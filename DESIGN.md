@@ -125,6 +125,8 @@ cmd를 실행해 출력을 `.gdm/<슬러그>/out/`에 저장·해시하고, exit
 | $omo:ultraresearch, autoresearch | 10회+ | gdm:research | P4 |
 | $team, teammode | 10회 | full의 병렬 check 실행으로 흡수, 부족 시 P4 재검토 | P4 |
 | start-work / continuation | 소량 | gdm resume | P1 |
+| (수동 반복) PR 생성·CI 감시 요청 | 179회 | gdm-pr | 완료 |
+| (수동 반복) 프로젝트 표준 명령 재타이핑 | local-run 스킬 3종 자작 | gdm preset + @참조 | 완료 |
 | **만들지 않음** | | | |
 | workbook 워크플로우 ($solve/$define/$problem/$reflect/$submit/$do) | 100회+ | 폐기. 단계 흐름은 plan → go/full → review가 대신 | — |
 | codegraph, lsp(-daemon) | — | CLI 내장 기능 사용 | — |
@@ -204,6 +206,11 @@ strangler 방식 유지. history.jsonl 호출 빈도가 진행률 지표.
 - 2026-07-02: 런타임 bun 확정 (1.3.14 설치 확인) — 개발·테스트는 bun 직접 실행,
   배포는 `bun build --compile` 단일 바이너리 → `~/.local/bin/gdm`
 
+- 2026-07-03: **v0.5.0 — 실사용 데이터 기반 개인화.** history.jsonl 3,448건 실측:
+  스크린샷 확인 498회 / DB 작업 230회 / PR·CI 179회 / 원인 진단 122회. 반영:
+  gdm-pr 스킬 신설(이슈→브랜치→커밋→PR→CI 감시, 실패 로그 진단), `gdm preset`
+  (프로젝트 표준 명령 등록, check에서 @이름 참조 — 등록 시점에 실제 명령으로
+  치환해 증거 재현성 유지), go/full에 UI 증거·DB 검증 관행, analyze에 로그-우선 절차
 - 2026-07-02: **v0.4.0 — P2~P4 스킬팩 완성.** 검수(audit) 게이트를 상태 머신에 내장:
   `plan init --audit` 작업은 done이 검수 통과를 요구하고, 판정 시점 checks 스냅샷
   해시(stateHash)로 검수 후 상태 변경 시 자동 무효화. 검수자는 이중 포맷(md/toml)

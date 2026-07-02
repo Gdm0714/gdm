@@ -41,7 +41,8 @@ gdm-go의 도구 전부 + 검수:
 2. check 설계: gdm-go 기준(happy/edge/regression)에 **adversarial 항목을 추가**한다
    — 악의적/경계 입력에서 무너지지 않는지 검증하는 check 1개 이상.
    등록 후 목록을 사용자에게 보여주고, 중량 작업이므로 이견 없는지 확인한다.
-3. gdm-go와 동일한 구현·pass 루프.
+3. gdm-go와 동일한 구현·pass 루프 (작업 유형별 관행 — UI 증거 경로, DB 검증
+   규칙, 프리셋 — 포함).
 4. 전 항목 통과 후 `gdm recheck`로 회귀 확인.
 5. 검수:
    a. `gdm audit brief` 출력과 `git diff`를 준비한다.
