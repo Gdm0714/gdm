@@ -193,7 +193,6 @@ strangler 방식 유지. history.jsonl 호출 빈도가 진행률 지표.
 ## 10. 미결 사항
 
 - [ ] Codex에서 bash로 gdm 호출 시 권한 프롬프트 처리 확인
-- [ ] 검수자 정의 소스(agents/)의 claude/codex 이중 포맷 생성 방식
 - [ ] 스킬 이름 최종 확정 — go/full은 자리표시자. 실사용 후 입에 붙는 말로 rename
 - [ ] Telegram 연동 방식 (P5)
 
@@ -205,6 +204,11 @@ strangler 방식 유지. history.jsonl 호출 빈도가 진행률 지표.
 - 2026-07-02: 런타임 bun 확정 (1.3.14 설치 확인) — 개발·테스트는 bun 직접 실행,
   배포는 `bun build --compile` 단일 바이너리 → `~/.local/bin/gdm`
 
+- 2026-07-02: **v0.4.0 — P2~P4 스킬팩 완성.** 검수(audit) 게이트를 상태 머신에 내장:
+  `plan init --audit` 작업은 done이 검수 통과를 요구하고, 판정 시점 checks 스냅샷
+  해시(stateHash)로 검수 후 상태 변경 시 자동 무효화. 검수자는 이중 포맷(md/toml)
+  대신 프롬프트 파일(agents/auditor.md)을 스킬이 서브에이전트에 그대로 전달하는
+  방식으로 단순화. 스킬 6종 완성: go/full/plan/review/analyze/research
 - 2026-07-02: **v0.3.0 기능 추가** — `recheck`(통과 항목 재실행으로 회귀 검출, done의 해시
   검사가 못 잡는 코드 회귀 보완), `status`(전 작업 현황), `retro`(journal 회고 — P2에서 조기
   구현, 거부·수정·재검증 이력 집계), 알 수 없는 플래그 감지(오타 조용한 무시 차단)
