@@ -16,7 +16,7 @@ import {
   revertChecks,
   validateWork,
 } from "../src/state.ts";
-import { listWorks, loadWork, resolveWork, saveWork } from "../src/store.ts";
+import { listWorks, loadPresets, loadWork, resolveWork, savePresets, saveWork } from "../src/store.ts";
 import type { Work } from "../src/types.ts";
 
 const NOW = "2026-07-02T00:00:00.000Z";
@@ -321,5 +321,19 @@ describe("store", () => {
   test("resolveWork: 없는 슬러그 에러", () => {
     const cwd = mkdtempSync(join(tmpdir(), "gdm-test-"));
     expect(() => resolveWork(cwd, "ghost")).toThrow(/없습니다/);
+  });
+
+  test("프리셋 저장/로드 라운드트립", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "gdm-test-"));
+    expect(loadPresets(cwd)).toEqual({});
+    savePresets(cwd, { test: "./gradlew test", build: "bun run build" });
+    expect(loadPresets(cwd)).toEqual({ test: "./gradlew test", build: "bun run build" });
+  });
+
+  test("손상된 프리셋 파일은 GdmError", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "gdm-test-"));
+    mkdirSync(join(cwd, ".gdm"), { recursive: true });
+    writeFileSync(join(cwd, ".gdm", "presets.json"), "{broken");
+    expect(() => loadPresets(cwd)).toThrow(GdmError);
   });
 });

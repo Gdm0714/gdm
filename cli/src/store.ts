@@ -95,6 +95,24 @@ export function resolveWork(cwd: string, given?: string): Work {
   throw new GdmError(`진행 중인 작업이 여러 개입니다. --slug로 지정하세요: ${slugs}`, "ambiguous_slug");
 }
 
+export function loadPresets(cwd: string): Record<string, string> {
+  const path = join(cwd, ROOT, "presets.json");
+  if (!existsSync(path)) return {};
+  try {
+    return JSON.parse(readFileSync(path, "utf8")) as Record<string, string>;
+  } catch {
+    throw new GdmError(`프리셋 파일이 손상됐습니다: ${path}`, "state_corrupt");
+  }
+}
+
+export function savePresets(cwd: string, presets: Record<string, string>): void {
+  mkdirSync(join(cwd, ROOT), { recursive: true });
+  const path = join(cwd, ROOT, "presets.json");
+  const tmp = `${path}.tmp`;
+  writeFileSync(tmp, JSON.stringify(presets, null, 2) + "\n");
+  renameSync(tmp, path);
+}
+
 export function renderWorkMd(work: Work): string {
   const { proven, total } = provenCount(work);
   const status = work.done

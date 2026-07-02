@@ -22,15 +22,17 @@ import {
   appendJournal,
   journalTail,
   listWorks,
+  loadPresets,
   readJournal,
   resolveWork,
+  savePresets,
   saveWork,
   workDir,
   workExists,
 } from "./store.ts";
 import type { Evidence, Work } from "./types.ts";
 
-const VERSION = "0.4.0";
+const VERSION = "0.5.0";
 const CMD_TIMEOUT_MS = 300_000;
 
 const USAGE = `gdm ${VERSION} — 검증 항목 기반 작업 하네스
@@ -49,7 +51,11 @@ const USAGE = `gdm ${VERSION} — 검증 항목 기반 작업 하네스
   gdm status [--json]                                       # 현재 디렉토리 전체 작업 현황
   gdm resume [--json] [--slug <슬러그>]
   gdm retro [--json] [--slug <슬러그>]                      # journal 회고 (거부·수정 이력)
+  gdm preset set <이름> <명령> | list | rm <이름>            # 프로젝트 표준 명령 등록
   gdm doctor
+
+프리셋: plan add/edit의 --cmd에 "@이름"을 쓰면 등록된 명령으로 치환됩니다
+  (예: gdm preset set test "./gradlew test" → gdm plan add --cmd @test ...)
 
 규칙:
   - 자동 항목의 증거는 gdm이 직접 만듭니다: pass가 cmd를 실행해 출력을 저장·해시하고,
@@ -151,13 +157,25 @@ function cmdPlanInit(cwd: string, args: string[]): void {
   console.log(`다음: gdm plan add --desc <항목> --cmd <검증 명령> --expect <기대>`);
 }
 
+function resolveCmd(cwd: string, cmd: string | undefined): string | undefined {
+  if (!cmd?.startsWith("@")) return cmd;
+  const name = cmd.slice(1);
+  const presets = loadPresets(cwd);
+  const resolved = presets[name];
+  if (!resolved) {
+    const known = Object.keys(presets).join(", ") || "없음";
+    throw new GdmError(`프리셋 "@${name}"이 없습니다 (등록된 프리셋: ${known})`, "preset_not_found");
+  }
+  return resolved;
+}
+
 function cmdPlanAdd(cwd: string, args: string[]): void {
   ensureFlags(args, ["desc", "cmd", "expect", "slug"], ["manual"]);
   const ts = now();
   const work = resolveWork(cwd, readFlag(args, "slug"));
   const { work: next, check } = addCheck(work, {
     desc: readFlag(args, "desc") ?? "",
-    cmd: readFlag(args, "cmd"),
+    cmd: resolveCmd(cwd, readFlag(args, "cmd")),
     expect: readFlag(args, "expect"),
     manual: hasFlag(args, "manual"),
   });
@@ -195,7 +213,7 @@ function cmdPlanEdit(cwd: string, args: string[]): void {
   const work = resolveWork(cwd, readFlag(args, "slug"));
   const patch = {
     desc: readFlag(args, "desc"),
-    cmd: readFlag(args, "cmd"),
+    cmd: resolveCmd(cwd, readFlag(args, "cmd")),
     expect: readFlag(args, "expect"),
   };
   const { work: next, reverted } = editCheck(work, id, patch, reason);
@@ -565,7 +583,45 @@ function cmdRetro(cwd: string, args: string[]): void {
   }
 }
 
-const SKILL_NAMES = ["go", "full", "plan", "review", "analyze", "research"] as const;
+function cmdPreset(cwd: string, args: string[]): void {
+  const [sub, ...rest] = args;
+  if (sub === "list") {
+    const presets = loadPresets(cwd);
+    const names = Object.keys(presets);
+    if (names.length === 0) {
+      console.log("등록된 프리셋 없음 — gdm preset set <이름> <명령>");
+      return;
+    }
+    for (const name of names) console.log(`@${name} = ${presets[name]}`);
+    return;
+  }
+  if (sub === "set") {
+    const [name, command] = rest;
+    if (!name || !command) throw new GdmError("사용법: gdm preset set <이름> <명령>", "usage");
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) {
+      throw new GdmError(`프리셋 이름은 소문자/숫자/하이픈만 가능합니다: "${name}"`, "usage");
+    }
+    const presets = loadPresets(cwd);
+    presets[name] = command;
+    savePresets(cwd, presets);
+    console.log(`@${name} = ${command}`);
+    return;
+  }
+  if (sub === "rm") {
+    const [name] = rest;
+    if (!name) throw new GdmError("사용법: gdm preset rm <이름>", "usage");
+    const presets = loadPresets(cwd);
+    if (!(name in presets)) throw new GdmError(`프리셋 "@${name}"이 없습니다`, "preset_not_found");
+    delete presets[name];
+    savePresets(cwd, presets);
+    console.log(`@${name} 삭제됨`);
+    return;
+  }
+  console.error(USAGE);
+  process.exit(2);
+}
+
+const SKILL_NAMES = ["go", "full", "plan", "review", "analyze", "research", "pr"] as const;
 
 function cmdDoctor(cwd: string): void {
   console.log(`gdm ${VERSION}`);
@@ -628,6 +684,9 @@ function main(): void {
         break;
       case "retro":
         cmdRetro(cwd, rest);
+        break;
+      case "preset":
+        cmdPreset(cwd, rest);
         break;
       case "doctor":
         cmdDoctor(cwd);
