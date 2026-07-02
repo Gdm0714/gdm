@@ -1,0 +1,5 @@
+node_modules/
+cli/dist/
+.gdm/
+.DS_Store
+.omc/
