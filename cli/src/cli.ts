@@ -20,11 +20,14 @@ import {
 } from "./state.ts";
 import {
   appendJournal,
+  checkHow,
+  checkMark,
   journalTail,
   listWorks,
   loadPresets,
   readJournal,
   resolveWork,
+  resolveWorkForRead,
   savePresets,
   saveWork,
   workDir,
@@ -32,7 +35,7 @@ import {
 } from "./store.ts";
 import type { Evidence, Work } from "./types.ts";
 
-const VERSION = "0.5.0";
+const VERSION = "0.5.1";
 const CMD_TIMEOUT_MS = 300_000;
 
 const USAGE = `gdm ${VERSION} — 검증 항목 기반 작업 하네스
@@ -124,11 +127,15 @@ function journalDenied(
 
 function checkLine(work: Work): string[] {
   return work.checks.map((c) => {
-    const mark = c.status === "proven" ? "✅" : "⬜";
-    const how = c.manual ? "(수동 확인)" : `${c.cmd}`;
-    const detail = c.status === "proven" ? `증거: ${c.evidence?.observed}` : `재현: ${how} → 기대: ${c.expect}`;
-    return `  ${mark} ${c.id} ${c.desc} — ${detail}`;
+    const detail =
+      c.status === "proven" ? `증거: ${c.evidence?.observed}` : `재현: ${checkHow(c)} → 기대: ${c.expect}`;
+    return `  ${checkMark(c)} ${c.id} ${c.desc} — ${detail}`;
   });
+}
+
+function workHeader(work: Work): string {
+  const { proven, total } = provenCount(work);
+  return `# ${work.slug} — ${work.done ? "완료" : "진행 중"} (${proven}/${total})`;
 }
 
 function cmdPlanInit(cwd: string, args: string[]): void {
@@ -194,13 +201,12 @@ function cmdPlanAdd(cwd: string, args: string[]): void {
 
 function cmdPlanList(cwd: string, args: string[]): void {
   ensureFlags(args, ["slug"], ["json"]);
-  const work = resolveWork(cwd, readFlag(args, "slug"));
+  const work = resolveWorkForRead(cwd, readFlag(args, "slug"));
   if (hasFlag(args, "json")) {
     console.log(JSON.stringify(work, null, 2));
     return;
   }
-  const { proven, total } = provenCount(work);
-  console.log(`# ${work.slug} — ${work.done ? "완료" : "진행 중"} (${proven}/${total})`);
+  console.log(workHeader(work));
   for (const line of checkLine(work)) console.log(line);
 }
 
@@ -374,7 +380,7 @@ function auditState(work: Work): string {
 
 function cmdAuditBrief(cwd: string, args: string[]): void {
   ensureFlags(args, ["slug"], ["json"]);
-  const work = resolveWork(cwd, readFlag(args, "slug"));
+  const work = resolveWorkForRead(cwd, readFlag(args, "slug"));
   if (hasFlag(args, "json")) {
     console.log(JSON.stringify({ work, journal: readJournal(cwd, work.slug) }, null, 2));
     return;
@@ -495,13 +501,12 @@ function cmdStatus(cwd: string, args: string[]): void {
 
 function cmdResume(cwd: string, args: string[]): void {
   ensureFlags(args, ["slug"], ["json"]);
-  const work = resolveWork(cwd, readFlag(args, "slug"));
+  const work = resolveWorkForRead(cwd, readFlag(args, "slug"));
   if (hasFlag(args, "json")) {
     console.log(JSON.stringify({ work, journal: journalTail(cwd, work.slug) }, null, 2));
     return;
   }
-  const { proven, total } = provenCount(work);
-  console.log(`# ${work.slug} — ${work.done ? "완료" : "진행 중"} (${proven}/${total})`);
+  console.log(workHeader(work));
   console.log(`목표: ${work.brief}`);
   const audit = auditState(work);
   if (audit) console.log(audit);
@@ -519,7 +524,7 @@ function cmdResume(cwd: string, args: string[]): void {
 
 function cmdRetro(cwd: string, args: string[]): void {
   ensureFlags(args, ["slug"], ["json"]);
-  const work = resolveWork(cwd, readFlag(args, "slug"));
+  const work = resolveWorkForRead(cwd, readFlag(args, "slug"));
   const journal = readJournal(cwd, work.slug);
   const denied = journal.filter((e) => e.event === "denied");
   const edits = journal.filter((e) => e.event === "plan.edit");

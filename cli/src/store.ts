@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { GdmError, provenCount, validateSlug, validateWork } from "./state.ts";
-import type { JournalEvent, Work } from "./types.ts";
+import type { Check, JournalEvent, Work } from "./types.ts";
 
 const ROOT = ".gdm";
 
@@ -95,6 +95,24 @@ export function resolveWork(cwd: string, given?: string): Work {
   throw new GdmError(`진행 중인 작업이 여러 개입니다. --slug로 지정하세요: ${slugs}`, "ambiguous_slug");
 }
 
+export function resolveWorkForRead(cwd: string, given?: string): Work {
+  if (given) return loadWork(cwd, given);
+  const works = listWorks(cwd);
+  const active = works.filter((w) => !w.done);
+  if (active.length === 1) return active[0]!;
+  if (active.length > 1) {
+    const slugs = active.map((w) => w.slug).join(", ");
+    throw new GdmError(`진행 중인 작업이 여러 개입니다. --slug로 지정하세요: ${slugs}`, "ambiguous_slug");
+  }
+  if (works.length === 0) {
+    throw new GdmError("작업이 없습니다. gdm plan init으로 시작하세요", "no_active");
+  }
+  const latest = works
+    .map((w) => ({ w, ts: journalTail(cwd, w.slug, 1)[0]?.ts ?? w.createdAt }))
+    .sort((a, b) => (a.ts < b.ts ? 1 : -1))[0]!;
+  return latest.w;
+}
+
 export function loadPresets(cwd: string): Record<string, string> {
   const path = join(cwd, ROOT, "presets.json");
   if (!existsSync(path)) return {};
@@ -113,16 +131,23 @@ export function savePresets(cwd: string, presets: Record<string, string>): void 
   renameSync(tmp, path);
 }
 
+export function checkMark(check: Check): string {
+  return check.status === "proven" ? "✅" : "⬜";
+}
+
+export function checkHow(check: Check): string {
+  return check.manual ? "(수동 확인)" : `${check.cmd}`;
+}
+
 export function renderWorkMd(work: Work): string {
   const { proven, total } = provenCount(work);
   const status = work.done
     ? `완료 (${proven}/${total}) · ${work.doneAt}`
     : `진행 중 (${proven}/${total}) · 시작 ${work.createdAt}`;
   const rows = work.checks.map((c) => {
-    const mark = c.status === "proven" ? "✅" : "⬜";
-    const cmd = c.manual ? "(수동 확인)" : `\`${c.cmd}\``;
+    const cmd = c.manual ? checkHow(c) : `\`${c.cmd}\``;
     const evidence = c.evidence ? c.evidence.observed : "—";
-    return `| ${c.id} | ${mark} | ${c.desc} | ${cmd} | ${c.expect} | ${evidence} |`;
+    return `| ${c.id} | ${checkMark(c)} | ${c.desc} | ${cmd} | ${c.expect} | ${evidence} |`;
   });
   return [
     `# ${work.slug}`,

@@ -16,7 +16,15 @@ import {
   revertChecks,
   validateWork,
 } from "../src/state.ts";
-import { listWorks, loadPresets, loadWork, resolveWork, savePresets, saveWork } from "../src/store.ts";
+import {
+  listWorks,
+  loadPresets,
+  loadWork,
+  resolveWork,
+  resolveWorkForRead,
+  savePresets,
+  saveWork,
+} from "../src/store.ts";
 import type { Work } from "../src/types.ts";
 
 const NOW = "2026-07-02T00:00:00.000Z";
@@ -321,6 +329,16 @@ describe("store", () => {
   test("resolveWork: 없는 슬러그 에러", () => {
     const cwd = mkdtempSync(join(tmpdir(), "gdm-test-"));
     expect(() => resolveWork(cwd, "ghost")).toThrow(/없습니다/);
+  });
+
+  test("resolveWorkForRead: 진행 중 없으면 가장 최근 작업(완료 포함) 선택", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "gdm-test-"));
+    let work = sampleWork();
+    work = passCheck(work, "c1", EV, NOW);
+    work = passCheck(work, "c2", { ...EV, observed: "out/c2.txt" }, NOW);
+    saveWork(cwd, closeWork(work, NOW));
+    expect(() => resolveWork(cwd)).toThrow(/진행 중인 작업이 없습니다/);
+    expect(resolveWorkForRead(cwd).slug).toBe("sample");
   });
 
   test("프리셋 저장/로드 라운드트립", () => {
