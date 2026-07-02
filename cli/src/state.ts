@@ -1,4 +1,5 @@
-import type { Check, Evidence, Work } from "./types.ts";
+import { createHash } from "node:crypto";
+import type { Audit, Check, Evidence, Work } from "./types.ts";
 
 export class GdmError extends Error {
   constructor(
@@ -19,11 +20,28 @@ export function validateSlug(slug: string): string {
   return slug;
 }
 
-export function initWork(slug: string, brief: string, now: string): Work {
+export function initWork(slug: string, brief: string, now: string, auditRequired = false): Work {
   validateSlug(slug);
   const trimmed = brief.trim();
   if (!trimmed) throw new GdmError("brief(작업 설명)가 비어 있습니다", "empty_brief");
-  return { slug, brief: trimmed, createdAt: now, done: false, checks: [] };
+  return { slug, brief: trimmed, createdAt: now, done: false, auditRequired, checks: [] };
+}
+
+export function checksHash(work: Work): string {
+  return createHash("sha256").update(JSON.stringify(work.checks)).digest("hex");
+}
+
+export function recordAudit(work: Work, result: Audit["result"], report: string, now: string): Work {
+  if (work.done) throw new GdmError("이미 완료된 작업입니다", "work_done");
+  const open = work.checks.filter((c) => c.status !== "proven");
+  if (work.checks.length === 0 || open.length > 0) {
+    throw new GdmError(
+      `검수는 모든 항목 통과 후에 가능합니다 (미통과: ${open.map((c) => c.id).join(", ") || "항목 없음"})`,
+      "audit_premature",
+    );
+  }
+  if (!report?.trim()) throw new GdmError("검수보고 파일 경로(report)가 필요합니다", "report_required");
+  return { ...work, audit: { result, report, stateHash: checksHash(work), at: now } };
 }
 
 export interface CheckInput {
@@ -162,6 +180,17 @@ export function closeWork(work: Work, now: string): Work {
   if (open.length > 0) {
     const list = open.map((c) => `${c.id}(${c.desc})`).join(", ");
     throw new GdmError(`미통과 항목 ${open.length}개: ${list}`, "unproven");
+  }
+  if (work.auditRequired) {
+    if (!work.audit) {
+      throw new GdmError("검수가 필요한 작업입니다. gdm audit brief → 검수자 → gdm audit verdict", "audit_required");
+    }
+    if (work.audit.result !== "pass") {
+      throw new GdmError("검수가 반려됐습니다. 반려 사유를 해결하고 재검수하세요", "audit_failed");
+    }
+    if (work.audit.stateHash !== checksHash(work)) {
+      throw new GdmError("검수 이후 항목 상태가 바뀌었습니다. 재검수가 필요합니다", "audit_stale");
+    }
   }
   return { ...work, done: true, doneAt: now };
 }

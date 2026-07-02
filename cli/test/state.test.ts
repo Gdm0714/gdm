@@ -4,12 +4,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   addCheck,
+  checksHash,
   closeWork,
   editCheck,
   GdmError,
   initWork,
   passCheck,
   provenCount,
+  recordAudit,
   refreshEvidence,
   revertChecks,
   validateWork,
@@ -157,6 +159,53 @@ describe("closeWork", () => {
     expect(closed.done).toBe(true);
     expect(() => addCheck(closed, { desc: "추가", cmd: "x", expect: "y" })).toThrow(/완료된 작업/);
     expect(() => closeWork(closed, NOW)).toThrow(/이미 완료/);
+  });
+});
+
+describe("audit 게이트", () => {
+  function allProven(auditRequired = true): Work {
+    let work = initWork("sample", "샘플", NOW, auditRequired);
+    ({ work } = addCheck(work, { desc: "빌드", cmd: "b", expect: "ok" }));
+    work = passCheck(work, "c1", EV, NOW);
+    return work;
+  }
+
+  test("미통과 상태에서 verdict 거부", () => {
+    const work = initWork("sample", "x", NOW, true);
+    expect(() => recordAudit(work, "pass", "report.md", NOW)).toThrow(/모든 항목 통과 후/);
+  });
+
+  test("검수 필수 작업은 검수 없이 done 거부", () => {
+    expect(() => closeWork(allProven(), NOW)).toThrow(/검수가 필요한 작업/);
+  });
+
+  test("검수 반려 상태에서 done 거부", () => {
+    const audited = recordAudit(allProven(), "fail", "report.md", NOW);
+    expect(() => closeWork(audited, NOW)).toThrow(/반려/);
+  });
+
+  test("검수 통과 후 done 성공", () => {
+    const audited = recordAudit(allProven(), "pass", "report.md", NOW);
+    expect(closeWork(audited, NOW).done).toBe(true);
+  });
+
+  test("검수 후 상태가 바뀌면 done 거부 (stateHash 불일치)", () => {
+    let audited = recordAudit(allProven(), "pass", "report.md", NOW);
+    ({ work: audited } = addCheck(audited, { desc: "추가", cmd: "x", expect: "y" }));
+    audited = passCheck(audited, "c2", { ...EV, observed: "out/c2.txt" }, NOW);
+    expect(() => closeWork(audited, NOW)).toThrow(/재검수/);
+  });
+
+  test("검수 불필요 작업은 audit 없이 done 가능", () => {
+    expect(closeWork(allProven(false), NOW).done).toBe(true);
+  });
+
+  test("checksHash는 checks 변경에만 반응", () => {
+    const work = allProven();
+    const before = checksHash(work);
+    expect(checksHash({ ...work, brief: "다른 brief" })).toBe(before);
+    const { work: added } = addCheck(work, { desc: "추가", cmd: "x", expect: "y" });
+    expect(checksHash(added)).not.toBe(before);
   });
 });
 

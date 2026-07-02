@@ -7,12 +7,14 @@ import { join, relative, resolve } from "node:path";
 import {
   addCheck,
   assertPassable,
+  checksHash,
   closeWork,
   editCheck,
   GdmError,
   initWork,
   passCheck,
   provenCount,
+  recordAudit,
   refreshEvidence,
   revertChecks,
 } from "./state.ts";
@@ -28,19 +30,21 @@ import {
 } from "./store.ts";
 import type { Evidence, Work } from "./types.ts";
 
-const VERSION = "0.3.0";
+const VERSION = "0.4.0";
 const CMD_TIMEOUT_MS = 300_000;
 
 const USAGE = `gdm ${VERSION} — 검증 항목 기반 작업 하네스
 
 사용법:
-  gdm plan init --slug <슬러그> (--brief <설명> | --brief-file <파일>)
+  gdm plan init --slug <슬러그> (--brief <설명> | --brief-file <파일>) [--audit]
   gdm plan add  --desc <항목> --cmd <검증 명령> --expect <기대> [--manual] [--slug <슬러그>]
   gdm plan list [--json] [--slug <슬러그>]
   gdm plan edit --check <id> [--desc ..] [--cmd ..] [--expect ..] --reason <사유> [--slug <슬러그>]
   gdm pass <id> [--note <메모>] [--slug <슬러그>]           # 자동 항목: cmd를 직접 실행해 판정
   gdm pass <id> --manual --observed <확인 기록 파일> [...]   # 수동 항목: 스크린샷 등 제출
   gdm recheck [--check <id>] [--slug <슬러그>]              # 통과한 자동 항목 재실행 (회귀 검출)
+  gdm audit brief [--json] [--slug <슬러그>]                # 검수자에게 줄 브리핑 패키지 출력
+  gdm audit verdict (--pass | --fail) --report <검수보고 파일> [--slug <슬러그>]
   gdm done [--slug <슬러그>]
   gdm status [--json]                                       # 현재 디렉토리 전체 작업 현황
   gdm resume [--json] [--slug <슬러그>]
@@ -122,7 +126,7 @@ function checkLine(work: Work): string[] {
 }
 
 function cmdPlanInit(cwd: string, args: string[]): void {
-  ensureFlags(args, ["slug", "brief", "brief-file"]);
+  ensureFlags(args, ["slug", "brief", "brief-file"], ["audit"]);
   const ts = now();
   const slug = readFlag(args, "slug");
   if (!slug) throw new GdmError("--slug가 필요합니다", "usage");
@@ -139,10 +143,11 @@ function cmdPlanInit(cwd: string, args: string[]): void {
   if (workExists(cwd, slug)) {
     throw new GdmError(`작업 "${slug}"가 이미 있습니다. 이어서 하려면 gdm resume --slug ${slug}`, "work_exists");
   }
-  const work = initWork(slug, brief, ts);
-  appendJournal(cwd, slug, { ts, event: "plan.init", brief: work.brief });
+  const auditRequired = hasFlag(args, "audit");
+  const work = initWork(slug, brief, ts, auditRequired);
+  appendJournal(cwd, slug, { ts, event: "plan.init", brief: work.brief, auditRequired });
   saveWork(cwd, work);
-  console.log(`작업 시작: ${slug}`);
+  console.log(`작업 시작: ${slug}${auditRequired ? " (검수 필수)" : ""}`);
   console.log(`다음: gdm plan add --desc <항목> --cmd <검증 명령> --expect <기대>`);
 }
 
@@ -342,6 +347,80 @@ function verifyEvidence(cwd: string, work: Work): { id: string; why: string }[] 
   return problems;
 }
 
+function auditState(work: Work): string {
+  if (!work.auditRequired) return "";
+  if (!work.audit) return "검수: 필요 (미실시)";
+  if (work.audit.result === "fail") return "검수: 반려";
+  return work.audit.stateHash === checksHash(work) ? "검수: 통과" : "검수: 무효 (상태 변경됨, 재검수 필요)";
+}
+
+function cmdAuditBrief(cwd: string, args: string[]): void {
+  ensureFlags(args, ["slug"], ["json"]);
+  const work = resolveWork(cwd, readFlag(args, "slug"));
+  if (hasFlag(args, "json")) {
+    console.log(JSON.stringify({ work, journal: readJournal(cwd, work.slug) }, null, 2));
+    return;
+  }
+  const { proven, total } = provenCount(work);
+  console.log(`# 검수 브리핑: ${work.slug} (${proven}/${total} 통과)`);
+  console.log("");
+  console.log("## 원 요청");
+  console.log(work.brief);
+  console.log("");
+  console.log("## 확인 항목과 증거");
+  for (const c of work.checks) {
+    const how = c.manual ? "(수동 확인)" : c.cmd;
+    console.log(`- ${c.id} [${c.status}] ${c.desc}`);
+    console.log(`  검증: ${how} → 기대: ${c.expect}`);
+    if (c.evidence) console.log(`  증거: ${c.evidence.observed} (sha256 ${c.evidence.sha256.slice(0, 12)}…)`);
+  }
+  const denied = readJournal(cwd, work.slug).filter((e) => e.event === "denied" || e.event === "plan.edit");
+  if (denied.length > 0) {
+    console.log("");
+    console.log("## 과정 이력 (거부·기준 수정)");
+    for (const e of denied) {
+      console.log(`- ${e.ts} ${e.event}${e.check ? ` ${e.check}` : ""}: ${e.reason ?? e.message ?? ""}`);
+    }
+  }
+  console.log("");
+  console.log(`검수보고 저장 위치: ${join(workDir(cwd, work.slug), "audit-report.md")}`);
+  console.log(`판정 기록: gdm audit verdict (--pass | --fail) --report <검수보고 경로>`);
+  if (proven < total) console.log(`주의: 미통과 항목이 있어 verdict는 아직 기록할 수 없습니다`);
+}
+
+function cmdAuditVerdict(cwd: string, args: string[]): void {
+  ensureFlags(args, ["report", "slug"], ["pass", "fail"]);
+  const ts = now();
+  const pass = hasFlag(args, "pass");
+  const fail = hasFlag(args, "fail");
+  if (pass === fail) throw new GdmError("--pass 또는 --fail 중 정확히 하나가 필요합니다", "usage");
+  const report = readFlag(args, "report");
+  if (!report) throw new GdmError("--report <검수보고 파일>이 필요합니다", "usage");
+  const reportPath = resolve(cwd, report);
+  if (!existsSync(reportPath)) throw new GdmError(`검수보고 파일이 없습니다: ${report}`, "report_missing");
+  if (statSync(reportPath).size === 0) throw new GdmError(`검수보고 파일이 비어 있습니다: ${report}`, "report_empty");
+  const work = resolveWork(cwd, readFlag(args, "slug"));
+  try {
+    const next = recordAudit(work, pass ? "pass" : "fail", report, ts);
+    appendJournal(cwd, work.slug, {
+      ts,
+      event: "audit",
+      result: next.audit!.result,
+      report,
+      stateHash: next.audit!.stateHash,
+    });
+    saveWork(cwd, next);
+    if (pass) {
+      console.log(`검수 통과 기록됨 — gdm done으로 완료하세요`);
+    } else {
+      console.log(`검수 반려 기록됨 — 반려 사유를 check로 반영(plan add/edit)하고 해결 후 재검수하세요`);
+    }
+  } catch (error) {
+    if (error instanceof GdmError) journalDenied(cwd, work.slug, "audit", error, ts);
+    throw error;
+  }
+}
+
 function cmdDone(cwd: string, args: string[]): void {
   ensureFlags(args, ["slug"]);
   const ts = now();
@@ -406,6 +485,8 @@ function cmdResume(cwd: string, args: string[]): void {
   const { proven, total } = provenCount(work);
   console.log(`# ${work.slug} — ${work.done ? "완료" : "진행 중"} (${proven}/${total})`);
   console.log(`목표: ${work.brief}`);
+  const audit = auditState(work);
+  if (audit) console.log(audit);
   console.log("항목:");
   for (const line of checkLine(work)) console.log(line);
   const tail = journalTail(cwd, work.slug, 5);
@@ -484,13 +565,18 @@ function cmdRetro(cwd: string, args: string[]): void {
   }
 }
 
+const SKILL_NAMES = ["go", "full", "plan", "review", "analyze", "research"] as const;
+
 function cmdDoctor(cwd: string): void {
   console.log(`gdm ${VERSION}`);
-  for (const [label, path] of [
-    ["claude 스킬", join(homedir(), ".claude", "skills", "gdm-go")],
-    ["codex 스킬 ", join(homedir(), ".codex", "skills", "gdm-go")],
-  ] as const) {
-    console.log(`  ${label}: ${path} ${existsSync(path) ? "[OK]" : "[없음 — install/install.sh 실행]"}`);
+  for (const name of SKILL_NAMES) {
+    const claude = existsSync(join(homedir(), ".claude", "skills", `gdm-${name}`));
+    const codex = existsSync(join(homedir(), ".codex", "skills", `gdm-${name}`));
+    const mark = (ok: boolean) => (ok ? "OK" : "없음");
+    console.log(`  gdm-${name}: claude[${mark(claude)}] codex[${mark(codex)}]`);
+  }
+  if (SKILL_NAMES.some((n) => !existsSync(join(homedir(), ".claude", "skills", `gdm-${n}`)))) {
+    console.log(`  → 누락 스킬은 install/install.sh 실행으로 설치`);
   }
   const works = listWorks(cwd);
   const active = works.filter((w) => !w.done);
@@ -521,6 +607,16 @@ function main(): void {
       case "recheck":
         cmdRecheck(cwd, rest);
         break;
+      case "audit": {
+        const [sub, ...auditArgs] = rest;
+        if (sub === "brief") cmdAuditBrief(cwd, auditArgs);
+        else if (sub === "verdict") cmdAuditVerdict(cwd, auditArgs);
+        else {
+          console.error(USAGE);
+          process.exit(2);
+        }
+        break;
+      }
       case "done":
         cmdDone(cwd, rest);
         break;

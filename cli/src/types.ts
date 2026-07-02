@@ -19,12 +19,21 @@ export interface Check {
   evidence?: Evidence;
 }
 
+export interface Audit {
+  result: "pass" | "fail";
+  report: string;
+  stateHash: string;
+  at: string;
+}
+
 export interface Work {
   slug: string;
   brief: string;
   createdAt: string;
   done: boolean;
   doneAt?: string;
+  auditRequired?: boolean;
+  audit?: Audit;
   checks: Check[];
 }
 
