@@ -13,11 +13,14 @@ import {
   initWork,
   passCheck,
   provenCount,
+  refreshEvidence,
+  revertChecks,
 } from "./state.ts";
 import {
   appendJournal,
   journalTail,
   listWorks,
+  readJournal,
   resolveWork,
   saveWork,
   workDir,
@@ -25,20 +28,23 @@ import {
 } from "./store.ts";
 import type { Evidence, Work } from "./types.ts";
 
-const VERSION = "0.2.0";
+const VERSION = "0.3.0";
 const CMD_TIMEOUT_MS = 300_000;
 
 const USAGE = `gdm ${VERSION} — 검증 항목 기반 작업 하네스
 
 사용법:
   gdm plan init --slug <슬러그> (--brief <설명> | --brief-file <파일>)
-  gdm plan add  --desc <항목> --cmd <재현 명령> --expect <기대> [--manual] [--slug <슬러그>]
+  gdm plan add  --desc <항목> --cmd <검증 명령> --expect <기대> [--manual] [--slug <슬러그>]
   gdm plan list [--json] [--slug <슬러그>]
   gdm plan edit --check <id> [--desc ..] [--cmd ..] [--expect ..] --reason <사유> [--slug <슬러그>]
   gdm pass <id> [--note <메모>] [--slug <슬러그>]           # 자동 항목: cmd를 직접 실행해 판정
   gdm pass <id> --manual --observed <확인 기록 파일> [...]   # 수동 항목: 스크린샷 등 제출
+  gdm recheck [--check <id>] [--slug <슬러그>]              # 통과한 자동 항목 재실행 (회귀 검출)
   gdm done [--slug <슬러그>]
+  gdm status [--json]                                       # 현재 디렉토리 전체 작업 현황
   gdm resume [--json] [--slug <슬러그>]
+  gdm retro [--json] [--slug <슬러그>]                      # journal 회고 (거부·수정 이력)
   gdm doctor
 
 규칙:
@@ -63,6 +69,25 @@ function hasFlag(args: string[], name: string): boolean {
   return args.includes(`--${name}`);
 }
 
+function ensureFlags(args: string[], value: string[], bool: string[] = []): void {
+  for (let i = 0; i < args.length; i++) {
+    const token = args[i]!;
+    if (!token.startsWith("--")) continue;
+    const eq = token.indexOf("=");
+    const name = eq >= 0 ? token.slice(2, eq) : token.slice(2);
+    if (value.includes(name)) {
+      if (eq < 0) i++;
+      continue;
+    }
+    if (bool.includes(name)) {
+      if (eq >= 0) throw new GdmError(`--${name}는 값을 받지 않습니다`, "usage");
+      continue;
+    }
+    const known = [...value, ...bool].map((f) => `--${f}`).join(", ") || "없음";
+    throw new GdmError(`알 수 없는 플래그: --${name} (가능: ${known})`, "usage");
+  }
+}
+
 function now(): string {
   return new Date().toISOString();
 }
@@ -76,8 +101,15 @@ function tailLines(text: string, n: number): string {
   return lines.slice(-n).join("\n");
 }
 
-function journalDenied(cwd: string, slug: string, action: string, error: GdmError, ts: string): void {
-  appendJournal(cwd, slug, { ts, event: "denied", action, code: error.code, message: error.message });
+function journalDenied(
+  cwd: string,
+  slug: string,
+  action: string,
+  error: GdmError,
+  ts: string,
+  extra: Record<string, unknown> = {},
+): void {
+  appendJournal(cwd, slug, { ts, event: "denied", action, code: error.code, message: error.message, ...extra });
 }
 
 function checkLine(work: Work): string[] {
@@ -90,6 +122,7 @@ function checkLine(work: Work): string[] {
 }
 
 function cmdPlanInit(cwd: string, args: string[]): void {
+  ensureFlags(args, ["slug", "brief", "brief-file"]);
   const ts = now();
   const slug = readFlag(args, "slug");
   if (!slug) throw new GdmError("--slug가 필요합니다", "usage");
@@ -110,10 +143,11 @@ function cmdPlanInit(cwd: string, args: string[]): void {
   appendJournal(cwd, slug, { ts, event: "plan.init", brief: work.brief });
   saveWork(cwd, work);
   console.log(`작업 시작: ${slug}`);
-  console.log(`다음: gdm plan add --desc <항목> --cmd <재현 명령> --expect <기대>`);
+  console.log(`다음: gdm plan add --desc <항목> --cmd <검증 명령> --expect <기대>`);
 }
 
 function cmdPlanAdd(cwd: string, args: string[]): void {
+  ensureFlags(args, ["desc", "cmd", "expect", "slug"], ["manual"]);
   const ts = now();
   const work = resolveWork(cwd, readFlag(args, "slug"));
   const { work: next, check } = addCheck(work, {
@@ -136,6 +170,7 @@ function cmdPlanAdd(cwd: string, args: string[]): void {
 }
 
 function cmdPlanList(cwd: string, args: string[]): void {
+  ensureFlags(args, ["slug"], ["json"]);
   const work = resolveWork(cwd, readFlag(args, "slug"));
   if (hasFlag(args, "json")) {
     console.log(JSON.stringify(work, null, 2));
@@ -147,6 +182,7 @@ function cmdPlanList(cwd: string, args: string[]): void {
 }
 
 function cmdPlanEdit(cwd: string, args: string[]): void {
+  ensureFlags(args, ["check", "desc", "cmd", "expect", "reason", "slug"]);
   const ts = now();
   const id = readFlag(args, "check");
   if (!id) throw new GdmError("--check <id>가 필요합니다", "usage");
@@ -196,11 +232,11 @@ function buildAutoEvidence(
   writeFileSync(outPath, body);
   const observed = relative(cwd, outPath);
   if (result.error) {
-    throw new GdmError(`재현 명령 실행 실패: ${result.error.message}`, "cmd_failed");
+    throw new GdmError(`검증 명령 실행 실패: ${result.error.message}`, "cmd_failed");
   }
   if (result.status !== 0) {
     throw new GdmError(
-      `재현 명령이 실패했습니다 (exit ${result.status}). 출력: ${observed}\n${tailLines(output, 15)}`,
+      `검증 명령이 실패했습니다 (exit ${result.status}). 출력: ${observed}\n${tailLines(output, 15)}`,
       "cmd_failed",
     );
   }
@@ -213,6 +249,7 @@ function cmdPass(cwd: string, args: string[]): void {
   const id = args[0] && !args[0].startsWith("--") ? args[0] : undefined;
   if (!id) throw new GdmError("통과시킬 항목 id가 필요합니다: gdm pass <id>", "usage");
   const rest = args.slice(1);
+  ensureFlags(rest, ["observed", "note", "slug"], ["manual"]);
   const work = resolveWork(cwd, readFlag(rest, "slug"));
   try {
     const check = assertPassable(work, id);
@@ -229,7 +266,7 @@ function cmdPass(cwd: string, args: string[]): void {
     } else {
       if (hasFlag(rest, "manual") || readFlag(rest, "observed")) {
         throw new GdmError(
-          `${id}는 자동 검증 항목입니다. gdm pass가 재현 명령을 직접 실행하므로 --manual/--observed는 쓸 수 없습니다`,
+          `${id}는 자동 검증 항목입니다. gdm pass가 검증 명령을 직접 실행하므로 --manual/--observed는 쓸 수 없습니다`,
           "manual_not_allowed",
         );
       }
@@ -242,9 +279,48 @@ function cmdPass(cwd: string, args: string[]): void {
     console.log(`${id} 통과 (${proven}/${total})`);
     if (proven === total) console.log(`모든 항목 통과 — gdm done으로 완료하세요`);
   } catch (error) {
-    if (error instanceof GdmError) journalDenied(cwd, work.slug, "pass", error, ts);
+    if (error instanceof GdmError) journalDenied(cwd, work.slug, "pass", error, ts, { check: id });
     throw error;
   }
+}
+
+function cmdRecheck(cwd: string, args: string[]): void {
+  ensureFlags(args, ["check", "slug"]);
+  const ts = now();
+  let work = resolveWork(cwd, readFlag(args, "slug"));
+  const only = readFlag(args, "check");
+  const targets = work.checks.filter(
+    (c) => c.status === "proven" && !c.manual && (!only || c.id === only),
+  );
+  if (only && targets.length === 0) {
+    throw new GdmError(`${only}는 재검증 대상이 아닙니다 (통과한 자동 항목만 가능)`, "not_recheckable");
+  }
+  if (targets.length === 0) {
+    console.log("재검증할 자동 통과 항목이 없습니다");
+    return;
+  }
+  const failed: string[] = [];
+  for (const check of targets) {
+    try {
+      const evidence = buildAutoEvidence(cwd, work.slug, check.id, check.cmd!);
+      work = refreshEvidence(work, check.id, evidence, ts);
+      appendJournal(cwd, work.slug, { ts, event: "recheck", check: check.id, ok: true, sha256: evidence.sha256 });
+      console.log(`${check.id} 재검증 통과`);
+    } catch (error) {
+      if (!(error instanceof GdmError) || error.code !== "cmd_failed") throw error;
+      work = revertChecks(work, [check.id]);
+      failed.push(check.id);
+      appendJournal(cwd, work.slug, { ts, event: "recheck", check: check.id, ok: false, message: error.message });
+      console.log(`${check.id} 재검증 실패 — open으로 회귀`);
+    }
+  }
+  saveWork(cwd, work);
+  const { proven, total } = provenCount(work);
+  if (failed.length > 0) {
+    console.error(`재검증 결과: ${targets.length}개 중 ${failed.length}개 실패 (${failed.join(", ")}) — 현재 ${proven}/${total}`);
+    process.exit(1);
+  }
+  console.log(`재검증 결과: ${targets.length}개 전부 통과 (${proven}/${total})`);
 }
 
 function verifyEvidence(cwd: string, work: Work): { id: string; why: string }[] {
@@ -267,18 +343,14 @@ function verifyEvidence(cwd: string, work: Work): { id: string; why: string }[] 
 }
 
 function cmdDone(cwd: string, args: string[]): void {
+  ensureFlags(args, ["slug"]);
   const ts = now();
   const work = resolveWork(cwd, readFlag(args, "slug"));
   try {
     const stale = verifyEvidence(cwd, work);
     if (stale.length > 0) {
       const ids = stale.map((s) => s.id);
-      const reverted: Work = {
-        ...work,
-        checks: work.checks.map((c) =>
-          ids.includes(c.id) ? { ...c, status: "open" as const, evidence: undefined } : c,
-        ),
-      };
+      const reverted = revertChecks(work, ids);
       appendJournal(cwd, work.slug, { ts, event: "evidence_stale", checks: ids });
       saveWork(cwd, reverted);
       throw new GdmError(
@@ -299,7 +371,33 @@ function cmdDone(cwd: string, args: string[]): void {
   }
 }
 
+function cmdStatus(cwd: string, args: string[]): void {
+  ensureFlags(args, [], ["json"]);
+  const works = listWorks(cwd);
+  if (hasFlag(args, "json")) {
+    const summary = works.map((w) => {
+      const { proven, total } = provenCount(w);
+      const last = journalTail(cwd, w.slug, 1)[0];
+      return { slug: w.slug, done: w.done, proven, total, lastEvent: last?.event, lastAt: last?.ts };
+    });
+    console.log(JSON.stringify(summary, null, 2));
+    return;
+  }
+  if (works.length === 0) {
+    console.log("작업이 없습니다. gdm plan init으로 시작하세요");
+    return;
+  }
+  for (const w of works) {
+    const { proven, total } = provenCount(w);
+    const last = journalTail(cwd, w.slug, 1)[0];
+    const state = w.done ? "완료  " : "진행 중";
+    const lastInfo = last ? ` — 마지막: ${last.ts} ${last.event}` : "";
+    console.log(`[${state}] ${w.slug} (${proven}/${total})${lastInfo}`);
+  }
+}
+
 function cmdResume(cwd: string, args: string[]): void {
+  ensureFlags(args, ["slug"], ["json"]);
   const work = resolveWork(cwd, readFlag(args, "slug"));
   if (hasFlag(args, "json")) {
     console.log(JSON.stringify({ work, journal: journalTail(cwd, work.slug) }, null, 2));
@@ -317,6 +415,72 @@ function cmdResume(cwd: string, args: string[]): void {
   }
   if (!work.done) {
     console.log("다음: 미통과 항목을 구현한 뒤 gdm pass <id>");
+  }
+}
+
+function cmdRetro(cwd: string, args: string[]): void {
+  ensureFlags(args, ["slug"], ["json"]);
+  const work = resolveWork(cwd, readFlag(args, "slug"));
+  const journal = readJournal(cwd, work.slug);
+  const denied = journal.filter((e) => e.event === "denied");
+  const edits = journal.filter((e) => e.event === "plan.edit");
+  const rechecks = journal.filter((e) => e.event === "recheck");
+  const deniedByCode = new Map<string, number>();
+  for (const d of denied) {
+    const code = String(d.code ?? "unknown");
+    deniedByCode.set(code, (deniedByCode.get(code) ?? 0) + 1);
+  }
+  const frictionByCheck = new Map<string, number>();
+  for (const d of denied) {
+    if (typeof d.check === "string") {
+      frictionByCheck.set(d.check, (frictionByCheck.get(d.check) ?? 0) + 1);
+    }
+  }
+  if (hasFlag(args, "json")) {
+    console.log(
+      JSON.stringify(
+        {
+          slug: work.slug,
+          done: work.done,
+          events: journal.length,
+          denied: Object.fromEntries(deniedByCode),
+          frictionByCheck: Object.fromEntries(frictionByCheck),
+          edits: edits.map((e) => ({ check: e.check, reason: e.reason, patch: e.patch })),
+          rechecks: rechecks.map((e) => ({ check: e.check, ok: e.ok })),
+        },
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+  console.log(`# ${work.slug} 회고 — 이벤트 ${journal.length}건, 거부 ${denied.length}건, 기준 수정 ${edits.length}건`);
+  if (journal.length > 0) {
+    console.log(`기간: ${journal[0]!.ts} → ${journal[journal.length - 1]!.ts}`);
+  }
+  if (deniedByCode.size > 0) {
+    console.log("거부 사유:");
+    for (const [code, count] of [...deniedByCode.entries()].sort((a, b) => b[1] - a[1])) {
+      console.log(`  - ${code}: ${count}회`);
+    }
+  }
+  if (frictionByCheck.size > 0) {
+    console.log("항목별 마찰(거부 횟수):");
+    for (const [check, count] of [...frictionByCheck.entries()].sort((a, b) => b[1] - a[1])) {
+      const desc = work.checks.find((c) => c.id === check)?.desc ?? "";
+      console.log(`  - ${check} ${desc}: ${count}회`);
+    }
+  }
+  if (edits.length > 0) {
+    console.log("기준 수정 이력:");
+    for (const e of edits) console.log(`  - ${e.check}: ${e.reason}`);
+  }
+  if (rechecks.length > 0) {
+    const failedRechecks = rechecks.filter((r) => r.ok === false).length;
+    console.log(`재검증: ${rechecks.length}회 (회귀 검출 ${failedRechecks}회)`);
+  }
+  if (denied.length === 0 && edits.length === 0) {
+    console.log("게이트 마찰 없음 — 항목 설계가 처음부터 유효했습니다");
   }
 }
 
@@ -354,11 +518,20 @@ function main(): void {
       case "pass":
         cmdPass(cwd, rest);
         break;
+      case "recheck":
+        cmdRecheck(cwd, rest);
+        break;
       case "done":
         cmdDone(cwd, rest);
         break;
+      case "status":
+        cmdStatus(cwd, rest);
+        break;
       case "resume":
         cmdResume(cwd, rest);
+        break;
+      case "retro":
+        cmdRetro(cwd, rest);
         break;
       case "doctor":
         cmdDoctor(cwd);

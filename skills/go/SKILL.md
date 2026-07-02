@@ -37,7 +37,9 @@ description: |
 | `gdm plan edit --check <id> [...] --reason <사유>` | 항목 조정 (사유 필수) |
 | `gdm pass <id>` | 자동 항목 통과 — gdm이 cmd를 직접 실행·저장·해시하고 exit 0일 때만 통과 |
 | `gdm pass <id> --manual --observed <파일>` | 수동 항목 통과 — 스크린샷 등 확인 기록 제출 |
+| `gdm recheck` | 통과한 자동 항목 전부 재실행 — 회귀 검출, 실패 항목은 open 회귀 |
 | `gdm done` | 완료 — 전 항목 통과 + 증거 파일 현존·해시 재검증 후에만 exit 0 |
+| `gdm status` | 현재 디렉토리 전체 작업 현황 |
 | `gdm resume` | 중단된 작업 상태 복원 |
 
 ## 프로세스
@@ -54,8 +56,10 @@ description: |
       `.gdm/<슬러그>/out/<id>.txt`에 남아 있다.
    d. 수동 항목은 확인 기록(스크린샷 등)을 파일로 저장한 뒤
       `gdm pass <id> --manual --observed <경로>`.
-4. 전 항목 통과 후 `gdm done`. 성공한 경우에만 완료를 보고한다.
-5. 새 세션에서 이어받으면 먼저 `gdm resume`으로 상태를 복원한다.
+4. 항목이 3개 이상이거나 여러 파일을 고쳤으면 `gdm done` 전에 `gdm recheck`로
+   회귀를 확인한다 (앞서 통과한 항목이 이후 수정으로 깨졌는지 재실행 검증).
+5. 전 항목 통과 후 `gdm done`. 성공한 경우에만 완료를 보고한다.
+6. 새 세션에서 이어받으면 먼저 `gdm resume`으로 상태를 복원한다.
 
 ## 엣지 케이스
 
