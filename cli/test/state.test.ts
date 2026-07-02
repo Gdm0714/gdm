@@ -10,6 +10,8 @@ import {
   initWork,
   passCheck,
   provenCount,
+  refreshEvidence,
+  revertChecks,
   validateWork,
 } from "../src/state.ts";
 import { listWorks, loadWork, resolveWork, saveWork } from "../src/store.ts";
@@ -155,6 +157,34 @@ describe("closeWork", () => {
     expect(closed.done).toBe(true);
     expect(() => addCheck(closed, { desc: "추가", cmd: "x", expect: "y" })).toThrow(/완료된 작업/);
     expect(() => closeWork(closed, NOW)).toThrow(/이미 완료/);
+  });
+});
+
+describe("revertChecks / refreshEvidence", () => {
+  test("revertChecks: proven → open + 증거 제거", () => {
+    const proven = passCheck(sampleWork(), "c1", EV, NOW);
+    const reverted = revertChecks(proven, ["c1"]);
+    expect(reverted.checks[0]!.status).toBe("open");
+    expect(reverted.checks[0]!.evidence).toBeUndefined();
+    expect(reverted.checks[1]!.status).toBe("open");
+  });
+
+  test("refreshEvidence: proven 자동 항목의 증거 갱신", () => {
+    const proven = passCheck(sampleWork(), "c1", EV, NOW);
+    const refreshed = refreshEvidence(proven, "c1", { ...EV, sha256: "newhash" }, NOW);
+    expect(refreshed.checks[0]!.status).toBe("proven");
+    expect(refreshed.checks[0]!.evidence?.sha256).toBe("newhash");
+  });
+
+  test("refreshEvidence: open 항목 거부", () => {
+    expect(() => refreshEvidence(sampleWork(), "c1", EV, NOW)).toThrow(/통과 상태가 아닙니다/);
+  });
+
+  test("refreshEvidence: 수동 항목 거부", () => {
+    let work = initWork("sample", "x", NOW);
+    ({ work } = addCheck(work, { desc: "UI", expect: "정상", manual: true }));
+    work = passCheck(work, "c1", { observed: "shot.png", sha256: "h", manual: true }, NOW);
+    expect(() => refreshEvidence(work, "c1", EV, NOW)).toThrow(/수동 항목/);
   });
 });
 

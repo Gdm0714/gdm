@@ -135,6 +135,24 @@ export function editCheck(
   return { work: replaceCheck(work, next), reverted };
 }
 
+export function revertChecks(work: Work, ids: string[]): Work {
+  return {
+    ...work,
+    checks: work.checks.map((c) =>
+      ids.includes(c.id) ? { ...c, status: "open" as const, evidence: undefined } : c,
+    ),
+  };
+}
+
+export function refreshEvidence(work: Work, id: string, evidence: Omit<Evidence, "at">, now: string): Work {
+  const check = findCheck(work, id);
+  if (check.status !== "proven") {
+    throw new GdmError(`${id}는 통과 상태가 아닙니다. gdm pass를 쓰세요`, "not_proven");
+  }
+  if (check.manual) throw new GdmError(`${id}는 수동 항목이라 재검증할 수 없습니다`, "manual_not_allowed");
+  return replaceCheck(work, { ...check, evidence: { ...evidence, at: now } });
+}
+
 export function closeWork(work: Work, now: string): Work {
   if (work.done) throw new GdmError("이미 완료된 작업입니다", "work_done");
   if (work.checks.length === 0) {

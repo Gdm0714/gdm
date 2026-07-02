@@ -57,11 +57,15 @@ export function appendJournal(cwd: string, slug: string, event: JournalEvent): v
   appendFileSync(join(dir, "journal.jsonl"), JSON.stringify(event) + "\n");
 }
 
-export function journalTail(cwd: string, slug: string, n = 8): JournalEvent[] {
+export function readJournal(cwd: string, slug: string): JournalEvent[] {
   const path = join(workDir(cwd, slug), "journal.jsonl");
   if (!existsSync(path)) return [];
   const lines = readFileSync(path, "utf8").trim().split("\n").filter(Boolean);
-  return lines.slice(-n).map((line) => JSON.parse(line) as JournalEvent);
+  return lines.map((line) => JSON.parse(line) as JournalEvent);
+}
+
+export function journalTail(cwd: string, slug: string, n = 8): JournalEvent[] {
+  return readJournal(cwd, slug).slice(-n);
 }
 
 export function listWorks(cwd: string): Work[] {
