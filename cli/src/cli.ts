@@ -626,7 +626,7 @@ function cmdPreset(cwd: string, args: string[]): void {
   process.exit(2);
 }
 
-const SKILL_NAMES = ["go", "full", "plan", "review", "analyze", "research", "pr"] as const;
+const SKILL_NAMES = ["go", "full", "plan", "review", "analyze", "research", "pr", "ui", "db"] as const;
 
 function cmdDoctor(cwd: string): void {
   console.log(`gdm ${VERSION}`);
