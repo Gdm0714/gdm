@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: 테스트·빌드
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: 의존성 설치
+        working-directory: cli
+        run: bun install --frozen-lockfile
+      - name: 유닛 테스트
+        working-directory: cli
+        run: bun test
+      - name: 바이너리 빌드
+        working-directory: cli
+        run: bun run build
+      - name: 스킬 front-matter 검증
+        run: |
+          for f in skills/*/SKILL.md; do
+            head -1 "$f" | grep -q '^---$' || { echo "front-matter 누락: $f"; exit 1; }
+            grep -q '^name: gdm-' "$f" || { echo "name 필드 누락: $f"; exit 1; }
+          done
+          echo "스킬 $(ls -d skills/*/ | wc -l)개 front-matter 정상"
+
+  commit-message-guard:
+    name: 커밋 메시지 가드
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: AI 표기 금지 검사 (전체 히스토리)
+        run: |
+          BAD=$(git log --format='%H %s%n%b' | grep -inE 'claude|클로드|co-authored-by|generated (with|by)' || true)
+          if [ -n "$BAD" ]; then
+            echo "커밋 메시지에 금지 표기가 있습니다:"
+            echo "$BAD"
+            exit 1
+          fi
+          echo "전체 히스토리 $(git rev-list --count HEAD)개 커밋 — 금지 표기 0건"
