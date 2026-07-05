@@ -44,22 +44,17 @@ description: |
 
 ## 프로세스
 
-1. 요청을 한 문단으로 요약해 `gdm plan init --slug <kebab-슬러그> --brief "<요약>"`.
-2. 작업을 검증 항목으로 분해해 `gdm plan add`로 등록한다. 각 항목은
-   "무엇을(desc) / 어떤 명령이 성공하면 통과이고(cmd) / 그때 무엇이 관찰되는가(expect)"가
-   명확해야 한다. UI처럼 수동 확인만 가능한 항목은 `--manual`.
-   등록 후 `gdm plan list` 출력을 사용자에게 보여준다.
-3. 반복:
-   a. 미통과 항목 하나를 골라 구현한다.
-   b. `gdm pass <id>` — gdm이 cmd를 실행해 출력을 저장하고 판정한다.
-   c. 실패(exit≠0)하면 출력을 읽고 구현을 고쳐 b로 돌아간다. cmd 출력은
-      `.gdm/<슬러그>/out/<id>.txt`에 남아 있다.
-   d. 수동 항목은 확인 기록(스크린샷 등)을 파일로 저장한 뒤
-      `gdm pass <id> --manual --observed <경로>`.
-4. 항목이 3개 이상이거나 여러 파일을 고쳤으면 `gdm done` 전에 `gdm recheck`로
-   회귀를 확인한다 (앞서 통과한 항목이 이후 수정으로 깨졌는지 재실행 검증).
-5. 전 항목 통과 후 `gdm done`. 성공한 경우에만 완료를 보고한다.
-6. 새 세션에서 이어받으면 먼저 `gdm resume`으로 상태를 복원한다.
+순서는 계약(init → add → pass → done)이고, 그 안의 진행 방식은 판단에 맡긴다.
+
+1. `gdm plan init` 후 작업을 검증 항목으로 분해해 `gdm plan add`. 좋은 check의
+   기준은 하나다 — **cmd가 성공하면 기대가 충족됐다고 믿을 수 있는가.**
+   등록한 목록(`gdm plan list`)을 사용자에게 보여준다.
+2. 구현하고 `gdm pass <id>`. 실패하면 출력(`.gdm/<슬러그>/out/<id>.txt`)을 읽고
+   구현을 고친다. 수동 항목은 확인 기록을 저장한 뒤 `--manual --observed <경로>`.
+3. 여러 항목·여러 파일을 고쳤으면 done 전에 `gdm recheck`.
+4. `gdm done` 성공 시에만 완료를 보고한다. 재개는 `gdm resume`. 완료 이후
+   이 작업에서 결함이 발견되면 `gdm miss --desc ... --type ...`으로 기록한다
+   — 게이트 개선(retro --all)의 입력이 된다.
 
 ## 작업 유형별 관행 (실사용 빈도 기반)
 
