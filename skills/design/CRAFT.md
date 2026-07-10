@@ -15,6 +15,8 @@
 - 숫자가 세로로 나란한 곳(표·KPI·버전)은 `font-variant-numeric: tabular-nums`.
 - 폰트는 로드 실패를 전제한다 — 폴백 스택까지가 폰트 선택이고, 폴백으로
   렌더돼도 레이아웃이 무너지지 않아야 한다.
+- 한국어 UI는 `word-break: keep-all` + `overflow-wrap: break-word` — 음절
+  중간에서 끊긴 줄바꿈("있습니 다")은 렌더 채점에서 걸리는 결함이다.
 
 ## 색
 
