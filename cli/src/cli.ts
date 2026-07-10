@@ -10,6 +10,7 @@ import {
   checksHash,
   closeWork,
   editCheck,
+  findCheck,
   GdmError,
   initWork,
   passCheck,
@@ -35,7 +36,7 @@ import {
 } from "./store.ts";
 import type { Evidence, Work } from "./types.ts";
 
-const VERSION = "0.5.1";
+const VERSION = "0.6.0";
 const CMD_TIMEOUT_MS = 300_000;
 
 const USAGE = `gdm ${VERSION} — 검증 항목 기반 작업 하네스
@@ -53,7 +54,8 @@ const USAGE = `gdm ${VERSION} — 검증 항목 기반 작업 하네스
   gdm done [--slug <슬러그>]
   gdm status [--json]                                       # 현재 디렉토리 전체 작업 현황
   gdm resume [--json] [--slug <슬러그>]
-  gdm retro [--json] [--slug <슬러그>]                      # journal 회고 (거부·수정 이력)
+  gdm retro [--all] [--json] [--slug <슬러그>]              # 회고 (--all: 전체 작업 횡단 + 개선 제안)
+  gdm miss --desc <내용> [--type <유형>] [--check <id>] [--slug <슬러그>]  # 게이트 통과 후 발견된 결함 기록
   gdm preset set <이름> <명령> | list | rm <이름>            # 프로젝트 표준 명령 등록
   gdm doctor
 
@@ -522,8 +524,117 @@ function cmdResume(cwd: string, args: string[]): void {
   }
 }
 
+function cmdMiss(cwd: string, args: string[]): void {
+  ensureFlags(args, ["desc", "type", "check", "slug"]);
+  const ts = now();
+  const desc = readFlag(args, "desc");
+  if (!desc) throw new GdmError("--desc <무엇이 어떻게 터졌는지>가 필요합니다", "usage");
+  const work = resolveWorkForRead(cwd, readFlag(args, "slug"));
+  const check = readFlag(args, "check");
+  if (check) findCheck(work, check);
+  const type = readFlag(args, "type");
+  appendJournal(cwd, work.slug, {
+    ts,
+    event: "miss",
+    desc,
+    ...(type ? { type } : {}),
+    ...(check ? { check } : {}),
+  });
+  console.log(`탈출 결함 기록: ${work.slug}${check ? ` ${check}` : ""} — ${desc}`);
+  console.log(`집계: gdm retro --all (게이트 구멍 리포트)`);
+}
+
+function cmdRetroAll(cwd: string, json: boolean): void {
+  const works = listWorks(cwd);
+  if (works.length === 0) {
+    console.log("작업이 없습니다");
+    return;
+  }
+  const deniedByCode = new Map<string, number>();
+  const editReasons: { work: string; check?: unknown; reason?: unknown }[] = [];
+  const misses: { work: string; type?: unknown; check?: unknown; desc?: unknown }[] = [];
+  let recheckFails = 0;
+  let events = 0;
+  for (const w of works) {
+    for (const e of readJournal(cwd, w.slug)) {
+      events++;
+      if (e.event === "denied") {
+        const code = String(e.code ?? "unknown");
+        deniedByCode.set(code, (deniedByCode.get(code) ?? 0) + 1);
+      } else if (e.event === "plan.edit") {
+        editReasons.push({ work: w.slug, check: e.check, reason: e.reason });
+      } else if (e.event === "miss") {
+        misses.push({ work: w.slug, type: e.type, check: e.check, desc: e.desc });
+      } else if (e.event === "recheck" && e.ok === false) {
+        recheckFails++;
+      }
+    }
+  }
+  const missByType = new Map<string, number>();
+  for (const m of misses) {
+    const type = String(m.type ?? "미분류");
+    missByType.set(type, (missByType.get(type) ?? 0) + 1);
+  }
+  const suggestions: string[] = [];
+  for (const [type, count] of [...missByType.entries()].sort((a, b) => b[1] - a[1])) {
+    suggestions.push(
+      `검수 체크리스트에 "${type}" 유형 반영 검토 — 게이트 통과 후 ${count}건 발견 (agents/auditor.md)`,
+    );
+  }
+  if (editReasons.length >= 3) {
+    suggestions.push(`check 기준 수정 ${editReasons.length}건 — plan 단계에서 기준을 더 구체화하면 재작업이 줄어듭니다`);
+  }
+  if (recheckFails > 0) {
+    suggestions.push(`recheck가 회귀 ${recheckFails}건을 잡음 — done 전 recheck를 기본 습관으로`);
+  }
+  if (json) {
+    console.log(
+      JSON.stringify(
+        {
+          works: works.length,
+          done: works.filter((w) => w.done).length,
+          events,
+          denied: Object.fromEntries(deniedByCode),
+          misses,
+          editCount: editReasons.length,
+          recheckFails,
+          suggestions,
+        },
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+  console.log(
+    `# 전체 회고 — 작업 ${works.length}개(완료 ${works.filter((w) => w.done).length}), 이벤트 ${events}건, 탈출 결함 ${misses.length}건`,
+  );
+  if (misses.length > 0) {
+    console.log("탈출 결함 (게이트 구멍):");
+    for (const m of misses) {
+      console.log(`  - [${m.type ?? "미분류"}] ${m.work}${m.check ? ` ${m.check}` : ""}: ${m.desc}`);
+    }
+  }
+  if (deniedByCode.size > 0) {
+    console.log("거부 사유 누적:");
+    for (const [code, count] of [...deniedByCode.entries()].sort((a, b) => b[1] - a[1])) {
+      console.log(`  - ${code}: ${count}회`);
+    }
+  }
+  if (suggestions.length > 0) {
+    console.log("개선 제안:");
+    for (const s of suggestions) console.log(`  → ${s}`);
+  } else {
+    console.log("개선 제안: 없음 — 탈출 결함·반복 마찰이 아직 없습니다");
+  }
+}
+
 function cmdRetro(cwd: string, args: string[]): void {
-  ensureFlags(args, ["slug"], ["json"]);
+  ensureFlags(args, ["slug"], ["json", "all"]);
+  if (hasFlag(args, "all")) {
+    cmdRetroAll(cwd, hasFlag(args, "json"));
+    return;
+  }
   const work = resolveWorkForRead(cwd, readFlag(args, "slug"));
   const journal = readJournal(cwd, work.slug);
   const denied = journal.filter((e) => e.event === "denied");
@@ -692,6 +803,9 @@ function main(): void {
         break;
       case "preset":
         cmdPreset(cwd, rest);
+        break;
+      case "miss":
+        cmdMiss(cwd, rest);
         break;
       case "doctor":
         cmdDoctor(cwd);

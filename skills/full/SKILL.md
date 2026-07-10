@@ -41,19 +41,23 @@ gdm-go의 도구 전부 + 검수:
 2. check 설계: gdm-go 기준(happy/edge/regression)에 **adversarial 항목을 추가**한다
    — 악의적/경계 입력에서 무너지지 않는지 검증하는 check 1개 이상.
    등록 후 목록을 사용자에게 보여주고, 중량 작업이므로 이견 없는지 확인한다.
-3. gdm-go와 동일한 구현·pass 루프 (작업 유형별 관행 — UI 증거 경로, DB 검증
-   규칙, 프리셋 — 포함).
-4. 전 항목 통과 후 `gdm recheck`로 회귀 확인.
-5. 검수:
+3. gdm-go와 동일한 구현·pass 루프(작업 유형별 관행 포함), 전 항목 통과 후
+   `gdm recheck`로 회귀 확인.
+4. 검수:
    a. `gdm audit brief` 출력과 `git diff`를 준비한다.
-   b. **fresh-context 검수자 서브에이전트를 스폰한다.** 프롬프트는 gdm repo의
-      `agents/auditor.md` 전문 + 브리핑 + diff. (Claude Code: Agent 도구로 스폰,
-      Codex: 서브에이전트 스폰. 반드시 새 컨텍스트 — 현재 대화를 공유하지 않는다.)
+   b. **교차 벤더로 검수자를 스폰한다 — 실행자와 다른 모델이 기본이다.**
+      같은 모델은 같은 맹점을 공유하므로, 이종 모델 검수가 상관되지 않은
+      시각을 제공한다. 프롬프트는 `agents/auditor.md` 전문 + 브리핑 + diff:
+      - Claude Code에서 작업 중이면: `codex exec "<검수 입력>"` (headless)
+      - Codex에서 작업 중이면: `claude -p "<검수 입력>"`
+      - 교차 CLI가 없거나 실패하면 동일 벤더의 fresh-context 서브에이전트로
+        폴백하되, 완료 보고에 "동일 벤더 검수"였음을 명시한다.
+      어느 경우든 새 컨텍스트여야 한다 — 현재 대화를 공유하지 않는다.
    c. 검수자가 `.gdm/<슬러그>/audit-report.md`를 저장하고 통과/반려를 반환한다.
    d. `gdm audit verdict --pass|--fail --report .gdm/<슬러그>/audit-report.md`
-6. 반려면: 반려 사유를 check로 반영(`gdm plan add`/`edit --reason`)하고 3으로.
+5. 반려면: 반려 사유를 check로 반영(`gdm plan add`/`edit --reason`)하고 3으로.
    (check가 바뀌면 기존 검수는 자동 무효 — 재검수가 필요해진다. 정상 동작이다.)
-7. 통과면 `gdm done` → 마무리:
+6. 통과면 `gdm done` → 마무리:
    - 커밋: 사용자 커밋 규칙(`feat:`/`fix:` + 한국어 본문, AI 표기 금지) 준수
    - 브랜치/PR가 필요한 저장소면 gitflow 규칙대로 PR 본문 초안 작성
      (변경사항 / 테스트 체크리스트 / Closes #이슈)
