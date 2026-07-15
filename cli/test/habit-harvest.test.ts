@@ -250,6 +250,55 @@ describe("habit harvest", () => {
     expect(ledger).not.toContain(secret);
   });
 
+  test("harvest separates misses by --type into distinct patterns", () => {
+    // Given: two misses of different types plus one untyped miss in one work.
+    const cwd = tempRepo();
+    writeWork(cwd, "typed-work", [
+      jsonLine({ ts: NOW, event: "miss", desc: "문서 누락", type: "docs" }),
+      jsonLine({ ts: NOW, event: "miss", desc: "권한검사 누락", type: "security" }),
+      jsonLine({ ts: NOW, event: "miss", desc: "타입 없는 누락" }),
+    ]);
+
+    // When: harvest maps them.
+    runCli(cwd, ["habit", "harvest", "--json"]);
+    const patterns = readHabitLedger(cwd)
+      .filter((event) => event.kind === "observation")
+      .map((event) => (event.kind === "observation" ? event.pattern : ""));
+
+    // Then: distinct types get distinct patterns (no false "repeat" merge), untyped keeps the base.
+    expect(new Set(patterns).size).toBe(3);
+    expect(patterns).toContain("verification.escape-after-done");
+    expect(patterns.filter((pattern) => pattern.startsWith("verification.escape-after-done-")).length).toBe(2);
+  });
+
+  test("evaluation rejects a work completed before the habit was adopted", () => {
+    // Given: a ledger whose habit is adopted at NOW.
+    let events: readonly HabitEvent[] = [];
+    const additions: HabitEvent[] = [];
+    events = apply(events, createObservation(events, {
+      pattern: PATTERN, taxonomy: "recovery", sourceToken: "src-principle", sourceGroup: "grp-principle", sourceKind: "principle",
+    }, NOW), additions);
+    events = apply(events, createObservation(events, {
+      pattern: PATTERN, taxonomy: "recovery", sourceToken: "src-incident", sourceGroup: "grp-incident", sourceKind: "incident",
+    }, NOW), additions);
+    const sources = events.filter((event) => event.kind === "observation").map((event) => event.eventId);
+    events = apply(events, createProposal(events, { pattern: PATTERN, statement: STATEMENT, sourceEventIds: sources }, NOW), additions);
+    events = apply(events, createAdoption(events, {
+      habitId: HABIT, version: 1, ruleRef: "rules/repeated-failure.md", ruleHash: RULE_HASH, reason: "사용자 명시 승인",
+    }, NOW), additions);
+
+    // And: a work completed before that adoption.
+    const earlier = "2026-07-01T00:00:00.000Z";
+    let work = initWork("old-work", "예전 작업", earlier);
+    ({ work } = addCheck(work, { desc: "검증", cmd: "true", expect: "exit 0" }));
+    work = passCheck(work, "c1", { observed: "out/c1.txt", sha256: "e", manual: false }, earlier);
+    work = closeWork(work, earlier);
+
+    // Then: counting it as skipped is rejected (it predates the habit); ineligible is allowed.
+    expect(() => createEvaluation(events, work, { habitId: HABIT, version: 1, outcome: "skipped" }, NOW)).toThrow();
+    expect(createEvaluation(events, work, { habitId: HABIT, version: 1, outcome: "ineligible" }, NOW).changed).toBe(true);
+  });
+
   test("aggregate retro keeps legacy fields and adds habit next action", () => {
     // Given: one ordinary work journal and one currently adopted habit version.
     const cwd = tempRepo();

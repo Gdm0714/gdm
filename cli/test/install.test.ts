@@ -145,7 +145,7 @@ describe("gdm installation and workflow skills", () => {
     unlinkSync(join(installed.home, ".codex", "skills", "gdm-reflect"));
     const doctor = run(installed.binary, ROOT, ["doctor"], installed.home);
     expect(doctor.stdout).toContain("gdm-reflect: claude[OK] codex[없음]");
-    expect(doctor.stdout).toContain("누락 스킬은 install/install.sh 실행으로 설치");
+    expect(doctor.stdout).toContain("누락 스킬은 재설치로 채웁니다");
   });
 
   test("installed gdm skills close a proposed but unadopted reflection loop", () => {

@@ -186,7 +186,9 @@ function commandStatus(cwd: string, args: readonly string[]): void {
       version: state.proposal.version,
       pattern: state.proposal.pattern,
       statement: state.proposal.statement,
-      lifecycle: state.retirement === undefined ? (state.adoption === undefined ? "proposed" : "adopted") : "retired",
+      lifecycle: state.retirement === undefined
+        ? (state.adoption === undefined ? "proposed" : "adopted")
+        : (state.adoption === undefined ? "rejected" : "retired"),
       ...(state.adoption === undefined ? {} : { ruleRef: state.adoption.ruleRef, ruleHash: state.adoption.ruleHash }),
       metrics: habitMetrics(events, state.proposal.habitId, state.proposal.version),
     }));

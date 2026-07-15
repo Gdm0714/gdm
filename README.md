@@ -10,6 +10,14 @@ gdm의 흐름은 `약속 → 증명 → 관찰 → 습관 → 비교`다.
 - 습관: 서로 다른 근거에서 반복된 패턴만 후보로 만들고 사람이 채택한다.
 - 비교: 다음 작업에서 습관을 실제로 적용했는지와 같은 문제가 재발했는지 본다.
 
+gdm은 두 부분이다: 모델 호출 없이 상태·증거를 판정하는 **결정적 CLI 게이트**와, Claude Code·Codex 양쪽에서 실행 모델이 읽고 따르는 **스킬팩**.
+
+## 요구사항
+
+- macOS 또는 Linux (arm64·x64)
+- 스킬을 쓰려면 [Claude Code](https://claude.com/claude-code) 또는 Codex 중 하나 이상
+- 소스에서 빌드할 때만 [Bun](https://bun.sh) (한 줄 설치는 불필요)
+
 ## 처음 사용하기
 
 ```bash
@@ -49,3 +57,7 @@ bun test
 bunx --bun tsc --noEmit
 bun run build
 ```
+
+## 라이선스
+
+[MIT](./LICENSE)
