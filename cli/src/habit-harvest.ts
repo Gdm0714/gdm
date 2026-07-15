@@ -47,7 +47,12 @@ function mapping(
 ): Mapping | undefined {
   if (!isRecord(value)) return undefined;
   if (value.event === "miss" && typeof value.desc === "string" && value.desc.trim().length > 0) {
-    return { eventClass: "miss", pattern: "verification.escape-after-done", taxonomy: "verification" };
+    // 점으로 나뉜 8자+ 세그먼트 3개는 프라이버시 스캐너가 JWT로 오탐하므로 하이픈으로 잇는다.
+    const type = typeof value.type === "string" ? value.type.trim().toLowerCase() : "";
+    const pattern = type.length > 0
+      ? `verification.escape-after-done-${hash16(type)}`
+      : "verification.escape-after-done";
+    return { eventClass: "miss", pattern, taxonomy: "verification" };
   }
   if (value.event === "recheck" && value.ok === false) {
     return { eventClass: "recheck-failed", pattern: "verification.failed-recheck", taxonomy: "verification" };

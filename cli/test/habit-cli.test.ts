@@ -316,6 +316,27 @@ describe("habit CLI", () => {
     expect(readFileSync(ledgerPath(cwd), "utf8")).toBe(before);
   });
 
+  test("a proposed candidate can be rejected, then not adopted", () => {
+    // Given: a proposed-but-unadopted candidate.
+    const cwd = tempRepo();
+    importAndPropose(cwd);
+
+    // When: it is retired without ever being adopted (rejection).
+    const rejected = runCli(cwd, ["habit", "retire", `${HABIT}@1`, "--reason", "규칙이 부정확"]);
+
+    // Then: rejection succeeds, status reads "rejected", and a later adopt is refused.
+    expect(rejected.exitCode).toBe(0);
+    const status: unknown = JSON.parse(runCli(cwd, ["habit", "status", "--json"]).stdout);
+    const versions: unknown[] = isObject(status) && Array.isArray(status.versions) ? status.versions : [];
+    const version = versions.find((value: unknown) => isObject(value) && value.habitId === HABIT);
+    if (!isObject(version)) throw new Error("missing version");
+    expect(version.lifecycle).toBe("rejected");
+    writeRule(cwd);
+    const adopt = runCli(cwd, ["habit", "adopt", `${HABIT}@1`, "--rule-ref", RULE_REF, "--reason", "시도"]);
+    expect(adopt.exitCode).not.toBe(0);
+    expect(`${adopt.stdout}${adopt.stderr}`).toContain("proposed habit만 채택");
+  });
+
   test("stale ledger lock left by a crash is reclaimed", () => {
     // Given: a lock file older than the staleness window, as if a process died mid-write.
     const cwd = tempRepo();

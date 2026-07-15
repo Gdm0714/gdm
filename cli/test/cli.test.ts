@@ -128,6 +128,33 @@ describe("CLI regression", () => {
     expect(contained.stdout).toContain("c1 통과");
   });
 
+  test("done re-runs auto checks and blocks on code regression", () => {
+    // Given: an auto check proven against a source file.
+    const cwd = tempRepo();
+    writeFileSync(join(cwd, "src.txt"), "GOOD\n");
+    runCli(cwd, ["plan", "init", "--slug", "reg", "--brief", "회귀", "--require", "보존", "--forbid", "자동 커밋"]);
+    runCli(cwd, ["plan", "add", "--slug", "reg", "--desc", "내용 검증", "--cmd", "grep -q GOOD src.txt", "--expect", "exit 0"]);
+    expect(runCli(cwd, ["pass", "c1", "--slug", "reg"]).exitCode).toBe(0);
+
+    // When: the source regresses after pass, then done is attempted.
+    writeFileSync(join(cwd, "src.txt"), "BROKEN\n");
+    const regressed = runCli(cwd, ["done", "--slug", "reg"]);
+
+    // Then: done re-runs the cmd, catches the regression, reverts the check, and refuses to complete.
+    expect(regressed.exitCode).not.toBe(0);
+    const work = validateWork(
+      JSON.parse(readFileSync(join(cwd, ".gdm", "reg", "checks.json"), "utf8")),
+      "checks.json",
+    );
+    expect(work.done).toBe(false);
+    expect(work.checks[0]?.status).toBe("open");
+
+    // And: fixing the source lets pass + done succeed.
+    writeFileSync(join(cwd, "src.txt"), "GOOD\n");
+    expect(runCli(cwd, ["pass", "c1", "--slug", "reg"]).exitCode).toBe(0);
+    expect(runCli(cwd, ["done", "--slug", "reg"]).exitCode).toBe(0);
+  });
+
   test("miss is visible in retro json", () => {
     // Given: an open work with one recorded check.
     const cwd = tempRepo();

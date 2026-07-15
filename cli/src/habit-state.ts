@@ -161,8 +161,8 @@ function applyEvent(
     case "retirement": {
       const key = habitVersionKey(event.habitId, event.version);
       const version = state.versions.get(key);
-      if (version?.adoption === undefined || version.retirement !== undefined) {
-        throw new GdmError("adopted habit만 은퇴할 수 있습니다", "habit_transition");
+      if (version === undefined || version.retirement !== undefined) {
+        throw new GdmError("존재하고 아직 은퇴하지 않은 habit version만 은퇴할 수 있습니다", "habit_transition");
       }
       state.versions.set(key, { ...version, retirement: event });
       break;

@@ -461,10 +461,15 @@ function cmdPlanEdit(cwd: string, args: string[]): void {
     cmd: resolveCmd(cwd, readFlag(args, "cmd")),
     expect: readFlag(args, "expect"),
   };
-  const { work: next, reverted } = editCheck(work, id, patch, reason);
-  appendJournal(cwd, work.slug, { ts, event: "plan.edit", check: id, patch, reason, reverted });
-  saveWork(cwd, next);
-  console.log(`${id} 수정됨${reverted ? " (통과 상태가 해제되어 재검증 필요)" : ""}`);
+  try {
+    const { work: next, reverted } = editCheck(work, id, patch, reason);
+    appendJournal(cwd, work.slug, { ts, event: "plan.edit", check: id, patch, reason, reverted });
+    saveWork(cwd, next);
+    console.log(`${id} 수정됨${reverted ? " (통과 상태가 해제되어 재검증 필요)" : ""}`);
+  } catch (error) {
+    if (error instanceof GdmError) journalDenied(cwd, work.slug, "plan.edit", error, ts, { check: id });
+    throw error;
+  }
 }
 
 function buildManualEvidence(cwd: string, args: string[], note?: string): Omit<Evidence, "at"> {
@@ -551,12 +556,37 @@ function cmdPass(cwd: string, args: string[]): void {
   }
 }
 
+function runRecheck(
+  cwd: string,
+  work: Work,
+  ts: string,
+  targets: Work["checks"],
+): { work: Work; failed: string[] } {
+  let next = work;
+  const failed: string[] = [];
+  for (const check of targets) {
+    try {
+      const evidence = buildAutoEvidence(cwd, next.slug, check.id, check.cmd!);
+      next = refreshEvidence(next, check.id, evidence, ts);
+      appendJournal(cwd, next.slug, { ts, event: "recheck", check: check.id, ok: true, sha256: evidence.sha256 });
+      console.log(`${check.id} 재검증 통과`);
+    } catch (error) {
+      if (!(error instanceof GdmError) || error.code !== "cmd_failed") throw error;
+      next = revertChecks(next, [check.id]);
+      failed.push(check.id);
+      appendJournal(cwd, next.slug, { ts, event: "recheck", check: check.id, ok: false, message: error.message });
+      console.log(`${check.id} 재검증 실패 — open으로 회귀`);
+    }
+  }
+  return { work: next, failed };
+}
+
 function cmdRecheck(cwd: string, args: string[]): void {
   ensureFlags(args, ["check", "slug"]);
   const ts = now();
-  let work = resolveWork(cwd, readFlag(args, "slug"));
+  const initial = resolveWork(cwd, readFlag(args, "slug"));
   const only = readFlag(args, "check");
-  const targets = work.checks.filter(
+  const targets = initial.checks.filter(
     (c) => c.status === "proven" && !c.manual && (!only || c.id === only),
   );
   if (only && targets.length === 0) {
@@ -566,21 +596,7 @@ function cmdRecheck(cwd: string, args: string[]): void {
     console.log("재검증할 자동 통과 항목이 없습니다");
     return;
   }
-  const failed: string[] = [];
-  for (const check of targets) {
-    try {
-      const evidence = buildAutoEvidence(cwd, work.slug, check.id, check.cmd!);
-      work = refreshEvidence(work, check.id, evidence, ts);
-      appendJournal(cwd, work.slug, { ts, event: "recheck", check: check.id, ok: true, sha256: evidence.sha256 });
-      console.log(`${check.id} 재검증 통과`);
-    } catch (error) {
-      if (!(error instanceof GdmError) || error.code !== "cmd_failed") throw error;
-      work = revertChecks(work, [check.id]);
-      failed.push(check.id);
-      appendJournal(cwd, work.slug, { ts, event: "recheck", check: check.id, ok: false, message: error.message });
-      console.log(`${check.id} 재검증 실패 — open으로 회귀`);
-    }
-  }
+  const { work, failed } = runRecheck(cwd, initial, ts, targets);
   saveWork(cwd, work);
   const { proven, total } = provenCount(work);
   if (failed.length > 0) {
@@ -693,10 +709,19 @@ function cmdDone(cwd: string, args: string[]): void {
   const ts = now();
   const work = resolveWork(cwd, readFlag(args, "slug"));
   try {
-    const stale = verifyEvidence(cwd, work);
+    const autoTargets = work.checks.filter((c) => c.status === "proven" && !c.manual);
+    const { work: rechecked, failed } = runRecheck(cwd, work, ts, autoTargets);
+    if (failed.length > 0) {
+      saveWork(cwd, rechecked);
+      throw new GdmError(
+        `완료 전 재검증 실패 — ${failed.join(", ")}가 open으로 회귀했습니다. 코드를 고치고 다시 pass 하세요`,
+        "unproven",
+      );
+    }
+    const stale = verifyEvidence(cwd, rechecked);
     if (stale.length > 0) {
       const ids = stale.map((s) => s.id);
-      const reverted = revertChecks(work, ids);
+      const reverted = revertChecks(rechecked, ids);
       appendJournal(cwd, work.slug, { ts, event: "evidence_stale", checks: ids });
       saveWork(cwd, reverted);
       throw new GdmError(
@@ -706,7 +731,7 @@ function cmdDone(cwd: string, args: string[]): void {
         "evidence_stale",
       );
     }
-    const next = closeWork(work, ts);
+    const next = closeWork(rechecked, ts);
     appendJournal(cwd, work.slug, { ts, event: "done", checks: next.checks.length });
     saveWork(cwd, next);
     console.log(`작업 완료: ${work.slug} (${next.checks.length}/${next.checks.length})`);
@@ -1041,7 +1066,7 @@ function cmdDoctor(cwd: string): void {
     !existsSync(join(homedir(), ".claude", "skills", `gdm-${name}`)) ||
     !existsSync(join(homedir(), ".codex", "skills", `gdm-${name}`))
   )) {
-    console.log(`  → 누락 스킬은 install/install.sh 실행으로 설치`);
+    console.log(`  → 누락 스킬은 재설치로 채웁니다: curl -fsSL https://raw.githubusercontent.com/Gdm0714/gdm/main/install.sh | bash (소스 설치는 install/install.sh)`);
   }
   const works = listWorks(cwd);
   const active = works.filter((w) => !w.done);

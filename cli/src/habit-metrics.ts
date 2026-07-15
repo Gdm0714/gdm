@@ -90,6 +90,9 @@ export function createEvaluation(
     throw new GdmError("현재 adopted habit만 평가할 수 있습니다", "habit_transition");
   }
   assertActivation(work, targetHabitId, version, value);
+  if (value !== "ineligible" && work.doneAt !== undefined && work.doneAt < lifecycle.adoption.at) {
+    throw new GdmError("채택 이전에 완료된 작업은 적용 대상이 아닙니다 (ineligible만 기록 가능)", "habit_transition");
+  }
   const current = state.latestEvaluations.get(evaluationKey(targetHabitId, version, slug));
   if (current === undefined) {
     if (input.correct !== undefined || input.reason !== undefined) {
