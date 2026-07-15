@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: 릴리스 빌드·발행
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: 크로스 컴파일 (darwin/linux × arm64/x64)
+        working-directory: cli
+        run: |
+          mkdir -p ../dist
+          for pair in \
+            "bun-darwin-arm64:gdm-darwin-arm64" \
+            "bun-darwin-x64:gdm-darwin-x64" \
+            "bun-linux-x64:gdm-linux-x64" \
+            "bun-linux-arm64:gdm-linux-arm64"; do
+            target="${pair%%:*}"; out="${pair##*:}"
+            echo "빌드 $out ($target)"
+            bun build src/cli.ts --compile --target="$target" --outfile "../dist/$out"
+          done
+      - name: 스킬·검수자 번들
+        run: tar -czf dist/gdm-skills.tar.gz skills agents
+      - name: 체크섬
+        working-directory: dist
+        run: sha256sum gdm-darwin-arm64 gdm-darwin-x64 gdm-linux-x64 gdm-linux-arm64 gdm-skills.tar.gz > SHASUMS256.txt
+      - name: GitHub Release 발행
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            dist/gdm-darwin-arm64 dist/gdm-darwin-x64 \
+            dist/gdm-linux-x64 dist/gdm-linux-arm64 \
+            dist/gdm-skills.tar.gz dist/SHASUMS256.txt \
+            --title "gdm ${GITHUB_REF_NAME}" --generate-notes
