@@ -149,6 +149,10 @@ export function renderWorkMd(work: Work): string {
     const evidence = c.evidence ? c.evidence.observed : "—";
     return `| ${c.id} | ${checkMark(c)} | ${c.desc} | ${cmd} | ${c.expect} | ${evidence} |`;
   });
+  const required =
+    work.contract.required.length > 0 ? work.contract.required.map((value) => `  - ${value}`) : ["  - 없음"];
+  const forbidden =
+    work.contract.forbidden.length > 0 ? work.contract.forbidden.map((value) => `  - ${value}`) : ["  - 없음"];
   return [
     `# ${work.slug}`,
     "",
@@ -157,6 +161,14 @@ export function renderWorkMd(work: Work): string {
     "## 목표",
     "",
     work.brief,
+    "",
+    "## 작업 계약",
+    "",
+    `- 커밋: ${work.contract.commit}`,
+    "- 필수:",
+    ...required,
+    "- 금지:",
+    ...forbidden,
     "",
     "## 확인 항목",
     "",

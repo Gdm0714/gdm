@@ -1,0 +1,144 @@
+import { createHash } from "node:crypto";
+import { existsSync, lstatSync, readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+import { opaqueId } from "./contract.ts";
+import { parseHarvestJson } from "./habit-json.ts";
+import { createObservation } from "./habit.ts";
+import { appendHabitEvents, readHabitLedger } from "./habit-store.ts";
+import { workSlug } from "./habit-validation.ts";
+import type { HabitEvent, HabitTaxonomy } from "./habit.ts";
+
+type EventClass = "miss" | "denied-repeat" | "recheck-failed" | "plan-edit";
+
+type Mapping = {
+  readonly eventClass: EventClass;
+  readonly pattern: string;
+  readonly taxonomy: HabitTaxonomy;
+};
+
+export type HarvestResult = {
+  readonly scanned: number;
+  readonly mapped: number;
+  readonly appended: number;
+  readonly replayed: number;
+  readonly skippedUnsafe: number;
+  readonly skippedUnrecognized: number;
+};
+
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function hash16(value: string): string {
+  return createHash("sha256").update(value).digest("hex").slice(0, 16);
+}
+
+function sourceGroup(slug: string): string {
+  return `grp-${hash16(`gdm-harvest-group-v1\0${slug}`)}`;
+}
+
+function sourceToken(slug: string, line: number, eventClass: EventClass): string {
+  return `src-${hash16(`gdm-harvest-source-v1\0${slug}\0${line}\0${eventClass}`)}`;
+}
+
+function mapping(
+  value: unknown,
+  denied: Map<string, number>,
+): Mapping | undefined {
+  if (!isRecord(value)) return undefined;
+  if (value.event === "miss" && typeof value.desc === "string" && value.desc.trim().length > 0) {
+    return { eventClass: "miss", pattern: "verification.escape-after-done", taxonomy: "verification" };
+  }
+  if (value.event === "recheck" && value.ok === false) {
+    return { eventClass: "recheck-failed", pattern: "verification.failed-recheck", taxonomy: "verification" };
+  }
+  if (value.event === "plan.edit" && typeof value.reason === "string" && value.reason.trim().length > 0) {
+    return { eventClass: "plan-edit", pattern: "intent.criteria-revised", taxonomy: "intent" };
+  }
+  if (value.event !== "denied" || typeof value.code !== "string") return undefined;
+  try {
+    opaqueId(value.code, "harvest-code");
+  } catch {
+    return undefined;
+  }
+  const count = (denied.get(value.code) ?? 0) + 1;
+  denied.set(value.code, count);
+  return count < 2
+    ? undefined
+    : { eventClass: "denied-repeat", pattern: "recovery.repeated-denial", taxonomy: "recovery" };
+}
+
+function journalFiles(cwd: string): readonly { readonly slug: string; readonly path: string }[] {
+  const root = join(cwd, ".gdm");
+  if (!existsSync(root) || !lstatSync(root).isDirectory() || lstatSync(root).isSymbolicLink()) return [];
+  const files: { slug: string; path: string }[] = [];
+  for (const name of readdirSync(root).sort()) {
+    let slug: string;
+    try {
+      slug = workSlug(name);
+    } catch {
+      continue;
+    }
+    const directory = join(root, name);
+    const path = join(directory, "journal.jsonl");
+    if (
+      !existsSync(directory) ||
+      !lstatSync(directory).isDirectory() ||
+      lstatSync(directory).isSymbolicLink() ||
+      !existsSync(path) ||
+      !lstatSync(path).isFile() ||
+      lstatSync(path).isSymbolicLink()
+    ) continue;
+    files.push({ slug, path });
+  }
+  return files;
+}
+
+export function harvestHabits(cwd: string, at: string): HarvestResult {
+  const candidates: { readonly slug: string; readonly line: number; readonly mapping: Mapping }[] = [];
+  let scanned = 0;
+  let skippedUnsafe = 0;
+  let skippedUnrecognized = 0;
+  for (const file of journalFiles(cwd)) {
+    const denied = new Map<string, number>();
+    const lines = readFileSync(file.path, "utf8").split("\n");
+    for (const [index, raw] of lines.entries()) {
+      if (raw.length === 0 && index === lines.length - 1) continue;
+      scanned++;
+      let value: unknown;
+      try {
+        if (raw.length === 0 || Buffer.byteLength(raw, "utf8") >= 2048) throw new Error("unsafe");
+        value = parseHarvestJson(raw, "harvest");
+      } catch {
+        skippedUnsafe++;
+        continue;
+      }
+      const recognized = mapping(value, denied);
+      if (recognized === undefined) {
+        skippedUnrecognized++;
+        continue;
+      }
+      candidates.push({ slug: file.slug, line: index + 1, mapping: recognized });
+    }
+  }
+  let working = readHabitLedger(cwd);
+  const additions: HabitEvent[] = [];
+  let replayed = 0;
+  for (const candidate of candidates) {
+    const mutation = createObservation(working, {
+      pattern: candidate.mapping.pattern,
+      taxonomy: candidate.mapping.taxonomy,
+      sourceToken: sourceToken(candidate.slug, candidate.line, candidate.mapping.eventClass),
+      sourceGroup: sourceGroup(candidate.slug),
+      sourceKind: "incident",
+    }, at);
+    if (mutation.changed) {
+      additions.push(mutation.event);
+      working = [...working, mutation.event];
+    } else {
+      replayed++;
+    }
+  }
+  const appended = appendHabitEvents(cwd, additions).appended;
+  return { scanned, mapped: candidates.length, appended, replayed, skippedUnsafe, skippedUnrecognized };
+}

@@ -18,6 +18,8 @@ description: |
 
 - NEVER: `.gdm/` 아래 파일을 직접 쓰거나 고치지 않는다. 상태 변경은 gdm CLI로만 한다.
 - NEVER: `gdm done`이 성공(exit 0)하기 전에 "완료했다"고 보고하지 않는다.
+- NEVER: 이 실행 루프에서 stage, commit, push, PR을 만들지 않는다. `done`은 검증 완료이지
+  전달 승인이 아니다.
 - NEVER: 통과가 어렵다는 이유로 check의 cmd나 expect를 약하게 고치지 않는다.
   기준 조정이 정말 필요하면 `gdm plan edit --reason`으로 사유를 남긴다
   (통과된 항목을 고치면 통과가 해제되고, 모든 수정·거부는 journal에 기록된다).
@@ -31,7 +33,7 @@ description: |
 
 | 명령 | 용도 |
 |---|---|
-| `gdm plan init --slug <s> --brief <설명>` | 작업 시작 |
+| `gdm plan init --slug <s> --brief <설명> --require <보존> --forbid <금지>` | 작업 계약과 함께 시작 |
 | `gdm plan add --desc <항목> --cmd <검증 명령> --expect <기대> [--manual]` | 항목 등록 |
 | `gdm plan list` | 항목/상태 확인 |
 | `gdm plan edit --check <id> [...] --reason <사유>` | 항목 조정 (사유 필수) |
@@ -41,18 +43,42 @@ description: |
 | `gdm done` | 완료 — 전 항목 통과 + 증거 파일 현존·해시 재검증 후에만 exit 0 |
 | `gdm status` | 현재 디렉토리 전체 작업 현황 |
 | `gdm resume` | 중단된 작업 상태 복원 |
+| `gdm attempt fail ...` | 실패 서명·가설과 한 번의 확인 재시도 기록 |
+| `gdm attempt retry ...` | 바뀐 전제와 새 증거가 있을 때만 다음 재시도 허용 |
+| `gdm habit harvest --json` | 종료 시 실제 journal 사건을 정규화된 관찰로 수확 |
 
 ## 프로세스
 
 순서는 계약(init → add → pass → done)이고, 그 안의 진행 방식은 판단에 맡긴다.
 
-1. `gdm plan init` 후 작업을 검증 항목으로 분해해 `gdm plan add`. 좋은 check의
+구현 워커: 경량 루프이므로 **조율자(앉은 CLI)가 직접 구현**하는 것이 기본이다 — 매 스텝
+headless 위임은 과하다. 특정 항목만 `codex exec`로 위임하는 것은 선택이며, 검수까지 필요한
+중량 작업은 gdm-full로 올린다. 라우팅 계약: `skills/_shared/routing.md`.
+
+1. 지속 계획의 작업 계약 초안으로 `gdm plan init --require ... --forbid ...`을 실행한 뒤
+   작업을 검증 항목으로 분해해 `gdm plan add`. 좋은 check의
    기준은 하나다 — **cmd가 성공하면 기대가 충족됐다고 믿을 수 있는가.**
-   등록한 목록(`gdm plan list`)을 사용자에게 보여준다.
+   등록한 목록(`gdm plan list`)을 사용자에게 보여준다. 적용할 adopted habit이 있으면
+   첫 pass 전에만 `gdm plan contract --slug <슬러그> --activate-habit <id>@<version>`으로 고정한다.
 2. 구현하고 `gdm pass <id>`. 실패하면 출력(`.gdm/<슬러그>/out/<id>.txt`)을 읽고
-   구현을 고친다. 수동 항목은 확인 기록을 저장한 뒤 `--manual --observed <경로>`.
+   `gdm attempt fail`로 command/capability·target·error-code·가설을 기록한다. 같은 실패
+   서명은 확인 재시도를 한 번만 허용한다. 다시 실패하면 그대로 반복하지 말고,
+   전제가 실제로 바뀐 경우에만 새 contained evidence와 함께
+   `gdm attempt retry --changed <종류> --evidence <파일>`로 다음 epoch를 연다.
+   수동 항목은 확인 기록을 저장한 뒤 `--manual --observed <경로>`.
+
+   ```text
+   gdm attempt fail --slug <s> --attempt-id a1 --command <id> --target <id> --error-code <id> --hypothesis <가설>
+   gdm attempt retry --slug <s> --attempt-id a2 --fingerprint <첫 명령이 출력한 fingerprint>
+   gdm attempt fail --slug <s> --attempt-id a3 --command <id> --target <id> --error-code <id> --hypothesis <확인 결과>
+   gdm attempt retry --slug <s> --attempt-id a4 --fingerprint <fingerprint> --changed <종류> --evidence <파일>
+   ```
 3. 여러 항목·여러 파일을 고쳤으면 done 전에 `gdm recheck`.
-4. `gdm done` 성공 시에만 완료를 보고한다. 재개는 `gdm resume`. 완료 이후
+4. `gdm done` 성공 뒤 `gdm habit harvest --json`을 정확히 한 번 실행해 이번 작업의
+   반복 사건을 수확하고, 적용한 habit이 있으면 `ineligible|skipped|clean|recurred` 중
+   실제 결과를 `gdm habit evaluate`로 기록한다. 새 후보 검토가 필요하면
+   `gdm-reflect`를 안내하되 자동 채택하지 않는다.
+5. 이 피드백 checkpoint까지 끝난 뒤에만 완료를 보고한다. 재개는 `gdm resume`. 완료 이후
    이 작업에서 결함이 발견되면 `gdm miss --desc ... --type ...`으로 기록한다
    — 게이트 개선(retro --all)의 입력이 된다.
 
@@ -102,13 +128,14 @@ Good:
 사용자: 엑셀 다운로드 기본 제한을 50만 건으로 바꿔줘. $gdm-go
 
 어시스턴트:
-1. `gdm plan init --slug excel-limit --brief "엑셀 다운로드 기본 제한 50만 건으로 변경"`
+1. `gdm plan init --slug excel-limit --brief "엑셀 다운로드 기본 제한 50만 건으로 변경" --require "기존 다운로드 동작 보존" --forbid "자동 커밋"`
 2. check 등록:
    c1 "설정값 변경" (cmd: grep -q "DEFAULT_LIMIT = 500_000" src/config.ts)
    c2 "단위 테스트 통과" (cmd: ./gradlew test --tests '*Excel*')
    c3 "50만 초과 요청 시 안내 응답" (cmd: curl -sf .../download?rows=600000 | grep -q "제한")
 3. 구현 → `gdm pass c1` → `gdm pass c2` → `gdm pass c3` → `gdm done`
-4. "완료: 기본 제한이 50만 건으로 변경됐고 3개 항목이 전부 실행 증거로 통과했습니다.
+4. `gdm habit harvest --json` → 적용한 habit이 있으면 결과 평가
+5. "완료: 기본 제한이 50만 건으로 변경됐고 3개 항목이 전부 실행 증거로 통과했습니다.
    요약: .gdm/excel-limit/work.md"
 </example>
 

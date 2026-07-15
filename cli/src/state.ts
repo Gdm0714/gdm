@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import type { Audit, Check, Evidence, Work } from "./types.ts";
+import { defaultContract, normalizeContract } from "./contract.ts";
+import type { Audit, Check, Evidence, Work, WorkContract } from "./types.ts";
 
 export class GdmError extends Error {
   constructor(
@@ -20,11 +21,17 @@ export function validateSlug(slug: string): string {
   return slug;
 }
 
-export function initWork(slug: string, brief: string, now: string, auditRequired = false): Work {
+export function initWork(
+  slug: string,
+  brief: string,
+  now: string,
+  auditRequired = false,
+  contract: WorkContract = defaultContract(),
+): Work {
   validateSlug(slug);
   const trimmed = brief.trim();
   if (!trimmed) throw new GdmError("brief(작업 설명)가 비어 있습니다", "empty_brief");
-  return { slug, brief: trimmed, createdAt: now, done: false, auditRequired, checks: [] };
+  return { slug, brief: trimmed, createdAt: now, done: false, auditRequired, checks: [], contract };
 }
 
 export function checksHash(work: Work): string {
@@ -218,5 +225,5 @@ export function validateWork(raw: unknown, source: string): Work {
       bad(`${check.id}: 증거 없이 proven — 상태 파일이 gdm 외부에서 수정됨`);
     }
   }
-  return work;
+  return { ...work, contract: normalizeContract(work.contract) };
 }
