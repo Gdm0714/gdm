@@ -15,6 +15,9 @@ jobs:
       - name: 의존성 설치
         working-directory: cli
         run: bun install --frozen-lockfile
+      - name: 타입체크
+        working-directory: cli
+        run: bunx --bun tsc --noEmit
       - name: 유닛 테스트
         working-directory: cli
         run: bun test

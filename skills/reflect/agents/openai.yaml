@@ -1,0 +1,4 @@
+interface:
+  display_name: "GDM Reflect"
+  short_description: "작업 증거를 안전한 습관 후보로 정규화합니다"
+  default_prompt: "Use $gdm-reflect to turn selected local evidence into a reviewed habit candidate without adopting it."

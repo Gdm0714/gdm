@@ -23,6 +23,12 @@ description: |
 
 ## 프로세스
 
+워커 배정: 계획의 **소유자는 현재 세션**이다 — 사용자 문답, 코드 조사, 작업 계약, 문서
+검토·저장은 위임하지 않는다 (라우팅 계약: `skills/_shared/routing.md`의 역할 배정 표와 동일).
+그 안에서 초안 **문서 작성만** Codex 워커에 맡긴다: 조율자가 Codex가 아니면 요청·가정·조사
+결과를 정리해 `codex exec`로 초안 작성을 위임한 뒤 받아 검토·저장하고, 조율자가 Codex면
+전 과정을 직접 한다. 위임 도구가 없거나 실패하면 현재 세션이 직접 작성하고 사유를 남긴다.
+
 1. 요청을 읽고 모호한 지점을 가른다: 방향을 가르는 모호함이면 질문, 아니면
    기본값 선택 후 문서에 "가정"으로 기록.
 2. 관련 코드를 읽어 현재 구조를 파악한다 (추측 금지).
@@ -42,6 +48,10 @@ gdm plan add에 그대로 쓸 수 있는 형태:
 - desc: ... / cmd: ... / expect: ...
 - desc: ... (manual) / expect: ...
 
+## 작업 계약 초안
+- require: <반드시 보존할 사용자 결과·기존 변경>
+- forbid: <하면 안 되는 전달·데이터·범위 변경>
+
 ## 구현 단계
 1. <파일:위치> 무엇을 어떻게
 2. ...
@@ -50,8 +60,12 @@ gdm plan add에 그대로 쓸 수 있는 형태:
 - ...
 ```
 
-4. 문서 경로를 알려주고, 실행 연결을 안내한다:
-   `gdm plan init --slug <슬러그> --brief-file .gdm/plans/<슬러그>.md` (+중량이면 `--audit`).
+4. 대화가 끊겨도 새 컨텍스트가 복원할 수 있도록 목표·가정·검증 항목뿐 아니라
+   `require`/`forbid` 작업 계약도 문서에 남긴다. 채팅 요약만 다음 실행에 넘기지 않는다.
+5. 문서 경로를 알려주고, 계약을 포함한 실행 연결을 안내한다:
+   `gdm plan init --slug <슬러그> --brief-file .gdm/plans/<슬러그>.md --require '<보존 조건>' --forbid '<금지 조건>'`
+   (+중량이면 `--audit`). `--forbid '자동 커밋'`이 기본이며 사용자가 별도로 승인하기
+   전에는 계획 완료나 `done`을 전달 승인으로 해석하지 않는다.
 
 ## 엣지 케이스
 
@@ -83,7 +97,8 @@ Good:
 문서: .gdm/plans/download-limit-config.md — 검증 항목 초안 4개 포함.
 확인 필요: 상한선을 두시겠어요? (문서에는 100만 건 상한 가정으로 작성)
 바로 시작하려면: gdm plan init --slug download-limit-config
---brief-file .gdm/plans/download-limit-config.md --audit"
+--brief-file .gdm/plans/download-limit-config.md --require '기존 다운로드 동작 보존'
+--forbid '자동 커밋' --audit"
 </example>
 
 <commentary>
