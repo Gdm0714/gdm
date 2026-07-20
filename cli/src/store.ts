@@ -5,13 +5,25 @@ import {
   readdirSync,
   readFileSync,
   renameSync,
+  rmSync,
   writeFileSync,
 } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { GdmError, provenCount, validateSlug, validateWork } from "./state.ts";
 import type { Check, JournalEvent, Work } from "./types.ts";
 
 const ROOT = ".gdm";
+
+function atomicWriteFile(path: string, body: string | Uint8Array): void {
+  const tmp = `${path}.tmp.${process.pid}.${randomUUID()}`;
+  try {
+    writeFileSync(tmp, body, { flag: "wx" });
+    renameSync(tmp, path);
+  } finally {
+    rmSync(tmp, { force: true });
+  }
+}
 
 export function workDir(cwd: string, slug: string): string {
   validateSlug(slug);
@@ -45,10 +57,48 @@ export function saveWork(cwd: string, work: Work): void {
   const dir = workDir(cwd, work.slug);
   mkdirSync(join(dir, "out"), { recursive: true });
   const path = join(dir, "checks.json");
-  const tmp = `${path}.tmp`;
-  writeFileSync(tmp, JSON.stringify(work, null, 2) + "\n");
-  renameSync(tmp, path);
-  writeFileSync(join(dir, "work.md"), renderWorkMd(work));
+  atomicWriteFile(path, JSON.stringify(work, null, 2) + "\n");
+  atomicWriteFile(join(dir, "work.md"), renderWorkMd(work));
+}
+
+export function repairTrailingNulWork(
+  cwd: string,
+  slug: string,
+): { work: Work; removedBytes: number } {
+  const path = join(workDir(cwd, slug), "checks.json");
+  if (!existsSync(path)) throw new GdmError(`작업 "${slug}"가 없습니다`, "work_not_found");
+
+  const contents = readFileSync(path);
+  let end = contents.length;
+  while (end > 0 && contents[end - 1] === 0) end--;
+  const removedBytes = contents.length - end;
+  if (removedBytes === 0) {
+    throw new GdmError(
+      `복구를 거부했습니다 (${path}): 파일 끝에 NUL 바이트가 없습니다`,
+      "repair_not_applicable",
+    );
+  }
+
+  let raw: unknown;
+  try {
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(contents.subarray(0, end));
+    raw = JSON.parse(text);
+  } catch {
+    throw new GdmError(
+      `복구를 거부했습니다 (${path}): trailing NUL 제거 후에도 JSON 파싱 실패`,
+      "state_corrupt",
+    );
+  }
+  const work = validateWork(raw, path);
+  if (work.slug !== slug) {
+    throw new GdmError(
+      `복구를 거부했습니다 (${path}): 디렉토리(${slug})와 slug(${work.slug}) 불일치`,
+      "state_corrupt",
+    );
+  }
+
+  atomicWriteFile(path, contents.subarray(0, end));
+  return { work, removedBytes };
 }
 
 export function appendJournal(cwd: string, slug: string, event: JournalEvent): void {
@@ -126,9 +176,7 @@ export function loadPresets(cwd: string): Record<string, string> {
 export function savePresets(cwd: string, presets: Record<string, string>): void {
   mkdirSync(join(cwd, ROOT), { recursive: true });
   const path = join(cwd, ROOT, "presets.json");
-  const tmp = `${path}.tmp`;
-  writeFileSync(tmp, JSON.stringify(presets, null, 2) + "\n");
-  renameSync(tmp, path);
+  atomicWriteFile(path, JSON.stringify(presets, null, 2) + "\n");
 }
 
 export function checkMark(check: Check): string {

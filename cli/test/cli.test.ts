@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { validateWork } from "../src/state.ts";
+import { checksHash, validateWork } from "../src/state.ts";
 
 const CLI = join(import.meta.dir, "..", "src", "cli.ts");
 const decoder = new TextDecoder();
@@ -30,6 +31,10 @@ function tempRepo(): string {
   return mkdtempSync(join(tmpdir(), "gdm-cli-test-"));
 }
 
+function fileHash(path: string): string {
+  return createHash("sha256").update(readFileSync(path)).digest("hex");
+}
+
 describe("CLI regression", () => {
   test("bare and help show the current usage", () => {
     // Given: an empty temporary repository.
@@ -42,7 +47,7 @@ describe("CLI regression", () => {
     // Then: both are read-only successful usage responses.
     expect(bare.exitCode).toBe(0);
     expect(help.exitCode).toBe(0);
-    expect(bare.stderr).toContain("gdm 0.8.0 — 작업 증거가 다음 습관을 바꾸는 개인 AI 워크플로우");
+    expect(bare.stderr).toContain("gdm 0.8.2 — 작업 증거가 다음 습관을 바꾸는 개인 AI 워크플로우");
     expect(help.stderr).toBe(bare.stderr);
     expect(existsSync(join(cwd, ".gdm"))).toBe(false);
   });
@@ -153,6 +158,73 @@ describe("CLI regression", () => {
     writeFileSync(join(cwd, "src.txt"), "GOOD\n");
     expect(runCli(cwd, ["pass", "c1", "--slug", "reg"]).exitCode).toBe(0);
     expect(runCli(cwd, ["done", "--slug", "reg"]).exitCode).toBe(0);
+  });
+
+  test("audit pass survives done validation without changing audit-bound evidence", () => {
+    // Given: an audited automatic check whose command records each execution outside its evidence file.
+    const cwd = tempRepo();
+    const slug = "audited";
+    expect(
+      runCli(cwd, [
+        "plan",
+        "init",
+        "--slug",
+        slug,
+        "--brief",
+        "검수 완료 무결성",
+        "--audit",
+        "--require",
+        "증거 보존",
+        "--forbid",
+        "자동 커밋",
+      ]).exitCode,
+    ).toBe(0);
+    expect(
+      runCli(cwd, [
+        "plan",
+        "add",
+        "--slug",
+        slug,
+        "--desc",
+        "재실행 확인",
+        "--cmd",
+        "printf 'run\\n' >> executions.log",
+        "--expect",
+        "exit 0",
+      ]).exitCode,
+    ).toBe(0);
+    expect(runCli(cwd, ["pass", "c1", "--slug", slug]).exitCode).toBe(0);
+    const report = join(cwd, ".gdm", slug, "audit-report.md");
+    writeFileSync(report, "[APPROVE]\n");
+    expect(runCli(cwd, ["audit", "verdict", "--pass", "--report", report, "--slug", slug]).exitCode).toBe(0);
+
+    const statePath = join(cwd, ".gdm", slug, "checks.json");
+    const evidencePath = join(cwd, ".gdm", slug, "out", "c1.txt");
+    const before = validateWork(JSON.parse(readFileSync(statePath, "utf8")), statePath);
+    const auditBoundBefore = {
+      checks: checksHash(before),
+      evidence: JSON.stringify(before.checks[0]?.evidence),
+      evidenceFile: fileHash(evidencePath),
+      report: fileHash(report),
+    };
+
+    // When: done performs its mandatory automatic validation.
+    const done = runCli(cwd, ["done", "--slug", slug]);
+
+    // Then: the command ran twice, done succeeds, and every audit-bound byte/hash remains stable.
+    expect(done.exitCode).toBe(0);
+    expect(readFileSync(join(cwd, "executions.log"), "utf8")).toBe("run\nrun\n");
+    const after = validateWork(JSON.parse(readFileSync(statePath, "utf8")), statePath);
+    expect(after.done).toBe(true);
+    expect(after.audit?.stateHash).toBe(checksHash(after));
+    expect({
+      checks: checksHash(after),
+      evidence: JSON.stringify(after.checks[0]?.evidence),
+      evidenceFile: fileHash(evidencePath),
+      report: fileHash(report),
+    }).toEqual(auditBoundBefore);
+    const status = JSON.parse(runCli(cwd, ["status", "--json"]).stdout) as Array<{ slug: string; audit: string }>;
+    expect(status.find((item) => item.slug === slug)?.audit).toBe("검수: 통과");
   });
 
   test("miss is visible in retro json", () => {
