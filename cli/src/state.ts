@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { defaultContract, normalizeContract } from "./contract.ts";
-import type { Audit, Check, Evidence, Work, WorkContract } from "./types.ts";
+import type { Audit, Check, Evidence, Work, WorkContract, WorkspaceFingerprint } from "./types.ts";
 
 export class GdmError extends Error {
   constructor(
@@ -38,7 +38,16 @@ export function checksHash(work: Work): string {
   return createHash("sha256").update(JSON.stringify(work.checks)).digest("hex");
 }
 
-export function recordAudit(work: Work, result: Audit["result"], report: string, now: string): Work {
+export function recordAudit(
+  work: Work,
+  result: Audit["result"],
+  report: string,
+  reportSha256: string,
+  implementationModel: string,
+  auditModel: string,
+  workspace: WorkspaceFingerprint | null,
+  now: string,
+): Work {
   if (work.done) throw new GdmError("이미 완료된 작업입니다", "work_done");
   const open = work.checks.filter((c) => c.status !== "proven");
   if (work.checks.length === 0 || open.length > 0) {
@@ -48,7 +57,26 @@ export function recordAudit(work: Work, result: Audit["result"], report: string,
     );
   }
   if (!report?.trim()) throw new GdmError("검수보고 파일 경로(report)가 필요합니다", "report_required");
-  return { ...work, audit: { result, report, stateHash: checksHash(work), at: now } };
+  if (!reportSha256?.trim()) throw new GdmError("검수보고 해시가 필요합니다", "report_required");
+  if (!implementationModel?.trim() || !auditModel?.trim()) {
+    throw new GdmError("구현 모델과 검수 모델이 필요합니다", "audit_models_required");
+  }
+  if (implementationModel.trim().toLowerCase() === auditModel.trim().toLowerCase()) {
+    throw new GdmError("구현 모델과 검수 모델은 달라야 합니다", "audit_independence");
+  }
+  return {
+    ...work,
+    audit: {
+      result,
+      report,
+      reportSha256,
+      implementationModel: implementationModel.trim(),
+      auditModel: auditModel.trim(),
+      workspace,
+      stateHash: checksHash(work),
+      at: now,
+    },
+  };
 }
 
 export interface CheckInput {
@@ -224,6 +252,27 @@ export function validateWork(raw: unknown, source: string): Work {
     if (check.status === "proven" && !check.evidence?.sha256) {
       bad(`${check.id}: 증거 없이 proven — 상태 파일이 gdm 외부에서 수정됨`);
     }
+  }
+  if (work.delivery !== undefined) {
+    const delivery = work.delivery;
+    if (
+      typeof delivery !== "object" || delivery === null || typeof delivery.issue !== "string" ||
+      typeof delivery.branch !== "string" || typeof delivery.head !== "string" ||
+      typeof delivery.preparedAt !== "string"
+    ) bad("delivery 형태 오류");
+    if (delivery.pr && (typeof delivery.pr.number !== "string" || typeof delivery.pr.head !== "string")) {
+      bad("delivery.pr 형태 오류");
+    }
+    if (
+      delivery.ci &&
+      ((delivery.ci.status !== "passed" && delivery.ci.status !== "failed") ||
+        typeof delivery.ci.head !== "string" || typeof delivery.ci.run !== "string")
+    ) bad("delivery.ci 형태 오류");
+    if (
+      delivery.mergeApproval &&
+      (typeof delivery.mergeApproval.head !== "string" || typeof delivery.mergeApproval.reason !== "string")
+    ) bad("delivery.mergeApproval 형태 오류");
+    if (delivery.merged && typeof delivery.merged.sha !== "string") bad("delivery.merged 형태 오류");
   }
   return { ...work, contract: normalizeContract(work.contract) };
 }

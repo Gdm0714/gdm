@@ -10,7 +10,14 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { attemptFingerprint, parseChangeCategory } from "../src/attempt.ts";
+import {
+  attemptFingerprint,
+  parseChangeCategory,
+  prepareFailure,
+  prepareRetry,
+  recordFailure,
+  recordRetry,
+} from "../src/attempt.ts";
 
 const CLI = join(import.meta.dir, "..", "src", "cli.ts");
 const decoder = new TextDecoder();
@@ -128,6 +135,46 @@ describe("attempt gate", () => {
 
     // Then: trimming is deterministic and the fixed SHA-256 vector is preserved.
     expect(fingerprint).toBe(FINGERPRINT);
+  });
+
+  test("domain transitions require confirmation and changed evidence", () => {
+    const cwd = tempRepo();
+    const at = "2026-07-20T00:00:00.000Z";
+    const firstInput = prepareFailure({
+      attemptId: "direct1",
+      sourceKind: "command",
+      sourceId: "build.test",
+      target: "cli",
+      errorCode: "ENOENT",
+      hypothesis: "host file missing",
+    });
+    const first = recordFailure([], firstInput, at);
+    expect(first.event.decision).toBe("awaiting-confirmation");
+    expect(recordFailure([first.event], firstInput, at).changed).toBe(false);
+
+    const confirmationInput = prepareRetry({ attemptId: "direct2", fingerprint: firstInput.fingerprint });
+    const confirmation = recordRetry(cwd, [first.event], confirmationInput, at);
+    expect(confirmation.event.decision).toBe("confirmation-permitted");
+
+    const secondInput = prepareFailure({ ...firstInput, attemptId: "direct3" });
+    const second = recordFailure([first.event, confirmation.event], secondInput, at);
+    expect(second.event.decision).toBe("locked");
+    expect(() => recordRetry(cwd, [first.event, confirmation.event, second.event], prepareRetry({
+      attemptId: "direct4",
+      fingerprint: firstInput.fingerprint,
+    }), at)).toThrow("unchanged_retry");
+
+    const path = evidence(cwd, "direct-change.txt", "changed input\n");
+    const changedInput = prepareRetry({
+      attemptId: "direct5",
+      fingerprint: firstInput.fingerprint,
+      changed: "input",
+      evidence: path,
+    });
+    const changed = recordRetry(cwd, [first.event, confirmation.event, second.event], changedInput, at);
+    expect(changed.event.decision).toBe("changed-permitted");
+    expect(changed.event.epoch).toBe(1);
+    expect(changed.event.evidenceSha256).toHaveLength(64);
   });
 
   test("changed evidence opens a new retry epoch", () => {

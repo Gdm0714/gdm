@@ -223,6 +223,20 @@ export function renderWorkMd(work: Work): string {
     "| ID | 상태 | 항목 | 재현 명령 | 기대 | 증거 |",
     "|---|---|---|---|---|---|",
     ...rows,
+    ...(work.delivery
+      ? [
+          "",
+          "## 전달",
+          "",
+          `- 이슈: ${work.delivery.issue}`,
+          `- 브랜치: ${work.delivery.branch}`,
+          `- HEAD: ${work.delivery.head}`,
+          `- PR: ${work.delivery.pr?.number ?? "—"}`,
+          `- CI: ${work.delivery.ci?.status ?? "—"}`,
+          `- 머지 승인: ${work.delivery.mergeApproval ? "승인" : "—"}`,
+          `- 머지 SHA: ${work.delivery.merged?.sha ?? "—"}`,
+        ]
+      : []),
     "",
   ].join("\n");
 }

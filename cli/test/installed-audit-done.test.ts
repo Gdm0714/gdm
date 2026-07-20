@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import packageJson from "../package.json";
 
 const decoder = new TextDecoder();
 const enabled = process.env.GDM_INSTALLED_CAPABILITY === "1";
@@ -29,7 +30,7 @@ describe("installed audit-done capability", () => {
     const cwd = mkdtempSync(join(tmpdir(), "gdm-installed-audit-done-"));
     const slug = "capability-probe";
 
-    expect(run(binary, cwd, ["--version"]).stdout.trim()).toBe("0.8.2");
+    expect(run(binary, cwd, ["--version"]).stdout.trim()).toBe(packageJson.version);
     expect(
       run(binary, cwd, [
         "plan",
@@ -64,9 +65,13 @@ describe("installed audit-done capability", () => {
     const root = join(cwd, ".gdm", slug);
     const statePath = join(root, "checks.json");
     const evidencePath = join(root, "out", "c1.txt");
-    const reportPath = join(root, "audit-report.md");
-    writeFileSync(reportPath, "[APPROVE]\n");
-    expect(run(binary, cwd, ["audit", "verdict", "--pass", "--report", reportPath, "--slug", slug]).exitCode).toBe(0);
+    const reportRelative = join(".gdm", slug, "audit-report.md");
+    const reportPath = join(cwd, reportRelative);
+    writeFileSync(reportPath, "[APPROVE]\nimplementationModel: Codex\nauditModel: Claude\n");
+    expect(run(binary, cwd, [
+      "audit", "verdict", "--pass", "--report", reportRelative,
+      "--implementation-model", "Codex", "--audit-model", "Claude", "--slug", slug,
+    ]).exitCode).toBe(0);
 
     const stateBefore = JSON.parse(readFileSync(statePath, "utf8")) as {
       checks: unknown;

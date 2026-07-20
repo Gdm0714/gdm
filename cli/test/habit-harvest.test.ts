@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import packageJson from "../package.json";
 import {
   createAdoption,
   createEvaluation,
@@ -185,8 +186,8 @@ describe("habit harvest", () => {
     const version = status.versions.find((value) => isObject(value) && value.habitId === HABIT);
     if (!isObject(version) || !isObject(version.metrics)) throw new Error("missing metrics");
     expect(version.metrics).toEqual({ eligible: 3, applied: 3, recurred: 0, applicationRate: 1, recurrenceRate: 0, verdict: "observed" });
-    expect(runCli(cwd, ["--version"]).stdout.trim()).toBe("0.8.2");
-    expect(JSON.parse(readFileSync(join(import.meta.dir, "..", "package.json"), "utf8"))).toMatchObject({ version: "0.8.2" });
+    expect(runCli(cwd, ["--version"]).stdout.trim()).toBe(packageJson.version);
+    expect(JSON.parse(readFileSync(join(import.meta.dir, "..", "package.json"), "utf8"))).toMatchObject({ version: packageJson.version });
   });
 
   test("unsafe journal content is skipped without reflection", () => {

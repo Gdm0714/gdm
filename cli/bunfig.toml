@@ -1,0 +1,4 @@
+[test]
+coverageSkipTestFiles = true
+# Bun 1.3 applies this floor to every instrumented source file, not only the aggregate.
+coverageThreshold = { lines = 0.40, functions = 0.40 }

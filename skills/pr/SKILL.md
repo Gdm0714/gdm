@@ -49,7 +49,8 @@ CI가 끝날 때까지 감시하며, 실패하면 원인을 진단해 보고하�
    사용자가 워크트리를 원하면 `git worktree add ../<프로젝트>-<설명> <브랜치>`.
 6. 커밋: 규칙 준수 — `feat:`/`fix:`/`refactor:` 접두사 + 한국어 본문 불릿 +
    `(#이슈번호)`. 커밋 전 테스트 실행이 프로젝트 규칙이면 실행.
-7. 푸시 + PR 생성:
+7. 커밋 직후 현재 브랜치·HEAD·이슈를 delivery 정본에 기록하고 푸시 + PR 생성:
+   `gdm delivery prepare --slug <슬러그> --issue <번호> --branch <브랜치> --head <HEAD>`.
    ```
    gh pr create --title "<제목>" --body "## 변경사항
    - ...
@@ -60,12 +61,16 @@ CI가 끝날 때까지 감시하며, 실패하면 원인을 진단해 보고하�
 
    Closes #<이슈번호>"
    ```
+   PR 생성 뒤 `gdm delivery pr --slug <슬러그> --number <PR번호> --head <HEAD>`를 기록한다.
 8. CI 감시: `gh pr checks --watch` (미지원 환경이면 30초 간격 폴링).
 9. 실패 시: `gh run view <run-id> --log-failed`로 실패 로그를 수집해
    원인을 진단하고 보고한다 — 어떤 체크가, 어떤 단계에서, 무슨 에러로.
-   추정이면 추정이라고 표기한다.
-10. 전부 통과 시: 통과 보고. 머지 요청이 있었으면 이 시점에 머지(squash 여부는
-   저장소 관행 확인).
+   추정이면 추정이라고 표기한다. 실패도 `gdm delivery ci --slug <슬러그> --status failed
+   --head <HEAD> --run <run-id>`로 남긴다. 자동 재실행은 하지 않는다.
+10. 전부 통과 시 `gdm delivery ci --slug <슬러그> --status passed --head <HEAD> --run <run-id>`를 기록한다.
+    머지 요청이 있었으면 `gdm delivery approve-merge --slug <슬러그> --head <HEAD> --reason <승인 근거>`와
+    `gdm delivery check-merge --slug <슬러그> --head <HEAD>`가 모두 성공한 뒤에만 머지한다. 머지 후 원격의
+    merge SHA를 `gdm delivery merged --slug <슬러그> --head <HEAD> --merge-sha <SHA>`로 기록한다.
 
 ## 엣지 케이스
 
