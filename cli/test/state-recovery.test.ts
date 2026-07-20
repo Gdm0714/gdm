@@ -100,7 +100,7 @@ describe("state recovery", () => {
       const result = runCli(cwd, ["repair", "state", "--slug", slug, "--trailing-nul"]);
 
       expect(result.exitCode).not.toBe(0);
-      expect(readFileSync(path)).toEqual(damaged);
+      expect(Buffer.compare(readFileSync(path), damaged)).toBe(0);
       expect(readJournal(cwd, slug)).toHaveLength(0);
     }
   });
