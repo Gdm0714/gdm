@@ -1135,12 +1135,13 @@ async function main(): Promise<void> {
   const cwd = process.cwd();
   const [command, ...rest] = argv;
   const [sub] = rest;
+  // Habit commands are serialized by habit-ledger-file.ts. Nesting the repository
+  // work-state lock here turns concurrent observations into avoidable lock timeouts.
   const mutating =
     command === "pass" || command === "attempt" || command === "recheck" || command === "done" ||
     command === "miss" || command === "repair" ||
     (command === "plan" && sub !== "list" && !(sub === "contract" && rest.includes("--check-commit"))) ||
     (command === "audit" && sub === "verdict") ||
-    (command === "habit" && sub !== "status") ||
     (command === "preset" && sub !== "list") ||
     command === "delivery";
   let releaseLock: (() => void) | undefined;
