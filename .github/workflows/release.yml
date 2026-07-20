@@ -14,6 +14,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+      - name: 의존성 설치
+        working-directory: cli
+        run: bun install --frozen-lockfile
+      - name: 태그·패키지 버전 일치
+        working-directory: cli
+        run: test "v$(bun -e 'console.log(require("./package.json").version)')" = "$GITHUB_REF_NAME"
+      - name: 릴리스 전 필수 검증
+        working-directory: cli
+        run: bun run verify
       - name: 크로스 컴파일 (darwin/linux × arm64/x64)
         working-directory: cli
         run: |

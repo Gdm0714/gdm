@@ -36,7 +36,7 @@ gdm done --slug fix-login
   ```bash
   curl -fsSL https://raw.githubusercontent.com/Gdm0714/gdm/main/install.sh | bash
   ```
-  플랫폼(macOS·Linux)에 맞는 바이너리와 스킬을 받아 `~/.local/bin`과 Claude Code·Codex 스킬 폴더에 설치한다. 특정 버전은 `GDM_VERSION=v0.8.2`, 설치 경로는 `GDM_BIN_DIR`로 조정한다.
+  플랫폼(macOS·Linux)에 맞는 바이너리와 스킬을 받아 `~/.local/bin`과 Claude Code·Codex 스킬 폴더에 설치한다. 특정 버전은 `GDM_VERSION=v<버전>`, 설치 경로는 `GDM_BIN_DIR`로 조정한다.
 - 설치 (소스에서 · 개발용): 클론 후 `./install/install.sh` (Bun 필요)
 - 사용: Claude Code / Codex에서 `$gdm-go <작업>`, 터미널에서 `gdm --help`
 
@@ -53,10 +53,10 @@ install/  바이너리 빌드와 스킬 설치
 
 ```bash
 cd cli
-bun test
-bunx --bun tsc --noEmit
-bun run build
+bun run verify
 ```
+
+`verify`는 타입 검사, 커버리지 기준, 전체 테스트, 빌드, 바이너리 스모크 테스트를 한 번만 순서대로 실행한다.
 
 ## 라이선스
 
