@@ -48,6 +48,7 @@ import {
   listWorks,
   loadPresets,
   readJournal,
+  repairTrailingNulWork,
   resolveWork,
   resolveWorkForRead,
   savePresets,
@@ -57,7 +58,7 @@ import {
 } from "./store.ts";
 import type { Evidence, Work } from "./types.ts";
 
-const VERSION = "0.8.0";
+const VERSION = "0.8.2";
 const CMD_TIMEOUT_MS = 300_000;
 
 const USAGE = `gdm ${VERSION} — 작업 증거가 다음 습관을 바꾸는 개인 AI 워크플로우
@@ -94,6 +95,7 @@ const USAGE = `gdm ${VERSION} — 작업 증거가 다음 습관을 바꾸는 �
   gdm resume [--json] [--slug <슬러그>]
   gdm retro [--all] [--json] [--slug <슬러그>]              # 회고 (--all: 전체 작업 횡단 + 개선 제안)
   gdm miss --desc <내용> [--type <유형>] [--check <id>] [--slug <슬러그>]  # 게이트 통과 후 발견된 결함 기록
+  gdm repair state --slug <슬러그> --trailing-nul               # 끝의 NUL 손상만 명시적으로 복구
   gdm preset set <이름> <명령> | list | rm <이름>            # 프로젝트 표준 명령 등록
   gdm doctor
 
@@ -516,6 +518,29 @@ function buildAutoEvidence(
   return { observed, sha256: sha256(body), exitCode: result.status, manual: false, note };
 }
 
+function validateAutoCommand(cwd: string, cmd: string): string {
+  console.log(`실행: ${cmd}`);
+  const result = spawnSync("bash", ["-c", cmd], {
+    cwd,
+    encoding: "utf8",
+    timeout: CMD_TIMEOUT_MS,
+    maxBuffer: 10 * 1024 * 1024,
+  });
+  const output = `${result.stdout ?? ""}${result.stderr ? `\n[stderr]\n${result.stderr}` : ""}`;
+  const body = `$ ${cmd}\n(exit ${result.status})\n\n${output}`;
+  if (result.error) {
+    throw new GdmError(`검증 명령 실행 실패: ${result.error.message}`, "cmd_failed");
+  }
+  if (result.status !== 0) {
+    throw new GdmError(
+      `검증 명령이 실패했습니다 (exit ${result.status}). 완료 전 검증은 승인된 증거 파일을 덮어쓰지 않습니다\n${tailLines(output, 15)}`,
+      "cmd_failed",
+    );
+  }
+  console.log(tailLines(output, 10));
+  return sha256(body);
+}
+
 function cmdPass(cwd: string, args: string[]): void {
   const ts = now();
   const id = args[0] && !args[0].startsWith("--") ? args[0] : undefined;
@@ -561,14 +586,28 @@ function runRecheck(
   work: Work,
   ts: string,
   targets: Work["checks"],
+  mode: "refresh" | "validate" = "refresh",
 ): { work: Work; failed: string[] } {
   let next = work;
   const failed: string[] = [];
   for (const check of targets) {
     try {
-      const evidence = buildAutoEvidence(cwd, next.slug, check.id, check.cmd!);
-      next = refreshEvidence(next, check.id, evidence, ts);
-      appendJournal(cwd, next.slug, { ts, event: "recheck", check: check.id, ok: true, sha256: evidence.sha256 });
+      const evidenceSha256 =
+        mode === "refresh"
+          ? (() => {
+              const evidence = buildAutoEvidence(cwd, next.slug, check.id, check.cmd!);
+              next = refreshEvidence(next, check.id, evidence, ts);
+              return evidence.sha256;
+            })()
+          : validateAutoCommand(cwd, check.cmd!);
+      appendJournal(cwd, next.slug, {
+        ts,
+        event: "recheck",
+        check: check.id,
+        ok: true,
+        mode,
+        sha256: evidenceSha256,
+      });
       console.log(`${check.id} 재검증 통과`);
     } catch (error) {
       if (!(error instanceof GdmError) || error.code !== "cmd_failed") throw error;
@@ -710,7 +749,7 @@ function cmdDone(cwd: string, args: string[]): void {
   const work = resolveWork(cwd, readFlag(args, "slug"));
   try {
     const autoTargets = work.checks.filter((c) => c.status === "proven" && !c.manual);
-    const { work: rechecked, failed } = runRecheck(cwd, work, ts, autoTargets);
+    const { work: rechecked, failed } = runRecheck(cwd, work, ts, autoTargets, "validate");
     if (failed.length > 0) {
       saveWork(cwd, rechecked);
       throw new GdmError(
@@ -755,6 +794,7 @@ function cmdStatus(cwd: string, args: string[]): void {
         done: w.done,
         proven,
         total,
+        audit: auditState(w),
         contract: w.contract,
         lastEvent: last?.event,
         lastAt: last?.ts,
@@ -1031,6 +1071,27 @@ function cmdPreset(cwd: string, args: string[]): void {
   process.exit(2);
 }
 
+function cmdRepair(cwd: string, args: string[]): void {
+  const [sub, ...rest] = args;
+  if (sub !== "state") {
+    throw new GdmError("사용법: gdm repair state --slug <슬러그> --trailing-nul", "usage");
+  }
+  ensureFlags(rest, ["slug"], ["trailing-nul"]);
+  const slug = readFlag(rest, "slug");
+  if (!slug || !hasFlag(rest, "trailing-nul")) {
+    throw new GdmError("사용법: gdm repair state --slug <슬러그> --trailing-nul", "usage");
+  }
+  const { removedBytes } = repairTrailingNulWork(cwd, slug);
+  const ts = now();
+  appendJournal(cwd, slug, {
+    ts,
+    event: "state.repair",
+    kind: "trailing-nul",
+    removedBytes,
+  });
+  console.log(`${slug} 상태 복구 완료: trailing NUL ${removedBytes}바이트 제거`);
+}
+
 const SKILL_NAMES = ["go", "full", "plan", "review", "analyze", "research", "pr", "ui", "db", "design", "reflect"] as const;
 
 function repoVersionFromSkills(): { version: string; root: string } | undefined {
@@ -1131,6 +1192,9 @@ function main(): void {
         break;
       case "miss":
         cmdMiss(cwd, rest);
+        break;
+      case "repair":
+        cmdRepair(cwd, rest);
         break;
       case "doctor":
         cmdDoctor(cwd);
