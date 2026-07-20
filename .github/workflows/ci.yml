@@ -10,6 +10,9 @@ concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   verify:
     name: 필수 검증
@@ -19,28 +22,27 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: AI 표기 금지 검사 (전체 히스토리)
+      - name: AI 표기 금지 검사 (현재 변경 커밋)
         run: |
-          BAD=$(git log --format='%H %s%n%b' | grep -inE 'claude|클로드|co-authored-by|generated (with|by)' || true)
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            RANGE="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+          else
+            RANGE="HEAD"
+          fi
+          BAD=$(git log "$RANGE" --format='%H %s%n%b' | grep -inE 'claude|클로드|co-authored-by|generated (with|by)' || true)
           if [ -n "$BAD" ]; then
             echo "커밋 메시지에 금지 표기가 있습니다:"
             echo "$BAD"
             exit 1
           fi
-          echo "전체 히스토리 $(git rev-list --count HEAD)개 커밋 — 금지 표기 0건"
+          echo "검사 범위 $RANGE — 금지 표기 0건"
       - uses: oven-sh/setup-bun@v2
       - name: 의존성 설치
         working-directory: cli
         run: bun install --frozen-lockfile
-      - name: 타입체크
+      - name: 타입체크·테스트·커버리지·빌드·스모크
         working-directory: cli
-        run: bunx --bun tsc --noEmit
-      - name: 유닛 테스트
-        working-directory: cli
-        run: bun test
-      - name: 바이너리 빌드
-        working-directory: cli
-        run: bun run build
+        run: bun run verify
       - name: 스킬 front-matter 검증
         run: |
           for f in skills/*/SKILL.md; do

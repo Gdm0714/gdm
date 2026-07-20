@@ -19,11 +19,11 @@ for dir in "$REPO"/skills/*/; do
   echo "  gdm-$name"
 done
 
-# 검수자 프롬프트: gdm-full/gdm-design이 서브에이전트에 전달한다.
+# 검수자 프롬프트와 제한 실행기: 단일 leaf 검수만 허용한다.
 # 스킬 옆(gdm-agents/)에 배치해 사용자 프로젝트 런타임에서도 참조 가능하게 한다.
 ln -sfn "$REPO/agents" "$HOME/.claude/skills/gdm-agents"
 ln -sfn "$REPO/agents" "$HOME/.codex/skills/gdm-agents"
-echo "  gdm-agents (auditor.md, design-auditor.md)"
+echo "  gdm-agents (auditor prompts, bounded runner)"
 
 echo "[3/3] 점검"
 "$BIN_DIR/gdm" doctor

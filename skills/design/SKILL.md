@@ -104,10 +104,14 @@ focus/비어있음/로딩/에러). **스타일 값은 여기 다시 적지 않�
 6. 증거·검수: 스크린샷은 `.gdm/<슬러그>/ui/<이름>-<폭>-<테마>.png`로 저장하고
    `gdm pass --manual --observed`의 증거로, 기계 게이트는 자동 check로 등록한다.
    중량 작업(배포 화면, `--audit`)이면 시각 검수를 받는다 — 검수자는 구현자와
-   **다른 벤더**의 fresh-context 워커(`codex exec` / `claude -p`), 프롬프트는
+   **다른 벤더**의 fresh-context leaf 워커 정확히 1명이다. `MAX_AUDITORS_PER_PASS: 1`,
+   `AUDITOR_MAX_AGENT_DEPTH: 0`, `AUDITOR_MAX_CHILD_AGENTS: 0`이며 collaboration
+   서브에이전트로 스폰하지 않는다. 프롬프트는
    검수자 프롬프트(`design-auditor.md`) 전문 + 원 요청 + 계약 + 스크린샷·증거 경로.
    `design-auditor.md`는 설치 시 스킬 옆 `gdm-agents/`에 배치된다(소스: 저장소
-   `agents/design-auditor.md`). 다른 벤더 검수자를 실행할 수 없으면 임의로 동일
+   `agents/design-auditor.md`). 실행은 반드시 `gdm-agents/run-auditor.sh`를 사용해
+   에이전트·사용자 MCP·쓰기 도구를 제거하고 단일 PID 트리에 자원 한도를 적용한다.
+   다른 벤더 검수자를 실행할 수 없으면 임의로 동일
    벤더 검수로 낮추지 말고 `INDEPENDENCE_BLOCKED`를 보고하고 멈춘다 (gdm-full과
    동일 규칙).
 

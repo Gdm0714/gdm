@@ -1,6 +1,6 @@
 # gdm — 개인 증거 루프 설계
 
-> v0.8 설계 · 대상: Claude Code + Codex
+> v0.9 설계 · 대상: Claude Code + Codex
 > 목적: 실제 작업의 증거와 반복 실수가 다음 작업의 검증 가능한 습관으로 이어지게 한다.
 
 ## 0. 한눈에 보는 흐름
@@ -85,7 +85,7 @@ cmd를 실행해 출력을 `.gdm/<슬러그>/out/`에 저장·해시하고, exit
 ┌─ L2. gdm CLI (TypeScript, 결정적 상태 머신) ──────────────┐
 │  gdm plan|pass|recheck|done             ← 작업 상태·게이트│
 │  gdm status|resume|retro                ← 현황·재개·회고  │
-│  gdm audit                              ← 검수 기록 (P2)  │
+│  gdm audit|delivery                     ← 검수·전달 게이트│
 │  모델 호출·네트워크 없음, JSON 입출력 + exit code           │
 └──────────────┬───────────────────────────────────────────┘
                │ P5+
@@ -112,9 +112,15 @@ cmd를 실행해 출력을 `.gdm/<슬러그>/out/`에 저장·해시하고, exit
 - 판정 어휘: **통과 / 반려** (반려 시 반려 사유가 새 check로 환원된다)
 - 산출물: `검수보고` — 토스 라이팅 역피라미드로 작성 (결론 → 근거 → 세부).
   그대로 wiki-ingest 가능한 포맷이다. 작업 뒤에도 판단 근거를 재사용할 수 있다.
+- 판정에는 보고서 해시, 구현·검수 모델, 실제 워크트리 내용 지문을 함께 묶는다. 보고서나
+  소스가 바뀌면 판정은 무효이며, 같은 내용을 커밋해 HEAD 표현만 바뀐 경우에는 유지된다.
 - 역할을 늘리지 않는 근거: 독립 검수의 가치는 새 컨텍스트에서 나오고,
   세부 관점(리뷰/QA/슬롭)은 검수 체크리스트로 흡수한다. 실사용에서 반복적으로
   놓치는 유형이 `gdm retro`로 확인되면 그때만 역할 분리를 검토한다.
+- 검수자는 pass당 정확히 1개의 leaf 프로세스이며 하위 에이전트를 만들 수 없다.
+  `gdm-agents/run-auditor.sh`가 Codex multi-agent와 사용자 MCP를 끄고 Claude 도구를
+  읽기 전용으로 제한한다. 시간·프로세스 수·RSS를 넘으면 실행기가 자신이 만든 PID 트리만
+  종료하며, 이름 기반 Node/Gradle/Vite 전역 정리는 금지한다.
 
 ### 역할 실행과 독립 검수 (v0.7)
 
@@ -161,8 +167,9 @@ cmd를 실행해 출력을 `.gdm/<슬러그>/out/`에 저장·해시하고, exit
 │   └── _shared/             # 검수 체크리스트, 문서 포맷 규칙
 ├── agents/                  # 검수자 프롬프트(auditor.md/design-auditor.md) — install이 스킬 옆 gdm-agents/로 설치
 ├── cli/                     # gdm 바이너리 (TypeScript)
-│   ├── src/{work,audit,retro}/
-│   ├── src/{run,adapters}/  # P5
+│   ├── src/{state,store,contract,attempt}.ts
+│   ├── src/{audit-integrity,delivery,repository-lock}.ts
+│   ├── src/{cli,cli-args,delivery-cli,version}.ts
 │   └── test/
 ├── install/install.sh       # 심링크 설치 + PATH
 └── README.md
@@ -170,6 +177,8 @@ cmd를 실행해 출력을 `.gdm/<슬러그>/out/`에 저장·해시하고, exit
 
 - 스킬 포맷은 양 CLI 동일(SKILL.md + front-matter) — 확인 완료.
 - 배포: 개발 중 install.sh, 안정화 후 nix home-manager 번들 승격.
+- 버전 정본은 `cli/package.json` 하나이며 CLI와 릴리스 태그 검증이 이를 읽는다.
+- 상태 변경 명령은 저장소 단위 PID 잠금으로 직렬화해 병렬 실행의 갱신 유실을 막는다.
 
 ## 7. 스킬 개요
 
@@ -179,10 +188,11 @@ cmd를 실행해 출력을 `.gdm/<슬러그>/out/`에 저장·해시하고, exit
 - **gdm:go** (P1): brief → `gdm plan init` → check 목록 등록 → 구현·`gdm pass` 반복(CLI가 cmd 실행·판정) →
   전 check proven 시 `gdm done`(증거 재검증 포함). 막히면 `gdm plan edit --reason`을 journal에 남기고 계속.
   재개: `$gdm:go --resume`.
-- **gdm:full** (P2): go 흐름 + `gdm audit`으로 검수자 스폰 → 통과/반려 →
+- **gdm:full** (P2): go 흐름 + 제한 실행기로 단일 leaf 검수자 실행 → 통과/반려 →
   반려는 check로 환원 → 통과 시 마무리 절차(커밋 규칙 검사, PR 본문, 검수보고).
-- **gdm:plan / review / analyze** (P3), **gdm:research** (P4): 계획·리뷰·원인 분석·병렬 조사.
-- **gdm:pr**: 이슈→브랜치→커밋→PR→CI 감시 파이프라인. `gdm plan contract --check-commit` 게이트 통과 후에만 전달.
+- **gdm:plan / review / analyze** (P3), **gdm:research** (P4): 계획·리뷰·원인 분석·단일 세션 배치 조사.
+- **gdm:pr**: 이슈→브랜치→커밋→PR→CI 감시 파이프라인. 계약 게이트와 `delivery`의
+  HEAD·PR·CI·명시적 머지 승인 기록이 모두 맞을 때만 전달한다.
 - **gdm:ui / gdm:design**: 화면 수정(스크린샷 피드백)과 0→1 화면 디자인 루프. 시각 검수자는 구현자와 다른 벤더.
 - **gdm:db**: 스키마·쿼리·마이그레이션·데이터 검증.
 - **gdm:reflect**: 게이트 증거와 사용자 노트에서 반복 패턴을 찾아 습관 후보를 만든다(사람이 채택).
@@ -262,8 +272,9 @@ cmd를 실행해 출력을 `.gdm/<슬러그>/out/`에 저장·해시하고, exit
 - 2026-07-02: **v0.4.0 — P2~P4 스킬팩 완성.** 검수(audit) 게이트를 상태 머신에 내장:
   `plan init --audit` 작업은 done이 검수 통과를 요구하고, 판정 시점 checks 스냅샷
   해시(stateHash)로 검수 후 상태 변경 시 자동 무효화. 검수자는 이중 포맷(md/toml)
-  대신 프롬프트 파일(agents/auditor.md)을 스킬이 서브에이전트에 그대로 전달하는
-  방식으로 단순화. 스킬 6종 완성: go/full/plan/review/analyze/research
+  대신 프롬프트 파일(agents/auditor.md)을 별도 컨텍스트에 전달하는 방식으로 단순화.
+  현재는 제한 실행기가 단일 leaf와 자원 한도를 구조적으로 적용한다. 스킬 6종 완성:
+  go/full/plan/review/analyze/research
 - 2026-07-02: **v0.3.0 기능 추가** — `recheck`(통과 항목 재실행으로 회귀 검출, done의 해시
   검사가 못 잡는 코드 회귀 보완), `status`(전 작업 현황), `retro`(journal 회고 — P2에서 조기
   구현, 거부·수정·재검증 이력 집계), 알 수 없는 플래그 감지(오타 조용한 무시 차단)

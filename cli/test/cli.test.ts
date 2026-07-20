@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import packageJson from "../package.json";
 import { checksHash, validateWork } from "../src/state.ts";
 
 const CLI = join(import.meta.dir, "..", "src", "cli.ts");
@@ -47,7 +48,7 @@ describe("CLI regression", () => {
     // Then: both are read-only successful usage responses.
     expect(bare.exitCode).toBe(0);
     expect(help.exitCode).toBe(0);
-    expect(bare.stderr).toContain("gdm 0.8.2 — 작업 증거가 다음 습관을 바꾸는 개인 AI 워크플로우");
+    expect(bare.stderr).toContain(`gdm ${packageJson.version} — 작업 증거가 다음 습관을 바꾸는 개인 AI 워크플로우`);
     expect(help.stderr).toBe(bare.stderr);
     expect(existsSync(join(cwd, ".gdm"))).toBe(false);
   });
@@ -194,9 +195,13 @@ describe("CLI regression", () => {
       ]).exitCode,
     ).toBe(0);
     expect(runCli(cwd, ["pass", "c1", "--slug", slug]).exitCode).toBe(0);
-    const report = join(cwd, ".gdm", slug, "audit-report.md");
-    writeFileSync(report, "[APPROVE]\n");
-    expect(runCli(cwd, ["audit", "verdict", "--pass", "--report", report, "--slug", slug]).exitCode).toBe(0);
+    const reportRelative = join(".gdm", slug, "audit-report.md");
+    const report = join(cwd, reportRelative);
+    writeFileSync(report, "[APPROVE]\nimplementationModel: Codex\nauditModel: Claude\n");
+    expect(runCli(cwd, [
+      "audit", "verdict", "--pass", "--report", reportRelative,
+      "--implementation-model", "Codex", "--audit-model", "Claude", "--slug", slug,
+    ]).exitCode).toBe(0);
 
     const statePath = join(cwd, ".gdm", slug, "checks.json");
     const evidencePath = join(cwd, ".gdm", slug, "out", "c1.txt");

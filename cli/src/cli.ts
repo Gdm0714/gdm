@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import {
@@ -13,6 +13,8 @@ import {
 import { latestAttemptStates, readAttemptEvents } from "./attempt-journal.ts";
 import { parseBriefChecks } from "./brief-checks.ts";
 import { readContainedFile } from "./contained-file.ts";
+import { auditIntegrityProblems, captureWorkspaceFingerprint } from "./audit-integrity.ts";
+import { ensureFlags, hasFlag, readFlag, readFlags } from "./cli-args.ts";
 import {
   addConstraints,
   assertCommitAllowed,
@@ -57,8 +59,10 @@ import {
   workExists,
 } from "./store.ts";
 import type { Evidence, Work } from "./types.ts";
+import { VERSION } from "./version.ts";
+import { acquireRepositoryLock } from "./repository-lock.ts";
+import { cmdDelivery } from "./delivery-cli.ts";
 
-const VERSION = "0.8.2";
 const CMD_TIMEOUT_MS = 300_000;
 
 const USAGE = `gdm ${VERSION} — 작업 증거가 다음 습관을 바꾸는 개인 AI 워크플로우
@@ -89,13 +93,19 @@ const USAGE = `gdm ${VERSION} — 작업 증거가 다음 습관을 바꾸는 �
   gdm pass <id> --manual --observed <확인 기록 파일> [...]   # 수동 항목: 스크린샷 등 제출
   gdm recheck [--check <id>] [--slug <슬러그>]              # 통과한 자동 항목 재실행 (회귀 검출)
   gdm audit brief [--json] [--slug <슬러그>]                # 검수자에게 줄 브리핑 패키지 출력
-  gdm audit verdict (--pass | --fail) --report <검수보고 파일> [--slug <슬러그>]
+  gdm audit verdict (--pass | --fail) --report <검수보고 파일> --implementation-model <모델> --audit-model <모델> [--slug <슬러그>]
   gdm done [--slug <슬러그>]
   gdm status [--json] [--checks]                            # 현재 디렉토리 전체 작업 현황 (--checks: 항목 상세)
   gdm resume [--json] [--slug <슬러그>]
   gdm retro [--all] [--json] [--slug <슬러그>]              # 회고 (--all: 전체 작업 횡단 + 개선 제안)
   gdm miss --desc <내용> [--type <유형>] [--check <id>] [--slug <슬러그>]  # 게이트 통과 후 발견된 결함 기록
   gdm repair state --slug <슬러그> --trailing-nul               # 끝의 NUL 손상만 명시적으로 복구
+  gdm delivery prepare --slug <슬러그> --issue <id> --branch <브랜치> --head <sha>
+  gdm delivery pr --slug <슬러그> --number <id> --head <sha>
+  gdm delivery ci --slug <슬러그> --status <passed|failed> --head <sha> --run <id>
+  gdm delivery approve-merge --slug <슬러그> --head <sha> --reason <승인 근거>
+  gdm delivery check-merge --slug <슬러그> --head <sha>
+  gdm delivery merged --slug <슬러그> --head <sha> --merge-sha <sha>
   gdm preset set <이름> <명령> | list | rm <이름>            # 프로젝트 표준 명령 등록
   gdm doctor
 
@@ -108,62 +118,6 @@ const USAGE = `gdm ${VERSION} — 작업 증거가 다음 습관을 바꾸는 �
   - done은 모든 항목 통과 + 증거 파일 현존·해시 일치를 재검증한 뒤에만 성공합니다
   - 상태 파일(.gdm/)은 gdm 명령으로만 수정하세요
 `;
-
-function readFlag(args: string[], name: string): string | undefined {
-  const i = args.indexOf(`--${name}`);
-  if (i >= 0) {
-    const value = args[i + 1];
-    if (value === undefined || value.startsWith("--")) {
-      throw new GdmError(`--${name} 값이 필요합니다`, "usage");
-    }
-    return value;
-  }
-  const prefix = `--${name}=`;
-  return args.find((a) => a.startsWith(prefix))?.slice(prefix.length);
-}
-
-function readFlags(args: string[], name: string): readonly string[] {
-  const values: string[] = [];
-  const token = `--${name}`;
-  const prefix = `${token}=`;
-  for (let index = 0; index < args.length; index++) {
-    const current = args[index];
-    if (current === token) {
-      const value = args[index + 1];
-      if (value === undefined || value.startsWith("--")) {
-        throw new GdmError(`${token} 값이 필요합니다`, "usage");
-      }
-      values.push(value);
-      index++;
-    } else if (current?.startsWith(prefix)) {
-      values.push(current.slice(prefix.length));
-    }
-  }
-  return values;
-}
-
-function hasFlag(args: string[], name: string): boolean {
-  return args.includes(`--${name}`);
-}
-
-function ensureFlags(args: string[], value: string[], bool: string[] = []): void {
-  for (let i = 0; i < args.length; i++) {
-    const token = args[i]!;
-    if (!token.startsWith("--")) continue;
-    const eq = token.indexOf("=");
-    const name = eq >= 0 ? token.slice(2, eq) : token.slice(2);
-    if (value.includes(name)) {
-      if (eq < 0) i++;
-      continue;
-    }
-    if (bool.includes(name)) {
-      if (eq >= 0) throw new GdmError(`--${name}는 값을 받지 않습니다`, "usage");
-      continue;
-    }
-    const known = [...value, ...bool].map((f) => `--${f}`).join(", ") || "없음";
-    throw new GdmError(`알 수 없는 플래그: --${name} (가능: ${known})`, "usage");
-  }
-}
 
 function now(): string {
   return new Date().toISOString();
@@ -639,8 +593,10 @@ function cmdRecheck(cwd: string, args: string[]): void {
   saveWork(cwd, work);
   const { proven, total } = provenCount(work);
   if (failed.length > 0) {
-    console.error(`재검증 결과: ${targets.length}개 중 ${failed.length}개 실패 (${failed.join(", ")}) — 현재 ${proven}/${total}`);
-    process.exit(1);
+    throw new GdmError(
+      `재검증 결과: ${targets.length}개 중 ${failed.length}개 실패 (${failed.join(", ")}) — 현재 ${proven}/${total}`,
+      "recheck_failed",
+    );
   }
   console.log(`재검증 결과: ${targets.length}개 전부 통과 (${proven}/${total})`);
 }
@@ -664,11 +620,14 @@ function verifyEvidence(cwd: string, work: Work): { id: string; why: string }[] 
   return problems;
 }
 
-function auditState(work: Work): string {
+function auditState(cwd: string, work: Work): string {
   if (!work.auditRequired) return "";
   if (!work.audit) return "검수: 필요 (미실시)";
   if (work.audit.result === "fail") return "검수: 반려";
-  return work.audit.stateHash === checksHash(work) ? "검수: 통과" : "검수: 무효 (상태 변경됨, 재검수 필요)";
+  if (work.audit.stateHash !== checksHash(work)) return "검수: 무효 (상태 변경됨, 재검수 필요)";
+  return auditIntegrityProblems(cwd, work.audit).length === 0
+    ? "검수: 통과"
+    : "검수: 무효 (보고서 또는 워크트리 변경됨, 재검수 필요)";
 }
 
 function cmdAuditBrief(cwd: string, args: string[]): void {
@@ -706,29 +665,47 @@ function cmdAuditBrief(cwd: string, args: string[]): void {
   }
   console.log("");
   console.log(`검수보고 저장 위치: ${join(workDir(cwd, work.slug), "audit-report.md")}`);
-  console.log(`판정 기록: gdm audit verdict (--pass | --fail) --report <검수보고 경로>`);
+  console.log(`판정 기록: gdm audit verdict (--pass | --fail) --report <검수보고 경로> --implementation-model <모델> --audit-model <모델>`);
   if (proven < total) console.log(`주의: 미통과 항목이 있어 verdict는 아직 기록할 수 없습니다`);
 }
 
 function cmdAuditVerdict(cwd: string, args: string[]): void {
-  ensureFlags(args, ["report", "slug"], ["pass", "fail"]);
+  ensureFlags(args, ["report", "slug", "implementation-model", "audit-model"], ["pass", "fail"]);
   const ts = now();
   const pass = hasFlag(args, "pass");
   const fail = hasFlag(args, "fail");
   if (pass === fail) throw new GdmError("--pass 또는 --fail 중 정확히 하나가 필요합니다", "usage");
   const report = readFlag(args, "report");
   if (!report) throw new GdmError("--report <검수보고 파일>이 필요합니다", "usage");
-  const reportPath = resolve(cwd, report);
-  if (!existsSync(reportPath)) throw new GdmError(`검수보고 파일이 없습니다: ${report}`, "report_missing");
-  if (statSync(reportPath).size === 0) throw new GdmError(`검수보고 파일이 비어 있습니다: ${report}`, "report_empty");
+  const implementationModel = safeText(readFlag(args, "implementation-model") ?? "", "implementation-model");
+  const auditModel = safeText(readFlag(args, "audit-model") ?? "", "audit-model");
+  const contained = readContainedFile(cwd, report, "report");
+  if (contained.content.length === 0) throw new GdmError(`검수보고 파일이 비어 있습니다: ${report}`, "report_empty");
+  if (!contained.content.includes(`implementationModel: ${implementationModel}`) || !contained.content.includes(`auditModel: ${auditModel}`)) {
+    throw new GdmError("검수보고의 implementationModel 또는 auditModel이 명령 인자와 일치하지 않습니다", "audit_model_mismatch");
+  }
   const work = resolveWork(cwd, readFlag(args, "slug"));
   try {
-    const next = recordAudit(work, pass ? "pass" : "fail", report, ts);
+    const workspace = captureWorkspaceFingerprint(cwd);
+    const next = recordAudit(
+      work,
+      pass ? "pass" : "fail",
+      contained.path,
+      contained.sha256,
+      implementationModel,
+      auditModel,
+      workspace,
+      ts,
+    );
     appendJournal(cwd, work.slug, {
       ts,
       event: "audit",
       result: next.audit!.result,
       report,
+      reportSha256: contained.sha256,
+      implementationModel,
+      auditModel,
+      workspace,
       stateHash: next.audit!.stateHash,
     });
     saveWork(cwd, next);
@@ -748,7 +725,16 @@ function cmdDone(cwd: string, args: string[]): void {
   const ts = now();
   const work = resolveWork(cwd, readFlag(args, "slug"));
   try {
-    const autoTargets = work.checks.filter((c) => c.status === "proven" && !c.manual);
+    if (work.auditRequired && work.audit?.result === "pass") {
+      const problems = auditIntegrityProblems(cwd, work.audit);
+      if (problems.length > 0) {
+        throw new GdmError(`검수 무결성 실패 — 재검수가 필요합니다: ${problems.join(", ")}`, "audit_stale");
+      }
+    }
+    const auditBindsGitWorkspace = work.auditRequired && work.audit?.result === "pass" && work.audit.workspace !== null;
+    const autoTargets = auditBindsGitWorkspace
+      ? []
+      : work.checks.filter((c) => c.status === "proven" && !c.manual);
     const { work: rechecked, failed } = runRecheck(cwd, work, ts, autoTargets, "validate");
     if (failed.length > 0) {
       saveWork(cwd, rechecked);
@@ -794,8 +780,9 @@ function cmdStatus(cwd: string, args: string[]): void {
         done: w.done,
         proven,
         total,
-        audit: auditState(w),
+        audit: auditState(cwd, w),
         contract: w.contract,
+        delivery: w.delivery ?? null,
         lastEvent: last?.event,
         lastAt: last?.ts,
         ...(withChecks ? { checks: w.checks } : {}),
@@ -814,6 +801,11 @@ function cmdStatus(cwd: string, args: string[]): void {
     const state = w.done ? "완료  " : "진행 중";
     const lastInfo = last ? ` — 마지막: ${last.ts} ${last.event}` : "";
     console.log(`[${state}] ${w.slug} (${proven}/${total})${lastInfo}`);
+    if (w.delivery) {
+      console.log(
+        `  전달: ${w.delivery.branch} · PR ${w.delivery.pr?.number ?? "—"} · CI ${w.delivery.ci?.status ?? "—"} · ${w.delivery.merged ? "머지됨" : "미머지"}`,
+      );
+    }
     if (withChecks) {
       for (const line of checkLine(w)) console.log(line);
     }
@@ -830,8 +822,13 @@ function cmdResume(cwd: string, args: string[]): void {
   console.log(workHeader(work));
   console.log(`목표: ${work.brief}`);
   console.log(contractLine(work));
-  const audit = auditState(work);
+  const audit = auditState(cwd, work);
   if (audit) console.log(audit);
+  if (work.delivery) {
+    console.log(
+      `전달: ${work.delivery.branch} · ${work.delivery.head} · PR ${work.delivery.pr?.number ?? "—"} · CI ${work.delivery.ci?.status ?? "—"} · 머지 ${work.delivery.merged?.sha ?? "—"}`,
+    );
+  }
   console.log("항목:");
   for (const line of checkLine(work)) console.log(line);
   const tail = journalTail(cwd, work.slug, 5);
@@ -1067,8 +1064,7 @@ function cmdPreset(cwd: string, args: string[]): void {
     console.log(`@${name} 삭제됨`);
     return;
   }
-  console.error(USAGE);
-  process.exit(2);
+  throw new GdmError("preset은 set, list 또는 rm을 사용하세요", "usage");
 }
 
 function cmdRepair(cwd: string, args: string[]): void {
@@ -1134,11 +1130,23 @@ function cmdDoctor(cwd: string): void {
   console.log(`  현재 디렉토리 작업: ${works.length}개 (진행 중 ${active.length}개)`);
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   const cwd = process.cwd();
   const [command, ...rest] = argv;
+  const [sub] = rest;
+  // Habit commands are serialized by habit-ledger-file.ts. Nesting the repository
+  // work-state lock here turns concurrent observations into avoidable lock timeouts.
+  const mutating =
+    command === "pass" || command === "attempt" || command === "recheck" || command === "done" ||
+    command === "miss" || command === "repair" ||
+    (command === "plan" && sub !== "list" && !(sub === "contract" && rest.includes("--check-commit"))) ||
+    (command === "audit" && sub === "verdict") ||
+    (command === "preset" && sub !== "list") ||
+    command === "delivery";
+  let releaseLock: (() => void) | undefined;
   try {
+    if (mutating) releaseLock = acquireRepositoryLock(cwd);
     switch (command) {
       case "plan": {
         const [sub, ...planArgs] = rest;
@@ -1149,7 +1157,7 @@ function main(): void {
         else if (sub === "contract") cmdPlanContract(cwd, planArgs);
         else {
           console.error(USAGE);
-          process.exit(2);
+          process.exitCode = 2;
         }
         break;
       }
@@ -1171,7 +1179,7 @@ function main(): void {
         else if (sub === "verdict") cmdAuditVerdict(cwd, auditArgs);
         else {
           console.error(USAGE);
-          process.exit(2);
+          process.exitCode = 2;
         }
         break;
       }
@@ -1196,6 +1204,9 @@ function main(): void {
       case "repair":
         cmdRepair(cwd, rest);
         break;
+      case "delivery":
+        cmdDelivery(cwd, rest, now());
+        break;
       case "doctor":
         cmdDoctor(cwd);
         break;
@@ -1204,7 +1215,7 @@ function main(): void {
         break;
       default:
         console.error(USAGE);
-        process.exit(command === undefined || command === "--help" ? 0 : 2);
+        process.exitCode = command === undefined || command === "--help" ? 0 : 2;
     }
   } catch (error) {
     if (error instanceof GdmError) {
@@ -1227,17 +1238,20 @@ function main(): void {
         "habit_activation_conflict",
         "habit_event_invalid",
       ]);
-      const policy = new Set(["commit_forbidden", "unchanged_retry", "stale_evidence"]);
+      const policy = new Set(["commit_forbidden", "unchanged_retry", "stale_evidence", "delivery_gate"]);
       const privacy = new Set(["privacy_rejected", "path_rejected"]);
-      if (usage.has(error.code)) process.exit(2);
-      if (invalid.has(error.code)) process.exit(3);
-      if (policy.has(error.code)) process.exit(4);
-      if (privacy.has(error.code)) process.exit(5);
-      process.exit(1);
+      if (usage.has(error.code)) process.exitCode = 2;
+      else if (invalid.has(error.code)) process.exitCode = 3;
+      else if (policy.has(error.code)) process.exitCode = 4;
+      else if (privacy.has(error.code)) process.exitCode = 5;
+      else process.exitCode = 1;
+      return;
     }
     console.error(`오류(internal): ${error instanceof Error ? error.message : String(error)}`);
-    process.exit(1);
+    process.exitCode = 1;
+  } finally {
+    releaseLock?.();
   }
 }
 
-main();
+await main();

@@ -21,10 +21,17 @@ description: |
   기준 몰래 완화 금지).
 - CRITICAL: 제품 파일 작성자는 한 명이며, 실제 구현 모델과 검수 모델은 달라야 한다.
   역할 이름이나 조율자 정체성이 아니라 실제 diff를 만든 주체를 기준으로 기록한다.
-- NEVER: 검수보고(audit-report.md)를 직접 작성하지 않는다. 검수보고는 검수자
-  서브에이전트만 작성한다 — 실행자가 쓰면 자기 채점이다.
+- NEVER: 검수보고(audit-report.md)를 직접 작성하지 않는다. 검수보고는 제한 실행기로 띄운
+  외부 leaf 검수자만 작성한다 — 실행자가 쓰면 자기 채점이다.
 - NEVER: 검수자에게 작업 요약을 대신 판단 근거로 주지 않는다. 검수자는 브리핑
   원문과 diff, 증거 파일 경로를 받아 직접 확인한다.
+- CRITICAL: 검수 pass당 검수자는 정확히 1명이다. `MAX_AUDITORS_PER_PASS: 1`,
+  `AUDITOR_MAX_AGENT_DEPTH: 0`, `AUDITOR_MAX_CHILD_AGENTS: 0`이다. 검수자를
+  collaboration 서브에이전트로 스폰하지 않고 `gdm-agents/run-auditor.sh`로만 실행한다.
+- NEVER: 검수 실패나 지연을 이유로 추가 검수자를 병렬 실행하지 않는다. 실행기가 자원 한도로
+  중단되면 `AUDITOR_RESOURCE_LIMIT`을 보고하고 해당 pass를 중단한다.
+- NEVER: 프로세스 이름으로 Node, Gradle, Vite, Codex, Claude를 일괄 종료하지 않는다.
+  실행기가 기록한 단일 검수 루트 PID와 그 하위 트리만 실행기가 회수한다.
 - NEVER: 반려 사유를 무시하고 verdict --pass를 기록하지 않는다.
 - NEVER: `gdm plan contract --check-commit --slug <슬러그>`가 exit 0이 아니면 stage,
   commit, push, PR을 하지 않는다. `done`이나 audit pass는 전달 승인이 아니다.
@@ -38,7 +45,8 @@ gdm-go의 도구 전부 + 검수:
 |---|---|
 | `gdm plan init --slug <s> --brief <설명> --audit --require <보존> --forbid <금지>` | 계약과 함께 검수 필수 작업 시작 |
 | `gdm audit brief` | 검수자에게 줄 브리핑 패키지 출력 |
-| `gdm audit verdict (--pass\|--fail) --report <파일>` | 검수자 판정 기록 (모든 항목 통과 후에만 가능) |
+| `gdm audit verdict (--pass\|--fail) --report <파일> --implementation-model <모델> --audit-model <모델>` | 검수자 판정과 독립성·보고서·워크트리 지문 기록 |
+| `gdm-agents/run-auditor.sh <codex\|claude> <prompt> <report> [workspace]` | 에이전트·MCP를 차단하고 단일 검수 PID 트리를 자원 한도 안에서 실행 |
 
 ## 프로세스
 
@@ -53,15 +61,21 @@ gdm-go의 도구 전부 + 검수:
    증거로만 판정한다), 전 항목 통과 후 `gdm recheck`로 회귀를 확인한다.
 4. 검수:
    a. `gdm audit brief` 출력과 `git diff`를 준비한다.
-   b. **실제 구현 모델과 다른 모델의 검수자를 새 컨텍스트로 실행한다.** 프롬프트는
+   b. **실제 구현 모델과 다른 모델의 검수자 정확히 1명을 새 컨텍스트로 실행한다.** 프롬프트는
       검수자 프롬프트(`auditor.md`) 전문 + 브리핑 + diff이며 현재 대화 요약은 주지
       않는다. `auditor.md`는 설치 시 스킬 옆 `gdm-agents/`에 배치된다(소스:
-      저장소 `agents/auditor.md`).
+      저장소 `agents/auditor.md`). 실행은 반드시 같은 디렉토리의 `run-auditor.sh`를
+      사용한다. 이 실행기는 Codex multi-agent와 사용자 MCP를 끄고, Claude에는 읽기 전용
+      도구만 허용하며, 시간·프로세스 수·RSS 한도를 넘으면 자신이 시작한 트리만 종료한다.
       다른 모델을 사용할 수 없으면 임의로 같은 모델 검수로 낮추지 말고 사용자에게
       차단 상태를 보고한다.
    c. 검수자가 보고서에 `implementationModel`과 `auditModel`을 기록하고
       `.gdm/<슬러그>/audit-report.md`를 저장한 뒤 통과/반려를 반환한다.
-   d. `gdm audit verdict --pass|--fail --report .gdm/<슬러그>/audit-report.md`
+   d. `gdm audit verdict --pass|--fail --report .gdm/<슬러그>/audit-report.md
+      --implementation-model <실제 구현 모델> --audit-model <검수 모델>`.
+      CLI는 보고서 해시와 현재 Git 워크트리의 실제 파일 내용 지문을 함께 묶는다. 이후 코드나
+      보고서가 바뀌면 검수가 무효가 되고, 같은 내용을 커밋해 HEAD만 바뀐 경우에는 유지된다.
+      Git 지문이 유효한 경우 `done`은 같은 검증 명령을 다시 실행하지 않는다.
 5. 반려면: 반려 사유를 check로 반영(`gdm plan add`/`edit --reason`)하고 3으로.
    (check가 바뀌면 기존 검수는 자동 무효 — 재검수가 필요해진다. 정상 동작이다.)
 6. 통과면 `gdm done` 뒤 gdm-go의 단일 habit feedback checkpoint를 수행한다.
@@ -106,7 +120,8 @@ Good:
 1. plan init --audit --require "기존 심의 전이 보존" --forbid "자동 커밋",
    check 4개(happy/edge/regression/adversarial) 등록·공유
 2. 구현은 Codex 워커에 위임(codex exec) → 조율자가 pass ×4 → recheck 통과
-3. audit brief + git diff로 검수자 스폰 — 구현이 Codex였으므로 검수는 Claude(claude -p)
+3. audit brief + git diff로 단일 검수자 실행 — 구현이 Codex였으므로 검수는
+   `gdm-agents/run-auditor.sh claude ...`
    → 검수자가 반려 ("전문간사 배정 전 통보 시도 케이스 미검증")
 4. verdict --fail 기록 → 해당 케이스를 c5로 추가, 구현·pass → 재검수 → 통과
 5. verdict --pass → done → habit feedback 1회 → commit gate가 닫혀 있어 전달 없이 정지

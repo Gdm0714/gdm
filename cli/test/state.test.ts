@@ -28,6 +28,11 @@ import {
 import type { Work } from "../src/types.ts";
 
 const NOW = "2026-07-02T00:00:00.000Z";
+const REPORT_HASH = "a".repeat(64);
+
+function audit(work: Work, result: "pass" | "fail") {
+  return recordAudit(work, result, "report.md", REPORT_HASH, "Codex", "Claude", null, NOW);
+}
 const EV = { observed: "out/c1.txt", sha256: "abc123", manual: false };
 
 function sampleWork(): Work {
@@ -180,7 +185,7 @@ describe("audit 게이트", () => {
 
   test("미통과 상태에서 verdict 거부", () => {
     const work = initWork("sample", "x", NOW, true);
-    expect(() => recordAudit(work, "pass", "report.md", NOW)).toThrow(/모든 항목 통과 후/);
+    expect(() => audit(work, "pass")).toThrow(/모든 항목 통과 후/);
   });
 
   test("검수 필수 작업은 검수 없이 done 거부", () => {
@@ -188,17 +193,17 @@ describe("audit 게이트", () => {
   });
 
   test("검수 반려 상태에서 done 거부", () => {
-    const audited = recordAudit(allProven(), "fail", "report.md", NOW);
+    const audited = audit(allProven(), "fail");
     expect(() => closeWork(audited, NOW)).toThrow(/반려/);
   });
 
   test("검수 통과 후 done 성공", () => {
-    const audited = recordAudit(allProven(), "pass", "report.md", NOW);
+    const audited = audit(allProven(), "pass");
     expect(closeWork(audited, NOW).done).toBe(true);
   });
 
   test("검수 후 상태가 바뀌면 done 거부 (stateHash 불일치)", () => {
-    let audited = recordAudit(allProven(), "pass", "report.md", NOW);
+    let audited = audit(allProven(), "pass");
     ({ work: audited } = addCheck(audited, { desc: "추가", cmd: "x", expect: "y" }));
     audited = passCheck(audited, "c2", { ...EV, observed: "out/c2.txt" }, NOW);
     expect(() => closeWork(audited, NOW)).toThrow(/재검수/);
@@ -262,6 +267,11 @@ describe("validateWork", () => {
     const work = sampleWork() as unknown as { checks: { status: string }[] };
     work.checks[0]!.status = "proven";
     expect(() => validateWork(work, "t")).toThrow(/증거 없이 proven/);
+  });
+
+  test("손상된 delivery 상태면 거부", () => {
+    const work = { ...sampleWork(), delivery: { issue: 12 } };
+    expect(() => validateWork(work, "t")).toThrow(/delivery 형태 오류/);
   });
 });
 

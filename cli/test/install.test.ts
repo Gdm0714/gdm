@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import {
   existsSync,
   lstatSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
@@ -10,9 +12,11 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import packageJson from "../package.json";
 
 const ROOT = join(import.meta.dir, "..", "..");
 const INSTALL = join(ROOT, "install", "install.sh");
+const REMOTE_INSTALL = join(ROOT, "install.sh");
 const decoder = new TextDecoder();
 const PATTERN = "learning.minimal-rule-after-recurrence";
 
@@ -32,6 +36,35 @@ function run(program: string, cwd: string, args: readonly string[], home?: strin
     stdout: decoder.decode(result.stdout),
     stderr: decoder.decode(result.stderr),
   };
+}
+
+function runEnv(program: string, cwd: string, args: readonly string[], env: NodeJS.ProcessEnv): ProcessResult {
+  const result = Bun.spawnSync([program, ...args], { cwd, env, stdout: "pipe", stderr: "pipe" });
+  return {
+    exitCode: result.exitCode,
+    stdout: decoder.decode(result.stdout),
+    stderr: decoder.decode(result.stderr),
+  };
+}
+
+function fileHash(path: string): string {
+  return createHash("sha256").update(readFileSync(path)).digest("hex");
+}
+
+function remoteAssets(withChecksums: boolean): { directory: string; asset: string } {
+  const directory = tempDirectory("gdm-remote-assets-");
+  const os = process.platform === "darwin" ? "darwin" : "linux";
+  const arch = process.arch === "arm64" ? "arm64" : "x64";
+  const asset = `gdm-${os}-${arch}`;
+  expect(run("bun", ROOT, ["build", "cli/src/cli.ts", "--compile", "--outfile", join(directory, asset)]).exitCode).toBe(0);
+  expect(run("tar", ROOT, ["-czf", join(directory, "gdm-skills.tar.gz"), "skills", "agents"]).exitCode).toBe(0);
+  if (withChecksums) {
+    writeFileSync(
+      join(directory, "SHASUMS256.txt"),
+      `${fileHash(join(directory, asset))}  ${asset}\n${fileHash(join(directory, "gdm-skills.tar.gz"))}  gdm-skills.tar.gz\n`,
+    );
+  }
+  return { directory, asset };
 }
 
 function tempDirectory(prefix: string): string {
@@ -123,6 +156,47 @@ function importFixture(binary: string, home: string, cwd: string): readonly stri
 }
 
 describe("gdm installation and workflow skills", () => {
+  test("remote installer verifies complete artifacts before changing the target", () => {
+    const assets = remoteAssets(true);
+    const home = tempDirectory("gdm-remote-home-");
+    const bin = join(home, "bin");
+    mkdirSync(bin, { recursive: true });
+    const installed = runEnv("bash", ROOT, [REMOTE_INSTALL], {
+      ...process.env,
+      HOME: home,
+      SHELL: "/bin/zsh",
+      GDM_BASE_URL: `file://${assets.directory}`,
+      GDM_BIN_DIR: bin,
+    });
+    expect(installed.exitCode).toBe(0);
+    expect(run(join(bin, "gdm"), ROOT, ["--version"]).stdout.trim()).toBe(packageJson.version);
+    expect(existsSync(join(home, ".claude", "skills", "gdm-go", "SKILL.md"))).toBe(true);
+    expect(existsSync(join(home, ".codex", "skills", "gdm-pr", "SKILL.md"))).toBe(true);
+    const installedResearch = readFileSync(join(home, ".codex", "skills", "gdm-research", "SKILL.md"), "utf8");
+    const installedAuditor = readFileSync(join(home, ".claude", "skills", "gdm-agents", "auditor.md"), "utf8");
+    const installedRunner = readFileSync(join(home, ".codex", "skills", "gdm-agents", "run-auditor.sh"), "utf8");
+    expect(installedResearch).toContain("에이전트 팬아웃을 사용하지 않는다");
+    expect(installedAuditor).toContain("MAX_AGENT_DEPTH: 0");
+    expect(installedRunner).toContain("--disable multi_agent");
+    expect(installedRunner).toContain('--tools "Read,Glob,Grep"');
+  });
+
+  test("remote installer fails closed when checksums are unavailable", () => {
+    const assets = remoteAssets(false);
+    const home = tempDirectory("gdm-remote-no-checksum-");
+    const bin = join(home, "bin");
+    const rejected = runEnv("bash", ROOT, [REMOTE_INSTALL], {
+      ...process.env,
+      HOME: home,
+      SHELL: "/bin/zsh",
+      GDM_BASE_URL: `file://${assets.directory}`,
+      GDM_BIN_DIR: bin,
+    });
+    expect(rejected.exitCode).not.toBe(0);
+    expect(`${rejected.stdout}${rejected.stderr}`).toContain("SHASUMS256.txt");
+    expect(existsSync(join(bin, "gdm"))).toBe(false);
+  });
+
   test("every skill has discoverable metadata and reflect installs for both hosts", () => {
     // Given: an isolated HOME and every repository skill.
     const installed = installGdm();

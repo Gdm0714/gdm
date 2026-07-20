@@ -39,8 +39,8 @@ description: |
 | `gdm plan edit --check <id> [...] --reason <사유>` | 항목 조정 (사유 필수) |
 | `gdm pass <id>` | 자동 항목 통과 — gdm이 cmd를 직접 실행·저장·해시하고 exit 0일 때만 통과 |
 | `gdm pass <id> --manual --observed <파일>` | 수동 항목 통과 — 스크린샷 등 확인 기록 제출 |
-| `gdm recheck` | 통과한 자동 항목 전부 재실행 — 회귀 검출, 실패 항목은 open 회귀 |
-| `gdm done` | 완료 — 전 항목 통과 + 증거 파일 현존·해시 재검증 후에만 exit 0 |
+| `gdm recheck` | 구현 중 중간 회귀 확인이 필요할 때만 통과한 자동 항목 재실행 |
+| `gdm done` | 완료 — 자동 항목 재실행 + 증거 파일 현존·해시 재검증 후에만 exit 0 |
 | `gdm status` | 현재 디렉토리 전체 작업 현황 |
 | `gdm resume` | 중단된 작업 상태 복원 |
 | `gdm attempt fail ...` | 실패 서명·가설과 한 번의 확인 재시도 기록 |
@@ -73,7 +73,8 @@ headless 위임은 과하다. 특정 항목만 `codex exec`로 위임하는 것�
    gdm attempt fail --slug <s> --attempt-id a3 --command <id> --target <id> --error-code <id> --hypothesis <확인 결과>
    gdm attempt retry --slug <s> --attempt-id a4 --fingerprint <fingerprint> --changed <종류> --evidence <파일>
    ```
-3. 여러 항목·여러 파일을 고쳤으면 done 전에 `gdm recheck`.
+3. `gdm done`이 자동 항목을 다시 실행하므로 직전에 `gdm recheck`를 중복 실행하지 않는다.
+   `recheck`는 구현 도중 이미 통과한 항목의 중간 회귀를 확인해야 할 때만 사용한다.
 4. `gdm done` 성공 뒤 `gdm habit harvest --json`을 정확히 한 번 실행해 이번 작업의
    반복 사건을 수확하고, 적용한 habit이 있으면 `ineligible|skipped|clean|recurred` 중
    실제 결과를 `gdm habit evaluate`로 기록한다. 새 후보 검토가 필요하면

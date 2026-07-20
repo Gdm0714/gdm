@@ -17,11 +17,13 @@
 
 ```
 1. gh issue create            이슈로 할 일 고정
-2. git checkout -b feat/<이슈>-<설명>
+2. git switch -c feat/<이슈>-<설명>
 3. 구현 + 논리 단위 커밋       (gdm 작업이면 $gdm-go / $gdm-full)
-4. gh pr create               본문: 변경사항 / 테스트 체크 / Closes #이슈
-5. CI 통과 확인               gh pr checks --watch
-6. squash 머지 → 브랜치 삭제
+4. gdm delivery prepare      이슈·브랜치·커밋 HEAD 고정
+5. gh pr create + delivery pr
+6. CI 통과 확인 + delivery ci
+7. 명시적 승인 + delivery check-merge
+8. squash 머지 → delivery merged → 브랜치 삭제
 ```
 
 ## 커밋 메시지
@@ -46,6 +48,6 @@
 
 ## 버전
 
-- `cli/src/cli.ts`의 `VERSION` — CLI 동작이 바뀌면 semver로 올린다
+- `cli/package.json`의 `version` — CLI 동작이 바뀌면 semver로 올린다
   (스킬 문서만 바뀌면 유지)
-- 릴리스 태그는 아직 사용하지 않는다 (P5 오케스트레이터 전까지 보류)
+- `v<version>` 태그만 릴리스하며, 워크플로가 태그와 패키지 버전 일치를 검증한다.
