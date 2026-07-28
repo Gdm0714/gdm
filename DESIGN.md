@@ -124,20 +124,111 @@ cmd를 실행해 출력을 `.gdm/<슬러그>/out/`에 저장·해시하고, exit
 
 ### 역할 실행과 독립 검수 (v0.7)
 
-현재 대화를 맡은 **진행자**가 사용자 상호작용·gdm 게이트·종합을 소유한다. 역할별 실행
-주체가 진행자와 같은 모델이면 직접 수행하고, 다르면 비대화형 CLI로 위임한다.
+현재 대화를 맡은 **진행자**가 사용자 상호작용·gdm 게이트·종합을 소유한다. 실제 실행은
+진행자 고정이 아니라 작업의 독립 경계, 필요한 전문성, 컨텍스트 분리 이득에 따라 현재
+세션과 서브에이전트 사이에 배정한다. 다른 모델이 더 적합한 역할은 비대화형 CLI로 위임한다.
 
-| 역할 | 기본 실행 주체 | 진행자가 Claude일 때 |
+| 역할 | 기본 실행 주체 | 상황별 위임 기준 |
 |---|---|---|
-| 계획 초안·중량 구현·리뷰 | Codex | `codex exec`로 위임 |
-| 경량 구현 | 진행자 직접 | 직접 수행 |
-| 최종 검수 | **실제 구현 주체와 다른 모델** | 기본 Codex 구현이면 Claude가 검수 |
+| 계획·조사·리뷰 | 진행자 + 필요한 서브에이전트 | 독립 축이나 새 컨텍스트가 결과 품질을 높일 때 |
+| 경량·중량 구현 | 실제 구현 모델의 진행자 또는 워커 | 파일·모듈 소유권을 겹치지 않게 나눌 수 있을 때 |
+| 최종 검수 | **실제 구현 주체와 다른 모델** | 항상 새 컨텍스트의 단일 leaf |
 
 불변식: **검수 모델 ≠ 실제 구현 모델**. 구현 주체와 다른 맹점을 확보하기 위한 규칙이며
 역할 선호보다 우선한다.
 계약 정본은 `skills/_shared/routing.md`이고, 각 스킬은 자기 역할 규칙을 인라인으로 갖는다
 (install.sh가 `_shared`를 설치하지 않으므로 런타임 자립이 필요). 범위는 역할별 라우팅까지 —
 세션 밖 실행 관리와 모델별 성능 비교는 실제 회고 데이터가 쌓인 뒤 판단한다.
+
+탐색·조사·리뷰뿐 아니라 구현과 검증도 독립 경계가 있으면 서브에이전트로 위임한다. 일반
+서브에이전트는 leaf가 아니며, 작업 중 새 독립 경계를 발견하면 같은 기준으로 하위 위임할 수
+있다. 여러 구현 워커는 겹치지 않는 파일·모듈을 소유하고 진행자가 통합한다. 독립 검수의
+모델 판정이 필요한 gdm-full 작업은 실제 구현 모델을 하나로 유지하되, 그 모델의 에이전트
+수를 한 명으로 제한하지 않는다.
+
+폭증 방지는 위임 깊이를 0으로 만드는 대신 두 개의 독립 퓨즈로 한다. 경계 단위는 하나의
+네이티브 Codex 루트 세션 트리다. 그 안에서 gdm 훅은 모든 descendant가 공유하는 hook
+`session_id`에서 허용한 spawn 시도를 생애 누적 12회로 제한한다. primary를 제외한 열린
+spawned-agent thread의 동시 4는 현재 세션의 유효
+`[agents] max_concurrent_threads_per_session = 4`일 때 Codex가 강제하는 네이티브 상한이다.
+사용자 `config.toml` 값은 CLI·프로필·프로젝트 계층이 덮을 수 있으므로 doctor는 사용자 설정과
+현재 세션 유효값을 구분하고 `/debug-config` 확인을 안내한다.
+실패·취소도 예산을 돌려주지 않아 무한 재시도형 팬아웃을 막는다. 첫 Pre 뒤 같은
+`tool_use_id`가 다시 들어오면 실제 handler가 이미 실행됐는지 훅이 증명할 수 없으므로, 동일한
+`tool_input`·protocol·caller라도 즉시 거부한다. 이 재전달은 새 attempt로 세지 않으며, 같은
+id의 입력·caller가 바뀌는 경우도 충돌로 거부한다. Pre보다 먼저 온 unmatched Post 기록도
+세션당 12개로 제한하고, 동일 Post replay만 상태 변경 없이 허용한다.
+비대화형 CLI나 별도 Codex 세션까지 합친 논리 작업 전체에는 이 원장을 공유할 수 없으므로,
+진행자가 동시 4·누적 12를 지키는 협력적 운영 규칙을 적용한다.
+
+gdm 워크플로의 각 spawn 메시지 첫 줄에는
+`GDM_AGENT_ENVELOPE_V1=<단일행 JSON>` 계약을 넣는다. 역할·범위·읽기/쓰기 소유권·산출물·
+검증법·종료조건·의존성·위임 가능 여부·자식 quota·깊이를 명시하고, PreToolUse 훅이 형식,
+중복 task id, 활성 structured 역할의 중복 scope, 경로 별칭을 정규화한 쓰기 소유권 충돌,
+누적 예산을 검사한 뒤 원자적으로 예약한다. 첫 줄 marker의 들여쓰기나 필드의 앞뒤 공백은
+일반 spawn으로 강등하지 않고 잘못된 계약으로 거부한다. user hook을 쓰더라도 gdm을 사용하지
+않는 일반 Codex spawn은 envelope가
+없다는 이유로 막지 않는다. 이런 unmarked spawn도 같은 세션 누적 12에는 포함하되 구조
+정책만 적용하지 않는다.
+
+PostToolUse와 SubagentStart/Stop은 실행 결과와 관찰된 turn 상태를 원장에 조정한다. Codex V1은
+성공 Post가 주는 최상위 agent id를 쓰고, 하위 hook의 caller agent id는 structured와
+unstructured 예약 모두에 결속한다. lifecycle 순서만으로 추정한 V1 연결은 provisional이며
+소유권 해제나 `blockedBy` 충족에 쓰지 않는다.
+
+Codex V2는 `tool_input.task_name` 존재로 구분한다. V2 성공 Post의 `task_name`은 입력 leaf가
+아니라 `/root/child/grandchild` 같은 canonical AgentPath일 수 있고 agent id가 없으므로 신원
+근거로 쓰지 않는다. 대신 unresolved V2가 포함된 identity-ambiguous 구간에는 다른 unresolved
+V1/V2 handshake가 함께 생기지 않게 직렬화하고, 유일한 Start·Stop 또는 caller 결속으로 id가
+정해진 뒤 병렬 spawn을 다시 허용한다. 이미 id가 연결된 active V1/V2는 이 직렬화 대상이 아니다.
+structured V2 자식의 실제 caller는 active이지만 아직 id가 없는 선언 부모가 V1이어도 V2여도
+한 트랜잭션 안에서 부모를 먼저 결속할 수 있다. 이후 정책이 거부되면 이 결속도 기록하지 않는다.
+
+Pre/Post 설치 matcher는 정확한 내장 이름과, 공식 namespace 문자 집합
+`[A-Za-z0-9_-]{1,64}` 뒤에 `spawn_agent`가 붙은 flat tool 이름을 전달한다. 내장 이름이 아닌
+suffix 도구는 공백 없는 `task_name`과 비어 있지 않은 문자열 `message`가 모두 있을 때만 V2
+spawn으로 원장에 기록한다. 단, Codex가 custom V2 namespace로 금지하는 `mcp`, `mcp__*`,
+Responses 예약 namespace는 같은 suffix와 shape를 가져도 통과시키고 예산에 세지 않는다.
+그 밖의 suffix 도구도 shape가 없으면 통과시킨다. Codex가 전달하는 flat tool 이름만으로는
+실제 namespace 출처를 증명할 수 없으므로 이 검사는 provenance 인증이 아니라 보수적인
+wire-shape 분류다.
+
+Pre 예약은 60초 acknowledgement 유예를 가진다. Post·Start로 running이 확인되면 30분
+lifecycle lease로 바뀌며, lease expiry는 내부 Stop 장벽과 선언 소유권을 풀기 위한 정리일 뿐
+실제 thread 종료나 성공 증명이 아니다. 실제 Start가 관찰된 뒤 실패 Post가 와도 그 agent는
+Stop 또는 lease expiry까지 running으로 남겨 숨기지 않는다. 반대로 failed 또는 expired
+예약에 이미 연결된 pending/running agent의 실제 Start가 뒤늦게 오면 running lease를 다시
+열고 Stop 장벽을 복구한다. 실패 Post의 outcome·reason은 보존하고 일반 lease-expiry reason만
+지운다. 이미 stopped로 관찰된 agent의 순서 뒤집힌 Start는 stop 신호를 바꾸지 않는다. 예약과
+연결하지 못한 lifecycle 관찰도 30분 뒤 Stop 계산에서 제거하고 세션당 12개로 제한해 rogue
+event가 영구 장벽이나 무제한 원장이 되지 않게 한다. 상태 요약은 파일을 다시 쓰지 않아도
+만료 시각이 지난 active 예약을 effective `expired`로 집계한다. 원장 쓰기는 임시 파일 fsync와
+rename 뒤 가능한 파일시스템에서 디렉터리 fsync를 best effort로 수행한다. stale lock은 PID뿐
+아니라 Linux `/proc` 또는 macOS 고정 `/bin/ps`에서 얻은 process-start identity가 정확히
+일치할 때만 유지해 PID 재사용으로 인한 영구 고착을 피한다.
+
+하위 hook에 caller agent id가 있고 원장의 structured 부모와 일대일로 결속되면
+`parentId`, `childQuota`, `canDelegate`, `depth`를 기계적으로 검사한다. root 호출은
+`parentId=root`, `depth=1`이어야 한다. caller id를 제공하지 않는 호환 런타임에서는 원장에
+선언한 부모가 있을 때만 그 부모의 nonterminal/quota/depth/canDelegate를 검사하는
+degraded fallback을 쓴다. 이 fallback을 부모 신원 하드 경계라고 주장하지 않는다. 훅이
+실행되면 같은 세션 누적 12는 계속 강제되고, 동시 4는 현재 세션의 유효 Codex 상한이 4일
+때 강제된다.
+훅 sequencing에서 `blockedBy`를 만족하는 내부 상태는 id와 연결된 `stopped`뿐이다.
+여기서 `SubagentStop`은 한 turn의 stop 시도 관찰이자 순서 힌트이며, thread의 영구 종료나
+성공을 뜻하지 않는다. `failed|expired`는 활성 소유권과 Stop 장벽에서는 빠지지만 의존성을
+충족하지 않는다. follow-up·agent 재사용·interrupt의 실제 처리와 이후 재개는 이 훅 집합에서
+관찰할 수 없으므로, `blockedBy`와 ownership release를 hard safety나 작업 완료 판정으로 쓰지
+않는다. 진행자가 `deliverable`과 `verify`를 직접 확인하고 workflow 결과를
+`completed|failed|cancelled|inconclusive` 중 하나로 판정해 통합해야 한다. Stop 반환도 다른
+훅보다 우선하는 절대 차단이 아니라 한 번의 continuation guardrail이다. 설치기는 기존 `~/.codex/hooks.json`과
+`config.toml`을 보존해 gdm handler만 병합하며, 설치와 실행 신뢰는 구분한다. 새 command
+hook은 사용자가 Codex `/hooks` 화면에서 신뢰 상태를 확인해야 한다.
+
+빈 슬롯이 없으면 기다리거나 기존 역할을 재사용한다. 같은 범위를 다시 넘기는 자기복제형
+재귀와 끝이 정해지지 않은 팬아웃은 금지한다. 최종 검수자만 독립성·판정 일관성을 위해 항상
+1명의 leaf이며, gdm doctor는 동시성 상한과 훅 설치·활성·신뢰 미확인 상태를 구분해
+보고한다.
 
 ## 5. 실사용 신호와 기능 우선순위
 
@@ -170,6 +261,7 @@ cmd를 실행해 출력을 `.gdm/<슬러그>/out/`에 저장·해시하고, exit
 │   ├── src/{state,store,contract,attempt}.ts
 │   ├── src/{audit-integrity,delivery,repository-lock}.ts
 │   ├── src/{cli,cli-args,delivery-cli,version}.ts
+│   ├── src/{codex-agent-hook,codex-agent-hooks-config,agent-cli}.ts
 │   └── test/
 ├── install/install.sh       # 심링크 설치 + PATH
 └── README.md
@@ -190,7 +282,7 @@ cmd를 실행해 출력을 `.gdm/<슬러그>/out/`에 저장·해시하고, exit
   재개: `$gdm:go --resume`.
 - **gdm:full** (P2): go 흐름 + 제한 실행기로 단일 leaf 검수자 실행 → 통과/반려 →
   반려는 check로 환원 → 통과 시 마무리 절차(커밋 규칙 검사, PR 본문, 검수보고).
-- **gdm:plan / review / analyze** (P3), **gdm:research** (P4): 계획·리뷰·원인 분석·단일 세션 배치 조사.
+- **gdm:plan / review / analyze** (P3), **gdm:research** (P4): 계획·리뷰·원인 분석·최대 4개 축 제한 병렬 조사.
 - **gdm:pr**: 이슈→브랜치→커밋→PR→CI 감시 파이프라인. 계약 게이트와 `delivery`의
   HEAD·PR·CI·명시적 머지 승인 기록이 모두 맞을 때만 전달한다.
 - **gdm:ui / gdm:design**: 화면 수정(스크린샷 피드백)과 0→1 화면 디자인 루프. 시각 검수자는 구현자와 다른 벤더.
@@ -221,6 +313,8 @@ cmd를 실행해 출력을 `.gdm/<슬러그>/out/`에 저장·해시하고, exit
 | 규칙이 쌓여 컨텍스트가 다시 오염됨 | 반복 사건 2개 이상만 후보화, 적용 결과가 없으면 폐기 검토 |
 | 자동 기억이 잘못된 규칙으로 승격됨 | 원문과 후보를 분리하고 사람의 명시적 채택을 필수화 |
 | 완료를 커밋 허가로 오해 | 작업 계약의 커밋 상태를 별도 필드와 읽기 전용 게이트로 관리 |
+| 서브에이전트 재귀 팬아웃으로 로컬 자원 고갈 | hook root session 누적 spawn 12 + effective Codex 동시 상한이 4일 때 네이티브 제한 + 자기복제형 위임 금지 |
+| 훅 설치를 곧 실행 강제로 오해 | 설치·feature 활성·사용자 신뢰를 doctor에서 별도 상태로 표시하고 `/hooks` 확인 안내 |
 
 ## 10. 미결 사항
 
@@ -230,6 +324,22 @@ cmd를 실행해 출력을 `.gdm/<슬러그>/out/`에 저장·해시하고, exit
 
 ## 11. 결정 로그
 
+- 2026-07-28: **재귀 위임 계약을 런타임 원장으로 연결.** `GDM_AGENT_ENVELOPE_V1`으로
+  역할·소유권·종료조건·의존성을 전달하고, Pre/PostToolUse와 SubagentStart/Stop 훅이
+  예약·실행 결과·관찰된 turn-stop을 세션 원장에 기록한다. 훅이 실행되는 root session 누적 12는 하드
+  퓨즈이고, 동시 4는 현재 세션의 effective Codex 설정이 4일 때 네이티브 하드 퓨즈다.
+  호출자 신원이 없는 호환 경로에서 부모별 quota를 완전 강제한다고 주장하지 않는다. Stop
+  장벽과 command hook 신뢰도 각각 continuation guardrail과 사용자 확인 상태로 명시한다.
+- 2026-07-28: **안전 제한과 위임 판단을 분리.** 일반 서브에이전트의 재귀 위임과 구현
+  위임을 금지하지 않는다. 독립 경계·전문성·컨텍스트 분리가 유리하면 어느 세대든 다음
+  역할을 만들 수 있다. 폭증은 root session 누적 12와 운영 상한 4로 막고, 현재 세션의
+  effective Codex 동시 상한이 4이면 네이티브 퓨즈도 함께 적용한다. 같은 범위를 다시 넘기는
+  자기복제형 재귀만 금지한다. 단일 leaf는 최종 검수자에만 적용한다.
+- 2026-07-23: **서브에이전트 전면 차단을 동시성 안전 퓨즈로 교체.** 16GB Mac에서 Codex 상한
+  `1000`이 MCP·Node 자식 1,688개와 swap 46GB를 만든 실측 사고를 근거로 전역 상한을
+  사용자 `[agents] max_concurrent_threads_per_session = 4`로 낮췄다. gdm doctor는 사용자
+  설정의 상한 누락, 구형 `multi_agent_v2`, 8개 초과를 경고하고 현재 세션 effective 값은
+  `/debug-config`로 구분해 확인하도록 안내한다.
 - 2026-07-02: CLI 어휘 확정 — `plan / pass / done / audit / resume / retro`. 기준: CLI는 모델이
   치고 사람은 읽으므로 역할 가독성 우선. 스킬 이름은 `go`/`full` **자리표시자** —
   실사용 후 입에 붙는 말로 rename (사용자 합의)

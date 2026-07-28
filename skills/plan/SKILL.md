@@ -23,11 +23,57 @@ description: |
 
 ## 프로세스
 
-워커 배정: 계획의 **소유자는 현재 세션**이다 — 사용자 문답, 코드 조사, 작업 계약, 문서
-검토·저장은 위임하지 않는다 (라우팅 계약: `skills/_shared/routing.md`의 역할 배정 표와 동일).
-그 안에서 초안 **문서 작성만** Codex 워커에 맡긴다: 조율자가 Codex가 아니면 요청·가정·조사
-결과를 정리해 `codex exec`로 초안 작성을 위임한 뒤 받아 검토·저장하고, 조율자가 Codex면
-전 과정을 직접 한다. 위임 도구가 없거나 실패하면 현재 세션이 직접 작성하고 사유를 남긴다.
+워커 배정: 계획의 **소유자는 루트 진행자**다 — 사용자 문답, 작업 계약, 근거 판정, 최종 문서
+검토·저장은 진행자가 소유한다 (라우팅 계약: `skills/_shared/routing.md`의 역할 배정 표와 동일).
+그 안의 조사·초안 작업은 독립 코드 경계, 필요한 전문성·fresh context, 넓은 탐색이 주
+컨텍스트에 만드는 노이즈를 보고 직접 수행하거나 위임한다. 여러 조사 역할에는 겹치지 않는
+영역과 종료 조건을 주며, 진행자가 인용할 실제 파일을 다시 확인하고 최종 문서를 저장한다.
+
+일반 조사 역할은 작업 중 새로 발견한 독립 코드 영역을 하위 역할에 맡길 수 있다. 같은
+네이티브 Codex 루트 세션에서 진행자를 제외한 모든 세대의 활성 spawned agent를 합쳐 동시에
+최대 4명이며, 자식이 만든 자식도 같은 세션 상한에 포함된다. 같은 전체 계획 범위를 다시
+넘기는 자기복제형 재위임과 끝이 정해지지 않은 팬아웃만 금지한다. 빈 슬롯이나 위임 수단이
+없으면 진행자가 이어서 수행한다.
+
+위임 lease: 모든 spawn 메시지 첫 줄에 `GDM_AGENT_ENVELOPE_V1=` 단일행 JSON과 역할·scope·
+ownership·산출물·검증·종료 조건·`blockedBy`를 넣는다. 제한은
+`MAX_TOTAL_SPAWNS_PER_ROOT: 12`, `DEFAULT_CHILD_QUOTA: 1`, `MAX_CHILD_QUOTA: 2`,
+`MAX_AGENT_DEPTH: 3`이다. 일반 역할의 기본 quota는 1이며 일괄 leaf로 만들지 않는다.
+허용된 시도는 누적 예산을 소비하고 실패·취소된 spawn도 예산을 돌려주지 않는다. timeout은
+대기 호출의 종료일 뿐 workflow 결과 확정이 아니다. structured 역할의 scope와
+ownership resource는 cwd 기준 `.`·`..`·상대/절대 별칭을 정규화한다. 활성 역할과 같은
+canonical scope 또는 겹치는 write resource는 거부하지만, 이는 선언 guardrail이며
+symlink·대소문자까지 잠그는 운영체제 파일 lock은 아니다.
+`SubagentStop`은 child turn의 stop 관찰이자 sequencing hint일 뿐 영구 thread 종료나 성공
+증명이 아니다. 다른 Stop handler가 continuation을 요청할 수 있고, idle thread는
+`followup_task`로 재사용될 수 있으며, interrupt는 Stop 관찰을 남기지 않을 수 있다. 원장에서
+해당 identity에 연결된 `stopped` 관찰은 active/ownership lease를 협력적으로 해제하고
+`blockedBy`를 열 수 있지만 hard runtime proof가 아니다. 루트 진행자는 deliverable/verify와
+실제 작업 겹침 부재를 확인해야 한다. `failed|expired`는 active/ownership lease에서는 빠져도
+`blockedBy`를 만족하지 않으며, 30분 lease expiry도 완료가 아니다. 의존 조사와 계획 확정은 산출물 결과를
+`completed|failed|cancelled|inconclusive` 중 하나로 별도 판정한다. 이 workflow 결과는
+lifecycle 관찰과 분리한다.
+훅이 실행되는 하나의 네이티브 Codex 루트 세션 트리에서 누적 12는 하드 상한이고, 동시 4는
+현재 세션의 유효 Codex 설정이 4일 때 네이티브 하드 상한이다. 하위 hook caller agent id가
+structured 부모와 일대일로 결속될 때 부모별 quota/depth/canDelegate를 기계적으로 검사한다.
+caller id가 없는 호환 런타임은 원장에 선언한 부모가 있을 때만
+nonterminal/quota/depth/canDelegate를 검사하는 degraded fallback을 쓰며, 이를 부모 신원
+하드 경계라고 주장하지 않는다.
+`multi_agent_v2` spawn 응답에는 agent id가 없으므로 unresolved V2가 포함된
+identity-ambiguous 구간만 직렬화한다. unresolved V1끼리는 병렬 가능하고, identity가 연결된 뒤
+active agent 실행도 병렬 가능하다. same-axis 후속 작업으로 idle thread를 재사용할 수 있지만
+훅은 이전 ownership/delegation을 기계적으로 갱신하지 못한다.
+루트 진행자는 실제 작업 겹침을 피하고 새 bounded delegation이 필요하면 새 lease를 선언해
+생성한다.
+비대화형 CLI·별도 세션을 합친 논리 작업 전체의 동시 4·누적 12는 협력적 운영 규칙이다.
+
+아래 한 줄은 형식 예시일 뿐이다. 복사하기 전에 `taskId`, `parentId`, `role`, `scope`,
+`ownership.mode/resources`, `deliverable`, `verify`, `stopWhen`, `canDelegate`,
+`childQuota`(quota), `depth`, `blockedBy` 값을 작업에 맞게 모두 바꾼다.
+
+```text
+GDM_AGENT_ENVELOPE_V1={"taskId":"example-task","parentId":"root","role":"bounded-worker","scope":"docs/example","ownership":{"mode":"read","resources":["docs/example.md"]},"deliverable":"Evidence-backed result","verify":"Confirm cited file and result","stopWhen":"Deliverable and verification are complete","canDelegate":false,"childQuota":0,"depth":1,"blockedBy":[]}
+```
 
 1. 요청을 읽고 모호한 지점을 가른다: 방향을 가르는 모호함이면 질문, 아니면
    기본값 선택 후 문서에 "가정"으로 기록.

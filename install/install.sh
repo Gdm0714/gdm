@@ -1,32 +1,174 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+INSTALL_CWD="$(pwd)"
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BIN_DIR="$HOME/.local/bin"
+case "${CODEX_HOME:-}" in
+  "") CODEX_HOME_DIR="$HOME/.codex" ;;
+  /*) CODEX_HOME_DIR="$CODEX_HOME" ;;
+  *) CODEX_HOME_DIR="$INSTALL_CWD/$CODEX_HOME" ;;
+esac
 
-echo "[1/3] gdm 바이너리 빌드 (bun compile)"
+BUILD_TMP=""
+ROLLBACK_DIR=""
+CLAUDE_STAGE=""
+CODEX_STAGE=""
+CLAUDE_SKILL_ROLLBACK=""
+CODEX_SKILL_ROLLBACK=""
+BINARY_OLD_MOVED=0
+BINARY_NEW_INSTALLED=0
+INSTALL_COMMITTED=0
+
+# Called by cleanup(), which itself is invoked through the EXIT trap.
+# shellcheck disable=SC2329
+rollback_skill_swap() {
+  local root="$1"
+  local stage="$2"
+  local rollback="$3"
+  local name
+  [ -n "$rollback" ] && [ -f "$rollback/.names" ] || return 0
+  while IFS= read -r name; do
+    if [ -e "$rollback/$name" ] || [ -L "$rollback/$name" ]; then
+      if [ -e "$root/$name" ] || [ -L "$root/$name" ]; then
+        rm -rf -- "${root:?}/${name:?}"
+      fi
+      mv "$rollback/$name" "$root/$name"
+    elif [ ! -e "$stage/$name" ] && [ ! -L "$stage/$name" ]; then
+      rm -rf -- "${root:?}/${name:?}"
+    fi
+  done <"$rollback/.names"
+}
+
+# shellcheck disable=SC2329
+cleanup() {
+  status=$?
+  trap - EXIT
+  set +e
+  if [ "$INSTALL_COMMITTED" = "0" ]; then
+    # Skill roots may coincide, so unwind in the reverse order of installation.
+    rollback_skill_swap "$CODEX_HOME_DIR/skills" "$CODEX_STAGE" "$CODEX_SKILL_ROLLBACK"
+    rollback_skill_swap "$HOME/.claude/skills" "$CLAUDE_STAGE" "$CLAUDE_SKILL_ROLLBACK"
+    if [ "$BINARY_NEW_INSTALLED" = "1" ]; then
+      [ ! -e "$BIN_DIR/gdm" ] && [ ! -L "$BIN_DIR/gdm" ] || rm -f "$BIN_DIR/gdm"
+    fi
+    if [ "$BINARY_OLD_MOVED" = "1" ] && [ -n "$ROLLBACK_DIR" ] &&
+      { [ -e "$ROLLBACK_DIR/gdm" ] || [ -L "$ROLLBACK_DIR/gdm" ]; }; then
+      mv "$ROLLBACK_DIR/gdm" "$BIN_DIR/gdm"
+    fi
+  fi
+  [ -z "$BUILD_TMP" ] || rm -f "$BUILD_TMP"
+  [ -z "$CLAUDE_STAGE" ] || rm -rf "$CLAUDE_STAGE"
+  [ -z "$CODEX_STAGE" ] || rm -rf "$CODEX_STAGE"
+  [ -z "$CLAUDE_SKILL_ROLLBACK" ] || rm -rf "$CLAUDE_SKILL_ROLLBACK"
+  [ -z "$CODEX_SKILL_ROLLBACK" ] || rm -rf "$CODEX_SKILL_ROLLBACK"
+  [ -z "$ROLLBACK_DIR" ] || rm -rf "$ROLLBACK_DIR"
+  exit "$status"
+}
+
+stage_source_skills() {
+  local root="$1"
+  local output_variable="$2"
+  local stage dir name
+  mkdir -p "$root"
+  [ -d "$root" ] || {
+    echo "gdm 설치 실패: skill 경로가 디렉터리가 아닙니다: $root" >&2
+    return 1
+  }
+  stage="$(mktemp -d "$root/.gdm-stage.XXXXXX")"
+  for dir in "$REPO"/skills/*/; do
+    name="$(basename "$dir")"
+    [ "$name" = "_shared" ] && continue
+    [ -f "${dir%/}/SKILL.md" ] || {
+      echo "gdm 설치 실패: skill 원본이 올바르지 않습니다: ${dir%/}" >&2
+      return 1
+    }
+    ln -s "${dir%/}" "$stage/gdm-$name"
+  done
+  [ -d "$REPO/agents" ] || {
+    echo "gdm 설치 실패: agents 원본이 올바르지 않습니다: $REPO/agents" >&2
+    return 1
+  }
+  ln -s "$REPO/agents" "$stage/gdm-agents"
+  printf -v "$output_variable" '%s' "$stage"
+}
+
+prepare_skill_swap() {
+  local root="$1"
+  local stage="$2"
+  local output_variable="$3"
+  local rollback staged name
+  rollback="$(mktemp -d "$root/.gdm-rollback.XXXXXX")"
+  : >"$rollback/.names"
+  for staged in "$stage"/gdm-*; do
+    [ -e "$staged" ] || [ -L "$staged" ] || return 1
+    name="$(basename "$staged")"
+    printf '%s\n' "$name" >>"$rollback/.names"
+  done
+  printf -v "$output_variable" '%s' "$rollback"
+}
+
+apply_skill_swap() {
+  local root="$1"
+  local stage="$2"
+  local rollback="$3"
+  local name
+  while IFS= read -r name; do
+    if [ -e "$root/$name" ] || [ -L "$root/$name" ]; then
+      mv "$root/$name" "$rollback/$name"
+    fi
+  done <"$rollback/.names"
+  while IFS= read -r name; do
+    mv "$stage/$name" "$root/$name"
+    echo "  $name"
+  done <"$rollback/.names"
+}
+
+echo "[1/5] gdm 바이너리 빌드·설치 사전검증"
+trap cleanup EXIT
 cd "$REPO/cli"
 mkdir -p "$BIN_DIR"
-bun build src/cli.ts --compile --outfile "$BIN_DIR/gdm" >/dev/null
+if { [ -e "$BIN_DIR/gdm" ] || [ -L "$BIN_DIR/gdm" ]; } &&
+  [ ! -f "$BIN_DIR/gdm" ] && [ ! -L "$BIN_DIR/gdm" ]; then
+  echo "gdm 설치 실패: 기존 바이너리 경로가 일반 파일이 아닙니다: $BIN_DIR/gdm" >&2
+  exit 1
+fi
+BUILD_TMP="$(mktemp "$BIN_DIR/.gdm.tmp.XXXXXX")"
+bun build src/cli.ts --compile --outfile "$BUILD_TMP" >/dev/null
+chmod 755 "$BUILD_TMP"
+CODEX_HOME="$CODEX_HOME_DIR" "$BUILD_TMP" agent hook-install \
+  --binary "$BUILD_TMP" --dry-run
 
-echo "[2/3] 스킬 심링크 (Claude Code / Codex)"
-mkdir -p "$HOME/.claude/skills" "$HOME/.codex/skills"
-for dir in "$REPO"/skills/*/; do
-  name="$(basename "$dir")"
-  [ "$name" = "_shared" ] && continue
-  ln -sfn "${dir%/}" "$HOME/.claude/skills/gdm-$name"
-  ln -sfn "${dir%/}" "$HOME/.codex/skills/gdm-$name"
-  echo "  gdm-$name"
-done
+echo "[2/5] 스킬 대상 사전검증·staging"
+stage_source_skills "$HOME/.claude/skills" CLAUDE_STAGE
+stage_source_skills "$CODEX_HOME_DIR/skills" CODEX_STAGE
 
-# 검수자 프롬프트와 제한 실행기: 단일 leaf 검수만 허용한다.
-# 스킬 옆(gdm-agents/)에 배치해 사용자 프로젝트 런타임에서도 참조 가능하게 한다.
-ln -sfn "$REPO/agents" "$HOME/.claude/skills/gdm-agents"
-ln -sfn "$REPO/agents" "$HOME/.codex/skills/gdm-agents"
-echo "  gdm-agents (auditor prompts, bounded runner)"
+echo "[3/5] 바이너리·스킬 transactional 교체"
+ROLLBACK_DIR="$(mktemp -d "$BIN_DIR/.gdm-rollback.XXXXXX")"
+prepare_skill_swap "$HOME/.claude/skills" "$CLAUDE_STAGE" CLAUDE_SKILL_ROLLBACK
+prepare_skill_swap "$CODEX_HOME_DIR/skills" "$CODEX_STAGE" CODEX_SKILL_ROLLBACK
+if [ -e "$BIN_DIR/gdm" ] || [ -L "$BIN_DIR/gdm" ]; then
+  mv "$BIN_DIR/gdm" "$ROLLBACK_DIR/gdm"
+  BINARY_OLD_MOVED=1
+fi
+mv "$BUILD_TMP" "$BIN_DIR/gdm"
+BINARY_NEW_INSTALLED=1
+apply_skill_swap "$HOME/.claude/skills" "$CLAUDE_STAGE" "$CLAUDE_SKILL_ROLLBACK"
+apply_skill_swap "$CODEX_HOME_DIR/skills" "$CODEX_STAGE" "$CODEX_SKILL_ROLLBACK"
 
-echo "[3/3] 점검"
-"$BIN_DIR/gdm" doctor
+echo "[4/5] Codex 에이전트 게이트 commit"
+CODEX_HOME="$CODEX_HOME_DIR" "$BIN_DIR/gdm" agent hook-install \
+  --binary "$BIN_DIR/gdm" >/dev/null
+INSTALL_COMMITTED=1
+
+# Everything after the hook commit is diagnostic only. It must not turn a
+# complete install into a partial-failure report.
+set +e
+echo "[5/5] 점검"
+if ! CODEX_HOME="$CODEX_HOME_DIR" "$BIN_DIR/gdm" doctor; then
+  echo "경고: 설치는 완료됐지만 gdm doctor 점검에 실패했습니다" >&2
+fi
 
 echo
 echo "설치 완료. 사용: 프로젝트 디렉토리에서 \$gdm-go / \$gdm-full 스킬 또는 gdm --help"
+exit 0

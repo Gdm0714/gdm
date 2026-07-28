@@ -36,7 +36,12 @@ gdm done --slug fix-login
   ```bash
   curl -fsSL https://raw.githubusercontent.com/Gdm0714/gdm/main/install.sh | bash
   ```
-  플랫폼(macOS·Linux)에 맞는 바이너리와 스킬을 받아 `~/.local/bin`과 Claude Code·Codex 스킬 폴더에 설치한다. 특정 버전은 `GDM_VERSION=v<버전>`, 설치 경로는 `GDM_BIN_DIR`로 조정한다.
+  플랫폼(macOS·Linux)에 맞는 바이너리와 스킬을 받아 `~/.local/bin`과 Claude Code·Codex
+  스킬 폴더에 설치한다. Codex에서는 기존 `hooks.json`의 다른 handler를 보존하면서 gdm
+  agent gate를 병합하고, 최초 변경 전 파일은 `hooks.json.gdm-backup`으로 남긴다.
+  `config.toml`은 수정하지 않으며 실제 command hook 실행은 Codex `/hooks`에서 사용자가
+  검토·신뢰한 뒤에만 확인된다. 상태는 `gdm agent hook-status` 또는 `gdm doctor`로 본다.
+  특정 버전은 `GDM_VERSION=v<버전>`, 설치 경로는 `GDM_BIN_DIR`로 조정한다.
 - 설치 (소스에서 · 개발용): 클론 후 `./install/install.sh` (Bun 필요)
 - 사용: Claude Code / Codex에서 `$gdm-go <작업>`, 터미널에서 `gdm --help`
 

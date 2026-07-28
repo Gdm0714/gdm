@@ -62,6 +62,13 @@ import type { Evidence, Work } from "./types.ts";
 import { VERSION } from "./version.ts";
 import { acquireRepositoryLock } from "./repository-lock.ts";
 import { cmdDelivery } from "./delivery-cli.ts";
+import { codexAgentLimitDoctorLines } from "./codex-agent-limit.ts";
+import { AgentCliError, cmdAgent } from "./agent-cli.ts";
+import {
+  AgentHooksConfigError,
+  codexAgentHookDoctorLines,
+  resolveCodexHome,
+} from "./codex-agent-hooks-config.ts";
 
 const CMD_TIMEOUT_MS = 300_000;
 
@@ -106,6 +113,9 @@ const USAGE = `gdm ${VERSION} — 작업 증거가 다음 습관을 바꾸는 �
   gdm delivery approve-merge --slug <슬러그> --head <sha> --reason <승인 근거>
   gdm delivery check-merge --slug <슬러그> --head <sha>
   gdm delivery merged --slug <슬러그> --head <sha> --merge-sha <sha>
+  gdm agent hook-install --binary <절대경로> [--dry-run] [--json] # 기존 hooks.json을 보존해 런타임 게이트 설치
+  gdm agent hook-status [--json]                            # 설치·원장 상태 조회
+  gdm agent hook [--handler-id gdm-agent-gate-v1]           # Codex lifecycle hook 내부 진입점
   gdm preset set <이름> <명령> | list | rm <이름>            # 프로젝트 표준 명령 등록
   gdm doctor
 
@@ -1103,6 +1113,9 @@ function repoVersionFromSkills(): { version: string; root: string } | undefined 
 
 function cmdDoctor(cwd: string): void {
   console.log(`gdm ${VERSION}`);
+  const home = homedir();
+  const codexEnv = { ...process.env, HOME: process.env.HOME ?? home };
+  const codexHomePath = resolveCodexHome(cwd, codexEnv);
   const repo = repoVersionFromSkills();
   if (repo) {
     if (repo.version === VERSION) {
@@ -1113,15 +1126,19 @@ function cmdDoctor(cwd: string): void {
       );
     }
   }
+  for (const line of codexAgentLimitDoctorLines(cwd, codexEnv)) console.log(line);
+  for (const line of codexAgentHookDoctorLines(cwd, codexEnv, process.execPath)) {
+    console.log(line);
+  }
   for (const name of SKILL_NAMES) {
-    const claude = existsSync(join(homedir(), ".claude", "skills", `gdm-${name}`));
-    const codex = existsSync(join(homedir(), ".codex", "skills", `gdm-${name}`));
+    const claude = existsSync(join(home, ".claude", "skills", `gdm-${name}`));
+    const codex = existsSync(join(codexHomePath, "skills", `gdm-${name}`));
     const mark = (ok: boolean) => (ok ? "OK" : "없음");
     console.log(`  gdm-${name}: claude[${mark(claude)}] codex[${mark(codex)}]`);
   }
   if (SKILL_NAMES.some((name) =>
-    !existsSync(join(homedir(), ".claude", "skills", `gdm-${name}`)) ||
-    !existsSync(join(homedir(), ".codex", "skills", `gdm-${name}`))
+    !existsSync(join(home, ".claude", "skills", `gdm-${name}`)) ||
+    !existsSync(join(codexHomePath, "skills", `gdm-${name}`))
   )) {
     console.log(`  → 누락 스킬은 재설치로 채웁니다: curl -fsSL https://raw.githubusercontent.com/Gdm0714/gdm/main/install.sh | bash (소스 설치는 install/install.sh)`);
   }
@@ -1207,6 +1224,15 @@ async function main(): Promise<void> {
       case "delivery":
         cmdDelivery(cwd, rest, now());
         break;
+      case "agent":
+        cmdAgent(
+          cwd,
+          rest,
+          rest[0] === "hook" ? readFileSync(0, "utf8") : "",
+          process.env,
+          process.execPath,
+        );
+        break;
       case "doctor":
         cmdDoctor(cwd);
         break;
@@ -1218,6 +1244,16 @@ async function main(): Promise<void> {
         process.exitCode = command === undefined || command === "--help" ? 0 : 2;
     }
   } catch (error) {
+    if (error instanceof AgentCliError) {
+      console.error(`오류(${error.code}): ${error.message}`);
+      process.exitCode = 2;
+      return;
+    }
+    if (error instanceof AgentHooksConfigError) {
+      console.error(`오류(${error.code}): ${error.message}`);
+      process.exitCode = 3;
+      return;
+    }
     if (error instanceof GdmError) {
       console.error(`오류(${error.code}): ${error.message}`);
       const usage = new Set(["usage", "constraint_required", "state_corrupt", "habit_ledger_corrupt", "brief_checks_invalid"]);
