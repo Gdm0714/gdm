@@ -30,9 +30,12 @@ description: |
 - IMPORTANT: 일반 조사 역할은 leaf로 고정하지 않는다.
 - CRITICAL: 모든 spawn 메시지 첫 줄에 `GDM_AGENT_ENVELOPE_V1=` 단일행 JSON과 역할·scope·
   ownership·산출물·검증·종료 조건·`blockedBy`를 넣는다. 위임 lease는
-  `MAX_TOTAL_SPAWNS_PER_ROOT: 12`, `DEFAULT_CHILD_QUOTA: 1`, `MAX_CHILD_QUOTA: 2`,
+  `INITIAL_SPAWN_ATTEMPT_BUDGET: 16`, `SPAWN_ATTEMPT_EXTENSION: 4`,
+  `MAX_TOTAL_SPAWNS_PER_ROOT: 32`, `DEFAULT_CHILD_QUOTA: 1`, `MAX_CHILD_QUOTA: 2`,
   `MAX_AGENT_DEPTH: 3`이다. 일반 조사 역할의 기본 quota는 1이며 일괄 leaf로 만들지 않는다.
-  허용된 시도는 누적 예산을 소비하고 실패·취소된 spawn도 예산을 돌려주지 않는다. timeout은
+  허용된 시도는 누적 예산을 소비하고 실패·취소된 spawn도 예산을 돌려주지 않는다. 초기 16을
+  다 쓰면 pending/running 역할이 하나도 없을 때만 다음 spawn에서 4개 예산을 자동으로 열며,
+  활성 역할이 남은 동안에는 확장하지 않는다. timeout은
   대기 호출의 종료일 뿐 workflow 결과 확정이 아니다. structured 역할의 scope와
   ownership resource는 cwd 기준 `.`·`..`·상대/절대 별칭을 정규화한다. 활성 역할과 같은
   canonical scope 또는 겹치는 write resource는 거부하지만, 이는 선언 guardrail이며
@@ -46,7 +49,7 @@ description: |
   빠져도 `blockedBy`를 만족하지 않으며, 30분 lease expiry도 완료가 아니다. 의존 조사와 최종 종합은 산출물 결과를
   `completed|failed|cancelled|inconclusive` 중 하나로 별도 판정한다. 이 workflow 결과는
   lifecycle 관찰과 분리한다.
-- CRITICAL: 훅이 실행되는 하나의 네이티브 Codex 루트 세션 트리에서 누적 12는 하드 상한이고,
+- CRITICAL: 훅이 실행되는 하나의 네이티브 Codex 루트 세션 트리에서 절대 누적 32는 하드 상한이고,
   동시 4는 현재 세션의 유효 Codex 설정이 4일 때 네이티브 하드 상한이다. 하위 hook caller
   agent id가 structured 부모와 일대일로 결속될 때 부모별 quota/depth/canDelegate를
   기계적으로 검사한다. caller id가 없는 호환 런타임은 원장에 선언한 부모가 있을 때만
@@ -56,8 +59,8 @@ description: |
   가능하고, identity가 연결된 뒤 active agent 실행도 병렬 가능하다. same-axis 후속 작업으로
   idle thread를 재사용할 수 있지만 훅은 이전 ownership/delegation을 기계적으로 갱신하지
   못한다. 루트 진행자는 실제 작업 겹침을 피하고 새 bounded delegation이 필요하면 새 lease를
-  선언해 생성한다. 비대화형 CLI·별도 세션을 합친 논리 작업 전체의 동시 4·누적 12는 협력적
-  운영 규칙이다.
+  선언해 생성한다. 비대화형 CLI·별도 세션을 합친 논리 작업 전체의 동시 4·초기 16·4개 자동
+  확장·절대 누적 32는 협력적 운영 규칙이다.
 
 아래 한 줄은 형식 예시일 뿐이다. 복사하기 전에 `taskId`, `parentId`, `role`, `scope`,
 `ownership.mode/resources`, `deliverable`, `verify`, `stopWhen`, `canDelegate`,

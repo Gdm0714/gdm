@@ -148,18 +148,21 @@ cmd를 실행해 출력을 `.gdm/<슬러그>/out/`에 저장·해시하고, exit
 
 폭증 방지는 위임 깊이를 0으로 만드는 대신 두 개의 독립 퓨즈로 한다. 경계 단위는 하나의
 네이티브 Codex 루트 세션 트리다. 그 안에서 gdm 훅은 모든 descendant가 공유하는 hook
-`session_id`에서 허용한 spawn 시도를 생애 누적 12회로 제한한다. primary를 제외한 열린
+`session_id`에서 spawn 시도를 초기 16회까지 허용한다. 16회를 다 쓴 뒤에는 pending/running
+역할이 하나도 없을 때만 다음 spawn에서 4회분을 자동으로 열고, 생애 누적 32회에서 완전히
+차단한다. primary를 제외한 열린
 spawned-agent thread의 동시 4는 현재 세션의 유효
 `[agents] max_concurrent_threads_per_session = 4`일 때 Codex가 강제하는 네이티브 상한이다.
 사용자 `config.toml` 값은 CLI·프로필·프로젝트 계층이 덮을 수 있으므로 doctor는 사용자 설정과
 현재 세션 유효값을 구분하고 `/debug-config` 확인을 안내한다.
-실패·취소도 예산을 돌려주지 않아 무한 재시도형 팬아웃을 막는다. 첫 Pre 뒤 같은
+실패·취소도 예산을 돌려주지 않아 무한 재시도형 팬아웃을 막고, 활성 역할이 남은 동안에는
+다음 예산 파동을 열지 않는다. 첫 Pre 뒤 같은
 `tool_use_id`가 다시 들어오면 실제 handler가 이미 실행됐는지 훅이 증명할 수 없으므로, 동일한
 `tool_input`·protocol·caller라도 즉시 거부한다. 이 재전달은 새 attempt로 세지 않으며, 같은
 id의 입력·caller가 바뀌는 경우도 충돌로 거부한다. Pre보다 먼저 온 unmatched Post 기록도
-세션당 12개로 제한하고, 동일 Post replay만 상태 변경 없이 허용한다.
+세션당 32개로 제한하고, 동일 Post replay만 상태 변경 없이 허용한다.
 비대화형 CLI나 별도 Codex 세션까지 합친 논리 작업 전체에는 이 원장을 공유할 수 없으므로,
-진행자가 동시 4·누적 12를 지키는 협력적 운영 규칙을 적용한다.
+진행자가 동시 4·초기 16·4회 자동 확장·절대 누적 32를 지키는 협력적 운영 규칙을 적용한다.
 
 gdm 워크플로의 각 spawn 메시지 첫 줄에는
 `GDM_AGENT_ENVELOPE_V1=<단일행 JSON>` 계약을 넣는다. 역할·범위·읽기/쓰기 소유권·산출물·
@@ -168,7 +171,7 @@ gdm 워크플로의 각 spawn 메시지 첫 줄에는
 누적 예산을 검사한 뒤 원자적으로 예약한다. 첫 줄 marker의 들여쓰기나 필드의 앞뒤 공백은
 일반 spawn으로 강등하지 않고 잘못된 계약으로 거부한다. user hook을 쓰더라도 gdm을 사용하지
 않는 일반 Codex spawn은 envelope가
-없다는 이유로 막지 않는다. 이런 unmarked spawn도 같은 세션 누적 12에는 포함하되 구조
+없다는 이유로 막지 않는다. 이런 unmarked spawn도 같은 세션 절대 누적 32에는 포함하되 구조
 정책만 적용하지 않는다.
 
 PostToolUse와 SubagentStart/Stop은 실행 결과와 관찰된 turn 상태를 원장에 조정한다. Codex V1은
@@ -200,7 +203,7 @@ Stop 또는 lease expiry까지 running으로 남겨 숨기지 않는다. 반대�
 예약에 이미 연결된 pending/running agent의 실제 Start가 뒤늦게 오면 running lease를 다시
 열고 Stop 장벽을 복구한다. 실패 Post의 outcome·reason은 보존하고 일반 lease-expiry reason만
 지운다. 이미 stopped로 관찰된 agent의 순서 뒤집힌 Start는 stop 신호를 바꾸지 않는다. 예약과
-연결하지 못한 lifecycle 관찰도 30분 뒤 Stop 계산에서 제거하고 세션당 12개로 제한해 rogue
+연결하지 못한 lifecycle 관찰도 30분 뒤 Stop 계산에서 제거하고 세션당 32개로 제한해 rogue
 event가 영구 장벽이나 무제한 원장이 되지 않게 한다. 상태 요약은 파일을 다시 쓰지 않아도
 만료 시각이 지난 active 예약을 effective `expired`로 집계한다. 원장 쓰기는 임시 파일 fsync와
 rename 뒤 가능한 파일시스템에서 디렉터리 fsync를 best effort로 수행한다. stale lock은 PID뿐
@@ -212,8 +215,8 @@ rename 뒤 가능한 파일시스템에서 디렉터리 fsync를 best effort로 
 `parentId=root`, `depth=1`이어야 한다. caller id를 제공하지 않는 호환 런타임에서는 원장에
 선언한 부모가 있을 때만 그 부모의 nonterminal/quota/depth/canDelegate를 검사하는
 degraded fallback을 쓴다. 이 fallback을 부모 신원 하드 경계라고 주장하지 않는다. 훅이
-실행되면 같은 세션 누적 12는 계속 강제되고, 동시 4는 현재 세션의 유효 Codex 상한이 4일
-때 강제된다.
+실행되면 같은 세션의 초기 16·4회 자동 확장·절대 누적 32가 계속 강제되고, 동시 4는 현재
+세션의 유효 Codex 상한이 4일 때 강제된다.
 훅 sequencing에서 `blockedBy`를 만족하는 내부 상태는 id와 연결된 `stopped`뿐이다.
 여기서 `SubagentStop`은 한 turn의 stop 시도 관찰이자 순서 힌트이며, thread의 영구 종료나
 성공을 뜻하지 않는다. `failed|expired`는 활성 소유권과 Stop 장벽에서는 빠지지만 의존성을
@@ -313,7 +316,7 @@ hook은 사용자가 Codex `/hooks` 화면에서 신뢰 상태를 확인해야 �
 | 규칙이 쌓여 컨텍스트가 다시 오염됨 | 반복 사건 2개 이상만 후보화, 적용 결과가 없으면 폐기 검토 |
 | 자동 기억이 잘못된 규칙으로 승격됨 | 원문과 후보를 분리하고 사람의 명시적 채택을 필수화 |
 | 완료를 커밋 허가로 오해 | 작업 계약의 커밋 상태를 별도 필드와 읽기 전용 게이트로 관리 |
-| 서브에이전트 재귀 팬아웃으로 로컬 자원 고갈 | hook root session 누적 spawn 12 + effective Codex 동시 상한이 4일 때 네이티브 제한 + 자기복제형 위임 금지 |
+| 서브에이전트 재귀 팬아웃으로 로컬 자원 고갈 | hook root session 초기 16·idle 시 4회 자동 확장·절대 누적 32 + effective Codex 동시 상한이 4일 때 네이티브 제한 + 자기복제형 위임 금지 |
 | 훅 설치를 곧 실행 강제로 오해 | 설치·feature 활성·사용자 신뢰를 doctor에서 별도 상태로 표시하고 `/hooks` 확인 안내 |
 
 ## 10. 미결 사항
@@ -324,15 +327,19 @@ hook은 사용자가 Codex `/hooks` 화면에서 신뢰 상태를 확인해야 �
 
 ## 11. 결정 로그
 
+- 2026-07-30: **고정 누적 한도를 유휴 시 자동 확장되는 예산 파동으로 교체.** 초기 16회가
+  소진되면 pending/running 역할이 0일 때만 다음 spawn에서 4회분을 자동으로 열고, 활성
+  fanout 중에는 확장하지 않는다. root session 생애 누적 32와 effective 동시 4는 하드
+  퓨즈로 남겨 과거 1,688개 프로세스 폭증 유형을 막는다. 사용자는 예산 숫자를 지정하지 않는다.
 - 2026-07-28: **재귀 위임 계약을 런타임 원장으로 연결.** `GDM_AGENT_ENVELOPE_V1`으로
   역할·소유권·종료조건·의존성을 전달하고, Pre/PostToolUse와 SubagentStart/Stop 훅이
-  예약·실행 결과·관찰된 turn-stop을 세션 원장에 기록한다. 훅이 실행되는 root session 누적 12는 하드
+  예약·실행 결과·관찰된 turn-stop을 세션 원장에 기록한다. 훅이 실행되는 root session 누적 16은 하드
   퓨즈이고, 동시 4는 현재 세션의 effective Codex 설정이 4일 때 네이티브 하드 퓨즈다.
   호출자 신원이 없는 호환 경로에서 부모별 quota를 완전 강제한다고 주장하지 않는다. Stop
   장벽과 command hook 신뢰도 각각 continuation guardrail과 사용자 확인 상태로 명시한다.
 - 2026-07-28: **안전 제한과 위임 판단을 분리.** 일반 서브에이전트의 재귀 위임과 구현
   위임을 금지하지 않는다. 독립 경계·전문성·컨텍스트 분리가 유리하면 어느 세대든 다음
-  역할을 만들 수 있다. 폭증은 root session 누적 12와 운영 상한 4로 막고, 현재 세션의
+  역할을 만들 수 있다. 폭증은 root session 누적 16과 운영 상한 4로 막고, 현재 세션의
   effective Codex 동시 상한이 4이면 네이티브 퓨즈도 함께 적용한다. 같은 범위를 다시 넘기는
   자기복제형 재귀만 금지한다. 단일 leaf는 최종 검수자에만 적용한다.
 - 2026-07-23: **서브에이전트 전면 차단을 동시성 안전 퓨즈로 교체.** 16GB Mac에서 Codex 상한

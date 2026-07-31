@@ -329,7 +329,9 @@ describe("gdm installation and workflow skills", () => {
     expect(installedResearch).toContain("자기 복제");
     expect(installedResearch).toContain("무제한 팬아웃");
     expect(installedGo).toContain("`GDM_AGENT_ENVELOPE_V1=`");
-    expect(installedFull).toContain("`MAX_TOTAL_SPAWNS_PER_ROOT: 12`");
+    expect(installedFull).toContain("`INITIAL_SPAWN_ATTEMPT_BUDGET: 16`");
+    expect(installedFull).toContain("`SPAWN_ATTEMPT_EXTENSION: 4`");
+    expect(installedFull).toContain("`MAX_TOTAL_SPAWNS_PER_ROOT: 32`");
     expect(installedResearch).toContain("`DEFAULT_CHILD_QUOTA: 1`");
     expect(installedResearch).toContain("실패·취소된 spawn도 예산을 돌려주지 않는다");
     expect(installedResearch).not.toContain("에이전트 팬아웃을 사용하지 않는다");

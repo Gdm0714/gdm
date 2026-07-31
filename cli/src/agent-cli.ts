@@ -8,6 +8,9 @@ import {
   type AgentHookEnvironment,
 } from "./codex-agent-hooks-config.ts";
 import {
+  AGENT_SESSION_ATTEMPT_EXTENSION_SIZE,
+  AGENT_SESSION_HARD_ATTEMPT_LIMIT,
+  AGENT_SESSION_INITIAL_ATTEMPT_LIMIT,
   readAgentHookLedgerSummary,
   runCodexAgentHook,
 } from "./codex-agent-hook.ts";
@@ -155,7 +158,9 @@ export function cmdAgent(
           `${status.ledgers.unstructuredAttempts} unstructured attempts`,
       );
       console.log(
-        "Unmarked spawns remain allowed but consume the same hard session limit of 12. " +
+        `Agent attempt budget starts at ${AGENT_SESSION_INITIAL_ATTEMPT_LIMIT}, ` +
+          `opens ${AGENT_SESSION_ATTEMPT_EXTENSION_SIZE} more only after active work settles, ` +
+          `and stops at ${AGENT_SESSION_HARD_ATTEMPT_LIMIT}. ` +
           `Parent delegation enforcement: ${status.ledgers.parentDelegationEnforcement}.`,
       );
       console.log(

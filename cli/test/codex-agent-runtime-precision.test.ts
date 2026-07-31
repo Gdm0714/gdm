@@ -14,6 +14,7 @@ import {
   AGENT_ENVELOPE_PREFIX,
   AGENT_PRE_ACK_TTL_MS,
   AGENT_RESERVATION_TTL_MS,
+  AGENT_SESSION_HARD_ATTEMPT_LIMIT,
   agentLedgerPath,
   readAgentHookLedgerSummary,
   runCodexAgentHook,
@@ -1457,21 +1458,34 @@ describe("Codex agent runtime precision", () => {
     const env = environment(temporaryDirectory("gdm-runtime-retention-home-"));
     const originalSession = "long-lived-root-session";
     const startedAt = Date.now();
-    for (let index = 0; index < 12; index += 1) {
+    for (let index = 0; index < AGENT_SESSION_HARD_ATTEMPT_LIMIT; index += 1) {
+      const input = {
+        session_id: originalSession,
+        tool_name: "spawn_agent",
+        tool_use_id: `original-use-${index}`,
+        tool_input: { message: `ordinary delegated task ${index}` },
+      };
       expect(
         preDecision(invoke(
           cwd,
           env,
           {
-            session_id: originalSession,
+            ...input,
             hook_event_name: "PreToolUse",
-            tool_name: "spawn_agent",
-            tool_use_id: `original-use-${index}`,
-            tool_input: { message: `ordinary delegated task ${index}` },
           },
-          startedAt + index,
+          startedAt + index * 2,
         )),
       ).toBe("allow");
+      expect(invoke(
+        cwd,
+        env,
+        {
+          ...input,
+          hook_event_name: "PostToolUse",
+          tool_response: { success: false, error: "synthetic failure" },
+        },
+        startedAt + index * 2 + 1,
+      ).decision).toBeUndefined();
     }
 
     const afterThirtyOneDays = startedAt + 31 * 24 * 60 * 60 * 1_000;
@@ -1497,13 +1511,15 @@ describe("Codex agent runtime precision", () => {
           session_id: originalSession,
           hook_event_name: "PreToolUse",
           tool_name: "spawn_agent",
-          tool_use_id: "thirteenth-use",
+          tool_use_id: "over-limit-use",
           tool_input: { message: "must remain over the cumulative limit" },
         },
         afterThirtyOneDays + 1,
       )),
     ).toBe("deny");
-    expect(ledger(cwd, env, originalSession).totalAcceptedAttempts).toBe(12);
+    expect(ledger(cwd, env, originalSession).totalAcceptedAttempts).toBe(
+      AGENT_SESSION_HARD_ATTEMPT_LIMIT,
+    );
   });
 
   test("PostToolUse digest checks are idempotent and never remap on conflict", () => {
@@ -2045,7 +2061,7 @@ describe("Codex agent runtime precision", () => {
     const env = environment(temporaryDirectory("gdm-runtime-unlinked-lease-home-"));
     const session = "unlinked-lifecycle-lease";
     const startedAt = Date.now();
-    for (let index = 0; index < 12; index += 1) {
+    for (let index = 0; index < AGENT_SESSION_HARD_ATTEMPT_LIMIT; index += 1) {
       expect(
         invoke(
           cwd,
@@ -2059,18 +2075,20 @@ describe("Codex agent runtime precision", () => {
       cwd,
       env,
       lifecycleInput("SubagentStart", session, "rogue-agent-overflow"),
-      startedAt + 12,
+      startedAt + AGENT_SESSION_HARD_ATTEMPT_LIMIT,
     );
     expect(String(overflow.systemMessage)).toContain(
       "unlinked lifecycle observation limit",
     );
-    expect(Object.keys(ledger(cwd, env, session).agents)).toHaveLength(12);
+    expect(Object.keys(ledger(cwd, env, session).agents)).toHaveLength(
+      AGENT_SESSION_HARD_ATTEMPT_LIMIT,
+    );
     expect(
       invoke(
         cwd,
         env,
         { session_id: session, hook_event_name: "Stop" },
-        startedAt + 13,
+        startedAt + AGENT_SESSION_HARD_ATTEMPT_LIMIT + 1,
       ).decision,
     ).toBe("block");
 
@@ -2079,7 +2097,7 @@ describe("Codex agent runtime precision", () => {
         cwd,
         env,
         { session_id: session, hook_event_name: "Stop" },
-        startedAt + AGENT_RESERVATION_TTL_MS + 13,
+        startedAt + AGENT_RESERVATION_TTL_MS + AGENT_SESSION_HARD_ATTEMPT_LIMIT + 1,
       ).decision,
     ).toBeUndefined();
     expect(Object.keys(ledger(cwd, env, session).agents)).toEqual([]);
@@ -2091,7 +2109,7 @@ describe("Codex agent runtime precision", () => {
     const startedAt = Date.now();
 
     const startSession = "correlation-cap-start";
-    for (let index = 0; index < 12; index += 1) {
+    for (let index = 0; index < AGENT_SESSION_HARD_ATTEMPT_LIMIT; index += 1) {
       invoke(
         cwd,
         env,
@@ -2106,14 +2124,14 @@ describe("Codex agent runtime precision", () => {
       cwd,
       env,
       spawnInput("PreToolUse", startSession, "v1-use", v1),
-      startedAt + 13,
+      startedAt + AGENT_SESSION_HARD_ATTEMPT_LIMIT + 1,
     );
     expect(
       invoke(
         cwd,
         env,
         lifecycleInput("SubagentStart", startSession, "correlated-v1-agent"),
-        startedAt + 14,
+        startedAt + AGENT_SESSION_HARD_ATTEMPT_LIMIT + 2,
       ).systemMessage,
     ).toBeUndefined();
     let state = ledger(cwd, env, startSession);
@@ -2122,10 +2140,10 @@ describe("Codex agent runtime precision", () => {
       Object.values(state.agents).filter(
         (agent) => agent.reservationToolUseId === undefined,
       ),
-    ).toHaveLength(12);
+    ).toHaveLength(AGENT_SESSION_HARD_ATTEMPT_LIMIT);
 
     const stopSession = "correlation-cap-stop";
-    for (let index = 0; index < 12; index += 1) {
+    for (let index = 0; index < AGENT_SESSION_HARD_ATTEMPT_LIMIT; index += 1) {
       invoke(
         cwd,
         env,
@@ -2142,14 +2160,14 @@ describe("Codex agent runtime precision", () => {
       spawnInput("PreToolUse", stopSession, "v2-use", v2, {
         taskName: "cap_v2",
       }),
-      startedAt + 13,
+      startedAt + AGENT_SESSION_HARD_ATTEMPT_LIMIT + 1,
     );
     expect(
       invoke(
         cwd,
         env,
         lifecycleInput("SubagentStop", stopSession, "correlated-v2-agent"),
-        startedAt + 14,
+        startedAt + AGENT_SESSION_HARD_ATTEMPT_LIMIT + 2,
       ).systemMessage,
     ).toBeUndefined();
     state = ledger(cwd, env, stopSession);
@@ -2159,7 +2177,7 @@ describe("Codex agent runtime precision", () => {
       Object.values(state.agents).filter(
         (agent) => agent.reservationToolUseId === undefined,
       ),
-    ).toHaveLength(12);
+    ).toHaveLength(AGENT_SESSION_HARD_ATTEMPT_LIMIT);
   });
 
   test("schema-v1 auxiliary records above the new cap migrate without corruption", () => {
@@ -2181,14 +2199,14 @@ describe("Codex agent runtime precision", () => {
     const orphanPosts = raw.orphanPosts as JsonObject;
     const original = orphanPosts["legacy-orphan-0"] as JsonObject;
     const observedAt = new Date().toISOString();
-    for (let index = 1; index < 14; index += 1) {
+    for (let index = 1; index < AGENT_SESSION_HARD_ATTEMPT_LIMIT + 2; index += 1) {
       const orphan = structuredClone(original);
       orphan.toolUseId = `legacy-orphan-${index}`;
       orphan.observedAt = observedAt;
       orphanPosts[`legacy-orphan-${index}`] = orphan;
     }
     const agents = raw.agents as JsonObject;
-    for (let index = 0; index < 14; index += 1) {
+    for (let index = 0; index < AGENT_SESSION_HARD_ATTEMPT_LIMIT + 2; index += 1) {
       agents[`legacy-agent-${index}`] = {
         agentId: `legacy-agent-${index}`,
         agentType: "worker",
@@ -2206,12 +2224,14 @@ describe("Codex agent runtime precision", () => {
       }).decision,
     ).toBeUndefined();
     const migrated = ledger(cwd, env, session);
-    expect(Object.keys(migrated.orphanPosts)).toHaveLength(12);
+    expect(Object.keys(migrated.orphanPosts)).toHaveLength(
+      AGENT_SESSION_HARD_ATTEMPT_LIMIT,
+    );
     expect(
       Object.values(migrated.agents).filter(
         (agent) => agent.reservationToolUseId === undefined,
       ),
-    ).toHaveLength(12);
+    ).toHaveLength(AGENT_SESSION_HARD_ATTEMPT_LIMIT);
     expect(readAgentHookLedgerSummary(cwd, env).corruptLedgers).toBe(0);
   });
 
@@ -2270,7 +2290,7 @@ describe("Codex agent runtime precision", () => {
     const session = "orphan-bound";
     const posts: JsonObject[] = [];
     const tasks: AgentEnvelope[] = [];
-    for (let index = 0; index < 12; index += 1) {
+    for (let index = 0; index < AGENT_SESSION_HARD_ATTEMPT_LIMIT; index += 1) {
       const task = envelope(`orphan-${index}`, {
         ownership: { mode: "read", resources: [`docs/orphan-${index}.md`] },
       });
@@ -2286,7 +2306,9 @@ describe("Codex agent runtime precision", () => {
       expect(invoke(cwd, env, post).decision).toBeUndefined();
     }
     let state = ledger(cwd, env, session);
-    expect(Object.keys(state.orphanPosts)).toHaveLength(12);
+    expect(Object.keys(state.orphanPosts)).toHaveLength(
+      AGENT_SESSION_HARD_ATTEMPT_LIMIT,
+    );
     expect(state.totalAcceptedAttempts).toBe(0);
     const stable = readFileSync(agentLedgerPath(cwd, env, session));
 
@@ -2313,7 +2335,9 @@ describe("Codex agent runtime precision", () => {
     ).toBe("allow");
     state = ledger(cwd, env, session);
     expect(state.totalAcceptedAttempts).toBe(1);
-    expect(Object.keys(state.orphanPosts)).toHaveLength(11);
+    expect(Object.keys(state.orphanPosts)).toHaveLength(
+      AGENT_SESSION_HARD_ATTEMPT_LIMIT - 1,
+    );
     expect(state.reservations["orphan-use-0"]?.postOutcome).toBe("succeeded");
     expect(
       preDecision(invoke(

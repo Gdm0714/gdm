@@ -25,11 +25,44 @@
 
 | 역할 | 스킬 | 소유자 | 필수 불변식 |
 |---|---|---|---|
-| 계획 | gdm-plan | 진행자 + 필요한 조사 역할 | 진행자가 결정·계약·최종 계획을 소유한다 |
+| 기술 설계 | gdm-plan | Claude CLI + Codex 진행자 | Claude가 설계안을 만들고 Codex가 근거·계약·최종 계획을 검증·통합한다 |
+| 시각 디자인 | gdm-design | Claude Design + Codex 진행자 | Codex가 프롬프트를 전달하고 사용자가 Claude Design에서 생성한 뒤 Codex가 pull·구현·검증한다 |
 | 경량 구현 | gdm-go | 진행자 또는 경계가 분리된 구현 워커 | 진행자가 통합하고 gdm 증거가 통과해야만 완료한다 |
 | 중량 구현 | gdm-full | 한 실제 구현 모델의 진행자·워커 | 같은 모델의 여러 워커는 허용하고 독립 검수 전 전달하지 않는다 |
 | 리뷰 | gdm-review | 진행자 + 필요한 읽기 전용 역할 | 실제 diff·증거를 읽고 후보를 반증·중복 제거한다 |
 | 검수 | auditor | 실제 구현 모델과 다른 모델 | 새 컨텍스트에서 직접 증거를 확인한다 |
+
+## 실행 모델 라우팅
+
+대화형 진입점은 Codex 하나다. `ENTRYPOINT_PROVIDER: Codex`,
+`TECHNICAL_DESIGN_PROVIDER: Claude CLI`, `VISUAL_DESIGN_PROVIDER: Claude Design`으로
+고정한다. Codex가 사용자 문답, 로컬 조사, 작업 계약, 구현, 변경 통합, gdm 게이트와 최종
+보고를 소유한다.
+
+- 새 아키텍처·API·데이터 모델·상태 흐름·컴포넌트 경계·마이그레이션처럼 구현 전에 기술
+  선택이 필요한 작업은 코드 작성 전에 Claude CLI에 읽기 전용 설계안을 요청한다.
+  국소 버그 수정, 사용자가 해법을 지정한 변경, 기계적 리팩터, 테스트·문서 보강처럼 새
+  설계 판단이 없는 작업은 Claude 호출을 생략한다.
+- 0→1 화면, 전면 리디자인, "이쁘게" 같은 개방형 시각 변경은 Codex가 저장소 맥락을
+  정리한 Claude Design용 프롬프트를 사용자에게 전달한다. 사용자가 claude.ai/design에서
+  프롬프트를 실행하고 프로젝트 준비를 확인할 때까지 멈춘 뒤 `/design-sync`로 결과를
+  pull한다. Codex가 Chrome 제어 스킬이나 다른 브라우저 자동화를 호출해 대신 생성하지 않는다.
+  기존 디자인 시스템 안의 잘림·간격·오타처럼 목표가 구체적인 결함 수정은 Codex가 gdm-ui로
+  바로 처리한다.
+- Claude 설계안은 코드 수정 권한이 없는 제안이다. Codex가 인용한 파일·함수를 다시 열고
+  요구·기존 변경·검증 가능성과 대조한 뒤 최종 계획에 통합한다. 근거가 틀리면 조용히
+  재작성하지 말고 반려 사유와 좁힌 입력으로 한 번만 재요청한다.
+- Claude Design은 claude.ai/design 안에서만 새 화면·레이아웃·프로토타입을 만든다.
+  DesignSync는 프로젝트·컴포넌트 파일의 읽기·쓰기·동기화 다리이지 디자인 생성기가 아니다.
+  Codex는 사용자 확인 뒤 동기화된 산출물을 기준으로 로컬 제품 코드를 작성·통합하고
+  렌더·테스트·gdm 증거를 소유한다.
+- 인증 실패, 권한 부족, Claude CLI나 DesignSync 부재, 프로젝트 불명확, 일반 네트워크
+  오류·timeout은 Codex 대체 사유가 아니다. 원인을 보고하고 사용자 조치가 필요한 상태로
+  멈춘다. `HTTP 429`, `rate_limit`, `quota exceeded`, 사용량 한도처럼 리밋임이 명확할
+  때만 원인을 계약·결과에 기록하고 Codex가 설계 또는 디자인을 대신할 수 있다.
+- 외부 모델에는 비밀·토큰·자격증명, 전체 대화, 불필요한 저장소 원문을 보내지 않는다.
+  필요한 요구와 파일 경계만 전달한다. Claude CLI와 Claude Design 호출도 아래의 비대화형
+  CLI 협력적 예산·PID 회수 규칙에 포함한다.
 
 ## 검수 독립성
 
@@ -67,22 +100,26 @@
 이는 선언을 검사하는 guardrail이지 symlink·대소문자까지 잠그는 운영체제 파일 lock은 아니다.
 각 메시지는 계약 다음에 실행 지시, 산출물, 검증 방법, `stopWhen`을 자체 완결적으로 적는다.
 
-`MAX_TOTAL_SPAWNS_PER_ROOT: 12`에서 ROOT는 하나의 네이티브 Codex root session을 뜻한다.
-같은 세션 트리의 제한은 누적 12, `DEFAULT_CHILD_QUOTA: 1`, `MAX_CHILD_QUOTA: 2`,
-`MAX_AGENT_DEPTH: 3`이다.
+`MAX_TOTAL_SPAWNS_PER_ROOT: 32`에서 ROOT는 하나의 네이티브 Codex root session을 뜻한다.
+같은 세션 트리의 제한은 `INITIAL_SPAWN_ATTEMPT_BUDGET: 16`,
+`SPAWN_ATTEMPT_EXTENSION: 4`, 절대 누적 32, `DEFAULT_CHILD_QUOTA: 1`,
+`MAX_CHILD_QUOTA: 2`, `MAX_AGENT_DEPTH: 3`이다.
 새 독립 경계가 예상되는 일반 역할의 기본 `childQuota`는 1이며, 실제로 하위 분할 가능성이
 없으면 0, 서로 독립인 하위 축이 이미
 확인됐으면 최대 2를 준다. 일반 역할을 일괄 leaf로 만들지 않는다. 허용된 spawn 시도는
 같은 root session 누적 예산을 하나 소비하며 실패·취소된 spawn도 예산을 돌려주지 않는다.
+초기 16을 다 쓰면 pending/running 역할이 하나도 없을 때만 다음 spawn에서 4개 예산을 자동으로
+열며, 활성 역할이 남은 동안에는 확장하지 않는다.
 첫 Pre 뒤 같은 `tool_use_id`의 재전달은 실제 handler 실행 여부를 훅이 증명할 수 없으므로
 동일한 `tool_input`·protocol·caller라도 즉시 거부하고 새 attempt로 세지 않는다. 같은 id의
-입력·caller가 바뀌는 경우도 거부한다. Pre보다 먼저 온 unmatched Post는 세션당 12개까지만
+입력·caller가 바뀌는 경우도 거부한다. Pre보다 먼저 온 unmatched Post는 세션당 32개까지만
 보관하고 동일 replay만 상태 변경 없이 허용한다. 예산이 없으면 새 역할 대신 기존 역할에
 후속 작업을 보내거나 진행자가 직접 통합한다.
-훅이 실행되는 하나의 네이티브 Codex 루트 세션 트리에서 누적 12는 하드 상한이고, 동시 4는
+훅이 실행되는 하나의 네이티브 Codex 루트 세션 트리에서 절대 누적 32는 하드 상한이고, 동시 4는
 현재 세션의 유효 Codex 설정이 4일 때 네이티브 하드 상한이다. 사용자 `config.toml`만으로
 유효값을 단정하지 않고 `/debug-config`에서 계층을 확인한다. 비대화형 CLI와 별도 Codex
-세션을 합친 논리 작업 전체의 동시 4·누적 12는 원장을 공유하는 하드 경계가 아니라 진행자가
+세션을 합친 논리 작업 전체의 동시 4·초기 16·4개 자동 확장·절대 누적 32는 원장을 공유하는
+하드 경계가 아니라 진행자가
 지키는 협력적 운영 규칙이다.
 
 일반 역할의 위임에서 금지하는 것은 "필요한 만큼", "파일마다 하나"처럼 끝이 정해지지 않은
@@ -124,10 +161,10 @@ Pre acknowledgement는 60초, running lifecycle lease는 30분이다. 실제 Sta
 와도 Stop 또는 lease expiry 전에는 running 관찰을 숨기지 않는다. failed/expired 예약에
 연결된 pending/running agent의 실제 Start는 running lease와 Stop 장벽을 다시 열되 실패
 Post evidence를 보존하고 일반 expiry reason만 지운다. 이미 stopped인 agent의 순서 뒤집힌
-Start는 stop 신호를 바꾸지 않는다. 예약과 연결하지 못한 lifecycle 관찰도 세션당 12개로
+Start는 stop 신호를 바꾸지 않는다. 예약과 연결하지 못한 lifecycle 관찰도 세션당 32개로
 제한하고 30분 뒤 Stop 계산에서 제거한다.
 진행자는 `deliverable`과 `verify`를 직접 확인해 결과를 통합해야 한다.
-user hook은 gdm 계약이 없는 일반 Codex spawn도 막지 않고 같은 세션 누적 12에만 포함한다.
+user hook은 gdm 계약이 없는 일반 Codex spawn도 막지 않고 같은 세션 절대 누적 32에만 포함한다.
 Stop 장벽은 한 번만 continuation을 요청하고 재진입에서는 경고만 해 무한 루프를 만들지 않는다.
 
 독립 검수는 예외적으로 pass당 정확히 1명의 **leaf 실행**이다. 검수자에는

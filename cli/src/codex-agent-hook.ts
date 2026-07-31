@@ -20,7 +20,9 @@ import type { AgentHookEnvironment } from "./codex-agent-hooks-config.ts";
 
 export const AGENT_ENVELOPE_PREFIX = "GDM_AGENT_ENVELOPE_V1=";
 export const AGENT_LEDGER_SCHEMA_VERSION = 1;
-export const AGENT_SESSION_ATTEMPT_LIMIT = 12;
+export const AGENT_SESSION_INITIAL_ATTEMPT_LIMIT = 16;
+export const AGENT_SESSION_ATTEMPT_EXTENSION_SIZE = 4;
+export const AGENT_SESSION_HARD_ATTEMPT_LIMIT = 32;
 export const AGENT_PRE_ACK_TTL_MS = 60_000;
 export const AGENT_RESERVATION_TTL_MS = 30 * 60 * 1_000;
 
@@ -145,6 +147,8 @@ export type AgentHookLedgerSummary = {
   readonly stopped: number;
   readonly failed: number;
   readonly expired: number;
+  readonly initialSessionAttemptLimit: number;
+  readonly attemptExtensionSize: number;
   readonly hardSessionAttemptLimit: number;
   readonly preAcknowledgementTtlMs: number;
   readonly lifecycleLeaseMs: number;
@@ -676,10 +680,10 @@ function validateLedger(value: unknown, path: string): AgentLedgerV1 {
 
 function validateLedgerBounds(ledger: AgentLedgerV1, path: string): void {
   if (
-    Object.keys(ledger.orphanPosts).length > AGENT_SESSION_ATTEMPT_LIMIT ||
+    Object.keys(ledger.orphanPosts).length > AGENT_SESSION_HARD_ATTEMPT_LIMIT ||
     Object.values(ledger.agents).filter(
       (agent) => agent.reservationToolUseId === undefined,
-    ).length > AGENT_SESSION_ATTEMPT_LIMIT
+    ).length > AGENT_SESSION_HARD_ATTEMPT_LIMIT
   ) {
     throw new AgentHookStateError(
       `agent ledger exceeds bounded auxiliary records: ${path}`,
@@ -712,7 +716,7 @@ function migrateLedgerV1(ledger: AgentLedgerV1): boolean {
       Date.parse(right.observedAt) - Date.parse(left.observedAt) ||
       left.toolUseId.localeCompare(right.toolUseId),
   );
-  for (const orphan of orphanPosts.slice(AGENT_SESSION_ATTEMPT_LIMIT)) {
+  for (const orphan of orphanPosts.slice(AGENT_SESSION_HARD_ATTEMPT_LIMIT)) {
     delete ledger.orphanPosts[orphan.toolUseId];
     changed = true;
   }
@@ -730,7 +734,7 @@ function migrateLedgerV1(ledger: AgentLedgerV1): boolean {
       );
       return rightTime - leftTime || left.agentId.localeCompare(right.agentId);
     });
-  for (const agent of unlinkedAgents.slice(AGENT_SESSION_ATTEMPT_LIMIT)) {
+  for (const agent of unlinkedAgents.slice(AGENT_SESSION_HARD_ATTEMPT_LIMIT)) {
     delete ledger.agents[agent.agentId];
     changed = true;
   }
@@ -1498,7 +1502,7 @@ function makeRoomForUnlinkedAgentObservation(ledger: AgentLedgerV1): boolean {
   const unlinked = Object.values(ledger.agents).filter(
     (agent) => agent.reservationToolUseId === undefined,
   );
-  if (unlinked.length < AGENT_SESSION_ATTEMPT_LIMIT) return true;
+  if (unlinked.length < AGENT_SESSION_HARD_ATTEMPT_LIMIT) return true;
   const stopped = unlinked
     .filter((agent) => agent.state === "stopped")
     .sort((left, right) =>
@@ -1969,10 +1973,36 @@ function validatePrePolicy(
 function validateSessionAttemptLimit(
   ledger: AgentLedgerV1,
 ): { readonly code: string; readonly detail: string } | undefined {
-  return ledger.totalAcceptedAttempts >= AGENT_SESSION_ATTEMPT_LIMIT
+  if (ledger.totalAcceptedAttempts >= AGENT_SESSION_HARD_ATTEMPT_LIMIT) {
+    return {
+      code: "session_attempt_hard_limit",
+      detail:
+        `session accepted-attempt hard limit is ` +
+        `${AGENT_SESSION_HARD_ATTEMPT_LIMIT}`,
+    };
+  }
+  const extensionCount = Math.ceil(
+    Math.max(
+      0,
+      ledger.totalAcceptedAttempts - AGENT_SESSION_INITIAL_ATTEMPT_LIMIT,
+    ) / AGENT_SESSION_ATTEMPT_EXTENSION_SIZE,
+  );
+  const currentLimit = Math.min(
+    AGENT_SESSION_HARD_ATTEMPT_LIMIT,
+    AGENT_SESSION_INITIAL_ATTEMPT_LIMIT +
+      extensionCount * AGENT_SESSION_ATTEMPT_EXTENSION_SIZE,
+  );
+  if (ledger.totalAcceptedAttempts < currentLimit) return undefined;
+  const active = Object.values(ledger.reservations).filter((reservation) =>
+    ACTIVE_RESERVATION_STATES.has(reservation.state)
+  ).length;
+  return active > 0
     ? {
-        code: "session_attempt_limit",
-        detail: `session accepted-attempt limit is ${AGENT_SESSION_ATTEMPT_LIMIT}`,
+        code: "session_attempt_wave_pending",
+        detail:
+          `automatic attempt wave ${currentLimit} is exhausted while ` +
+          `${active} delegated task(s) remain pending or running; ` +
+          "the next wave opens only after all active delegated work settles",
       }
     : undefined;
 }
@@ -2186,14 +2216,14 @@ function onPostToolUse(
         }
         if (
           Object.keys(ledger.orphanPosts).length >=
-            AGENT_SESSION_ATTEMPT_LIMIT
+            AGENT_SESSION_HARD_ATTEMPT_LIMIT
         ) {
           return {
             result: {
               decision: "block",
               reason:
                 "gdm agent gate: unmatched PostToolUse record limit is " +
-                AGENT_SESSION_ATTEMPT_LIMIT,
+                AGENT_SESSION_HARD_ATTEMPT_LIMIT,
             },
             changed: false,
           };
@@ -2529,7 +2559,7 @@ function onStop(
       const ids = [
         ...active.map((reservation) => reservation.envelope.taskId),
         ...unlinkedActiveAgents.map((agent) => `agent:${agent.agentId}`),
-      ].slice(0, AGENT_SESSION_ATTEMPT_LIMIT);
+      ].slice(0, AGENT_SESSION_HARD_ATTEMPT_LIMIT);
       const reason =
         `gdm agent gate: delegated work remains pending (${pending}) or running (${running})` +
         `${ids.length > 0 ? ` [${ids.join(", ")}]` : ""}. ` +
@@ -2622,7 +2652,9 @@ function emptySummary(directory: string): AgentHookLedgerSummary {
     stopped: 0,
     failed: 0,
     expired: 0,
-    hardSessionAttemptLimit: AGENT_SESSION_ATTEMPT_LIMIT,
+    initialSessionAttemptLimit: AGENT_SESSION_INITIAL_ATTEMPT_LIMIT,
+    attemptExtensionSize: AGENT_SESSION_ATTEMPT_EXTENSION_SIZE,
+    hardSessionAttemptLimit: AGENT_SESSION_HARD_ATTEMPT_LIMIT,
     preAcknowledgementTtlMs: AGENT_PRE_ACK_TTL_MS,
     lifecycleLeaseMs: AGENT_RESERVATION_TTL_MS,
     parentDelegationEnforcement:

@@ -4,7 +4,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   AGENT_ENVELOPE_PREFIX,
-  AGENT_SESSION_ATTEMPT_LIMIT,
+  AGENT_SESSION_ATTEMPT_EXTENSION_SIZE,
+  AGENT_SESSION_HARD_ATTEMPT_LIMIT,
+  AGENT_SESSION_INITIAL_ATTEMPT_LIMIT,
   parseAgentEnvelope,
 } from "../src/codex-agent-hook.ts";
 import { RECOMMENDED_CONCURRENT_LIMIT } from "../src/codex-agent-limit.ts";
@@ -28,7 +30,7 @@ const ENVELOPE_FIELDS = [
 const ENVELOPE_ADAPTATION_INSTRUCTION =
   "아래 한 줄은 형식 예시일 뿐이다. 복사하기 전에 `taskId`, `parentId`, `role`, `scope`, `ownership.mode/resources`, `deliverable`, `verify`, `stopWhen`, `canDelegate`, `childQuota`(quota), `depth`, `blockedBy` 값을 작업에 맞게 모두 바꾼다.";
 const HARD_FUSE =
-  "훅이 실행되는 하나의 네이티브 Codex 루트 세션 트리에서 누적 12는 하드 상한이고, 동시 4는 현재 세션의 유효 Codex 설정이 4일 때 네이티브 하드 상한이다.";
+  "훅이 실행되는 하나의 네이티브 Codex 루트 세션 트리에서 절대 누적 32는 하드 상한이고, 동시 4는 현재 세션의 유효 Codex 설정이 4일 때 네이티브 하드 상한이다.";
 
 function skill(name: string): string {
   return readFileSync(join(ROOT, "skills", name, "SKILL.md"), "utf8");
@@ -47,6 +49,60 @@ function agent(name: string): string {
 }
 
 describe("workflow policy", () => {
+  test("Codex routes technical and visual design to Claude with limit-only fallback", () => {
+    const routing = readFileSync(join(ROOT, "skills", "_shared", "routing.md"), "utf8");
+    const plan = skill("plan");
+    const go = skill("go");
+    const full = skill("full");
+    const design = skill("design");
+    const ui = skill("ui");
+    const readme = readFileSync(join(ROOT, "README.md"), "utf8");
+
+    expect(routing).toContain("대화형 진입점은 Codex 하나");
+    expect(routing).toContain("`TECHNICAL_DESIGN_PROVIDER: Claude CLI`");
+    expect(routing).toContain("`VISUAL_DESIGN_PROVIDER: Claude Design`");
+    expect(routing).toContain("`HTTP 429`, `rate_limit`, `quota exceeded`, 사용량 한도");
+    expect(routing).toContain("때만 원인을 계약·결과에 기록하고 Codex가 설계 또는 디자인을 대신");
+
+    expect(plan).toContain(
+      'claude -p --no-session-persistence --permission-mode plan --tools "Read,Glob,Grep"',
+    );
+    expect(plan).toContain("설계 출처: codex-direct");
+    expect(plan).toContain("설계 출처: codex-fallback");
+    expect(plan).toContain("인증·권한·CLI 부재·일반 네트워크 오류·timeout·잘못된 산출물");
+
+    for (const workflow of [go, full]) {
+      expect(workflow).toContain("새 기술 설계 판단");
+      expect(workflow).toContain("`gdm-plan`");
+      expect(workflow).toContain("`HTTP 429`, `rate_limit`, `quota exceeded`, 사용량 한도");
+      expect(workflow).toMatch(/인증·권한[\s\S]*timeout[\s\S]*대체하지/u);
+    }
+
+    expect(design).toContain("Claude Design용 프롬프트를 코드 블록으로");
+    expect(design).toContain("프로젝트 이름 또는 ID와");
+    expect(design).toContain("**이 turn을 멈춘다**");
+    expect(design).toContain("Chrome 제어 스킬이나");
+    expect(normalized(design)).toContain(
+      "`list_projects` → `get_project` → `list_files` → `get_file`",
+    );
+    expect(design).toContain("`finalize_plan`");
+    expect(design).toContain("`write_files`/`delete_files`");
+    expect(design).toContain("`/design-login`");
+    expect(design).toContain("`/design-sync`");
+    expect(normalized(design)).toContain(
+      "기본 디자인 생성·pull 흐름에서는 원격 쓰기를 하지 않는다",
+    );
+    expect(design).toContain("Codex는 로컬 제품 코드를");
+    expect(design).toContain("`designProvider: codex-fallback`");
+
+    expect(ui).toContain("구체적 시각 결함");
+    expect(ui).toContain("개방형 시각 변경이면 gdm-design으로 전환");
+    expect(ui).toContain("Claude Design용 프롬프트를 사용자에게 전달");
+    expect(readme).toContain("사용자가 작업을 시작하는 진입점은 Codex 하나");
+    expect(readme).toContain("새 화면·레이아웃·프로토타입 생성은 claude.ai/design에서");
+    expect(readme).toContain("Chrome이나 브라우저를 자동 조작하지 않는다");
+  });
+
   test("go relies on done for the final automatic recheck", () => {
     const go = skill("go");
     expect(go).toContain("직전에 `gdm recheck`를 중복 실행하지 않는다");
@@ -117,11 +173,15 @@ describe("workflow policy", () => {
     const workflows = ORDINARY_WORKFLOWS.map(skill);
     const policies = [routing, ...workflows];
 
-    expect(AGENT_SESSION_ATTEMPT_LIMIT).toBe(12);
+    expect(AGENT_SESSION_INITIAL_ATTEMPT_LIMIT).toBe(16);
+    expect(AGENT_SESSION_ATTEMPT_EXTENSION_SIZE).toBe(4);
+    expect(AGENT_SESSION_HARD_ATTEMPT_LIMIT).toBe(32);
     expect(RECOMMENDED_CONCURRENT_LIMIT).toBe(4);
     for (const policy of policies) {
       const compact = normalized(policy);
-      expect(policy).toContain("`MAX_TOTAL_SPAWNS_PER_ROOT: 12`");
+      expect(policy).toContain("`INITIAL_SPAWN_ATTEMPT_BUDGET: 16`");
+      expect(policy).toContain("`SPAWN_ATTEMPT_EXTENSION: 4`");
+      expect(policy).toContain("`MAX_TOTAL_SPAWNS_PER_ROOT: 32`");
       expect(policy).toContain("`DEFAULT_CHILD_QUOTA: 1`");
       expect(policy).toContain("`MAX_CHILD_QUOTA: 2`");
       expect(policy).toContain("`MAX_AGENT_DEPTH: 3`");
@@ -129,6 +189,9 @@ describe("workflow policy", () => {
       expect(policy).toContain("spawn 메시지 첫 줄");
       expect(policy).toContain("`blockedBy`");
       expect(policy).toContain("실패·취소된 spawn도 예산을 돌려주지 않는다");
+      expect(compact).toContain(
+        "초기 16을 다 쓰면 pending/running 역할이 하나도 없을 때만 다음 spawn에서 4개 예산을 자동으로 열며, 활성 역할이 남은 동안에는 확장하지 않는다.",
+      );
       expect(compact.split(HARD_FUSE)).toHaveLength(2);
       expect(compact).toMatch(
         /caller agent id가 structured 부모와 일대일로 결속될 때 부모별 quota\/depth\/canDelegate를 기계적으로 검사/,
@@ -138,7 +201,7 @@ describe("workflow policy", () => {
       );
       expect(compact).toContain("이를 부모 신원 하드 경계라고 주장하지 않는다");
       expect(compact).toMatch(
-        /비대화형 CLI[·와 ]+별도 (?:Codex )?세션을 합친 논리 작업 전체의 동시 4·누적 12는 .*협력적 운영 규칙/,
+        /비대화형 CLI[·와 ]+별도 (?:Codex )?세션을 합친 논리 작업 전체의 동시 4·초기 16·4개 자동 확장·절대 누적 32는 .*협력적 운영 규칙/,
       );
       expect(compact).toContain("canonical scope");
       expect(compact).toContain("write resource");
@@ -182,7 +245,7 @@ describe("workflow policy", () => {
     }
 
     expect(normalized(routing)).toContain(
-      "`MAX_TOTAL_SPAWNS_PER_ROOT: 12`에서 ROOT는 하나의 네이티브 Codex root session을 뜻한다.",
+      "`MAX_TOTAL_SPAWNS_PER_ROOT: 32`에서 ROOT는 하나의 네이티브 Codex root session을 뜻한다.",
     );
     expect(normalized(routing)).toContain(
       "사용자 `config.toml`만으로 유효값을 단정하지 않고 `/debug-config`에서 계층을 확인한다.",
@@ -191,7 +254,7 @@ describe("workflow policy", () => {
     expect(routing).toContain("일반 역할을 일괄 leaf로 만들지 않는다");
     expect(routing).toContain("의존하는 단계와 최종 응답");
     expect(routing).toContain("기존 역할에 후속 작업");
-    expect(routing).toContain("일반 Codex spawn도 막지 않고 같은 세션 누적 12에만 포함한다");
+    expect(routing).toContain("일반 Codex spawn도 막지 않고 같은 세션 절대 누적 32에만 포함한다");
     expect(routing).toMatch(/Stop 장벽은\s*한 번만 continuation을 요청/u);
   });
 
@@ -208,12 +271,12 @@ describe("workflow policy", () => {
       })),
     ];
     const contracts = contractEntries.map(({ policy }) => policy);
-    const policies = [design, ...contracts];
-
-    for (const policy of policies) {
-      expect(policy).not.toContain("동시 4와 누적 12만 하드 퓨즈");
+    for (const policy of [design, ...contracts]) {
+      expect(policy).not.toContain("동시 4와 누적 32만 하드 퓨즈");
       expect(policy).not.toContain("Codex 동시 thread 하드 상한 4");
       expect(policy).not.toMatch(/열린 spawned-agent thread 상한 4로 막/u);
+    }
+    for (const policy of contracts) {
       expect(
         capturedNumbers(
           policy,
@@ -225,7 +288,7 @@ describe("workflow policy", () => {
           policy,
           /누적\s*(\d+)[^.!?\n]{0,160}?하드(?:\s+상한|\s+퓨즈)/gu,
         ),
-      ).toEqual([AGENT_SESSION_ATTEMPT_LIMIT]);
+      ).toEqual([AGENT_SESSION_HARD_ATTEMPT_LIMIT]);
     }
     for (const { name, policy } of contractEntries) {
       expect(
@@ -233,7 +296,13 @@ describe("workflow policy", () => {
           policy,
           /`MAX_TOTAL_SPAWNS_PER_ROOT:\s*(\d+)`/gu,
         ),
-      ).toEqual([AGENT_SESSION_ATTEMPT_LIMIT]);
+      ).toEqual([AGENT_SESSION_HARD_ATTEMPT_LIMIT]);
+      expect(
+        capturedNumbers(policy, /`INITIAL_SPAWN_ATTEMPT_BUDGET:\s*(\d+)`/gu),
+      ).toEqual([AGENT_SESSION_INITIAL_ATTEMPT_LIMIT]);
+      expect(
+        capturedNumbers(policy, /`SPAWN_ATTEMPT_EXTENSION:\s*(\d+)`/gu),
+      ).toEqual([AGENT_SESSION_ATTEMPT_EXTENSION_SIZE]);
       expect(
         capturedNumbers(policy, /`DEFAULT_CHILD_QUOTA:\s*(\d+)`/gu),
       ).toEqual([1]);
@@ -259,6 +328,10 @@ describe("workflow policy", () => {
     expect(design).toContain(
       "동시 4는 현재 세션의 effective Codex 설정이 4일 때 네이티브 하드 퓨즈다.",
     );
+    expect(design).toContain(
+      "초기 16회가 소진되면 pending/running 역할이 0일 때만 다음 spawn에서 4회분을 자동으로 열고",
+    );
+    expect(design).toContain("root session 생애 누적 32");
     expect(design).toContain("/debug-config");
   });
 
