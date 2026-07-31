@@ -1,12 +1,15 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { createHash } from "node:crypto";
 import {
+  chmodSync,
   existsSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readlinkSync,
   readdirSync,
+  symlinkSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -19,6 +22,10 @@ const INSTALL = join(ROOT, "install", "install.sh");
 const REMOTE_INSTALL = join(ROOT, "install.sh");
 const decoder = new TextDecoder();
 const PATTERN = "learning.minimal-rule-after-recurrence";
+
+// These integration tests compile binaries, archive skills, and install into
+// isolated homes. The default 5-second unit-test budget flakes under host load.
+setDefaultTimeout(30_000);
 
 type ProcessResult = { readonly exitCode: number; readonly stdout: string; readonly stderr: string };
 type InstalledGdm = { readonly binary: string; readonly home: string; readonly output: string };
@@ -47,6 +54,63 @@ function runEnv(program: string, cwd: string, args: readonly string[], env: Node
   };
 }
 
+function shellQuote(value: string): string {
+  return `'${value.replaceAll("'", "'\"'\"'")}'`;
+}
+
+function testGdmLauncher(home: string): string {
+  const launcher = join(home, "gdm-test-launcher");
+  writeFileSync(
+    launcher,
+    `#!/bin/sh\nexec ${shellQuote(process.execPath)} ${shellQuote(join(ROOT, "cli", "src", "cli.ts"))} "$@"\n`,
+  );
+  chmodSync(launcher, 0o755);
+  return launcher;
+}
+
+function runHookInstall(home: string, codexHome?: string): ProcessResult {
+  const env: NodeJS.ProcessEnv = { ...process.env, HOME: home };
+  if (codexHome === undefined) {
+    delete env.CODEX_HOME;
+  } else {
+    env.CODEX_HOME = codexHome;
+  }
+  return runEnv(
+    "bun",
+    join(ROOT, "cli"),
+    [
+      "src/cli.ts",
+      "agent",
+      "hook-install",
+      "--binary",
+      testGdmLauncher(home),
+    ],
+    env,
+  );
+}
+
+function expectOneGdmHandlerPerLifecycle(hooksPath: string): void {
+  const config = object(JSON.parse(readFileSync(hooksPath, "utf8")));
+  const hooks = object(config.hooks);
+  for (const event of ["PreToolUse", "PostToolUse", "SubagentStart", "SubagentStop", "Stop"]) {
+    const groups = hooks[event];
+    expect(Array.isArray(groups)).toBe(true);
+    const handlers = (groups as readonly unknown[]).flatMap((group) => {
+      const value = object(group);
+      expect(Array.isArray(value.hooks)).toBe(true);
+      return value.hooks as readonly unknown[];
+    });
+    const gdmHandlers = handlers.filter((handler) => {
+      const value = object(handler);
+      return (
+        typeof value.command === "string" &&
+        value.command.includes("--handler-id gdm-agent-gate-v1")
+      );
+    });
+    expect(gdmHandlers).toHaveLength(1);
+  }
+}
+
 function fileHash(path: string): string {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
@@ -67,6 +131,18 @@ function remoteAssets(withChecksums: boolean): { directory: string; asset: strin
   return { directory, asset };
 }
 
+let verifiedRemoteAssets:
+  | { readonly directory: string; readonly asset: string }
+  | undefined;
+
+function sharedVerifiedRemoteAssets(): {
+  readonly directory: string;
+  readonly asset: string;
+} {
+  verifiedRemoteAssets ??= remoteAssets(true);
+  return verifiedRemoteAssets;
+}
+
 function tempDirectory(prefix: string): string {
   return mkdtempSync(join(tmpdir(), prefix));
 }
@@ -80,6 +156,64 @@ function installGdm(): InstalledGdm {
     home,
     output: `${result.stdout}${result.stderr}`,
   };
+}
+
+function seedExistingInstall(home: string): {
+  readonly binary: string;
+  readonly binaryBytes: Buffer;
+  readonly skillPaths: readonly string[];
+  readonly skillBytes: Buffer;
+} {
+  const binary = join(home, ".local", "bin", "gdm");
+  const binaryBytes = Buffer.from("#!/bin/sh\nprintf old-gdm\n", "utf8");
+  const skillBytes = Buffer.from("old skill\n", "utf8");
+  mkdirSync(join(home, ".local", "bin"), { recursive: true });
+  writeFileSync(binary, binaryBytes);
+  chmodSync(binary, 0o755);
+  const skillPaths = [
+    join(home, ".claude", "skills", "gdm-go", "SKILL.md"),
+    join(home, ".codex", "skills", "gdm-go", "SKILL.md"),
+  ];
+  for (const path of skillPaths) {
+    mkdirSync(join(path, ".."), { recursive: true });
+    writeFileSync(path, skillBytes);
+  }
+  return { binary, binaryBytes, skillPaths, skillBytes };
+}
+
+function expectExistingInstallUnchanged(
+  seeded: ReturnType<typeof seedExistingInstall>,
+): void {
+  expect(readFileSync(seeded.binary, "utf8")).toBe(
+    seeded.binaryBytes.toString("utf8"),
+  );
+  for (const path of seeded.skillPaths) {
+    expect(readFileSync(path, "utf8")).toBe(seeded.skillBytes.toString("utf8"));
+  }
+}
+
+function seedLiveHookLock(home: string): string {
+  const lock = join(home, ".codex", "hooks.json.gdm-lock");
+  mkdirSync(join(home, ".codex"), { recursive: true });
+  writeFileSync(lock, `${process.pid}-${"a".repeat(24)}\n`);
+  return lock;
+}
+
+function expectNoInstallerTransactionArtifacts(home: string): void {
+  for (const directory of [
+    join(home, ".local", "bin"),
+    join(home, ".claude", "skills"),
+    join(home, ".codex", "skills"),
+  ]) {
+    if (!existsSync(directory) || !lstatSync(directory).isDirectory()) continue;
+    expect(
+      readdirSync(directory).filter((name) =>
+        name.startsWith(".gdm-stage.") ||
+        name.startsWith(".gdm-rollback.") ||
+        name.startsWith(".gdm.tmp.")
+      ),
+    ).toEqual([]);
+  }
 }
 
 function skill(name: string): string {
@@ -157,7 +291,7 @@ function importFixture(binary: string, home: string, cwd: string): readonly stri
 
 describe("gdm installation and workflow skills", () => {
   test("remote installer verifies complete artifacts before changing the target", () => {
-    const assets = remoteAssets(true);
+    const assets = sharedVerifiedRemoteAssets();
     const home = tempDirectory("gdm-remote-home-");
     const bin = join(home, "bin");
     mkdirSync(bin, { recursive: true });
@@ -170,15 +304,295 @@ describe("gdm installation and workflow skills", () => {
     });
     expect(installed.exitCode).toBe(0);
     expect(run(join(bin, "gdm"), ROOT, ["--version"]).stdout.trim()).toBe(packageJson.version);
+    const hookStatus = run(join(bin, "gdm"), ROOT, ["agent", "hook-status", "--json"], home);
+    expect(hookStatus.exitCode).toBe(0);
+    expect(JSON.parse(hookStatus.stdout)).toMatchObject({ installed: true });
+    const installedHooks = readFileSync(join(home, ".codex", "hooks.json"), "utf8");
+    expect(installedHooks.match(/gdm-agent-gate-v1/g)?.length).toBe(5);
+    expect(installedHooks).toContain(join(bin, "gdm"));
     expect(existsSync(join(home, ".claude", "skills", "gdm-go", "SKILL.md"))).toBe(true);
     expect(existsSync(join(home, ".codex", "skills", "gdm-pr", "SKILL.md"))).toBe(true);
+    const installedGo = readFileSync(join(home, ".codex", "skills", "gdm-go", "SKILL.md"), "utf8");
+    const installedFull = readFileSync(join(home, ".codex", "skills", "gdm-full", "SKILL.md"), "utf8");
     const installedResearch = readFileSync(join(home, ".codex", "skills", "gdm-research", "SKILL.md"), "utf8");
     const installedAuditor = readFileSync(join(home, ".claude", "skills", "gdm-agents", "auditor.md"), "utf8");
     const installedRunner = readFileSync(join(home, ".codex", "skills", "gdm-agents", "run-auditor.sh"), "utf8");
-    expect(installedResearch).toContain("에이전트 팬아웃을 사용하지 않는다");
+    expect(installedGo).toContain("**상황에 맞게**");
+    expect(installedGo).toContain("여러 구현 워커를 둘 수 있고");
+    expect(installedGo).toContain("자식이 만든 자식도 같은 세션 상한");
+    expect(installedFull).toContain("같은 구현 모델의 에이전트는 여러 명이어도 된다");
+    expect(installedFull).toContain("여러 구현 워커에는 겹치지 않는 파일·모듈");
+    expect(installedResearch).toMatch(/모든 종류·모든 세대의\s+활성 spawned/u);
+    expect(installedResearch).toContain("`MAX_ACTIVE_SUBAGENTS: 4`");
+    expect(installedResearch).toContain("`하위 위임`");
+    expect(installedResearch).toContain("받은 전체 범위를 그대로 다시 맡기는 재위임");
+    expect(installedResearch).toContain("자기 복제");
+    expect(installedResearch).toContain("무제한 팬아웃");
+    expect(installedGo).toContain("`GDM_AGENT_ENVELOPE_V1=`");
+    expect(installedFull).toContain("`INITIAL_SPAWN_ATTEMPT_BUDGET: 16`");
+    expect(installedFull).toContain("`SPAWN_ATTEMPT_EXTENSION: 4`");
+    expect(installedFull).toContain("`MAX_TOTAL_SPAWNS_PER_ROOT: 32`");
+    expect(installedResearch).toContain("`DEFAULT_CHILD_QUOTA: 1`");
+    expect(installedResearch).toContain("실패·취소된 spawn도 예산을 돌려주지 않는다");
+    expect(installedResearch).not.toContain("에이전트 팬아웃을 사용하지 않는다");
     expect(installedAuditor).toContain("MAX_AGENT_DEPTH: 0");
-    expect(installedRunner).toContain("--disable multi_agent");
+    expect(installedAuditor).toContain("MAX_CHILD_AGENTS: 0");
+    expect(installedAuditor).toContain("NEVER: 서브에이전트 생성");
+    expect(installedAuditor).toContain("AUDITOR_RESOURCE_LIMIT");
+    expect(installedRunner).toContain("--disable multi_agent --disable multi_agent_v2 --disable enable_fanout");
     expect(installedRunner).toContain('--tools "Read,Glob,Grep"');
+    expect(installedRunner).toContain("max_processes");
+    expect(installedRunner).toContain("stop_owned_tree");
+    expect(installedRunner).not.toContain("pkill");
+  });
+
+  test("source installer preserves user hooks and config while updating only its handlers", () => {
+    const home = tempDirectory("gdm-hook-preserve-home-");
+    const codex = join(home, ".codex");
+    mkdirSync(codex, { recursive: true });
+    const originalHooks = `${JSON.stringify({
+      description: "user-owned hooks",
+      hooks: {
+        Stop: [{
+          hooks: [{
+            type: "command",
+            command: "/opt/user/stop-hook",
+            timeout: 7,
+            statusMessage: "user stop",
+          }],
+        }],
+      },
+    }, null, 2)}\n`;
+    const originalConfig = "[agents]\nmax_concurrent_threads_per_session = 4\n\n[features]\nhooks = true\n";
+    writeFileSync(join(codex, "hooks.json"), originalHooks);
+    writeFileSync(join(codex, "config.toml"), originalConfig);
+
+    const first = run("bash", ROOT, [INSTALL], home);
+    expect(first.exitCode).toBe(0);
+    expect(readFileSync(join(codex, "hooks.json.gdm-backup"), "utf8")).toBe(originalHooks);
+    expect(readFileSync(join(codex, "config.toml"), "utf8")).toBe(originalConfig);
+    const afterFirst = readFileSync(join(codex, "hooks.json"), "utf8");
+    expect(afterFirst).toContain("/opt/user/stop-hook");
+    expect(afterFirst.match(/gdm-agent-gate-v1/g)?.length).toBe(5);
+
+    const second = run("bash", ROOT, [INSTALL], home);
+    expect(second.exitCode).toBe(0);
+    const afterSecond = readFileSync(join(codex, "hooks.json"), "utf8");
+    expect(afterSecond).toContain("/opt/user/stop-hook");
+    expect(afterSecond.match(/gdm-agent-gate-v1/g)?.length).toBe(5);
+    expect(readFileSync(join(codex, "hooks.json.gdm-backup"), "utf8")).toBe(originalHooks);
+    expect(readFileSync(join(codex, "config.toml"), "utf8")).toBe(originalConfig);
+  });
+
+  test("source installer preflight preserves old binary and skills for malformed hooks, hostile backup, and malformed TOML", () => {
+    const scenarios = ["malformed-hooks", "backup-symlink", "malformed-toml"] as const;
+    for (const scenario of scenarios) {
+      const home = tempDirectory(`gdm-source-preflight-${scenario}-`);
+      const seeded = seedExistingInstall(home);
+      const codex = join(home, ".codex");
+      const hooksPath = join(codex, "hooks.json");
+      mkdirSync(codex, { recursive: true });
+      if (scenario === "malformed-hooks") {
+        writeFileSync(hooksPath, '{"hooks":[\n');
+      } else if (scenario === "backup-symlink") {
+        writeFileSync(hooksPath, '{"description":"user"}\n');
+        const target = join(home, "user-backup.json");
+        writeFileSync(target, "owned backup target\n");
+        symlinkSync(target, `${hooksPath}.gdm-backup`);
+      } else {
+        writeFileSync(hooksPath, '{"description":"user"}\n');
+        writeFileSync(join(codex, "config.toml"), "[features\nhooks = true\n");
+      }
+
+      const rejected = run("bash", ROOT, [INSTALL], home);
+
+      expect(rejected.exitCode).not.toBe(0);
+      expectExistingInstallUnchanged(seeded);
+    }
+  });
+
+  test("source installer rolls binary and both skill roots back when the real hook commit fails", () => {
+    const home = tempDirectory("gdm-source-hook-rollback-");
+    const seeded = seedExistingInstall(home);
+    const lock = seedLiveHookLock(home);
+
+    const rejected = run("bash", ROOT, [INSTALL], home);
+
+    expect(rejected.exitCode).not.toBe(0);
+    expect(`${rejected.stdout}${rejected.stderr}`).toContain(
+      "잠금을 기다리다 시간 초과",
+    );
+    expectExistingInstallUnchanged(seeded);
+    expect(existsSync(lock)).toBe(true);
+    expectNoInstallerTransactionArtifacts(home);
+  });
+
+  test("source installer preflights a regular-file skill root before changing binary or hooks", () => {
+    const home = tempDirectory("gdm-source-skill-root-file-");
+    const binary = join(home, ".local", "bin", "gdm");
+    const claudeSkillRoot = join(home, ".claude", "skills");
+    const codexSkill = join(home, ".codex", "skills", "gdm-go", "SKILL.md");
+    const oldBinary = "#!/bin/sh\nprintf old-gdm\n";
+    mkdirSync(join(binary, ".."), { recursive: true });
+    writeFileSync(binary, oldBinary);
+    chmodSync(binary, 0o755);
+    mkdirSync(join(claudeSkillRoot, ".."), { recursive: true });
+    writeFileSync(claudeSkillRoot, "user-owned skill root\n");
+    mkdirSync(join(codexSkill, ".."), { recursive: true });
+    writeFileSync(codexSkill, "old codex skill\n");
+
+    const rejected = run("bash", ROOT, [INSTALL], home);
+
+    expect(rejected.exitCode).not.toBe(0);
+    expect(readFileSync(binary, "utf8")).toBe(oldBinary);
+    expect(readFileSync(claudeSkillRoot, "utf8")).toBe(
+      "user-owned skill root\n",
+    );
+    expect(readFileSync(codexSkill, "utf8")).toBe("old codex skill\n");
+    expect(existsSync(join(home, ".codex", "hooks.json"))).toBe(false);
+    expectNoInstallerTransactionArtifacts(home);
+  });
+
+  test("source installer replaces legacy real gdm skill directories with exact links and preserves unrelated skills", () => {
+    const home = tempDirectory("gdm-source-skill-migration-");
+    for (const host of [".claude", ".codex"]) {
+      const root = join(home, host, "skills");
+      mkdirSync(join(root, "gdm-go"), { recursive: true });
+      writeFileSync(join(root, "gdm-go", "stale.txt"), "stale\n");
+      mkdirSync(join(root, "user-owned"), { recursive: true });
+      writeFileSync(join(root, "user-owned", "SKILL.md"), "keep me\n");
+    }
+
+    const installed = run("bash", ROOT, [INSTALL], home);
+
+    expect(installed.exitCode).toBe(0);
+    for (const host of [".claude", ".codex"]) {
+      const root = join(home, host, "skills");
+      const migrated = join(root, "gdm-go");
+      expect(lstatSync(migrated).isSymbolicLink()).toBe(true);
+      expect(readlinkSync(migrated)).toBe(join(ROOT, "skills", "go"));
+      expect(existsSync(join(migrated, "stale.txt"))).toBe(false);
+      expect(readFileSync(join(root, "user-owned", "SKILL.md"), "utf8")).toBe(
+        "keep me\n",
+      );
+    }
+  });
+
+  test("source and remote installers never delete a non-regular existing binary target", () => {
+    const assets = sharedVerifiedRemoteAssets();
+    for (const variant of ["source", "remote"] as const) {
+      const home = tempDirectory(`gdm-${variant}-binary-directory-`);
+      const binary = join(home, ".local", "bin", "gdm");
+      const sentinel = join(binary, "user-owned.txt");
+      mkdirSync(binary, { recursive: true });
+      writeFileSync(sentinel, "keep me\n");
+
+      const rejected =
+        variant === "source"
+          ? run("bash", ROOT, [INSTALL], home)
+          : runEnv("bash", ROOT, [REMOTE_INSTALL], {
+              ...process.env,
+              HOME: home,
+              SHELL: "/bin/zsh",
+              GDM_BASE_URL: `file://${assets.directory}`,
+              GDM_BIN_DIR: join(home, ".local", "bin"),
+            });
+
+      expect(rejected.exitCode).not.toBe(0);
+      expect(`${rejected.stdout}${rejected.stderr}`).toContain(
+        "기존 바이너리 경로가 일반 파일이 아닙니다",
+      );
+      expect(lstatSync(binary).isDirectory()).toBe(true);
+      expect(readFileSync(sentinel, "utf8")).toBe("keep me\n");
+      expect(existsSync(join(home, ".codex", "hooks.json"))).toBe(false);
+      expectNoInstallerTransactionArtifacts(home);
+    }
+  });
+
+  test("hook installer rejects malformed config without changing bytes or creating a backup", () => {
+    const home = tempDirectory("gdm-hook-malformed-home-");
+    const codex = join(home, ".codex");
+    const hooksPath = join(codex, "hooks.json");
+    const backupPath = `${hooksPath}.gdm-backup`;
+    const malformed = Buffer.from('{"hooks": [\n', "utf8");
+    mkdirSync(codex, { recursive: true });
+    writeFileSync(hooksPath, malformed);
+
+    const rejected = runHookInstall(home);
+
+    expect(rejected.exitCode).not.toBe(0);
+    expect(`${rejected.stdout}${rejected.stderr}`).toContain("JSON이 손상");
+    expect(readFileSync(hooksPath)).toEqual(malformed);
+    expect(existsSync(backupPath)).toBe(false);
+  });
+
+  test("hook installer rejects a symlink without changing the link or its target", () => {
+    const home = tempDirectory("gdm-hook-symlink-home-");
+    const codex = join(home, ".codex");
+    const hooksPath = join(codex, "hooks.json");
+    const targetPath = join(home, "user-hooks.json");
+    const targetBytes = Buffer.from('{"description":"user-owned"}\n', "utf8");
+    mkdirSync(codex, { recursive: true });
+    writeFileSync(targetPath, targetBytes);
+    symlinkSync(targetPath, hooksPath);
+    const linkTarget = readlinkSync(hooksPath);
+
+    const rejected = runHookInstall(home);
+
+    expect(rejected.exitCode).not.toBe(0);
+    expect(`${rejected.stdout}${rejected.stderr}`).toContain("일반 파일이 아닙니다");
+    expect(lstatSync(hooksPath).isSymbolicLink()).toBe(true);
+    expect(readlinkSync(hooksPath)).toBe(linkTarget);
+    expect(readFileSync(targetPath)).toEqual(targetBytes);
+    expect(existsSync(`${hooksPath}.gdm-backup`)).toBe(false);
+  });
+
+  test("hook installer rejects a non-regular config path without mutation", () => {
+    const home = tempDirectory("gdm-hook-nonregular-home-");
+    const codex = join(home, ".codex");
+    const hooksPath = join(codex, "hooks.json");
+    const sentinelPath = join(hooksPath, "sentinel");
+    const sentinelBytes = Buffer.from("user-owned\n", "utf8");
+    mkdirSync(hooksPath, { recursive: true });
+    writeFileSync(sentinelPath, sentinelBytes);
+
+    const rejected = runHookInstall(home);
+
+    expect(rejected.exitCode).not.toBe(0);
+    expect(`${rejected.stdout}${rejected.stderr}`).toContain("일반 파일이 아닙니다");
+    expect(lstatSync(hooksPath).isDirectory()).toBe(true);
+    expect(readFileSync(sentinelPath)).toEqual(sentinelBytes);
+    expect(existsSync(`${hooksPath}.gdm-backup`)).toBe(false);
+  });
+
+  test("hook installer is idempotent in an empty home", () => {
+    const home = tempDirectory("gdm-hook-idempotent-home-");
+    const hooksPath = join(home, ".codex", "hooks.json");
+
+    const first = runHookInstall(home);
+    expect(first.exitCode).toBe(0);
+    const afterFirst = readFileSync(hooksPath);
+
+    const second = runHookInstall(home);
+
+    expect(second.exitCode).toBe(0);
+    expect(readFileSync(hooksPath)).toEqual(afterFirst);
+    expect(readFileSync(hooksPath, "utf8").match(/gdm-agent-gate-v1/g)?.length).toBe(5);
+    expectOneGdmHandlerPerLifecycle(hooksPath);
+    expect(existsSync(`${hooksPath}.gdm-backup`)).toBe(false);
+  });
+
+  test("hook installer prefers CODEX_HOME over HOME", () => {
+    const home = tempDirectory("gdm-hook-home-priority-");
+    const codexHome = join(home, "custom-codex-home");
+    const hooksPath = join(codexHome, "hooks.json");
+
+    const installed = runHookInstall(home, codexHome);
+
+    expect(installed.exitCode).toBe(0);
+    expect(existsSync(hooksPath)).toBe(true);
+    expectOneGdmHandlerPerLifecycle(hooksPath);
+    expect(existsSync(join(home, ".codex", "hooks.json"))).toBe(false);
   });
 
   test("remote installer fails closed when checksums are unavailable", () => {
@@ -195,6 +609,143 @@ describe("gdm installation and workflow skills", () => {
     expect(rejected.exitCode).not.toBe(0);
     expect(`${rejected.stdout}${rejected.stderr}`).toContain("SHASUMS256.txt");
     expect(existsSync(join(bin, "gdm"))).toBe(false);
+  });
+
+  test("remote installer preflight preserves old binary and skills for malformed, symlink, hostile backup, and malformed TOML state", () => {
+    const assets = sharedVerifiedRemoteAssets();
+    const scenarios = [
+      "malformed",
+      "config-symlink",
+      "backup-symlink",
+      "malformed-toml",
+    ] as const;
+    for (const scenario of scenarios) {
+      const home = tempDirectory(`gdm-remote-preflight-${scenario}-`);
+      const seeded = seedExistingInstall(home);
+      const codex = join(home, ".codex");
+      const hooksPath = join(codex, "hooks.json");
+      mkdirSync(codex, { recursive: true });
+      if (scenario === "malformed") {
+        writeFileSync(hooksPath, '{"hooks":[\n');
+      } else if (scenario === "config-symlink") {
+        const target = join(home, "user-hooks.json");
+        writeFileSync(target, '{"description":"user"}\n');
+        symlinkSync(target, hooksPath);
+      } else if (scenario === "backup-symlink") {
+        writeFileSync(hooksPath, '{"description":"user"}\n');
+        const target = join(home, "user-backup.json");
+        writeFileSync(target, "owned backup target\n");
+        symlinkSync(target, `${hooksPath}.gdm-backup`);
+      } else {
+        writeFileSync(hooksPath, '{"description":"user"}\n');
+        writeFileSync(join(codex, "config.toml"), "[features\nhooks = true\n");
+      }
+
+      const rejected = runEnv("bash", ROOT, [REMOTE_INSTALL], {
+        ...process.env,
+        HOME: home,
+        SHELL: "/bin/zsh",
+        GDM_BASE_URL: `file://${assets.directory}`,
+        GDM_BIN_DIR: join(home, ".local", "bin"),
+      });
+
+      expect(rejected.exitCode).not.toBe(0);
+      expectExistingInstallUnchanged(seeded);
+    }
+  });
+
+  test("remote installer rolls binary and both skill roots back when the real hook commit fails", () => {
+    const assets = sharedVerifiedRemoteAssets();
+    const home = tempDirectory("gdm-remote-hook-rollback-");
+    const seeded = seedExistingInstall(home);
+    const lock = seedLiveHookLock(home);
+
+    const rejected = runEnv("bash", ROOT, [REMOTE_INSTALL], {
+      ...process.env,
+      HOME: home,
+      SHELL: "/bin/zsh",
+      GDM_BASE_URL: `file://${assets.directory}`,
+      GDM_BIN_DIR: join(home, ".local", "bin"),
+    });
+
+    expect(rejected.exitCode).not.toBe(0);
+    expect(`${rejected.stdout}${rejected.stderr}`).toContain(
+      "잠금을 기다리다 시간 초과",
+    );
+    expectExistingInstallUnchanged(seeded);
+    expect(existsSync(lock)).toBe(true);
+    expectNoInstallerTransactionArtifacts(home);
+  });
+
+  test("remote installer preflights a regular-file skill root before changing binary or hooks", () => {
+    const assets = sharedVerifiedRemoteAssets();
+    const home = tempDirectory("gdm-remote-skill-root-file-");
+    const binary = join(home, ".local", "bin", "gdm");
+    const claudeSkillRoot = join(home, ".claude", "skills");
+    const codexSkill = join(home, ".codex", "skills", "gdm-go", "SKILL.md");
+    const oldBinary = "#!/bin/sh\nprintf old-gdm\n";
+    mkdirSync(join(binary, ".."), { recursive: true });
+    writeFileSync(binary, oldBinary);
+    chmodSync(binary, 0o755);
+    mkdirSync(join(claudeSkillRoot, ".."), { recursive: true });
+    writeFileSync(claudeSkillRoot, "user-owned skill root\n");
+    mkdirSync(join(codexSkill, ".."), { recursive: true });
+    writeFileSync(codexSkill, "old codex skill\n");
+
+    const rejected = runEnv("bash", ROOT, [REMOTE_INSTALL], {
+      ...process.env,
+      HOME: home,
+      SHELL: "/bin/zsh",
+      GDM_BASE_URL: `file://${assets.directory}`,
+      GDM_BIN_DIR: join(home, ".local", "bin"),
+    });
+
+    expect(rejected.exitCode).not.toBe(0);
+    expect(readFileSync(binary, "utf8")).toBe(oldBinary);
+    expect(readFileSync(claudeSkillRoot, "utf8")).toBe(
+      "user-owned skill root\n",
+    );
+    expect(readFileSync(codexSkill, "utf8")).toBe("old codex skill\n");
+    expect(existsSync(join(home, ".codex", "hooks.json"))).toBe(false);
+    expectNoInstallerTransactionArtifacts(home);
+  });
+
+  test("remote installer resolves relative GDM_BIN_DIR from its starting cwd", () => {
+    const assets = sharedVerifiedRemoteAssets();
+    const home = tempDirectory("gdm-remote-relative-bin-home-");
+    const start = tempDirectory("gdm-remote-relative-bin-cwd-");
+
+    const installed = runEnv("bash", start, [REMOTE_INSTALL], {
+      ...process.env,
+      HOME: home,
+      SHELL: "/bin/zsh",
+      GDM_BASE_URL: `file://${assets.directory}`,
+      GDM_BIN_DIR: "relative-bin",
+    });
+
+    expect(installed.exitCode).toBe(0);
+    expect(existsSync(join(start, "relative-bin", "gdm"))).toBe(true);
+  });
+
+  test("remote installer reports PATH rc failures as post-commit warnings", () => {
+    const assets = sharedVerifiedRemoteAssets();
+    const home = tempDirectory("gdm-remote-path-warning-home-");
+    const bin = join(home, "bin");
+    mkdirSync(join(home, ".zshrc"));
+
+    const installed = runEnv("bash", ROOT, [REMOTE_INSTALL], {
+      ...process.env,
+      HOME: home,
+      SHELL: "/bin/zsh",
+      GDM_BASE_URL: `file://${assets.directory}`,
+      GDM_BIN_DIR: bin,
+    });
+
+    expect(installed.exitCode).toBe(0);
+    expect(installed.stderr).toContain("PATH를 추가하지 못했습니다");
+    expect(existsSync(join(bin, "gdm"))).toBe(true);
+    expect(existsSync(join(home, ".codex", "hooks.json"))).toBe(true);
+    expect(existsSync(join(home, ".codex", "skills", "gdm-go"))).toBe(true);
   });
 
   test("every skill has discoverable metadata and reflect installs for both hosts", () => {
@@ -315,7 +866,7 @@ describe("gdm installation and workflow skills", () => {
     expect(pr).toContain("Co-Authored-By");
     expect(pr).toContain("읽기 전용");
     expect(skill("reflect")).toContain("cleanup trap");
-    expect(routing).toContain("제품 파일을 쓰는 실제 구현 주체는 한 명");
+    expect(routing).toContain("여러 구현 워커는 겹치지 않는 파일·모듈을 소유");
     expect(routing).toContain("실제 diff를 만든 구현 모델과 달라야 한다");
   });
 });

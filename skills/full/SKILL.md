@@ -11,16 +11,68 @@ description: |
 
 ## 역할
 
-배포 수준 작업의 **조율자**. 제품 파일을 쓰는 실제 구현 주체는 한 명으로 유지하고 그 모델을
-기록한다. gdm 게이트로 증거를 판정하며, **실제 구현 모델과 다른 모델**의 새 컨텍스트 검수자가
-통과 판정을 내린 상태로만 작업을 끝낸다. 라우팅 계약: `skills/_shared/routing.md`.
+배포 수준 작업의 **루트 조율자**. 한 작업의 실제 구현 모델을 하나로 기록하되, 그 모델의
+여러 구현 에이전트가 겹치지 않는 파일·모듈을 나눠 맡길 수 있다. 루트 조율자가 산출물과
+gdm 게이트를 통합하며, **실제 구현 모델과 다른 모델**의 새 컨텍스트 검수자가 통과 판정을
+내린 상태로만 작업을 끝낸다. 라우팅 계약: `skills/_shared/routing.md`.
 
 ## 제약
 
 - gdm-go의 모든 제약이 그대로 적용된다 (상태는 CLI로만, done 전 완료 보고 금지,
   기준 몰래 완화 금지).
-- CRITICAL: 제품 파일 작성자는 한 명이며, 실제 구현 모델과 검수 모델은 달라야 한다.
-  역할 이름이나 조율자 정체성이 아니라 실제 diff를 만든 주체를 기준으로 기록한다.
+- CRITICAL: 한 작업의 **실제 구현 모델은 하나**이며 실제 구현 모델과 검수 모델은 달라야 한다.
+  같은 구현 모델의 에이전트는 여러 명이어도 된다. 역할 이름이나 조율자 정체성이 아니라
+  실제 diff를 만든 주체를 기준으로 기록한다.
+- IMPORTANT: 구현·탐색·로그 분석·테스트 실행은 독립 경계, 필요한 전문성·fresh context,
+  주 컨텍스트의 노이즈를 기준으로 위임한다. 여러 구현 워커에는 겹치지 않는 파일·모듈
+  소유권과 종료 조건을 주고 루트 조율자가 통합한다. 조율자가 제품 파일을 직접 고치면
+  조율자도 기록된 동일 구현 모델이어야 한다.
+- IMPORTANT: 일반 역할은 새로 발견한 독립 경계를 하위 역할에 맡길 수 있다. 같은 네이티브
+  Codex 루트 세션에서 조율자를 제외한 모든 세대의 활성 spawned agent를 합쳐 동시에 최대
+  4명이며 자식이 만든 자식도 같은 세션 상한에 포함된다. 같은 전체 범위를 다시 넘기는
+  자기복제형 재위임과 끝이 정해지지 않은 팬아웃만 금지한다.
+- IMPORTANT: 모든 spawn 메시지 첫 줄에 `GDM_AGENT_ENVELOPE_V1=` 단일행 JSON과 역할·scope·
+  ownership·산출물·검증·종료 조건·`blockedBy`를 넣는다. 위임 lease는
+  `INITIAL_SPAWN_ATTEMPT_BUDGET: 16`, `SPAWN_ATTEMPT_EXTENSION: 4`,
+  `MAX_TOTAL_SPAWNS_PER_ROOT: 32`, `DEFAULT_CHILD_QUOTA: 1`, `MAX_CHILD_QUOTA: 2`,
+  `MAX_AGENT_DEPTH: 3`이다. 일반 역할의 기본 quota는 1이며 일괄 leaf로 만들지 않는다.
+  허용된 시도는 누적 예산을 소비하고 실패·취소된 spawn도 예산을 돌려주지 않는다. 초기 16을
+  다 쓰면 pending/running 역할이 하나도 없을 때만 다음 spawn에서 4개 예산을 자동으로 열며,
+  활성 역할이 남은 동안에는 확장하지 않는다. timeout은
+  대기 호출의 종료일 뿐 workflow 결과 확정이 아니다. structured 역할의 scope와
+  ownership resource는 cwd 기준 `.`·`..`·상대/절대 별칭을 정규화한다. 활성 역할과 같은
+  canonical scope 또는 겹치는 write resource는 거부하지만, 이는 선언 guardrail이며
+  symlink·대소문자까지 잠그는 운영체제 파일 lock은 아니다.
+  `SubagentStop`은 child turn의 stop 관찰이자 sequencing hint일 뿐 영구 thread 종료나 성공
+  증명이 아니다. 다른 Stop handler가 continuation을 요청할 수 있고, idle thread는
+  `followup_task`로 재사용될 수 있으며, interrupt는 Stop 관찰을 남기지 않을 수 있다. 원장에서
+  해당 identity에 연결된 `stopped` 관찰은 active/ownership lease를 협력적으로 해제하고
+  `blockedBy`를 열 수 있지만 hard runtime proof가 아니다. 루트 조율자는 deliverable/verify와
+  실제 작업 겹침 부재를 확인해야 한다. `failed|expired`는 active/ownership lease에서는
+  빠져도 `blockedBy`를 만족하지 않으며, 30분 lease expiry도 완료가 아니다. 의존 단계와 최종 응답은 산출물 결과를
+  `completed|failed|cancelled|inconclusive` 중 하나로 별도 판정한다. 이 workflow 결과는
+  lifecycle 관찰과 분리한다.
+- IMPORTANT: 훅이 실행되는 하나의 네이티브 Codex 루트 세션 트리에서 절대 누적 32는 하드
+  상한이고, 동시 4는 현재 세션의 유효 Codex 설정이 4일 때 네이티브 하드 상한이다. 하위
+  hook caller agent id가 structured 부모와 일대일로 결속될 때 부모별
+  quota/depth/canDelegate를 기계적으로 검사한다. caller id가 없는 호환 런타임은 원장에
+  선언한 부모가 있을 때만 nonterminal/quota/depth/canDelegate를 검사하는 degraded
+  fallback을 쓰며, 이를 부모 신원 하드 경계라고 주장하지 않는다. `multi_agent_v2` spawn
+  응답에는 agent id가 없으므로 unresolved V2가 포함된 identity-ambiguous 구간만 직렬화한다.
+  unresolved V1끼리는 병렬 가능하고, identity가 연결된 뒤 active agent 실행도 병렬 가능하다.
+  same-axis 후속 작업으로 idle thread를 재사용할 수 있지만 훅은 이전 ownership/delegation을
+  기계적으로 갱신하지 못한다. 루트 조율자는 실제 작업 겹침을 피하고 새 bounded delegation이
+  필요하면 새 lease를 선언해 생성한다. 비대화형 CLI·별도 세션을 합친 논리 작업 전체의 동시
+  4·초기 16·4개 자동 확장·절대 누적 32는 협력적 운영 규칙이다.
+
+아래 한 줄은 형식 예시일 뿐이다. 복사하기 전에 `taskId`, `parentId`, `role`, `scope`,
+`ownership.mode/resources`, `deliverable`, `verify`, `stopWhen`, `canDelegate`,
+`childQuota`(quota), `depth`, `blockedBy` 값을 작업에 맞게 모두 바꾼다.
+
+```text
+GDM_AGENT_ENVELOPE_V1={"taskId":"example-task","parentId":"root","role":"bounded-worker","scope":"docs/example","ownership":{"mode":"read","resources":["docs/example.md"]},"deliverable":"Evidence-backed result","verify":"Confirm cited file and result","stopWhen":"Deliverable and verification are complete","canDelegate":false,"childQuota":0,"depth":1,"blockedBy":[]}
+```
+
 - NEVER: 검수보고(audit-report.md)를 직접 작성하지 않는다. 검수보고는 제한 실행기로 띄운
   외부 leaf 검수자만 작성한다 — 실행자가 쓰면 자기 채점이다.
 - NEVER: 검수자에게 작업 요약을 대신 판단 근거로 주지 않는다. 검수자는 브리핑
@@ -50,16 +102,27 @@ gdm-go의 도구 전부 + 검수:
 
 ## 프로세스
 
-1. `gdm plan init --slug <슬러그> --brief "<요약>" --audit --require "<보존 조건>" --forbid "자동 커밋"`
-2. check 설계: gdm-go 기준(happy/edge/regression)에 **adversarial 항목을 추가**한다
+1. 새 기술 설계 판단이 있으면 `gdm-plan`으로 Claude CLI 설계안을 먼저 받고 Codex가 실제
+   코드 근거를 검증한 최종 계획을 brief로 쓴다. 0→1·전면 리디자인·개방형 시각 변경은
+   `gdm-design`으로 Claude Design용 프롬프트를 사용자에게 전달하고, 사용자가
+   claude.ai/design에서 생성 완료를 확인한 뒤 DesignSync로 pull한다. Chrome 제어로 생성을
+   대신하지 않는다. 국소 버그·기계적 리팩터·구체적 UI 결함은 호출을 생략한다.
+   `HTTP 429`, `rate_limit`, `quota exceeded`, 사용량 한도일 때만
+   `codex-fallback`을 기록하고 Codex가 대신하며, 인증·권한·도구·프로젝트 문제나 timeout은
+   대체하지 않는다. Claude의 설계·시각 산출물은 구현 모델이 아니며 로컬 제품 코드는 기록된
+   Codex 구현 모델만 작성한다.
+2. `gdm plan init --slug <슬러그> --brief "<요약>" --audit --require "<보존 조건>" --forbid "자동 커밋"`
+3. check 설계: gdm-go 기준(happy/edge/regression)에 **adversarial 항목을 추가**한다
    — 악의적/경계 입력에서 무너지지 않는지 검증하는 check 1개 이상.
    등록 후 목록을 사용자에게 보여주고, 중량 작업이므로 이견 없는지 확인한다.
-3. 구현 시작 전에 실제 제품 작성자를 한 명 지정한다. 검수 입력의 첫 필드에
-   `implementationModel: <실제 모델>`을 기록하고 구현 모델을 작업 기록에도 남긴다.
-   경량 작업은 현재 실행자가 직접 맡고, 분리가 필요한 경우에도 제품 파일 writer는 하나만
-   둔다. 조율자는 gdm-go와 동일한 pass 게이트를 소유하고(위임 산출물도 문장이 아니라
-   증거로만 판정한다), 전 항목 통과 후 `gdm recheck`로 회귀를 확인한다.
-4. 검수:
+4. 구현 시작 전에 실제 구현 모델 하나를 지정한다. 검수 입력의 첫 필드에
+   `implementationModel: <실제 모델>`을 기록하고 작업 기록에도 남긴다. 구현은 독립 경계와
+   컨텍스트 이득에 따라 조율자가 맡거나, 같은 실제 구현 모델의 여러 워커에게 겹치지 않는
+   파일·모듈을 배정한다. 루트 조율자는 산출물을 통합하고, 제품 파일 충돌을 직접 고치면
+   기록된 실제 구현 모델과 동일해야 한다. 조율자는 gdm-go와 동일한 pass 게이트를 소유하고
+   (위임 산출물도 문장이 아니라 증거로만 판정한다), 전 항목 통과 후 `gdm recheck`로 회귀를
+   확인한다.
+5. 검수:
    a. `gdm audit brief` 출력과 `git diff`를 준비한다.
    b. **실제 구현 모델과 다른 모델의 검수자 정확히 1명을 새 컨텍스트로 실행한다.** 프롬프트는
       검수자 프롬프트(`auditor.md`) 전문 + 브리핑 + diff이며 현재 대화 요약은 주지
@@ -76,10 +139,10 @@ gdm-go의 도구 전부 + 검수:
       CLI는 보고서 해시와 현재 Git 워크트리의 실제 파일 내용 지문을 함께 묶는다. 이후 코드나
       보고서가 바뀌면 검수가 무효가 되고, 같은 내용을 커밋해 HEAD만 바뀐 경우에는 유지된다.
       Git 지문이 유효한 경우 `done`은 같은 검증 명령을 다시 실행하지 않는다.
-5. 반려면: 반려 사유를 check로 반영(`gdm plan add`/`edit --reason`)하고 3으로.
+6. 반려면: 반려 사유를 check로 반영(`gdm plan add`/`edit --reason`)하고 4로.
    (check가 바뀌면 기존 검수는 자동 무효 — 재검수가 필요해진다. 정상 동작이다.)
-6. 통과면 `gdm done` 뒤 gdm-go의 단일 habit feedback checkpoint를 수행한다.
-7. 전달은 별도 gate다. `gdm plan contract --check-commit --slug <슬러그>`를 실행한다.
+7. 통과면 `gdm done` 뒤 gdm-go의 단일 habit feedback checkpoint를 수행한다.
+8. 전달은 별도 gate다. `gdm plan contract --check-commit --slug <슬러그>`를 실행한다.
    - exit 4(기본값 커밋 금지)이고 사용자가 전달을 **명시적으로 승인하지 않았으면**:
      검증 결과만 보고하고 멈춘다. `done`이나 이 스킬 호출은 승인이 아니다.
    - 사용자가 전달을 명시적으로 승인했으면: `gdm plan contract --slug <슬러그>
@@ -119,7 +182,8 @@ Good:
 어시스턴트:
 1. plan init --audit --require "기존 심의 전이 보존" --forbid "자동 커밋",
    check 4개(happy/edge/regression/adversarial) 등록·공유
-2. 구현은 Codex 워커에 위임(codex exec) → 조율자가 pass ×4 → recheck 통과
+2. 구현은 같은 Codex 모델의 두 워커가 겹치지 않는 상태 전이·테스트 모듈을 맡음
+   → 조율자가 변경 통합·pass ×4 → recheck 통과
 3. audit brief + git diff로 단일 검수자 실행 — 구현이 Codex였으므로 검수는
    `gdm-agents/run-auditor.sh claude ...`
    → 검수자가 반려 ("전문간사 배정 전 통보 시도 케이스 미검증")

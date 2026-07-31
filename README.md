@@ -10,12 +10,15 @@ gdm의 흐름은 `약속 → 증명 → 관찰 → 습관 → 비교`다.
 - 습관: 서로 다른 근거에서 반복된 패턴만 후보로 만들고 사람이 채택한다.
 - 비교: 다음 작업에서 습관을 실제로 적용했는지와 같은 문제가 재발했는지 본다.
 
-gdm은 두 부분이다: 모델 호출 없이 상태·증거를 판정하는 **결정적 CLI 게이트**와, Claude Code·Codex 양쪽에서 실행 모델이 읽고 따르는 **스킬팩**.
+gdm은 두 부분이다: 모델 호출 없이 상태·증거를 판정하는 **결정적 CLI 게이트**와,
+Codex가 실행하고 Claude CLI·Claude Design에 전문 역할을 맡기는 **스킬팩**.
 
 ## 요구사항
 
 - macOS 또는 Linux (arm64·x64)
-- 스킬을 쓰려면 [Claude Code](https://claude.com/claude-code) 또는 Codex 중 하나 이상
+- 대화형 실행 주체인 Codex
+- 새 기술 설계에는 [Claude Code CLI](https://claude.com/claude-code) 로그인 필요
+- 0→1·개방형 시각 디자인에는 claude.ai/design 접근 권한과 최초 1회 `/design-login` 필요
 - 소스에서 빌드할 때만 [Bun](https://bun.sh) (한 줄 설치는 불필요)
 
 ## 처음 사용하기
@@ -36,9 +39,22 @@ gdm done --slug fix-login
   ```bash
   curl -fsSL https://raw.githubusercontent.com/Gdm0714/gdm/main/install.sh | bash
   ```
-  플랫폼(macOS·Linux)에 맞는 바이너리와 스킬을 받아 `~/.local/bin`과 Claude Code·Codex 스킬 폴더에 설치한다. 특정 버전은 `GDM_VERSION=v<버전>`, 설치 경로는 `GDM_BIN_DIR`로 조정한다.
+  플랫폼(macOS·Linux)에 맞는 바이너리와 스킬을 받아 `~/.local/bin`과 Claude Code·Codex
+  스킬 폴더에 설치한다. Claude Code 쪽 스킬은 Codex가 비대화형 설계 역할을 맡길 때 쓰며,
+  사용자가 작업을 시작하는 진입점은 Codex 하나다. Codex에서는 기존 `hooks.json`의 다른 handler를 보존하면서 gdm
+  agent gate를 병합하고, 최초 변경 전 파일은 `hooks.json.gdm-backup`으로 남긴다.
+  `config.toml`은 수정하지 않으며 실제 command hook 실행은 Codex `/hooks`에서 사용자가
+  검토·신뢰한 뒤에만 확인된다. 상태는 `gdm agent hook-status` 또는 `gdm doctor`로 본다.
+  특정 버전은 `GDM_VERSION=v<버전>`, 설치 경로는 `GDM_BIN_DIR`로 조정한다.
 - 설치 (소스에서 · 개발용): 클론 후 `./install/install.sh` (Bun 필요)
-- 사용: Claude Code / Codex에서 `$gdm-go <작업>`, 터미널에서 `gdm --help`
+- 사용: Codex에서 `$gdm-go <작업>`, 터미널에서 `gdm --help`
+
+새 화면·레이아웃·프로토타입 생성은 claude.ai/design에서 한다. gdm은 저장소 맥락을 반영한
+Claude Design용 프롬프트를 먼저 전달하고 멈추며, 사용자가 생성 완료와 프로젝트 이름/ID를
+알려주면 `/design-sync`의 `list_projects → get_project → list_files → get_file` 순서로
+결과를 pull한다. Chrome이나 브라우저를 자동 조작하지 않는다. `finalize_plan →
+write_files/delete_files`는 사용자가 양방향 push까지 요청한 경우에만 사용한다. 인증·권한
+문제는 중단하고, 사용량 한도나 rate limit이 명확할 때만 Codex가 대신한다.
 
 ## 구조
 

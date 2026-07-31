@@ -27,7 +27,7 @@ describe("CI and release policy", () => {
     expect(install).toContain("GDM_SKIP_VERIFY=1");
     expect(install).toContain('verify_asset "$asset" "$tmp/gdm"');
     expect(install).toContain('verify_asset "gdm-skills.tar.gz" "$tmp/skills.tar.gz"');
-    expect(install.indexOf("verify_asset \"gdm-skills.tar.gz\"")).toBeLessThan(install.indexOf('mv "$install_tmp" "$BIN_DIR/gdm"'));
+    expect(install.indexOf("verify_asset \"gdm-skills.tar.gz\"")).toBeLessThan(install.indexOf('mv "$INSTALL_TMP" "$BIN_DIR/gdm"'));
     expect(install).toContain("SHASUMS256.txt가 없어 설치를 중단합니다");
   });
 });

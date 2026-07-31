@@ -51,9 +51,75 @@ description: |
 
 순서는 계약(init → add → pass → done)이고, 그 안의 진행 방식은 판단에 맡긴다.
 
-구현 워커: 경량 루프이므로 **조율자(앉은 CLI)가 직접 구현**하는 것이 기본이다 — 매 스텝
-headless 위임은 과하다. 특정 항목만 `codex exec`로 위임하는 것은 선택이며, 검수까지 필요한
-중량 작업은 gdm-full로 올린다. 라우팅 계약: `skills/_shared/routing.md`.
+구현 전에 설계 필요성을 분류한다. 새 아키텍처·API·데이터 모델·상태 흐름·컴포넌트 경계·
+마이그레이션 선택이 있으면 `gdm-plan`으로 Claude CLI 설계안을 먼저 받고 Codex가 근거를
+검증한 계획만 구현한다. 0→1·전면 리디자인·개방형 시각 변경은 `gdm-design`으로 Claude
+Design용 프롬프트를 사용자에게 전달하고, 사용자가 claude.ai/design에서 생성 완료를
+확인한 뒤에만 DesignSync로 pull한다. Chrome 제어로 생성을 대신하지 않는다. 국소 버그·
+기계적 리팩터·사용자가 해법을 지정한 변경·구체적 UI 결함은 새 기술 설계 판단이 없으므로
+Claude를 호출하지 않는다.
+
+Claude 또는 Claude Design 실패가 `HTTP 429`, `rate_limit`, `quota exceeded`, 사용량 한도
+중 하나로 명확할 때만 gdm 계약에 원문 오류와 `codex-fallback`을 기록하고 Codex가 대신한다.
+인증·권한·도구 부재·프로젝트 불명확·일반 오류·timeout은 대체하지 않고 차단 상태를 보고한다.
+
+구현 워커: 루트 조율자는 작업을 **상황에 맞게** 직접 수행하거나 위임한다. 파일·모듈 경계를
+겹치지 않게 나눌 수 있으면 여러 구현 워커를 둘 수 있고, 전문성이나 fresh context가 필요하거나
+넓은 탐색·로그 분석·테스트 출력이 주 컨텍스트를 흐리면 별도 역할에 맡긴다. 각 워커에 소유
+파일·모듈과 종료 조건을 명시하고, 루트 조율자가 변경 통합·충돌 해결·gdm pass 판정을 소유한다.
+
+일반 역할은 작업 중 새로 발견한 독립 경계를 하위 역할에 맡길 수 있다. 같은 네이티브 Codex
+루트 세션에서 조율자를 제외한 모든 세대의 활성 spawned agent를 합쳐 동시에 최대 4명이며,
+자식이 만든 자식도 같은 세션 상한에 포함된다. 같은 전체 범위를 다시 넘기는 자기복제형
+재위임과 끝이 정해지지 않은 팬아웃만 금지한다. 빈 슬롯이 없으면 완료를 기다리거나 기존
+역할에 후속 작업을 보낸다.
+네이티브 위임이나 비대화형 CLI가 없으면 조율자가 이어서 수행한다. 검수까지 필요한 중량
+작업은 gdm-full로 올린다. 라우팅 계약: `skills/_shared/routing.md`.
+
+위임 lease: 모든 spawn 메시지 첫 줄에 `GDM_AGENT_ENVELOPE_V1=` 단일행 JSON을 넣고 역할·scope·
+ownership·산출물·검증·종료 조건과 `blockedBy`를 적는다. 제한은
+`INITIAL_SPAWN_ATTEMPT_BUDGET: 16`, `SPAWN_ATTEMPT_EXTENSION: 4`,
+`MAX_TOTAL_SPAWNS_PER_ROOT: 32`, `DEFAULT_CHILD_QUOTA: 1`, `MAX_CHILD_QUOTA: 2`,
+`MAX_AGENT_DEPTH: 3`이다. 일반 역할은 기본 quota 1로 필요한 재귀를 허용하며 일괄 leaf로
+만들지 않는다. 허용된 시도는 누적 예산을 소비하고 실패·취소된 spawn도 예산을 돌려주지 않는다.
+초기 16을 다 쓰면 pending/running 역할이 하나도 없을 때만 다음 spawn에서 4개 예산을 자동으로
+열며, 활성 역할이 남은 동안에는 확장하지 않는다.
+structured 역할의 scope와 ownership resource는 cwd 기준 `.`·`..`·상대/절대 별칭을
+정규화한다. 활성 역할과 같은 canonical scope 또는 겹치는 write resource는 거부하지만,
+이는 선언 guardrail이며 symlink·대소문자까지 잠그는 운영체제 파일 lock은 아니다.
+timeout은 대기 호출의 종료일 뿐 workflow 결과 확정이 아니다. `SubagentStop`은 child turn의
+stop 관찰이자 sequencing hint일 뿐 영구 thread 종료나 성공 증명이 아니다. 다른 Stop
+handler가 continuation을 요청할 수 있고, idle thread는 `followup_task`로 재사용될 수 있으며,
+interrupt는 Stop 관찰을 남기지 않을 수 있다. 원장에서 해당 identity에 연결된 `stopped`
+관찰은 active/ownership lease를 협력적으로 해제하고 `blockedBy`를 열 수 있지만 hard runtime
+proof가 아니다. 루트 조율자는 deliverable/verify와 실제 작업 겹침 부재를 확인해야 한다.
+`failed|expired`는 active/ownership lease에서는 빠져도 `blockedBy`를 만족하지 않으며,
+30분 lease expiry도
+완료가 아니다. 의존 역할과 최종 응답은 산출물 결과를
+`completed|failed|cancelled|inconclusive` 중 하나로 별도 판정한다. 이 workflow 결과는
+lifecycle 관찰과 분리한다.
+훅이 실행되는 하나의 네이티브 Codex 루트 세션 트리에서 절대 누적 32는 하드 상한이고, 동시 4는
+현재 세션의 유효 Codex 설정이 4일 때 네이티브 하드 상한이다. 하위 hook caller agent id가
+structured 부모와 일대일로 결속될 때 부모별 quota/depth/canDelegate를 기계적으로 검사한다.
+caller id가 없는 호환 런타임은 원장에 선언한 부모가 있을 때만
+nonterminal/quota/depth/canDelegate를 검사하는 degraded fallback을 쓰며, 이를 부모 신원
+하드 경계라고 주장하지 않는다.
+`multi_agent_v2` spawn 응답에는 agent id가 없으므로 unresolved V2가 포함된
+identity-ambiguous 구간만 직렬화한다. unresolved V1끼리는 병렬 가능하고, identity가 연결된 뒤
+active agent 실행도 병렬 가능하다. same-axis 후속 작업으로 idle thread를 재사용할 수 있지만
+훅은 이전 ownership/delegation을 기계적으로 갱신하지 못한다.
+루트 조율자는 실제 작업 겹침을 피하고 새 bounded delegation이 필요하면 새 lease를 선언해
+생성한다.
+비대화형 CLI·별도 세션을 합친 논리 작업 전체의 동시 4·초기 16·4개 자동 확장·절대 누적
+32는 협력적 운영 규칙이다.
+
+아래 한 줄은 형식 예시일 뿐이다. 복사하기 전에 `taskId`, `parentId`, `role`, `scope`,
+`ownership.mode/resources`, `deliverable`, `verify`, `stopWhen`, `canDelegate`,
+`childQuota`(quota), `depth`, `blockedBy` 값을 작업에 맞게 모두 바꾼다.
+
+```text
+GDM_AGENT_ENVELOPE_V1={"taskId":"example-task","parentId":"root","role":"bounded-worker","scope":"docs/example","ownership":{"mode":"read","resources":["docs/example.md"]},"deliverable":"Evidence-backed result","verify":"Confirm cited file and result","stopWhen":"Deliverable and verification are complete","canDelegate":false,"childQuota":0,"depth":1,"blockedBy":[]}
+```
 
 1. 지속 계획의 작업 계약 초안으로 `gdm plan init --require ... --forbid ...`을 실행한 뒤
    작업을 검증 항목으로 분해해 `gdm plan add`. 좋은 check의
