@@ -34,6 +34,9 @@ description: |
   라인 수나 diff 크기만으로 간소화를 판정하지 않는다.
 - IMPORTANT: `risk=high`는 gdm-full의 독립 검수로 올린다. `high+opaque`는 실제 도메인
   reviewer가 필요한 작업이며 AI가 reviewer를 자칭하거나 근거를 대신 쓰지 않는다.
+- IMPORTANT: 구현은 check가 요구하는 만큼만 한다. check에 없는 방어 코드·명세 밖
+  처리·동반 리팩토링은 개선이 아니라 범위 밖 변경이다 — 검수 반려 1순위 유형이고,
+  동일 조건 벤치에서 품질 감점의 주원인이었다.
 
 ## 도구
 
@@ -155,7 +158,8 @@ GDM_AGENT_ENVELOPE_V1={"taskId":"example-task","parentId":"root","role":"bounded
    gdm attempt fail --slug <s> --attempt-id a3 --command <id> --target <id> --error-code <id> --hypothesis <확인 결과>
    gdm attempt retry --slug <s> --attempt-id a4 --fingerprint <fingerprint> --changed <종류> --evidence <파일>
    ```
-3. `gdm done`이 자동 항목을 다시 실행하므로 직전에 `gdm recheck`를 중복 실행하지 않는다.
+3. `gdm done` 전에 diff를 열어 요청 범위 밖 변경이 섞이지 않았는지 최종 대조한다.
+   `gdm done`이 자동 항목을 다시 실행하므로 직전에 `gdm recheck`를 중복 실행하지 않는다.
    `recheck`는 구현 도중 이미 통과한 항목의 중간 회귀를 확인해야 할 때만 사용한다.
 4. `gdm done` 성공 뒤 `gdm habit harvest --json`을 정확히 한 번 실행해 이번 작업의
    반복 사건을 수확하고, 적용한 habit이 있으면 `ineligible|skipped|clean|recurred` 중
@@ -212,7 +216,11 @@ terminal-browser-background-tab.sh close <key> <id>
   데이터를 바꾸면 그것은 검증이 아니라 부작용이다.
 - **반복 명령**: 프로젝트 표준 명령(빌드/테스트/실행)은 `gdm preset set`으로
   등록하고 check에서 `@이름`으로 참조한다. 같은 명령을 두 번 타이핑하고 있다면
-  프리셋 등록 신호다.
+  프리셋 등록 신호다. lint·typecheck 표준 명령이 있는 프로젝트면 회귀 check
+  하나로 포함한다 — 사람 눈보다 싼 결정적 게이트부터 쓴다.
+- **검증 코드 추가**: 새 테스트는 기존 테스트 파일과 관례를 확장하는 것이
+  기본이다. 새 파일·새 스타일은 프로젝트에 관례가 없을 때만 만든다
+  (실측: 새 파일 생성이 반복된 품질 감점 사유였다).
 
 ## 엣지 케이스
 
