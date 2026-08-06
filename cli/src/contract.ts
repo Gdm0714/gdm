@@ -1,6 +1,15 @@
 import { createHash } from "node:crypto";
 import { GdmError } from "./state.ts";
-import type { ActiveHabit, CommitState, CommitTransition, Work, WorkContract } from "./types.ts";
+import type {
+  ActiveHabit,
+  CommitState,
+  CommitTransition,
+  RiskLevel,
+  ScopeAmendment,
+  VerificationMode,
+  Work,
+  WorkContract,
+} from "./types.ts";
 import {
   containsSensitiveRaw,
   isCanonicalTimestamp,
@@ -22,6 +31,24 @@ type ConstraintInput = {
   readonly forbidden: readonly string[];
 };
 
+export type PreflightInput = {
+  readonly assumptions?: readonly string[];
+  readonly uncertainties?: readonly string[];
+  readonly allowedPaths?: readonly string[];
+  readonly forbiddenPaths?: readonly string[];
+  readonly stopConditions?: readonly string[];
+  readonly risk?: RiskLevel;
+  readonly verification?: VerificationMode;
+  readonly simplificationRequired?: boolean;
+};
+
+export type ScopeMutationInput = {
+  readonly addAllowed?: readonly string[];
+  readonly addForbidden?: readonly string[];
+  readonly removeAllowed?: readonly string[];
+  readonly removeForbidden?: readonly string[];
+};
+
 export type ContractMutation = {
   readonly work: Work;
   readonly changed: boolean;
@@ -33,6 +60,11 @@ export type CommitMutation = {
   readonly work: Work;
   readonly changed: boolean;
   readonly transition?: CommitTransition;
+};
+
+export type ScopeMutation = {
+  readonly work: Work;
+  readonly amendment: ScopeAmendment;
 };
 
 export function privacyError(field: string, count = 1, detail?: string): GdmError {
@@ -78,6 +110,53 @@ export function opaqueId(value: string, field: string): string {
   return value;
 }
 
+export function normalizeRepositoryPath(value: string, field = "path"): string {
+  const trimmed = value.trim().replaceAll("\\", "/");
+  if (!trimmed || trimmed.includes("\0") || trimmed.startsWith("/") || /^[A-Za-z]:\//u.test(trimmed)) {
+    throw new GdmError(
+      `${field}는 저장소 상대 경로여야 합니다. 예: cli/src 또는 .`,
+      "path_rejected",
+    );
+  }
+  const segments: string[] = [];
+  for (const segment of trimmed.split("/")) {
+    if (!segment || segment === ".") continue;
+    if (segment === "..") {
+      throw new GdmError(`${field}에 상위 경로(..)를 쓸 수 없습니다`, "path_rejected");
+    }
+    segments.push(segment);
+  }
+  const normalized = segments.join("/") || ".";
+  if (normalized === ".gdm" || normalized.startsWith(".gdm/")) {
+    throw new GdmError(`${field}에 gdm 내부 상태 경로(.gdm)를 쓸 수 없습니다`, "path_rejected");
+  }
+  assertNoSensitiveRaw(value, field);
+  return normalized;
+}
+
+export function pathMatchesPrefix(path: string, prefix: string): boolean {
+  return prefix === "." || path === prefix || path.startsWith(`${prefix}/`);
+}
+
+export function parseRiskLevel(value: string | undefined): RiskLevel {
+  const risk = value ?? "low";
+  if (risk !== "low" && risk !== "medium" && risk !== "high") {
+    throw new GdmError("--risk는 low, medium, high 중 하나여야 합니다", "usage");
+  }
+  return risk;
+}
+
+export function parseVerificationMode(value: string | undefined): VerificationMode {
+  const verification = value ?? "deterministic";
+  if (verification !== "deterministic" && verification !== "inspectable" && verification !== "opaque") {
+    throw new GdmError(
+      "--verification은 deterministic, inspectable, opaque 중 하나여야 합니다",
+      "usage",
+    );
+  }
+  return verification;
+}
+
 function unique(values: readonly string[]): readonly string[] {
   return values.filter((value, index) => values.indexOf(value) === index);
 }
@@ -95,7 +174,21 @@ export function parseConstraints(
 }
 
 export function defaultContract(): WorkContract {
-  return { required: [], forbidden: [], activeHabits: [], commit: "forbidden" };
+  return {
+    required: [],
+    forbidden: [],
+    activeHabits: [],
+    commit: "forbidden",
+    assumptions: [],
+    uncertainties: [],
+    allowedPaths: ["."],
+    forbiddenPaths: [],
+    stopConditions: [],
+    risk: "low",
+    verification: "deterministic",
+    simplificationRequired: false,
+    scopeAmendments: [],
+  };
 }
 
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
@@ -107,6 +200,39 @@ function stringList(value: unknown, field: string): readonly string[] {
     throw new GdmError(`상태 파일의 ${field} 형식이 잘못됐습니다`, "state_corrupt");
   }
   return value.filter((entry): entry is string => typeof entry === "string");
+}
+
+function optionalStringList(value: unknown, field: string): readonly string[] {
+  return value === undefined ? [] : stringList(value, field);
+}
+
+function storedPaths(value: unknown, field: string, fallback: readonly string[]): readonly string[] {
+  if (value === undefined) return fallback;
+  const paths = stringList(value, field);
+  try {
+    return unique(paths.map((path) => normalizeRepositoryPath(path, field)));
+  } catch {
+    throw new GdmError(`상태 파일의 ${field} 형식이 잘못됐습니다`, "state_corrupt");
+  }
+}
+
+function scopeAmendment(value: unknown): ScopeAmendment {
+  if (!isRecord(value)) {
+    throw new GdmError("상태 파일의 contract.scopeAmendments 형식이 잘못됐습니다", "state_corrupt");
+  }
+  const reason = value.reason;
+  const at = value.at;
+  if (typeof reason !== "string" || !reason.trim() || typeof at !== "string" || !isCanonicalTimestamp(at)) {
+    throw new GdmError("상태 파일의 contract.scopeAmendments 형식이 잘못됐습니다", "state_corrupt");
+  }
+  return {
+    addedAllowed: storedPaths(value.addedAllowed, "contract.scopeAmendments.addedAllowed", []),
+    addedForbidden: storedPaths(value.addedForbidden, "contract.scopeAmendments.addedForbidden", []),
+    removedAllowed: storedPaths(value.removedAllowed, "contract.scopeAmendments.removedAllowed", []),
+    removedForbidden: storedPaths(value.removedForbidden, "contract.scopeAmendments.removedForbidden", []),
+    reason,
+    at,
+  };
 }
 
 function activeHabit(value: unknown): ActiveHabit {
@@ -151,10 +277,45 @@ export function normalizeContract(value: unknown): WorkContract {
     forbidden,
     activeHabits: value.activeHabits.map(activeHabit),
     commit: value.commit,
+    assumptions: optionalStringList(value.assumptions, "contract.assumptions"),
+    uncertainties: optionalStringList(value.uncertainties, "contract.uncertainties"),
+    allowedPaths: storedPaths(value.allowedPaths, "contract.allowedPaths", ["."]),
+    forbiddenPaths: storedPaths(value.forbiddenPaths, "contract.forbiddenPaths", []),
+    stopConditions: optionalStringList(value.stopConditions, "contract.stopConditions"),
+    risk: parseStoredRisk(value.risk),
+    verification: parseStoredVerification(value.verification),
+    simplificationRequired: parseStoredBoolean(value.simplificationRequired, false, "simplificationRequired"),
+    scopeAmendments: parseStoredAmendments(value.scopeAmendments),
   };
   if (value.latestCommitTransition === undefined) return base;
   const transition = parseTransition(value.latestCommitTransition);
   return { ...base, latestCommitTransition: transition };
+}
+
+function parseStoredRisk(value: unknown): RiskLevel {
+  if (value === undefined) return "low";
+  if (value === "low" || value === "medium" || value === "high") return value;
+  throw new GdmError("상태 파일의 contract.risk 형식이 잘못됐습니다", "state_corrupt");
+}
+
+function parseStoredVerification(value: unknown): VerificationMode {
+  if (value === undefined) return "deterministic";
+  if (value === "deterministic" || value === "inspectable" || value === "opaque") return value;
+  throw new GdmError("상태 파일의 contract.verification 형식이 잘못됐습니다", "state_corrupt");
+}
+
+function parseStoredBoolean(value: unknown, fallback: boolean, field: string): boolean {
+  if (value === undefined) return fallback;
+  if (typeof value === "boolean") return value;
+  throw new GdmError(`상태 파일의 contract.${field} 형식이 잘못됐습니다`, "state_corrupt");
+}
+
+function parseStoredAmendments(value: unknown): readonly ScopeAmendment[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) {
+    throw new GdmError("상태 파일의 contract.scopeAmendments 형식이 잘못됐습니다", "state_corrupt");
+  }
+  return value.map(scopeAmendment);
 }
 
 function parseTransition(value: unknown): CommitTransition {
@@ -184,11 +345,87 @@ function parseTransition(value: unknown): CommitTransition {
   };
 }
 
-export function createContract(input: ConstraintInput): WorkContract {
+export function createContract(input: ConstraintInput, preflight: PreflightInput = {}): WorkContract {
   if (input.required.length === 0 && input.forbidden.length === 0) {
     throw new GdmError("constraint_required: --require 또는 --forbid가 필요합니다", "constraint_required");
   }
-  return { ...defaultContract(), required: input.required, forbidden: input.forbidden };
+  return {
+    ...defaultContract(),
+    required: input.required,
+    forbidden: input.forbidden,
+    assumptions: unique((preflight.assumptions ?? []).map((value) => safeText(value, "assume"))),
+    uncertainties: unique((preflight.uncertainties ?? []).map((value) => safeText(value, "uncertain"))),
+    allowedPaths: unique((preflight.allowedPaths ?? ["."]).map((value) => normalizeRepositoryPath(value, "allow-path"))),
+    forbiddenPaths: unique((preflight.forbiddenPaths ?? []).map((value) => normalizeRepositoryPath(value, "forbid-path"))),
+    stopConditions: unique((preflight.stopConditions ?? []).map((value) => safeText(value, "stop-if"))),
+    risk: preflight.risk ?? "low",
+    verification: preflight.verification ?? "deterministic",
+    simplificationRequired: preflight.simplificationRequired ?? false,
+  };
+}
+
+export function amendScope(
+  work: Work,
+  input: ScopeMutationInput,
+  reasonValue: string,
+  at: string,
+): ScopeMutation {
+  if (work.done) throw new GdmError("완료된 작업의 범위는 바꿀 수 없습니다", "work_done");
+  if (work.audit) {
+    throw new GdmError(
+      "검수 뒤에는 범위를 바꿀 수 없습니다. 범위 변경이 필요하면 새 작업으로 계획하세요",
+      "scope_locked",
+    );
+  }
+  const reason = safeText(reasonValue, "reason");
+  const normalized = (values: readonly string[] | undefined, field: string): readonly string[] =>
+    unique((values ?? []).map((value) => normalizeRepositoryPath(value, field)));
+  const addAllowed = normalized(input.addAllowed, "allow-path");
+  const addForbidden = normalized(input.addForbidden, "forbid-path");
+  const removeAllowed = normalized(input.removeAllowed, "remove-allow-path");
+  const removeForbidden = normalized(input.removeForbidden, "remove-forbid-path");
+  if (
+    addAllowed.some((path) => removeAllowed.includes(path)) ||
+    addForbidden.some((path) => removeForbidden.includes(path))
+  ) {
+    throw new GdmError("같은 경로를 한 번에 추가하고 제거할 수 없습니다", "contract_conflict");
+  }
+  const allowedBefore = work.contract.allowedPaths ?? ["."];
+  const forbiddenBefore = work.contract.forbiddenPaths ?? [];
+  const removedAllowed = removeAllowed.filter((path) => allowedBefore.includes(path));
+  const removedForbidden = removeForbidden.filter((path) => forbiddenBefore.includes(path));
+  const remainingAllowed = allowedBefore.filter((path) => !removeAllowed.includes(path));
+  const remainingForbidden = forbiddenBefore.filter((path) => !removeForbidden.includes(path));
+  const addedAllowed = addAllowed.filter((path) => !remainingAllowed.includes(path));
+  const addedForbidden = addForbidden.filter((path) => !remainingForbidden.includes(path));
+  const allowedPaths = unique([...remainingAllowed, ...addedAllowed]);
+  const forbiddenPaths = unique([...remainingForbidden, ...addedForbidden]);
+  if (
+    addedAllowed.length === 0 && addedForbidden.length === 0 &&
+    removedAllowed.length === 0 && removedForbidden.length === 0
+  ) {
+    throw new GdmError("바뀐 범위가 없습니다", "no_changes");
+  }
+  const amendment: ScopeAmendment = {
+    addedAllowed,
+    addedForbidden,
+    removedAllowed,
+    removedForbidden,
+    reason,
+    at,
+  };
+  return {
+    work: {
+      ...work,
+      contract: {
+        ...work.contract,
+        allowedPaths,
+        forbiddenPaths,
+        scopeAmendments: [...(work.contract.scopeAmendments ?? []), amendment],
+      },
+    },
+    amendment,
+  };
 }
 
 export function addConstraints(work: Work, input: ConstraintInput): ContractMutation {

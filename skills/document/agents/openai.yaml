@@ -1,0 +1,4 @@
+interface:
+  display_name: "GDM Document"
+  short_description: "요구사항을 추적해 편집 가능한 발송 문서를 만듭니다"
+  default_prompt: "Use $gdm-document to create a polished, editable document and verify every requested item."

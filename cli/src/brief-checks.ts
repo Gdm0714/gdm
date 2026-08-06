@@ -1,12 +1,13 @@
 import type { CheckInput } from "./state.ts";
 import { GdmError } from "./state.ts";
+import type { CheckKind } from "./types.ts";
 
 const SECTION_HEADING_RE = /^##\s*검증 항목/u;
 const HEADING_RE = /^##\s/u;
 const ITEM_RE = /^-\s*desc:\s*/u;
 const EXPECT_SPLIT_RE = /\s+\/\s+expect:\s*/u;
 const CMD_SPLIT_RE = /\s+\/\s+cmd:\s*/u;
-const MANUAL_MARK_RE = /\(manual\)$/u;
+const KIND_MARK_RE = /\s+\((regression|behavior|edge|static|manual|expert)\)$/u;
 
 interface BriefCheckIssue {
   readonly line: number;
@@ -48,8 +49,11 @@ export function parseBriefChecks(brief: string): CheckInput[] {
       continue;
     }
     let desc = cmdParts[0]!.trim();
-    const manual = MANUAL_MARK_RE.test(desc);
-    if (manual) desc = desc.replace(MANUAL_MARK_RE, "").trim();
+    const marker = desc.match(KIND_MARK_RE)?.[1] as CheckKind | "expert" | undefined;
+    if (marker) desc = desc.replace(KIND_MARK_RE, "").trim();
+    const manual = marker === "manual" || marker === "expert";
+    const kind: CheckKind | undefined = marker === "expert" ? "manual" : marker === "manual" ? undefined : marker;
+    const expert = marker === "expert";
     const cmd = cmdParts.length === 2 ? stripBackticks(cmdParts[1]!) : undefined;
     if (manual && cmd) {
       issues.push({ line: lineNo, why: "manual 항목에 cmd가 함께 있습니다 — 하나만 선택하세요" });
@@ -67,7 +71,14 @@ export function parseBriefChecks(brief: string): CheckInput[] {
       issues.push({ line: lineNo, why: "desc 또는 expect가 비어 있습니다" });
       continue;
     }
-    inputs.push({ desc, cmd, expect, manual });
+    inputs.push({
+      desc,
+      cmd,
+      expect,
+      manual,
+      ...(kind ? { kind } : {}),
+      ...(expert ? { expert: true } : {}),
+    });
   }
   if (issues.length > 0) {
     const detail = issues.map((issue) => `  ${issue.line}행: ${issue.why}`).join("\n");

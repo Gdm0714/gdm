@@ -73,7 +73,7 @@ export function cmdDelivery(cwd: string, args: string[], ts: string): void {
     const head = requiredFlag(rest, "head");
     assertCurrentGitPosition(cwd, head, work.delivery?.branch);
     const delivery = assertDeliveryMergeAllowed(work, head);
-    console.log(`머지 가능: PR ${delivery.pr!.number} · CI ${delivery.ci!.run} · HEAD ${delivery.head}`);
+    console.log(`머지 가능: PR ${delivery.pr!.number} · CI ${delivery.ci?.run ?? "체크 없음"} · HEAD ${delivery.head}`);
     return;
   }
   if (sub === "merged") {

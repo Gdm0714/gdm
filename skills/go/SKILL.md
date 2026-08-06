@@ -28,17 +28,26 @@ description: |
   (예: `./gradlew test --tests '*Excel*'`, `grep -q "limit=500000" src/config.ts`,
   `curl -sf localhost:8080/health | grep -q '"status":"UP"'`)
 - IMPORTANT: check는 3~7개로 유지한다. 그보다 많으면 작업을 쪼개는 신호다.
+- IMPORTANT: init 전에 가정·불확실성·허용/금지 경로·중단 조건·위험도·검증 가능성을
+  분류한다. 소스·설정 동작 변경은 `--simplify`를 사용하고 proven `static` check로
+  불필요한 추상화·dead code·중복이 없음을 프로젝트에 맞는 정적 명령으로 증명한다.
+  라인 수나 diff 크기만으로 간소화를 판정하지 않는다.
+- IMPORTANT: `risk=high`는 gdm-full의 독립 검수로 올린다. `high+opaque`는 실제 도메인
+  reviewer가 필요한 작업이며 AI가 reviewer를 자칭하거나 근거를 대신 쓰지 않는다.
 
 ## 도구
 
 | 명령 | 용도 |
 |---|---|
-| `gdm plan init --slug <s> --brief <설명> --require <보존> --forbid <금지>` | 작업 계약과 함께 시작 |
-| `gdm plan add --desc <항목> --cmd <검증 명령> --expect <기대> [--manual]` | 항목 등록 |
+| `gdm plan init ... --assume <가정> --uncertain <불확실성> --allow-path <경로> --forbid-path <경로> --stop-if <조건> --risk <low\|medium\|high> --verification <deterministic\|inspectable\|opaque> [--simplify]` | preflight·범위·완료 정책과 init 기준선 기록 |
+| `gdm plan add --desc <항목> --cmd <검증 명령> --expect <기대> --kind <regression\|behavior\|edge\|static>` | 자동 항목 분류·등록 |
+| `gdm plan add --desc <항목> --expect <기대> --manual [--expert]` | 수동 확인 항목 등록 |
 | `gdm plan list` | 항목/상태 확인 |
 | `gdm plan edit --check <id> [...] --reason <사유>` | 항목 조정 (사유 필수) |
+| `gdm pass <id> --red` | regression 항목의 수정 전 동일 명령 실패(non-zero) 증거 기록 |
 | `gdm pass <id>` | 자동 항목 통과 — gdm이 cmd를 직접 실행·저장·해시하고 exit 0일 때만 통과 |
-| `gdm pass <id> --manual --observed <파일>` | 수동 항목 통과 — 스크린샷 등 확인 기록 제출 |
+| `gdm pass <id> --manual --observed <파일> [--reviewer <검토자> --note <근거>]` | 수동 항목 통과 — expert는 reviewer·근거 필수 |
+| `gdm plan contract --allow-path <경로> --reason <사유>` | 검수 전 의도한 범위 확장 기록 |
 | `gdm recheck` | 구현 중 중간 회귀 확인이 필요할 때만 통과한 자동 항목 재실행 |
 | `gdm done` | 완료 — 자동 항목 재실행 + 증거 파일 현존·해시 재검증 후에만 exit 0 |
 | `gdm status` | 현재 디렉토리 전체 작업 현황 |
@@ -121,12 +130,19 @@ active agent 실행도 병렬 가능하다. same-axis 후속 작업으로 idle t
 GDM_AGENT_ENVELOPE_V1={"taskId":"example-task","parentId":"root","role":"bounded-worker","scope":"docs/example","ownership":{"mode":"read","resources":["docs/example.md"]},"deliverable":"Evidence-backed result","verify":"Confirm cited file and result","stopWhen":"Deliverable and verification are complete","canDelegate":false,"childQuota":0,"depth":1,"blockedBy":[]}
 ```
 
-1. 지속 계획의 작업 계약 초안으로 `gdm plan init --require ... --forbid ...`을 실행한 뒤
-   작업을 검증 항목으로 분해해 `gdm plan add`. 좋은 check의
+1. 지속 계획의 작업 계약 초안에서 가정·불확실성·허용/금지 경로·중단 조건·risk·verification을
+   꺼내 `gdm plan init`에 명시한다. 소스·설정 동작을 바꾸면 `--simplify`를 붙인다.
+   init 기준선은 이미 존재하던 로컬 변경을 보존하고 이후 delta만 범위 판정한다.
+   작업을 3~7개의 `regression|behavior|edge|static|manual` 항목으로 분해해 `gdm plan add`.
+   기존 결함을 고치는 regression은 **구현 전에** `gdm pass <id> --red`로 동일 명령의
+   non-zero 실패를 기록한다. red가 성공(exit 0)하면 결함을 드러내는 항목이 아니므로 고친다.
+   좋은 check의
    기준은 하나다 — **cmd가 성공하면 기대가 충족됐다고 믿을 수 있는가.**
    등록한 목록(`gdm plan list`)을 사용자에게 보여준다. 적용할 adopted habit이 있으면
    첫 pass 전에만 `gdm plan contract --slug <슬러그> --activate-habit <id>@<version>`으로 고정한다.
-2. 구현하고 `gdm pass <id>`. 실패하면 출력(`.gdm/<슬러그>/out/<id>.txt`)을 읽고
+2. 허용 경로 안에서 구현하고 `gdm pass <id>`. 의도한 변경이 새 경로를 요구하면 검수 전에
+   `gdm plan contract --allow-path <경로> --reason <사유>`로 계약을 확장한다. 몰래 넓히지 않는다.
+   실패하면 출력(`.gdm/<슬러그>/out/<id>.txt`)을 읽고
    `gdm attempt fail`로 command/capability·target·error-code·가설을 기록한다. 같은 실패
    서명은 확인 재시도를 한 번만 허용한다. 다시 실패하면 그대로 반복하지 말고,
    전제가 실제로 바뀐 경우에만 새 contained evidence와 함께
@@ -149,12 +165,47 @@ GDM_AGENT_ENVELOPE_V1={"taskId":"example-task","parentId":"root","role":"bounded
    이 작업에서 결함이 발견되면 `gdm miss --desc ... --type ...`으로 기록한다
    — 게이트 개선(retro --all)의 입력이 된다.
 
+## 대화형 웹 검증
+
+`WEB_RUNTIME_PROVIDER: terminal-browser`, `COMPANION_TOOL_POLICY: optional`로 라우팅한다.
+웹 UI check에 실행 가능한 URL 또는 로컬 HTML이 있고 terminal-browser와 지원 터미널을
+사용할 수 있으면 다음 순서로 실제 브라우저 동작을 재현한다.
+
+```text
+terminal-browser-background-tab.sh open <url>
+# 반환 JSON의 browser와 tab을 각각 <key>, <id>로 고정한다.
+terminal-browser action --browser <key> --tab <id> -- snapshot
+terminal-browser action --browser <key> --tab <id> -- click <ref>
+terminal-browser action --browser <key> --tab <id> -- fill <ref> <value>
+terminal-browser action --browser <key> --tab <id> -- eval <assertion>
+terminal-browser-background-tab.sh close <key> <id>
+```
+
+헬퍼는 이 SKILL.md와 같은 디렉터리에 있으며 실행 중인 terminal-browser 가운데 현재 터미널
+탭 밖의 인스턴스를 우선 선택한다. 보이지 않는 가운데 클릭으로 탭을 만든 뒤 기존 활성 탭이
+그대로이고 새 탭이 `active: false`인지 확인한다. action은 반환된 `--browser <key> --tab <id>`를
+항상 명시하고 `--follow`를 사용하지 않는다. 셸 trap을 쓸 수 있으면 close를 EXIT 정리에 묶어
+실패 때도 AI 탭을 남기지 않는다. 자동 검증에서는 `terminal-browser open`이나 `--split`을
+호출하지 않는다.
+
+사용자가 화면 표시를 명시적으로 요청한 경우만 terminal-browser 스킬의 대화형 open 절차를
+별도로 사용한다. 실행 중인 terminal-browser가 없거나 비활성 탭 생성이 실패하면 새 pane이나
+새 창을 열지 말고 기존 headless 테스트로 폴백한다.
+
+기계 판정 가능한 action과 assertion은 check의 `cmd`에 넣어 gdm이 출력과 exit code를
+증거로 저장하게 한다. 시각 판정은 `.gdm/<슬러그>/ui/`의 스크린샷 또는 manual 근거를
+별도로 남긴다. terminal-browser는 단위·통합 테스트, 프로젝트 표준 Playwright·headless
+테스트, 빌드·타입 검사를 대체하지 않으며 웹 UI가 아닌 check에는 열지 않는다. 도구·지원
+터미널·URL이 없거나 CI 같은 비대화형 환경이면 기존 자동 테스트 또는 manual 증거 흐름으로
+폴백한다. 사용자가 terminal-browser 자체를 필수로 지정한 경우에만 부재를 차단으로 취급한다.
+
 ## 작업 유형별 관행 (실사용 빈도 기반)
 
 - **UI 변경** (스크린샷 확인이 관행인 작업): manual 항목의 증거는
   `.gdm/<슬러그>/ui/`에 파일로 남긴다. 사용자가 채팅에 이미지를 붙였으면
   파일 경로로 저장해달라고 요청하고, 직접 확인 가능한 환경(시뮬레이터,
-  스크린샷 도구)이면 직접 찍는다. 문답으로만 확인된 경우 확인 내용·시각을
+  스크린샷 도구)이면 직접 찍는다. 웹 UI이고 위 조건이 맞으면 terminal-browser를
+  우선 사용해 실제 상태 전이와 DOM을 확인한다. 문답으로만 확인된 경우 확인 내용·시각을
   텍스트 파일로 기록해 그 파일로 pass 한다.
 - **DB 검증**: check의 cmd에 비밀번호·접속 문자열을 인라인으로 쓰지 않는다
   (환경변수·설정 파일 참조). 검증 쿼리는 조회 전용이어야 한다 — 검증 명령이

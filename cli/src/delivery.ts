@@ -90,9 +90,7 @@ export function recordDeliveryCi(
 export function approveDeliveryMerge(work: Work, headValue: string, reasonValue: string, at: string): Work {
   const delivery = prepared(work);
   const head = matchingHead(delivery, headValue);
-  if (!delivery.ci || delivery.ci.status !== "passed" || delivery.ci.head !== head) {
-    throw new GdmError("현재 HEAD의 CI 통과 기록이 필요합니다", "delivery_gate");
-  }
+  if (!delivery.pr || delivery.pr.head !== head) throw new GdmError("현재 HEAD의 PR 기록이 필요합니다", "delivery_gate");
   const reason = safeText(reasonValue, "reason");
   return { ...work, delivery: { ...delivery, mergeApproval: { head, reason, at }, merged: undefined } };
 }
@@ -101,8 +99,8 @@ export function assertDeliveryMergeAllowed(work: Work, headValue: string): Deliv
   const delivery = prepared(work);
   const head = matchingHead(delivery, headValue);
   if (!delivery.pr || delivery.pr.head !== head) throw new GdmError("현재 HEAD의 PR 기록이 없습니다", "delivery_gate");
-  if (!delivery.ci || delivery.ci.status !== "passed" || delivery.ci.head !== head) {
-    throw new GdmError("현재 HEAD의 CI가 통과하지 않았습니다", "delivery_gate");
+  if (delivery.ci?.head === head && delivery.ci.status === "failed") {
+    throw new GdmError("현재 HEAD의 CI 실패 기록이 있습니다", "delivery_gate");
   }
   if (!delivery.mergeApproval || delivery.mergeApproval.head !== head) {
     throw new GdmError("현재 HEAD의 명시적 머지 승인이 없습니다", "delivery_gate");

@@ -63,6 +63,20 @@ describe("parseBriefChecks", () => {
     expect(parseBriefChecks(brief)).toHaveLength(1);
   });
 
+  test("regression·static·expert 분류를 실행 가능한 입력으로 보존한다", () => {
+    const brief = `## 검증 항목 초안
+- desc: 기존 결함 재현 (regression) / cmd: bun test regression / expect: red 뒤 green
+- desc: 최소 diff 확인 (static) / cmd: bun run lint / expect: 불필요한 복잡성 없음
+- desc: 전문가 위험 검토 (expert) / expect: reviewer와 판단 근거 기록
+`;
+
+    expect(parseBriefChecks(brief)).toEqual([
+      { desc: "기존 결함 재현", cmd: "bun test regression", expect: "red 뒤 green", manual: false, kind: "regression" },
+      { desc: "최소 diff 확인", cmd: "bun run lint", expect: "불필요한 복잡성 없음", manual: false, kind: "static" },
+      { desc: "전문가 위험 검토", cmd: undefined, expect: "reviewer와 판단 근거 기록", manual: true, kind: "manual", expert: true },
+    ]);
+  });
+
   test("섹션이 없으면 brief_checks_invalid", () => {
     const error = errorOf("# 계획\n\n## 목표\n설명뿐");
     expect(error.code).toBe("brief_checks_invalid");

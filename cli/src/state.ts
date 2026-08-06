@@ -1,6 +1,14 @@
 import { createHash } from "node:crypto";
 import { defaultContract, normalizeContract } from "./contract.ts";
-import type { Audit, Check, Evidence, Work, WorkContract, WorkspaceFingerprint } from "./types.ts";
+import type {
+  Audit,
+  Check,
+  CheckKind,
+  Evidence,
+  Work,
+  WorkContract,
+  WorkspaceFingerprint,
+} from "./types.ts";
 
 export class GdmError extends Error {
   constructor(
@@ -27,11 +35,21 @@ export function initWork(
   now: string,
   auditRequired = false,
   contract: WorkContract = defaultContract(),
+  baseline?: WorkspaceFingerprint | null,
 ): Work {
   validateSlug(slug);
   const trimmed = brief.trim();
   if (!trimmed) throw new GdmError("brief(작업 설명)가 비어 있습니다", "empty_brief");
-  return { slug, brief: trimmed, createdAt: now, done: false, auditRequired, checks: [], contract };
+  return {
+    slug,
+    brief: trimmed,
+    createdAt: now,
+    done: false,
+    auditRequired,
+    ...(baseline === undefined ? {} : { baseline }),
+    checks: [],
+    contract,
+  };
 }
 
 export function checksHash(work: Work): string {
@@ -84,6 +102,20 @@ export interface CheckInput {
   cmd?: string | null;
   expect?: string;
   manual?: boolean;
+  kind?: CheckKind;
+  expert?: boolean;
+}
+
+export function parseCheckKind(value: string | undefined): CheckKind | undefined {
+  if (value === undefined) return undefined;
+  if (value === "regression" || value === "behavior" || value === "edge" || value === "static" || value === "manual") {
+    return value;
+  }
+  throw new GdmError("--kind는 regression, behavior, edge, static, manual 중 하나여야 합니다", "usage");
+}
+
+export function checkKind(check: Check): CheckKind {
+  return check.kind ?? (check.manual ? "manual" : "behavior");
 }
 
 export function addCheck(work: Work, input: CheckInput): { work: Work; check: Check } {
@@ -91,6 +123,8 @@ export function addCheck(work: Work, input: CheckInput): { work: Work; check: Ch
   const desc = input.desc?.trim();
   if (!desc) throw new GdmError("desc(항목 설명)가 비어 있습니다", "empty_desc");
   const manual = input.manual ?? false;
+  const kind = input.kind ?? (manual ? "manual" : "behavior");
+  const expert = input.expert ?? false;
   const cmd = input.cmd?.trim() || null;
   const expect = input.expect?.trim() ?? "";
   if (!manual && !cmd) {
@@ -100,8 +134,14 @@ export function addCheck(work: Work, input: CheckInput): { work: Work; check: Ch
     );
   }
   if (!expect) throw new GdmError("기대 관찰(--expect)이 필수입니다", "expect_required");
+  if ((manual && kind !== "manual") || (!manual && kind === "manual")) {
+    throw new GdmError("manual kind와 --manual은 함께 지정해야 합니다", "usage");
+  }
+  if (expert && !manual) {
+    throw new GdmError("--expert는 --manual 전문가 확인 항목에만 쓸 수 있습니다", "usage");
+  }
   const maxN = work.checks.reduce((m, c) => Math.max(m, Number(c.id.slice(1)) || 0), 0);
-  const check: Check = { id: `c${maxN + 1}`, desc, cmd, expect, manual, status: "open" };
+  const check: Check = { id: `c${maxN + 1}`, desc, cmd, expect, manual, kind, expert, status: "open" };
   return { work: { ...work, checks: [...work.checks, check] }, check };
 }
 
@@ -127,6 +167,15 @@ export function assertPassable(work: Work, id: string): Check {
 
 export function passCheck(work: Work, id: string, evidence: Omit<Evidence, "at">, now: string): Work {
   const check = assertPassable(work, id);
+  if (checkKind(check) === "regression" && !check.redEvidence) {
+    throw new GdmError(
+      `${id}는 regression 항목입니다. 먼저 gdm pass ${id} --red로 실패를 재현하세요`,
+      "red_evidence_required",
+    );
+  }
+  if (check.redEvidence && check.redEvidence.at > now) {
+    throw new GdmError("regression green 증거는 red 증거보다 먼저 기록될 수 없습니다", "red_evidence_required");
+  }
   if (!check.manual && evidence.manual) {
     throw new GdmError(`${id}는 자동 검증 항목입니다. 수동 증거로는 통과할 수 없습니다`, "manual_not_allowed");
   }
@@ -142,13 +191,39 @@ export function passCheck(work: Work, id: string, evidence: Omit<Evidence, "at">
   if (!evidence.sha256?.trim()) {
     throw new GdmError("증거 파일 해시(sha256)가 필요합니다", "sha256_required");
   }
+  if (check.expert && (!evidence.reviewer?.trim() || !evidence.note?.trim())) {
+    throw new GdmError(
+      `${id}는 전문가 확인 항목입니다. --reviewer와 --note에 검토자와 판단 근거를 기록하세요`,
+      "expert_evidence_required",
+    );
+  }
   return replaceCheck(work, { ...check, status: "proven", evidence: { ...evidence, at: now } });
+}
+
+export function recordRedEvidence(
+  work: Work,
+  id: string,
+  evidence: Omit<Evidence, "at">,
+  now: string,
+): Work {
+  const check = assertPassable(work, id);
+  if (checkKind(check) !== "regression" || check.manual) {
+    throw new GdmError(`${id}는 regression 자동 항목이 아닙니다. --red를 제거하세요`, "red_not_allowed");
+  }
+  if (evidence.manual || evidence.exitCode === undefined || evidence.exitCode === 0) {
+    throw new GdmError("red 증거는 동일 자동 명령의 non-zero 종료여야 합니다", "red_expected_failure");
+  }
+  if (!evidence.observed?.trim() || !evidence.sha256?.trim()) {
+    throw new GdmError("red 증거 파일과 해시가 필요합니다", "red_evidence_required");
+  }
+  return replaceCheck(work, { ...check, redEvidence: { ...evidence, at: now } });
 }
 
 export interface CheckPatch {
   desc?: string;
   cmd?: string;
   expect?: string;
+  kind?: CheckKind;
 }
 
 export function editCheck(
@@ -175,24 +250,37 @@ export function editCheck(
     next.expect = patch.expect.trim();
     changed = true;
   }
+  if (patch.kind !== undefined && patch.kind !== checkKind(check)) {
+    next.kind = patch.kind;
+    changed = true;
+  }
   if (!changed) throw new GdmError("바뀐 내용이 없습니다", "no_changes");
   if (!next.manual && !next.cmd) {
     throw new GdmError("자동 항목에서 재현 명령(cmd)을 비울 수 없습니다", "cmd_required");
   }
   if (!next.expect) throw new GdmError("기대 관찰(expect)을 비울 수 없습니다", "expect_required");
-  const reverted = check.status === "proven";
-  if (reverted) {
-    next.status = "open";
-    delete next.evidence;
+  if ((next.manual && checkKind(next) !== "manual") || (!next.manual && checkKind(next) === "manual")) {
+    throw new GdmError("manual kind는 수동 항목에만 사용할 수 있습니다", "usage");
   }
+  const reverted = check.status === "proven";
+  next.status = "open";
+  delete next.evidence;
+  delete next.redEvidence;
   return { work: replaceCheck(work, next), reverted };
 }
 
-export function revertChecks(work: Work, ids: string[]): Work {
+export function revertChecks(work: Work, ids: string[], clearRedIds: readonly string[] = []): Work {
   return {
     ...work,
     checks: work.checks.map((c) =>
-      ids.includes(c.id) ? { ...c, status: "open" as const, evidence: undefined } : c,
+      ids.includes(c.id)
+        ? {
+            ...c,
+            status: "open" as const,
+            evidence: undefined,
+            ...(clearRedIds.includes(c.id) ? { redEvidence: undefined } : {}),
+          }
+        : c,
     ),
   };
 }
@@ -216,7 +304,28 @@ export function closeWork(work: Work, now: string): Work {
     const list = open.map((c) => `${c.id}(${c.desc})`).join(", ");
     throw new GdmError(`미통과 항목 ${open.length}개: ${list}`, "unproven");
   }
-  if (work.auditRequired) {
+  if (work.contract.simplificationRequired) {
+    const staticProof = work.checks.some((check) => check.status === "proven" && checkKind(check) === "static");
+    if (!staticProof) {
+      throw new GdmError(
+        "간소화 확인이 필요합니다. --kind static 항목을 추가하고 불필요한 복잡성이 없음을 증명하세요",
+        "simplification_required",
+      );
+    }
+  }
+  if (work.contract.risk === "high" && work.contract.verification === "opaque") {
+    const expertProof = work.checks.some(
+      (check) => check.status === "proven" && check.expert === true && check.manual &&
+        Boolean(check.evidence?.reviewer?.trim()) && Boolean(check.evidence?.note?.trim()),
+    );
+    if (!expertProof) {
+      throw new GdmError(
+        "high+opaque 작업은 전문가 확인이 필요합니다. --manual --expert 항목과 reviewer·판단 근거를 제출하세요",
+        "expert_review_required",
+      );
+    }
+  }
+  if (work.auditRequired || work.contract.risk === "high") {
     if (!work.audit) {
       throw new GdmError("검수가 필요한 작업입니다. gdm audit brief → 검수자 → gdm audit verdict", "audit_required");
     }
@@ -246,12 +355,36 @@ export function validateWork(raw: unknown, source: string): Work {
   if (typeof work.slug !== "string" || typeof work.brief !== "string") bad("slug/brief 누락");
   if (typeof work.done !== "boolean") bad("done 누락");
   if (!Array.isArray(work.checks)) bad("checks가 배열이 아님");
+  const checks: Check[] = [];
   for (const check of work.checks) {
     if (typeof check?.id !== "string" || typeof check?.desc !== "string") bad("check 형태 오류");
     if (check.status !== "open" && check.status !== "proven") bad(`${check.id}: status 값 오류`);
     if (check.status === "proven" && !check.evidence?.sha256) {
       bad(`${check.id}: 증거 없이 proven — 상태 파일이 gdm 외부에서 수정됨`);
     }
+    const kind = check.kind === undefined ? (check.manual ? "manual" : "behavior") : check.kind;
+    if (kind !== "regression" && kind !== "behavior" && kind !== "edge" && kind !== "static" && kind !== "manual") {
+      bad(`${check.id}: kind 값 오류`);
+    }
+    if ((check.manual && kind !== "manual") || (!check.manual && kind === "manual")) {
+      bad(`${check.id}: manual/kind 불일치`);
+    }
+    if (check.expert !== undefined && typeof check.expert !== "boolean") bad(`${check.id}: expert 값 오류`);
+    if (check.expert && !check.manual) bad(`${check.id}: expert 자동 항목 오류`);
+    if (
+      check.redEvidence !== undefined &&
+      (
+        kind !== "regression" || !check.redEvidence.observed || !check.redEvidence.sha256 ||
+        check.redEvidence.manual || typeof check.redEvidence.exitCode !== "number" ||
+        check.redEvidence.exitCode === 0 || typeof check.redEvidence.at !== "string" ||
+        (check.evidence?.at !== undefined && check.redEvidence.at > check.evidence.at)
+      )
+    ) {
+      bad(`${check.id}: red 증거 형태 또는 순서 오류`);
+    }
+    // Preserve legacy check object bytes semantically: adding default fields here would
+    // change checksHash and invalidate an audit recorded by an older gdm version.
+    checks.push(check);
   }
   if (work.delivery !== undefined) {
     const delivery = work.delivery;
@@ -274,5 +407,29 @@ export function validateWork(raw: unknown, source: string): Work {
     ) bad("delivery.mergeApproval 형태 오류");
     if (delivery.merged && typeof delivery.merged.sha !== "string") bad("delivery.merged 형태 오류");
   }
-  return { ...work, contract: normalizeContract(work.contract) };
+  if (work.baseline !== undefined && work.baseline !== null) validateFingerprint(work.baseline, bad);
+  return { ...work, checks, contract: normalizeContract(work.contract) };
+}
+
+function validateFingerprint(fingerprint: WorkspaceFingerprint, bad: (why: string) => never): void {
+  if (
+    fingerprint.kind !== "git" || typeof fingerprint.head !== "string" ||
+    !/^(?:[0-9a-f]{40}|[0-9a-f]{64}|unborn)$/u.test(fingerprint.head) ||
+    typeof fingerprint.sha256 !== "string" || !/^[0-9a-f]{64}$/u.test(fingerprint.sha256)
+  ) bad("baseline 형태 오류");
+  if (
+    fingerprint.files !== undefined &&
+    (!Array.isArray(fingerprint.files) || fingerprint.files.some(
+      (file) => {
+        if (typeof file?.path !== "string" || !/^[0-9a-f]{64}$/u.test(file?.sha256 ?? "")) return true;
+        const segments = file.path.split("/");
+        return file.path.length === 0 || file.path.startsWith("/") ||
+          segments.some((segment: string) => segment === "" || segment === "." || segment === "..") ||
+          file.path === ".gdm" || file.path.startsWith(".gdm/");
+      },
+    ))
+  ) bad("baseline.files 형태 오류");
+  if (fingerprint.files && new Set(fingerprint.files.map((file) => file.path)).size !== fingerprint.files.length) {
+    bad("baseline.files 중복 경로");
+  }
 }

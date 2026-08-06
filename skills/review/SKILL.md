@@ -21,6 +21,24 @@ description: |
 - IMPORTANT: 스타일 취향은 결함이 아니다. 보고 기준은 "잘못된 동작, 테스트 실패,
   오해를 부르는 결과를 만들 수 있는가"다.
 
+## tuicr 공유 리뷰 화면
+
+`HUMAN_REVIEW_PROVIDER: tuicr`, `COMPANION_TOOL_POLICY: optional`로 라우팅한다. 시작할 때
+사용자가 직접 변경을 보고 코멘트하려는 **사용자 주도 리뷰**인지, 에이전트에게 결함 탐색을
+맡긴 **에이전트 주도 리뷰**인지 먼저 구분한다.
+
+- 사용자 주도 리뷰: 관련 활성 tuicr 세션에 attach한다. 세션이 없고 tmux·Zellij·Herdr를
+  사용할 수 있으면 설치된 tuicr 스킬의 `tuicr-wrapper.sh`, `tuicr-wrapper-zellij.sh`,
+  `tuicr-wrapper-herdr.sh` 중 환경에 맞는 wrapper로 pane을 연다. 사용자가 코멘트를 마쳤다고
+  하거나 명시적으로 기다리라고 한 경우 `tuicr review comments`를 읽는다. 사용자 코멘트를
+  에이전트가 대신 만들거나 자기 리뷰 결과로 바꾸지 않는다.
+- 에이전트 주도 리뷰: tuicr가 있으면 shared diff surface로 열거나 기존 활성 세션에 attach할
+  수 있지만, 아래의 읽기 전용 runtime·edge·반증 pass가 판정 정본이다. 발견을 tuicr에 쓰는
+  것은 사용자가 명시적으로 요청했을 때만 허용하며 `tuicr review add --username "Codex"`로
+  작성자를 구분한다. 승인 없이 사용자 코멘트인 것처럼 기록하지 않는다.
+- tuicr나 multiplexer가 없거나 비대화형 환경이면 기존 텍스트 리뷰로 폴백하고 알린다.
+  gdm이 자동 설치하지 않으며, tuicr는 gdm-full의 독립 auditor를 대신하지 않는다.
+
 ## 프로세스
 
 워커 배정: 루트 진행자는 범위·불변식·중복 제거·반증·최종 보고를 소유한다. 각 리뷰 pass는

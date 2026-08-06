@@ -1,0 +1,4 @@
+interface:
+  display_name: "GDM Email"
+  short_description: "맥락을 검증해 바로 보낼 수 있는 메일을 작성합니다"
+  default_prompt: "Use $gdm-email to draft a concise, verified email from the provided context."

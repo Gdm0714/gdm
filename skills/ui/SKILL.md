@@ -28,6 +28,16 @@ description: |
   claude.ai/design에서 생성 완료를 확인한 뒤에만 DesignSync로 pull하며 Chrome 제어로
   대신 실행하지 않는다. `HTTP 429`, `rate_limit`, `quota exceeded`, 사용량 한도가
   명확할 때만 Codex fallback을 허용한다.
+- IMPORTANT: 구체적 웹 UI 수정의 런타임 확인은 실행 URL과 지원 터미널이 있고
+  실행 중인 `terminal-browser`가 있으면 gdm-go 스킬의
+  `terminal-browser-background-tab.sh open <url>`로 비활성 AI 탭을 만들고 반환된 browser와
+  tab을 모든 `terminal-browser action -- snapshot|click|fill|eval`에 명시한다.
+  이는 프로젝트 자동 테스트와 스크린샷 증거를 대체하지 않으며, 도구가 없으면 기존
+  브라우저·시뮬레이터·사용자 확인 흐름으로 폴백한다.
+- IMPORTANT: 자동 확인은 `terminal-browser open`, `--split`, `--follow`를 사용하지 않고
+  완료·실패 때 `terminal-browser-background-tab.sh close <key> <id>`로 AI 탭을 정리한다.
+  사용자가 화면 표시를 명시적으로 요청한 경우만 대화형 open 절차를 별도로 사용한다.
+  실행 중인 terminal-browser가 없으면 새 화면을 만들지 않고 기존 headless 흐름으로 폴백한다.
 
 ## 프로세스
 
@@ -42,7 +52,8 @@ description: |
 4. 확인: 수정 후 화면을 직접 보거나 사용자 확인을 받고, 그 기록(스크린샷 또는
    문답)을 남긴다 — gdm 작업 안이면 `.gdm/<슬러그>/ui/`에 저장해
    `gdm pass --manual`의 증거로 쓴다. 잘림·겹침 수정은 긴 텍스트·좁은 화면
-   같은 경계 조건에서도 확인해야 완료다.
+   같은 경계 조건에서도 확인해야 완료다. 웹 UI이면 terminal-browser로 정상·경계 상태의
+   실제 상호작용을 우선 재현하고, 기계 판정 가능한 assertion은 gdm check 명령에 포함한다.
 
 ## 엣지 케이스
 

@@ -95,7 +95,7 @@ gdm-go의 도구 전부 + 검수:
 
 | 명령 | 용도 |
 |---|---|
-| `gdm plan init --slug <s> --brief <설명> --audit --require <보존> --forbid <금지>` | 계약과 함께 검수 필수 작업 시작 |
+| `gdm plan init --audit --require <보존> --forbid <금지> --risk <low\|medium\|high> --verification <deterministic\|inspectable\|opaque> [preflight·scope 플래그] [--simplify]` | preflight 계약·baseline과 함께 검수 필수 작업 시작 |
 | `gdm audit brief` | 검수자에게 줄 브리핑 패키지 출력 |
 | `gdm audit verdict (--pass\|--fail) --report <파일> --implementation-model <모델> --audit-model <모델>` | 검수자 판정과 독립성·보고서·워크트리 지문 기록 |
 | `gdm-agents/run-auditor.sh <codex\|claude> <prompt> <report> [workspace]` | 에이전트·MCP를 차단하고 단일 검수 PID 트리를 자원 한도 안에서 실행 |
@@ -111,9 +111,18 @@ gdm-go의 도구 전부 + 검수:
    `codex-fallback`을 기록하고 Codex가 대신하며, 인증·권한·도구·프로젝트 문제나 timeout은
    대체하지 않는다. Claude의 설계·시각 산출물은 구현 모델이 아니며 로컬 제품 코드는 기록된
    Codex 구현 모델만 작성한다.
-2. `gdm plan init --slug <슬러그> --brief "<요약>" --audit --require "<보존 조건>" --forbid "자동 커밋"`
-3. check 설계: gdm-go 기준(happy/edge/regression)에 **adversarial 항목을 추가**한다
-   — 악의적/경계 입력에서 무너지지 않는지 검증하는 check 1개 이상.
+2. 구현 전 가정·불확실성·허용/금지 경로·중단 조건·risk·verification을 분류하고
+   `gdm plan init --slug <슬러그> --brief "<요약>" --audit --require "<보존 조건>"
+   --forbid "자동 커밋" ...`에 모두 기록한다. 소스·설정 동작 변경은 `--simplify`를 붙인다.
+   high risk는 `--audit`을 생략해도 CLI가 독립 검수를 요구하지만 full은 의도를 드러내기 위해
+   명시한다. init 기준선 전에 있던 로컬 변경은 보존 대상이며 이후 delta만 범위 판정한다.
+3. check 설계: gdm-go의 `regression|behavior|edge|static|manual` 분류에
+   **adversarial 항목을 추가**한다 — 악의적/경계 입력에서 무너지지 않는지 검증하는 check 1개 이상.
+   regression은 구현 전에 `gdm pass <id> --red`로 동일 명령의 non-zero 실패를 기록한다.
+   `--simplify` 작업에는 라인 수가 아니라 dead code·중복·불필요한 추상화를 겨냥한 proven
+   static check가 필요하다. high+opaque이면 실제 도메인 reviewer가 확인할
+   `--manual --expert` check를 추가하고 pass에 `--reviewer`와 `--note`를 기록한다.
+   실행 모델은 reviewer를 자칭하거나 전문가 판단 근거를 대신 작성하지 않는다.
    등록 후 목록을 사용자에게 보여주고, 중량 작업이므로 이견 없는지 확인한다.
 4. 구현 시작 전에 실제 구현 모델 하나를 지정한다. 검수 입력의 첫 필드에
    `implementationModel: <실제 모델>`을 기록하고 작업 기록에도 남긴다. 구현은 독립 경계와
@@ -123,7 +132,8 @@ gdm-go의 도구 전부 + 검수:
    (위임 산출물도 문장이 아니라 증거로만 판정한다), 전 항목 통과 후 `gdm recheck`로 회귀를
    확인한다.
 5. 검수:
-   a. `gdm audit brief` 출력과 `git diff`를 준비한다.
+   a. `gdm audit brief` 출력과 `git diff`를 준비한다. brief에는 preflight·경로 계약,
+      red→green·static·expert 증거가 포함되어야 한다.
    b. **실제 구현 모델과 다른 모델의 검수자 정확히 1명을 새 컨텍스트로 실행한다.** 프롬프트는
       검수자 프롬프트(`auditor.md`) 전문 + 브리핑 + diff이며 현재 대화 요약은 주지
       않는다. `auditor.md`는 설치 시 스킬 옆 `gdm-agents/`에 배치된다(소스:

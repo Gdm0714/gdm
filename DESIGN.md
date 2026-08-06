@@ -22,6 +22,12 @@ gdm은 `약속 → 증명 → 관찰 → 습관 → 비교`의 한 바퀴를 관
 5. **완료와 전달을 분리하기**: 검증 완료는 커밋·push·PR 권한을 뜻하지 않는다.
 6. **필요한 컨텍스트만 읽기**: 계획은 파일로 남기고, 세부 지식은 해당 작업에서만 점진적으로 불러온다.
 7. **판정 근거를 보존하기**: 상태는 원자적으로 저장하고 사건은 append-only로 기록한다.
+8. **구현 전에 경계를 고정하기**: 가정·불확실성·허용/금지 경로·중단 조건·위험도·검증 가능성을
+   preflight 계약으로 저장한다. 질문이 필요 없는 기본값은 명시하고, 범위 확장은 사유를 남긴다.
+9. **회귀 수정은 실패부터 증명하기**: regression check는 동일 명령의 non-zero red 증거가
+   green보다 먼저 있어야 한다. 테스트를 구현 뒤에 맞춰 쓰는 자기확증을 줄인다.
+10. **위험과 판정 한계를 완료 조건에 반영하기**: high risk는 독립 검수를 요구하고,
+    high+opaque는 실제 reviewer와 판단 근거가 있는 expert manual 증거를 추가로 요구한다.
 
 이 원칙은 실제 사용 중 나타난 환각, 과잉 구현, 같은 오류의 무변화 재시도, 자동 기억의 잡음,
 커밋 시점 오해에서 도출했다. 문서는 결론을 먼저 쓰고 재실행에 필요한 정보는 생략하지 않는다.
@@ -59,7 +65,14 @@ gdm은 작업을 **검증 항목(check) 중심**으로 표현한다.
 | `journal.jsonl` | append-only | 모든 CLI 호출 이벤트 (감사·재개·회고용) |
 
 check의 상태 전이는 CLI만 할 수 있다:
-`open → proven (gdm pass가 cmd를 직접 실행해 exit 0 + 출력 sha256 기록) → audited(P2)`
+`open → red(regression만, non-zero 증거) → proven(gdm pass가 exit 0 + 출력 sha256 기록) → audited(P2)`
+
+work 계약에는 필수·금지 조건 외에 `assumptions`, `uncertainties`, `allowedPaths`,
+`forbiddenPaths`, `stopConditions`, `risk`, `verification`, `simplificationRequired`가 들어간다.
+새 작업은 init 시점의 Git 파일별 내용 지문을 baseline으로 저장한다. `done`은 baseline 이후
+바뀐 파일만 계산하므로 init 전에 존재한 로컬 수정은 범위 위반으로 오인하지 않는다.
+경로는 glob이 아니라 저장소 상대 prefix이며 금지 prefix가 허용 prefix보다 우선한다.
+기존 상태에는 `low`, `deterministic`, 전체 경로 허용, 간소화 선택의 기본값을 적용한다.
 
 ### 증거의 정의 (환각 방지 규칙의 기계화)
 
@@ -69,6 +82,10 @@ cmd를 실행해 출력을 `.gdm/<슬러그>/out/`에 저장·해시하고, exit
 (cmd는 "기대 충족 시에만 성공"하도록 작성하는 것이 계약). `gdm done`은 증거 파일의
 현존과 해시 일치를 재검증한다 — pass 이후 삭제·변조된 증거로는 완료할 수 없다.
 수동 확인만 가능한 항목(UI 등)은 `--manual` + 확인 기록 파일 제출로만 허용.
+check는 `regression|behavior|edge|static|manual`로 분류한다. `--simplify` 계약은 proven
+`static` check를 요구하되, 라인 수 감소 같은 휴리스틱은 품질 증거로 인정하지 않는다.
+`high+opaque`의 `--expert` manual check는 reviewer와 note가 모두 있어야 하며 AI가 스스로
+전문가를 자칭해 채울 수 없다.
 거부된 시도(실패한 pass/done)도 journal에 기록되어 회고(retro)의 입력이 된다.
 
 ## 4. 전체 아키텍처
@@ -280,14 +297,16 @@ hook은 사용자가 Codex `/hooks` 화면에서 신뢰 상태를 확인해야 �
 공통 계약: 상태 기록은 gdm CLI 경유만 / 완료 주장 전 증거 3요소 /
 프롬프트는 prompt-patterns.md 준수(제약이 능력보다 먼저) / 프롬프트는 전부 자작.
 
-- **gdm:go** (P1): brief → `gdm plan init` → check 목록 등록 → 구현·`gdm pass` 반복(CLI가 cmd 실행·판정) →
+- **gdm:go** (P1): brief → preflight가 포함된 `gdm plan init` → 종류별 check 등록 → regression red →
+  구현·`gdm pass` 반복(CLI가 cmd 실행·판정) →
   전 check proven 시 `gdm done`(증거 재검증 포함). 막히면 `gdm plan edit --reason`을 journal에 남기고 계속.
   재개: `$gdm:go --resume`.
 - **gdm:full** (P2): go 흐름 + 제한 실행기로 단일 leaf 검수자 실행 → 통과/반려 →
   반려는 check로 환원 → 통과 시 마무리 절차(커밋 규칙 검사, PR 본문, 검수보고).
 - **gdm:plan / review / analyze** (P3), **gdm:research** (P4): 계획·리뷰·원인 분석·최대 4개 축 제한 병렬 조사.
 - **gdm:pr**: 이슈→브랜치→커밋→PR→CI 감시 파이프라인. 계약 게이트와 `delivery`의
-  HEAD·PR·CI·명시적 머지 승인 기록이 모두 맞을 때만 전달한다.
+  HEAD·PR·명시적 머지 승인 기록이 맞고 현재 HEAD에 알려진 CI 실패가 없을 때만 전달한다.
+  CI 체크가 없는 저장소는 통과 기록을 요구하지 않는다.
 - **gdm:ui / gdm:design**: 화면 수정(스크린샷 피드백)과 0→1 화면 디자인 루프. 시각 검수자는 구현자와 다른 벤더.
 - **gdm:db**: 스키마·쿼리·마이그레이션·데이터 검증.
 - **gdm:reflect**: 게이트 증거와 사용자 노트에서 반복 패턴을 찾아 습관 후보를 만든다(사람이 채택).
@@ -311,6 +330,10 @@ hook은 사용자가 Codex `/hooks` 화면에서 신뢰 상태를 확인해야 �
 |---|---|
 | 검수 1명이 결함을 놓침 | retro로 놓친 유형 추적, 반복 유형만 역할 분리 승격 |
 | check 선정 자체가 부실 (검증 항목 누락) | start 단계에서 check 목록을 사용자에게 확인받는 옵션(중량 작업 기본 on) |
+| 구현이 테스트에 정답을 맞춤 | regression check는 수정 전 동일 명령의 red 실패 증거를 의무화 |
+| 요청 밖 동반 변경·기존 dirty 오인 | init 파일별 baseline과 상대 prefix 계약으로 이후 delta만 판정 |
+| high risk를 자동 검사만으로 과신 | 독립 audit 자동 요구, high+opaque는 출처가 있는 expert manual 증거 추가 |
+| "간소화"를 라인 수로 추측 | `--simplify`가 프로젝트별 proven static check를 요구하고 크기 휴리스틱은 금지 |
 | 게이트 과잉 엄격 → 우회 | plan edit --reason으로 정식 완화 경로, journal 기록으로 사후 조정 |
 | CLI 포맷 변경 | 소스는 repo, 설치는 어댑터로 격리 |
 | 규칙이 쌓여 컨텍스트가 다시 오염됨 | 반복 사건 2개 이상만 후보화, 적용 결과가 없으면 폐기 검토 |
@@ -327,6 +350,11 @@ hook은 사용자가 Codex `/hooks` 화면에서 신뢰 상태를 확인해야 �
 
 ## 11. 결정 로그
 
+- 2026-08-04: **AI 작업 preflight·proof·scope 게이트 추가.** init에 가정·불확실성·허용/금지
+  경로·중단 조건·위험도·검증 가능성·간소화 계약을 기록하고 파일별 baseline 이후 delta만
+  범위 판정한다. regression은 동일 명령의 red→green을 강제한다. high risk는 audit을 자동
+  요구하고 high+opaque는 출처와 근거가 있는 expert manual 증거를 추가로 요구한다. 기존
+  상태는 안전한 legacy 기본값으로 정규화하며, 에이전트 동시 상한 4와 전달 승인 정책은 유지한다.
 - 2026-07-30: **고정 누적 한도를 유휴 시 자동 확장되는 예산 파동으로 교체.** 초기 16회가
   소진되면 pending/running 역할이 0일 때만 다음 spawn에서 4회분을 자동으로 열고, 활성
   fanout 중에는 확장하지 않는다. root session 생애 누적 32와 effective 동시 4는 하드

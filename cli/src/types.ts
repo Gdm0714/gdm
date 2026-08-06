@@ -1,4 +1,7 @@
 export type CheckStatus = "open" | "proven";
+export type CheckKind = "regression" | "behavior" | "edge" | "static" | "manual";
+export type RiskLevel = "low" | "medium" | "high";
+export type VerificationMode = "deterministic" | "inspectable" | "opaque";
 
 export interface Evidence {
   observed: string;
@@ -6,6 +9,7 @@ export interface Evidence {
   exitCode?: number;
   manual: boolean;
   note?: string;
+  reviewer?: string;
   at: string;
 }
 
@@ -15,7 +19,10 @@ export interface Check {
   cmd: string | null;
   expect: string;
   manual: boolean;
+  kind?: CheckKind;
+  expert?: boolean;
   status: CheckStatus;
+  redEvidence?: Evidence;
   evidence?: Evidence;
 }
 
@@ -33,6 +40,12 @@ export interface Audit {
 export interface WorkspaceFingerprint {
   readonly kind: "git";
   readonly head: string;
+  readonly sha256: string;
+  readonly files?: readonly WorkspaceFileFingerprint[];
+}
+
+export interface WorkspaceFileFingerprint {
+  readonly path: string;
   readonly sha256: string;
 }
 
@@ -78,6 +91,24 @@ export interface WorkContract {
   readonly activeHabits: readonly ActiveHabit[];
   readonly commit: CommitState;
   readonly latestCommitTransition?: CommitTransition;
+  readonly assumptions?: readonly string[];
+  readonly uncertainties?: readonly string[];
+  readonly allowedPaths?: readonly string[];
+  readonly forbiddenPaths?: readonly string[];
+  readonly stopConditions?: readonly string[];
+  readonly risk?: RiskLevel;
+  readonly verification?: VerificationMode;
+  readonly simplificationRequired?: boolean;
+  readonly scopeAmendments?: readonly ScopeAmendment[];
+}
+
+export interface ScopeAmendment {
+  readonly addedAllowed: readonly string[];
+  readonly addedForbidden: readonly string[];
+  readonly removedAllowed: readonly string[];
+  readonly removedForbidden: readonly string[];
+  readonly reason: string;
+  readonly at: string;
 }
 
 export interface Work {
@@ -89,6 +120,7 @@ export interface Work {
   auditRequired?: boolean;
   audit?: Audit;
   delivery?: DeliveryState;
+  baseline?: WorkspaceFingerprint | null;
   checks: Check[];
   contract: WorkContract;
 }
