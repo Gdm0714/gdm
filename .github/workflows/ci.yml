@@ -17,11 +17,13 @@ jobs:
   verify:
     name: 필수 검증
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: AI 표기 금지 검사 (현재 변경 커밋)
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
@@ -36,7 +38,9 @@ jobs:
             exit 1
           fi
           echo "검사 범위 $RANGE — 금지 표기 0건"
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.3.14
       - name: 의존성 설치
         working-directory: cli
         run: bun install --frozen-lockfile
@@ -49,4 +53,5 @@ jobs:
             head -1 "$f" | grep -q '^---$' || { echo "front-matter 누락: $f"; exit 1; }
             grep -q '^name: gdm-' "$f" || { echo "name 필드 누락: $f"; exit 1; }
           done
-          echo "스킬 $(ls -d skills/*/ | wc -l)개 front-matter 정상"
+          count="$(find skills -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')"
+          echo "스킬 ${count}개 front-matter 정상"
