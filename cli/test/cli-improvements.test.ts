@@ -25,6 +25,8 @@ const SKILL_NAMES = [
   "db",
   "design",
   "reflect",
+  "email",
+  "document",
 ] as const;
 
 type CliResult = {

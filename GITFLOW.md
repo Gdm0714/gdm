@@ -21,7 +21,7 @@
 3. 구현 + 논리 단위 커밋       (gdm 작업이면 $gdm-go / $gdm-full)
 4. gdm delivery prepare      이슈·브랜치·커밋 HEAD 고정
 5. gh pr create + delivery pr
-6. CI 통과 확인 + delivery ci
+6. CI 상태 확인(구성된 경우 통과 기록, 체크가 없으면 생략)
 7. 명시적 승인 + delivery check-merge
 8. squash 머지 → delivery merged → 브랜치 삭제
 ```
@@ -44,7 +44,7 @@
 - `git push --force` to main — 히스토리 정정이 필요한 예외 상황은 명시 합의 후
   `--force-with-lease`로만
 - `--no-verify`로 훅 우회
-- CI 실패 상태의 PR 머지
+- 현재 HEAD에 CI 실패가 확인된 PR 머지(체크가 없는 저장소는 CI 기록 없이 허용)
 
 ## 버전
 

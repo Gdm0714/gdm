@@ -64,6 +64,48 @@
   필요한 요구와 파일 경계만 전달한다. Claude CLI와 Claude Design 호출도 아래의 비대화형
   CLI 협력적 예산·PID 회수 규칙에 포함한다.
 
+## 대화형 테스트·리뷰 도구 라우팅
+
+gdm의 결정적 CLI 게이트는 그대로 유지하면서, 사람이 실행 과정을 함께 볼 수 있는 환경에서는
+다음 선택형 companion tool을 사용한다.
+
+- `WEB_RUNTIME_PROVIDER: terminal-browser`
+- `HUMAN_REVIEW_PROVIDER: tuicr`
+- `COMPANION_TOOL_POLICY: optional`
+
+웹 UI의 실제 브라우저 동작을 확인하는 자동 check는 실행 가능한 URL 또는 로컬 HTML이 있고
+실행 중인 `terminal-browser`가 있으면 gdm-go 스킬의
+`terminal-browser-background-tab.sh open <url>`로 AI 전용 비활성 탭을 만든다. 헬퍼는 현재
+터미널 탭 밖의 브라우저를 우선 고르고 새 탭이 `active: false`인지 확인한다. 반환된 key와 id로
+`terminal-browser action --browser <key> --tab <id> -- snapshot|click|fill|eval`처럼 매번
+대상을 고정하며 `--follow`는 사용하지 않는다. 검증이 끝나면
+`terminal-browser-background-tab.sh close <key> <id>`로 AI가 만든 탭만 닫는다.
+
+자동 검증은 `terminal-browser open`이나 `--split`을 호출하지 않으므로 사용자 tmux pane,
+브라우저 활성 탭, 현재 화면을 바꾸지 않는다. 사용자가 화면 공유를 명시적으로 원할 때만
+terminal-browser 스킬의 대화형 open 절차를 별도로 사용한다. 실행 중인 브라우저가 없거나
+백그라운드 탭을 만들 수 없으면 화면을 새로 열지 말고 프로젝트 표준 headless 테스트로 폴백한다.
+기계적으로 판정할 수 있는 동작은 action 명령과 assertion을 check의 `cmd`에 넣어 gdm이
+출력·exit code를 증거로 저장하게 한다. 시각 판정은 백그라운드 탭의 스크린샷이나 manual
+check 근거를 별도로 남긴다.
+
+terminal-browser는 단위·통합 테스트, 프로젝트의 Playwright 같은 자동 브라우저 테스트,
+빌드·타입 검사를 대체하지 않는다. 웹 UI가 아닌 check에는 열지 않는다. 명령·지원 터미널·
+실행 URL이 없거나 CI 같은 비대화형 환경이면 프로젝트 표준 headless 테스트 또는 기존 manual
+증거 흐름으로 폴백한다. 사용자가 terminal-browser 자체를 필수로 지정한 경우에만 부재를
+차단으로 취급한다. Claude Design 생성은 이 라우팅의 대상이 아니며 기존 금지 규칙을 유지한다.
+
+사람이 변경을 직접 보고 코멘트하는 리뷰에는 tuicr를 기본 공유 화면으로 쓴다. 관련 활성
+세션이 있으면 attach하고, 없고 tmux·Zellij·Herdr가 있으면 설치된 tuicr 스킬의
+`tuicr-wrapper.sh`, `tuicr-wrapper-zellij.sh`, `tuicr-wrapper-herdr.sh` 중 환경에 맞는 wrapper로
+연다. 사용자 주도 리뷰에서는 `tuicr review comments`로 사용자 코멘트만 회수하며 리뷰어를
+사칭하지 않는다. 에이전트 주도 `gdm-review`에서는 기존 읽기 전용 diff 분석을 유지하고,
+사용자가 명시적으로 요청한 경우에만 `tuicr review add --username "Codex"`로 발견을 공유한다.
+
+tuicr나 multiplexer가 없거나 비대화형 리뷰이면 기존 텍스트 `gdm-review`로 폴백하고 그 사실을
+알린다. gdm 설치기는 두 companion tool을 자동 설치하지 않는다. tuicr 세션이나 사용자 코멘트는
+구현 모델과 다른 fresh-context auditor가 아니므로 gdm-full의 독립 검수를 대신할 수 없다.
+
 ## 검수 독립성
 
 검수 모델은 실제 diff를 만든 구현 모델과 달라야 한다. 조율자나 스킬 이름이 아니라 실제

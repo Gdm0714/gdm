@@ -41,7 +41,7 @@ function completedRepo(): { cwd: string; slug: string; head: string } {
 }
 
 describe("delivery state machine", () => {
-  test("merge requires PR, passed CI, matching HEAD, and explicit approval", () => {
+  test("merge requires PR, matching HEAD, and explicit approval without requiring a CI record", () => {
     const { cwd, slug, head } = completedRepo();
     expect(run(cwd, [
       "delivery", "prepare", "--slug", slug, "--issue", "#12", "--branch", "main", "--head", head,
@@ -49,14 +49,6 @@ describe("delivery state machine", () => {
     expect(run(cwd, ["delivery", "check-merge", "--slug", slug, "--head", head]).exitCode).toBe(4);
 
     expect(run(cwd, ["delivery", "pr", "--slug", slug, "--number", "#13", "--head", head]).exitCode).toBe(0);
-    expect(run(cwd, [
-      "delivery", "ci", "--slug", slug, "--status", "failed", "--head", head, "--run", "run-1",
-    ]).exitCode).toBe(0);
-    expect(run(cwd, ["delivery", "check-merge", "--slug", slug, "--head", head]).exitCode).toBe(4);
-
-    expect(run(cwd, [
-      "delivery", "ci", "--slug", slug, "--status", "passed", "--head", head, "--run", "run-2",
-    ]).exitCode).toBe(0);
     expect(run(cwd, ["delivery", "check-merge", "--slug", slug, "--head", head]).exitCode).toBe(4);
     expect(run(cwd, [
       "delivery", "approve-merge", "--slug", slug, "--head", head, "--reason", "user requested merge",
@@ -66,8 +58,37 @@ describe("delivery state machine", () => {
     expect(allowed.stdout).toContain("머지 가능");
     const status = run(cwd, ["status", "--json"]);
     expect(status.exitCode).toBe(0);
-    expect(JSON.parse(status.stdout)[0].delivery.ci.status).toBe("passed");
+    expect(JSON.parse(status.stdout)[0].delivery.ci).toBeUndefined();
     expect(run(cwd, ["resume", "--slug", slug]).stdout).toContain("전달:");
+  });
+
+  test("a known failed CI result for the current HEAD blocks merge until superseded", () => {
+    const { cwd, slug, head } = completedRepo();
+    expect(run(cwd, [
+      "delivery", "prepare", "--slug", slug, "--issue", "#14", "--branch", "main", "--head", head,
+    ]).exitCode).toBe(0);
+    expect(run(cwd, ["delivery", "pr", "--slug", slug, "--number", "#15", "--head", head]).exitCode).toBe(0);
+    expect(run(cwd, [
+      "delivery", "ci", "--slug", slug, "--status", "failed", "--head", head, "--run", "run-1",
+    ]).exitCode).toBe(0);
+    expect(run(cwd, [
+      "delivery", "approve-merge", "--slug", slug, "--head", head, "--reason", "user requested merge",
+    ]).exitCode).toBe(0);
+    const rejected = run(cwd, ["delivery", "check-merge", "--slug", slug, "--head", head]);
+    expect(rejected.exitCode).toBe(4);
+    expect(rejected.stderr).toContain("CI 실패 기록");
+
+    expect(run(cwd, [
+      "delivery", "ci", "--slug", slug, "--status", "passed", "--head", head, "--run", "run-2",
+    ]).exitCode).toBe(0);
+    expect(run(cwd, ["delivery", "check-merge", "--slug", slug, "--head", head]).exitCode).toBe(4);
+    expect(run(cwd, [
+      "delivery", "approve-merge", "--slug", slug, "--head", head, "--reason", "user requested merge",
+    ]).exitCode).toBe(0);
+    expect(run(cwd, ["delivery", "check-merge", "--slug", slug, "--head", head]).exitCode).toBe(0);
+    const status = run(cwd, ["status", "--json"]);
+    expect(status.exitCode).toBe(0);
+    expect(JSON.parse(status.stdout)[0].delivery.ci.status).toBe("passed");
   });
 
   test("a new Git HEAD invalidates the prepared delivery chain", () => {

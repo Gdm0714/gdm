@@ -118,12 +118,26 @@ GDM_AGENT_ENVELOPE_V1={"taskId":"example-task","parentId":"root","role":"bounded
 
 ## 검증 항목 초안
 gdm plan add에 그대로 쓸 수 있는 형태:
-- desc: ... / cmd: ... / expect: ...
+- desc: ... (regression) / cmd: ... / expect: 수정 전 red 실패, 수정 후 green 성공
+- desc: ... (behavior) / cmd: ... / expect: ...
+- desc: ... (edge) / cmd: ... / expect: ...
+- desc: ... (static) / cmd: ... / expect: ...
 - desc: ... (manual) / expect: ...
+- desc: ... (expert) / expect: reviewer와 판단 근거 기록
 
 ## 작업 계약 초안
 - require: <반드시 보존할 사용자 결과·기존 변경>
 - forbid: <하면 안 되는 전달·데이터·범위 변경>
+
+## Preflight 계약 초안
+- assume: <질문 대신 택한 가정>
+- uncertain: <구현 전 아직 불확실한 사실>
+- allow-path: <저장소 상대 prefix>
+- forbid-path: <절대 바꾸지 않을 저장소 상대 prefix>
+- stop-if: <발견하면 구현을 멈추고 사용자에게 돌아갈 조건>
+- risk: low | medium | high
+- verification: deterministic | inspectable | opaque
+- simplify: yes | no (소스·설정 동작 변경은 기본 yes)
 
 ## 구현 단계
 1. <파일:위치> 무엇을 어떻게
@@ -134,10 +148,16 @@ gdm plan add에 그대로 쓸 수 있는 형태:
 ```
 
 7. 대화가 끊겨도 새 컨텍스트가 복원할 수 있도록 목표·가정·검증 항목뿐 아니라
-   `require`/`forbid` 작업 계약도 문서에 남긴다. 채팅 요약만 다음 실행에 넘기지 않는다.
+   `require`/`forbid`와 preflight 계약을 문서에 남긴다. regression 명령은 구현 전 같은
+   명령이 실패해야 하고, high risk는 audit, high+opaque는 실제 reviewer의 expert manual
+   증거가 필요하다고 계획에 적는다. 라인 수 감소를 간소화 증거로 쓰지 않는다.
+   채팅 요약만 다음 실행에 넘기지 않는다.
 8. 문서 경로를 알려주고, 계약을 포함한 실행 연결을 안내한다:
-   `gdm plan init --slug <슬러그> --brief-file .gdm/plans/<슬러그>.md --require '<보존 조건>' --forbid '<금지 조건>'`
-   (+중량이면 `--audit`). `--forbid '자동 커밋'`이 기본이며 사용자가 별도로 승인하기
+   `gdm plan init --slug <슬러그> --brief-file .gdm/plans/<슬러그>.md --require '<보존 조건>'
+   --forbid '<금지 조건>' --assume '<가정>' --uncertain '<불확실성>' --allow-path <경로>
+   --forbid-path <경로> --stop-if '<중단 조건>' --risk <등급> --verification <방식> [--simplify]`
+   (+중량이면 `--audit`). `gdm plan add --from-brief`가 괄호 marker를 check 종류로 보존한다.
+   `--forbid '자동 커밋'`이 기본이며 사용자가 별도로 승인하기
    전에는 계획 완료나 `done`을 전달 승인으로 해석하지 않는다.
 
 ## 엣지 케이스

@@ -109,13 +109,41 @@ describe("workflow policy", () => {
     expect(go).toContain("`recheck`는 구현 도중");
   });
 
+  test("execution workflows carry preflight, red-green, scope, simplification, and risk gates", () => {
+    const go = skill("go");
+    const full = skill("full");
+    const plan = skill("plan");
+    const auditor = agent("auditor.md");
+    const design = readFileSync(join(ROOT, "DESIGN.md"), "utf8");
+    const readme = readFileSync(join(ROOT, "README.md"), "utf8");
+
+    for (const text of [go, full, plan, auditor, design, readme]) {
+      expect(text).toMatch(/가정|assume/);
+      expect(text).toMatch(/허용.*경로|allow-path|allowedPaths/);
+      expect(text).toMatch(/risk|위험도|위험/);
+    }
+    expect(go).toContain("gdm pass <id> --red");
+    expect(go).toContain("`--simplify`");
+    expect(go).toContain("라인 수나 diff 크기만으로");
+    expect(full).toContain("high+opaque");
+    expect(full).toContain("--manual --expert");
+    expect(full).toContain("reviewer를 자칭");
+    expect(plan).toContain("(regression)");
+    expect(plan).toContain("(static)");
+    expect(auditor).toContain("baseline 이후 변경 경로");
+    expect(auditor).toContain("red non-zero 증거");
+    expect(design).toContain("기존 상태에는 `low`, `deterministic`, 전체 경로 허용");
+    expect(readme).toContain("기존 상태 파일은 `low + deterministic + 전체 경로 허용`");
+  });
+
   test("full binds audit identity and workspace while PR delivery is machine-gated", () => {
     const full = skill("full");
     const pr = skill("pr");
     expect(full).toContain("--implementation-model <실제 구현 모델> --audit-model <검수 모델>");
     expect(full).toContain("Git 워크트리의 실제 파일 내용 지문");
     expect(pr).toContain("gdm delivery prepare");
-    expect(pr).toContain("gdm delivery ci --slug <슬러그> --status passed");
+    expect(pr).toContain("CI 체크가 없으면 통과 기록을 만들지 않고 다음 단계로 진행한다");
+    expect(pr).toContain("현재 HEAD의 실패 기록이 있으면 머지하지 않는다");
     expect(pr).toContain("gdm delivery check-merge");
     expect(pr).toContain("자동 재실행은 하지 않는다");
   });

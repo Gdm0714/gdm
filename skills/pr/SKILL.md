@@ -21,7 +21,8 @@ CI가 끝날 때까지 감시하며, 실패하면 원인을 진단해 보고하�
 - NEVER: 선택한 work의 `gdm plan contract --check-commit --slug <슬러그>`가 exit 0이 되기
   전에 stage, commit, push, PR 생성을 시작하지 않는다. exit 4면 변경 없이 중단한다.
 - NEVER: 머지를 임의로 실행하지 않는다. 머지는 사용자가 명시적으로 요청했고
-  CI가 전부 통과한 경우에만 한다.
+  현재 HEAD의 알려진 CI 실패가 없는 경우에만 한다. CI 체크가 구성되지 않은 저장소는
+  CI 통과 기록 없이 진행할 수 있다.
 - IMPORTANT: 푸시 전에 gh 활성 계정과 커밋 author를 확인한다. 개인 레포(Gdm0714
   소유)는 Gdm0714 계정이어야 한다 — 불일치하면 중단하고 사용자에게 알린다.
 - IMPORTANT: CI 실패 진단의 산출물은 원인 보고다. 수정은 사용자가 요청하면
@@ -62,15 +63,19 @@ CI가 끝날 때까지 감시하며, 실패하면 원인을 진단해 보고하�
    Closes #<이슈번호>"
    ```
    PR 생성 뒤 `gdm delivery pr --slug <슬러그> --number <PR번호> --head <HEAD>`를 기록한다.
-8. CI 감시: `gh pr checks --watch` (미지원 환경이면 30초 간격 폴링).
+8. CI 상태 확인: 먼저 `gh pr checks`로 현재 PR에 체크가 구성되어 있는지 확인한다.
+   - 체크가 있으면 `gh pr checks --watch`로 감시한다(미지원 환경이면 30초 간격 폴링).
+   - CI 체크가 없으면 통과 기록을 만들지 않고 다음 단계로 진행한다.
 9. 실패 시: `gh run view <run-id> --log-failed`로 실패 로그를 수집해
    원인을 진단하고 보고한다 — 어떤 체크가, 어떤 단계에서, 무슨 에러로.
    추정이면 추정이라고 표기한다. 실패도 `gdm delivery ci --slug <슬러그> --status failed
    --head <HEAD> --run <run-id>`로 남긴다. 자동 재실행은 하지 않는다.
-10. 전부 통과 시 `gdm delivery ci --slug <슬러그> --status passed --head <HEAD> --run <run-id>`를 기록한다.
-    머지 요청이 있었으면 `gdm delivery approve-merge --slug <슬러그> --head <HEAD> --reason <승인 근거>`와
-    `gdm delivery check-merge --slug <슬러그> --head <HEAD>`가 모두 성공한 뒤에만 머지한다. 머지 후 원격의
-    merge SHA를 `gdm delivery merged --slug <슬러그> --head <HEAD> --merge-sha <SHA>`로 기록한다.
+10. 구성된 체크가 전부 통과하면 `gdm delivery ci --slug <슬러그> --status passed --head <HEAD>
+    --run <run-id>`를 기록한다. 체크가 없으면 CI 기록은 생략한다. 머지 요청이 있었으면
+    `gdm delivery approve-merge --slug <슬러그> --head <HEAD> --reason <승인 근거>`와
+    `gdm delivery check-merge --slug <슬러그> --head <HEAD>`가 모두 성공한 뒤에만 머지한다.
+    현재 HEAD의 실패 기록이 있으면 머지하지 않는다. 머지 후 원격의 merge SHA를
+    `gdm delivery merged --slug <슬러그> --head <HEAD> --merge-sha <SHA>`로 기록한다.
 
 ## 엣지 케이스
 

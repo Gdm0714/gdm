@@ -25,14 +25,30 @@ Codex가 실행하고 Claude CLI·Claude Design에 전문 역할을 맡기는 **
 
 ```bash
 gdm plan init --slug fix-login --brief "로그인 오류 수정" \
-  --require "기존 로그인 동작 보존" --forbid "자동 커밋"
+  --require "기존 로그인 동작 보존" --forbid "자동 커밋" \
+  --assume "기존 세션 형식 유지" --uncertain "외부 인증 응답" \
+  --allow-path cli/src --allow-path cli/test --stop-if "인증 계약 불일치" \
+  --risk medium --verification deterministic --simplify
 gdm plan add --slug fix-login --desc "로그인 회귀 테스트" \
-  --cmd "bun test login" --expect "exit 0"
+  --cmd "bun test login" --expect "exit 0" --kind regression
+gdm pass c1 --red --slug fix-login   # 수정 전에 같은 명령이 실패함을 기록
+# 구현
 gdm pass c1 --slug fix-login
+gdm plan add --slug fix-login --desc "최소 변경 확인" \
+  --cmd "bun run lint" --expect "불필요한 복잡성 없음" --kind static
+gdm pass c2 --slug fix-login
 gdm done --slug fix-login
 ```
 
 `done`은 검증 완료를 뜻한다. 커밋·push·PR 권한은 별도 계약이며 자동으로 생기지 않는다.
+init 시점의 tracked·untracked 파일 지문을 기준선으로 삼기 때문에 이미 있던 로컬 변경은 보존되고,
+이후 허용 경로 밖에서 바뀐 파일만 완료를 막는다. 의도한 범위 확장은 검수 전에
+`gdm plan contract --allow-path <경로> --reason <사유>`로 기록한다.
+
+위험도 `high`는 독립 검수를 자동 요구한다. `high + opaque`(결과를 기계적으로 직접 판정하기
+어려운 작업)는 AI가 전문가를 자칭하지 못하며, `--manual --expert` check에 실제 reviewer와
+판단 근거를 제출해야 한다. 기존 상태 파일은 `low + deterministic + 전체 경로 허용`으로
+읽히므로 예전 작업의 완료 조건은 바뀌지 않는다.
 
 - 설계: [DESIGN.md](./DESIGN.md)
 - 설치 (한 줄 · Bun·클론 불필요):
@@ -48,6 +64,21 @@ gdm done --slug fix-login
   특정 버전은 `GDM_VERSION=v<버전>`, 설치 경로는 `GDM_BIN_DIR`로 조정한다.
 - 설치 (소스에서 · 개발용): 클론 후 `./install/install.sh` (Bun 필요)
 - 사용: Codex에서 `$gdm-go <작업>`, 터미널에서 `gdm --help`
+
+## 선택형 대화형 도구
+
+gdm CLI와 CI에는 필수가 아니지만, 로컬 대화형 작업에서는 다음 도구를 감지해 사용한다.
+
+- [terminal-browser](https://github.com/zenbu-labs/terminal-browser): 웹 UI check를 실제
+  브라우저 pane에서 재현하고 `snapshot`, `click`, `fill`, `eval` 결과를 gdm 증거에 연결한다.
+  단위·통합 테스트나 프로젝트 표준 Playwright·headless 테스트는 그대로 실행한다.
+- [tuicr](https://tuicr.dev/): 사람이 변경 diff를 보고 코멘트하는 리뷰의 기본 공유 화면이다.
+  gdm-review는 사용자 주도 리뷰의 저장된 코멘트를 CLI로 읽고, 에이전트 주도 리뷰의 발견은
+  사용자가 요청한 경우에만 `Codex` 작성자로 기록한다.
+
+두 도구와 Codex 스킬은 각각의 공식 설치 방법으로 별도 설치한다. 사용할 수 없거나 CI처럼
+비대화형인 환경에서는 기존 자동 테스트·텍스트 리뷰로 폴백하며, gdm 설치기가 자동으로
+설치하지 않는다. tuicr는 gdm-full의 독립 검수자를 대신하지 않는다.
 
 새 화면·레이아웃·프로토타입 생성은 claude.ai/design에서 한다. gdm은 저장소 맥락을 반영한
 Claude Design용 프롬프트를 먼저 전달하고 멈추며, 사용자가 생성 완료와 프로젝트 이름/ID를

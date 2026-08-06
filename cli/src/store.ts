@@ -184,7 +184,7 @@ export function checkMark(check: Check): string {
 }
 
 export function checkHow(check: Check): string {
-  return check.manual ? "(수동 확인)" : `${check.cmd}`;
+  return check.manual ? `(수동 확인${check.expert ? " · expert" : ""})` : `${check.cmd}`;
 }
 
 export function renderWorkMd(work: Work): string {
@@ -195,12 +195,15 @@ export function renderWorkMd(work: Work): string {
   const rows = work.checks.map((c) => {
     const cmd = c.manual ? checkHow(c) : `\`${c.cmd}\``;
     const evidence = c.evidence ? c.evidence.observed : "—";
-    return `| ${c.id} | ${checkMark(c)} | ${c.desc} | ${cmd} | ${c.expect} | ${evidence} |`;
+    const red = c.redEvidence ? c.redEvidence.observed : "—";
+    return `| ${c.id} | ${checkMark(c)} | ${c.kind ?? (c.manual ? "manual" : "behavior")} | ${c.desc} | ${cmd} | ${c.expect} | ${red} | ${evidence} |`;
   });
   const required =
     work.contract.required.length > 0 ? work.contract.required.map((value) => `  - ${value}`) : ["  - 없음"];
   const forbidden =
     work.contract.forbidden.length > 0 ? work.contract.forbidden.map((value) => `  - ${value}`) : ["  - 없음"];
+  const list = (values: readonly string[] | undefined, fallback = "없음"): string =>
+    values && values.length > 0 ? values.join(", ") : fallback;
   return [
     `# ${work.slug}`,
     "",
@@ -213,6 +216,14 @@ export function renderWorkMd(work: Work): string {
     "## 작업 계약",
     "",
     `- 커밋: ${work.contract.commit}`,
+    `- 위험도: ${work.contract.risk ?? "low"}`,
+    `- 검증 가능성: ${work.contract.verification ?? "deterministic"}`,
+    `- 허용 경로: ${list(work.contract.allowedPaths, ".")}`,
+    `- 금지 경로: ${list(work.contract.forbiddenPaths)}`,
+    `- 가정: ${list(work.contract.assumptions)}`,
+    `- 불확실성: ${list(work.contract.uncertainties)}`,
+    `- 중단 조건: ${list(work.contract.stopConditions)}`,
+    `- 간소화 증거: ${work.contract.simplificationRequired ? "필수" : "선택"}`,
     "- 필수:",
     ...required,
     "- 금지:",
@@ -220,8 +231,8 @@ export function renderWorkMd(work: Work): string {
     "",
     "## 확인 항목",
     "",
-    "| ID | 상태 | 항목 | 재현 명령 | 기대 | 증거 |",
-    "|---|---|---|---|---|---|",
+    "| ID | 상태 | 종류 | 항목 | 재현 명령 | 기대 | red 증거 | green 증거 |",
+    "|---|---|---|---|---|---|---|---|",
     ...rows,
     ...(work.delivery
       ? [

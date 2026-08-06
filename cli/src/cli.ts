@@ -17,10 +17,13 @@ import { auditIntegrityProblems, captureWorkspaceFingerprint } from "./audit-int
 import { ensureFlags, hasFlag, readFlag, readFlags } from "./cli-args.ts";
 import {
   addConstraints,
+  amendScope,
   assertCommitAllowed,
   createContract,
+  parseRiskLevel,
   parseCommitState,
   parseConstraints,
+  parseVerificationMode,
   safeText,
   transitionCommit,
 } from "./contract.ts";
@@ -30,15 +33,18 @@ import { habitOverview } from "./habit-summary.ts";
 import {
   addCheck,
   assertPassable,
+  checkKind,
   checksHash,
   closeWork,
   editCheck,
   findCheck,
   GdmError,
   initWork,
+  parseCheckKind,
   passCheck,
   provenCount,
   recordAudit,
+  recordRedEvidence,
   refreshEvidence,
   revertChecks,
 } from "./state.ts";
@@ -58,7 +64,8 @@ import {
   workDir,
   workExists,
 } from "./store.ts";
-import type { Evidence, Work } from "./types.ts";
+import type { Check, Evidence, Work } from "./types.ts";
+import { describeScopeProblems, workspaceScopeProblems } from "./workflow-gates.ts";
 import { VERSION } from "./version.ts";
 import { acquireRepositoryLock } from "./repository-lock.ts";
 import { cmdDelivery } from "./delivery-cli.ts";
@@ -77,8 +84,10 @@ const USAGE = `gdm ${VERSION} — 작업 증거가 다음 습관을 바꾸는 �
 흐름: 약속 → 증명 → 관찰 → 습관 → 비교
 
 사용법:
-  gdm plan init --slug <슬러그> (--brief <설명> | --brief-file <파일>) [--audit] (--require <약속> | --forbid <금지>)...
+  gdm plan init --slug <슬러그> (--brief <설명> | --brief-file <파일>) [--audit] [--risk <low|medium|high>] [--verification <deterministic|inspectable|opaque>] [--simplify] (--require <약속> | --forbid <금지>)...
+                [--assume <가정>]... [--uncertain <불확실성>]... [--allow-path <경로>]... [--forbid-path <경로>]... [--stop-if <중단 조건>]...
   gdm plan contract [--slug <슬러그>] (--require <약속> | --forbid <금지>)...
+  gdm plan contract [--slug <슬러그>] (--allow-path <경로> | --forbid-path <경로> | --remove-allow-path <경로> | --remove-forbid-path <경로>)... --reason <사유>
   gdm plan contract [--slug <슬러그>] --commit <forbidden|explicitly-approved> --reason <사유>
   gdm plan contract [--slug <슬러그>] --check-commit
   gdm plan contract --slug <슬러그> --activate-habit <habit-id>@<version>
@@ -92,12 +101,14 @@ const USAGE = `gdm ${VERSION} — 작업 증거가 다음 습관을 바꾸는 �
   gdm habit evaluate <habit-id>@<version> --work <슬러그> --outcome <ineligible|skipped|clean|recurred> [--correct <event-id> --reason <사유>]
   gdm habit status [--json]
   gdm habit harvest [--json]
-  gdm plan add  --desc <항목> --cmd <검증 명령> --expect <기대> [--manual] [--slug <슬러그>]
+  gdm plan add  --desc <항목> --cmd <검증 명령> --expect <기대> [--kind <regression|behavior|edge|static>] [--slug <슬러그>]
+  gdm plan add  --desc <항목> --expect <기대> --manual [--expert] [--slug <슬러그>]
   gdm plan add  --from-brief [--dry-run] [--slug <슬러그>]   # brief의 "## 검증 항목" 초안 일괄 등록
   gdm plan list [--json] [--slug <슬러그>]
-  gdm plan edit --check <id> [--desc ..] [--cmd ..] [--expect ..] --reason <사유> [--slug <슬러그>]
+  gdm plan edit --check <id> [--desc ..] [--cmd ..] [--expect ..] [--kind ..] --reason <사유> [--slug <슬러그>]
+  gdm pass <id> --red [--note <메모>] [--slug <슬러그>]     # regression 항목의 수정 전 실패 증거
   gdm pass <id> [--note <메모>] [--slug <슬러그>]           # 자동 항목: cmd를 직접 실행해 판정
-  gdm pass <id> --manual --observed <확인 기록 파일> [...]   # 수동 항목: 스크린샷 등 제출
+  gdm pass <id> --manual --observed <확인 기록 파일> [--reviewer <검토자>] [...]   # 수동 항목
   gdm recheck [--check <id>] [--slug <슬러그>]              # 통과한 자동 항목 재실행 (회귀 검출)
   gdm audit brief [--json] [--slug <슬러그>]                # 검수자에게 줄 브리핑 패키지 출력
   gdm audit verdict (--pass | --fail) --report <검수보고 파일> --implementation-model <모델> --audit-model <모델> [--slug <슬러그>]
@@ -157,7 +168,7 @@ function checkLine(work: Work): string[] {
   return work.checks.map((c) => {
     const detail =
       c.status === "proven" ? `증거: ${c.evidence?.observed}` : `재현: ${checkHow(c)} → 기대: ${c.expect}`;
-    return `  ${checkMark(c)} ${c.id} ${c.desc} — ${detail}`;
+    return `  ${checkMark(c)} ${c.id} ${c.desc} [${checkKind(c)}] — ${detail}`;
   });
 }
 
@@ -167,16 +178,35 @@ function workHeader(work: Work): string {
 }
 
 function contractLine(work: Work): string {
-  return `계약: 필수 ${work.contract.required.length} · 금지 ${work.contract.forbidden.length} · 커밋 ${work.contract.commit}`;
+  return `계약: 필수 ${work.contract.required.length} · 금지 ${work.contract.forbidden.length} · 위험 ${work.contract.risk ?? "low"} · 검증 ${work.contract.verification ?? "deterministic"} · 커밋 ${work.contract.commit}`;
 }
 
 function cmdPlanInit(cwd: string, args: string[]): void {
-  ensureFlags(args, ["slug", "brief", "brief-file", "require", "forbid"], ["audit"]);
+  ensureFlags(
+    args,
+    [
+      "slug", "brief", "brief-file", "require", "forbid", "assume", "uncertain", "allow-path",
+      "forbid-path", "stop-if", "risk", "verification",
+    ],
+    ["audit", "simplify"],
+  );
   const ts = now();
   const slug = readFlag(args, "slug");
   if (!slug) throw new GdmError("--slug가 필요합니다", "usage");
   const constraints = parseConstraints(readFlags(args, "require"), readFlags(args, "forbid"));
-  const contract = createContract(constraints);
+  const risk = parseRiskLevel(readFlag(args, "risk"));
+  const verification = parseVerificationMode(readFlag(args, "verification"));
+  const allowedPaths = readFlags(args, "allow-path");
+  const contract = createContract(constraints, {
+    assumptions: readFlags(args, "assume"),
+    uncertainties: readFlags(args, "uncertain"),
+    allowedPaths: allowedPaths.length > 0 ? allowedPaths : undefined,
+    forbiddenPaths: readFlags(args, "forbid-path"),
+    stopConditions: readFlags(args, "stop-if"),
+    risk,
+    verification,
+    simplificationRequired: hasFlag(args, "simplify"),
+  });
   const briefFile = readFlag(args, "brief-file");
   let brief: string | undefined;
   if (briefFile) {
@@ -190,17 +220,26 @@ function cmdPlanInit(cwd: string, args: string[]): void {
   if (workExists(cwd, slug)) {
     throw new GdmError(`작업 "${slug}"가 이미 있습니다. 이어서 하려면 gdm resume --slug ${slug}`, "work_exists");
   }
-  const auditRequired = hasFlag(args, "audit");
-  const work = initWork(slug, brief, ts, auditRequired, contract);
-  appendJournal(cwd, slug, { ts, event: "plan.init", brief: work.brief, auditRequired, contract });
+  const auditRequired = hasFlag(args, "audit") || risk === "high";
+  const baseline = captureWorkspaceFingerprint(cwd);
+  const work = initWork(slug, brief, ts, auditRequired, contract, baseline);
+  appendJournal(cwd, slug, { ts, event: "plan.init", brief: work.brief, auditRequired, contract, baseline });
   saveWork(cwd, work);
   console.log(`작업 시작: ${slug}${auditRequired ? " (검수 필수)" : ""}`);
+  if (risk === "high" && !hasFlag(args, "audit")) console.log("high risk 정책으로 독립 검수를 자동 요구합니다");
   console.log(`다음: gdm plan add --desc <항목> --cmd <검증 명령> --expect <기대>`);
 }
 
 function cmdPlanContract(cwd: string, args: string[]): void {
   scanHabitArgs(args);
-  ensureFlags(args, ["slug", "require", "forbid", "commit", "reason", "activate-habit"], ["check-commit"]);
+  ensureFlags(
+    args,
+    [
+      "slug", "require", "forbid", "commit", "reason", "activate-habit", "allow-path", "forbid-path",
+      "remove-allow-path", "remove-forbid-path",
+    ],
+    ["check-commit"],
+  );
   const requiredValues = readFlags(args, "require");
   const forbiddenValues = readFlags(args, "forbid");
   const hasConstraints = requiredValues.length > 0 || forbiddenValues.length > 0;
@@ -209,7 +248,14 @@ function cmdPlanContract(cwd: string, args: string[]): void {
   const activationValues = readFlags(args, "activate-habit");
   const activationValue = activationValues[0];
   const reasonValue = readFlag(args, "reason");
-  const modes = Number(hasConstraints) + Number(checkCommit) + Number(commitValue !== undefined) + Number(activationValue !== undefined);
+  const scopeInput = {
+    addAllowed: readFlags(args, "allow-path"),
+    addForbidden: readFlags(args, "forbid-path"),
+    removeAllowed: readFlags(args, "remove-allow-path"),
+    removeForbidden: readFlags(args, "remove-forbid-path"),
+  };
+  const hasScope = Object.values(scopeInput).some((values) => values.length > 0);
+  const modes = Number(hasConstraints) + Number(hasScope) + Number(checkCommit) + Number(commitValue !== undefined) + Number(activationValue !== undefined);
   if (
     modes !== 1 ||
     activationValues.length > 1 ||
@@ -248,6 +294,16 @@ function cmdPlanContract(cwd: string, args: string[]): void {
     });
     saveWork(cwd, result.work);
     console.log(`계약 갱신: ${work.slug}`);
+    return;
+  }
+  if (hasScope) {
+    if (reasonValue === undefined) throw new GdmError("범위 변경에는 --reason이 필요합니다", "reason_required");
+    const work = resolveWork(cwd, slug);
+    const ts = now();
+    const result = amendScope(work, scopeInput, reasonValue, ts);
+    appendJournal(cwd, work.slug, { ts, event: "contract.scope", ...result.amendment });
+    saveWork(cwd, result.work);
+    console.log(`범위 계약 갱신: ${work.slug} — ${result.amendment.reason}`);
     return;
   }
   if (commitValue === undefined || reasonValue === undefined) {
@@ -338,13 +394,16 @@ function resolveCmd(cwd: string, cmd: string | undefined): string | undefined {
 }
 
 function cmdPlanAddFromBrief(cwd: string, args: string[]): void {
-  if (readFlag(args, "desc") || readFlag(args, "cmd") || readFlag(args, "expect") || hasFlag(args, "manual")) {
-    throw new GdmError("--from-brief는 --desc/--cmd/--expect/--manual과 함께 쓸 수 없습니다", "usage");
+  if (
+    readFlag(args, "desc") || readFlag(args, "cmd") || readFlag(args, "expect") || readFlag(args, "kind") ||
+    hasFlag(args, "manual") || hasFlag(args, "expert")
+  ) {
+    throw new GdmError("--from-brief는 개별 항목 플래그와 함께 쓸 수 없습니다", "usage");
   }
   const ts = now();
   let work = resolveWork(cwd, readFlag(args, "slug"));
   const inputs = parseBriefChecks(work.brief);
-  const added: { id: string; desc: string; cmd: string | null; expect: string; manual: boolean }[] = [];
+  const added: Check[] = [];
   for (const input of inputs) {
     const result = addCheck(work, input);
     work = result.work;
@@ -367,6 +426,8 @@ function cmdPlanAddFromBrief(cwd: string, args: string[]): void {
       cmd: check.cmd,
       expect: check.expect,
       manual: check.manual,
+      kind: check.kind,
+      expert: check.expert,
       source: "brief",
     });
   }
@@ -375,7 +436,7 @@ function cmdPlanAddFromBrief(cwd: string, args: string[]): void {
 }
 
 function cmdPlanAdd(cwd: string, args: string[]): void {
-  ensureFlags(args, ["desc", "cmd", "expect", "slug"], ["manual", "from-brief", "dry-run"]);
+  ensureFlags(args, ["desc", "cmd", "expect", "kind", "slug"], ["manual", "expert", "from-brief", "dry-run"]);
   if (hasFlag(args, "from-brief")) {
     cmdPlanAddFromBrief(cwd, args);
     return;
@@ -390,6 +451,8 @@ function cmdPlanAdd(cwd: string, args: string[]): void {
     cmd: resolveCmd(cwd, readFlag(args, "cmd")),
     expect: readFlag(args, "expect"),
     manual: hasFlag(args, "manual"),
+    kind: parseCheckKind(readFlag(args, "kind")),
+    expert: hasFlag(args, "expert"),
   });
   appendJournal(cwd, work.slug, {
     ts,
@@ -399,6 +462,8 @@ function cmdPlanAdd(cwd: string, args: string[]): void {
     cmd: check.cmd,
     expect: check.expect,
     manual: check.manual,
+    kind: check.kind,
+    expert: check.expert,
   });
   saveWork(cwd, next);
   console.log(`${check.id} 추가됨 (총 ${next.checks.length}개)`);
@@ -416,7 +481,7 @@ function cmdPlanList(cwd: string, args: string[]): void {
 }
 
 function cmdPlanEdit(cwd: string, args: string[]): void {
-  ensureFlags(args, ["check", "desc", "cmd", "expect", "reason", "slug"]);
+  ensureFlags(args, ["check", "desc", "cmd", "expect", "kind", "reason", "slug"]);
   const ts = now();
   const id = readFlag(args, "check");
   if (!id) throw new GdmError("--check <id>가 필요합니다", "usage");
@@ -426,6 +491,7 @@ function cmdPlanEdit(cwd: string, args: string[]): void {
     desc: readFlag(args, "desc"),
     cmd: resolveCmd(cwd, readFlag(args, "cmd")),
     expect: readFlag(args, "expect"),
+    kind: parseCheckKind(readFlag(args, "kind")),
   };
   try {
     const { work: next, reverted } = editCheck(work, id, patch, reason);
@@ -438,14 +504,19 @@ function cmdPlanEdit(cwd: string, args: string[]): void {
   }
 }
 
-function buildManualEvidence(cwd: string, args: string[], note?: string): Omit<Evidence, "at"> {
+function buildManualEvidence(
+  cwd: string,
+  args: string[],
+  note?: string,
+  reviewer?: string,
+): Omit<Evidence, "at"> {
   const observed = readFlag(args, "observed");
   if (!observed) {
     throw new GdmError("수동 항목은 --observed <확인 기록 파일(스크린샷 등)>이 필요합니다", "usage");
   }
   const contained = readContainedFile(cwd, observed, "observed");
   if (contained.content.length === 0) throw new GdmError(`증거 파일이 비어 있습니다: ${observed}`, "observed_empty");
-  return { observed, sha256: contained.sha256, manual: true, note };
+  return { observed, sha256: contained.sha256, manual: true, note, reviewer };
 }
 
 function buildAutoEvidence(
@@ -482,6 +553,40 @@ function buildAutoEvidence(
   return { observed, sha256: sha256(body), exitCode: result.status, manual: false, note };
 }
 
+function buildRedEvidence(
+  cwd: string,
+  slug: string,
+  id: string,
+  cmd: string,
+  note?: string,
+): Omit<Evidence, "at"> {
+  const outDir = join(workDir(cwd, slug), "out");
+  mkdirSync(outDir, { recursive: true });
+  const outPath = join(outDir, `${id}-red.txt`);
+  console.log(`red 재현: ${cmd}`);
+  const result = spawnSync("bash", ["-c", cmd], {
+    cwd,
+    encoding: "utf8",
+    timeout: CMD_TIMEOUT_MS,
+    maxBuffer: 10 * 1024 * 1024,
+  });
+  const output = `${result.stdout ?? ""}${result.stderr ? `\n[stderr]\n${result.stderr}` : ""}`;
+  const body = `$ ${cmd}\n(exit ${result.status})\n\n${output}`;
+  writeFileSync(outPath, body);
+  const observed = relative(cwd, outPath);
+  if (result.error || result.status === null) {
+    throw new GdmError(`red 재현 명령 실행 실패: ${result.error?.message ?? "종료 상태 없음"}`, "cmd_failed");
+  }
+  if (result.status === 0) {
+    throw new GdmError(
+      `red 재현이 성공(exit 0)했습니다. 결함을 드러내는 동일 명령인지 확인한 뒤 다시 실행하세요. 출력: ${observed}`,
+      "red_expected_failure",
+    );
+  }
+  console.log(tailLines(output, 10));
+  return { observed, sha256: sha256(body), exitCode: result.status, manual: false, note };
+}
+
 function validateAutoCommand(cwd: string, cmd: string): string {
   console.log(`실행: ${cmd}`);
   const result = spawnSync("bash", ["-c", cmd], {
@@ -510,11 +615,32 @@ function cmdPass(cwd: string, args: string[]): void {
   const id = args[0] && !args[0].startsWith("--") ? args[0] : undefined;
   if (!id) throw new GdmError("통과시킬 항목 id가 필요합니다: gdm pass <id>", "usage");
   const rest = args.slice(1);
-  ensureFlags(rest, ["observed", "note", "slug"], ["manual"]);
+  ensureFlags(rest, ["observed", "note", "reviewer", "slug"], ["manual", "red"]);
   const work = resolveWork(cwd, readFlag(rest, "slug"));
   try {
     const check = assertPassable(work, id);
-    const note = readFlag(rest, "note");
+    const noteValue = readFlag(rest, "note");
+    const note = check.expert && noteValue !== undefined ? safeText(noteValue, "note") : noteValue;
+    if (hasFlag(rest, "red")) {
+      if (hasFlag(rest, "manual") || readFlag(rest, "observed") || readFlag(rest, "reviewer")) {
+        throw new GdmError("--red는 자동 regression 명령과 note만 받습니다", "red_not_allowed");
+      }
+      if (checkKind(check) !== "regression" || check.manual || !check.cmd) {
+        throw new GdmError(`${id}는 regression 자동 항목이 아닙니다. --red를 제거하세요`, "red_not_allowed");
+      }
+      const evidence = buildRedEvidence(cwd, work.slug, id, check.cmd, note);
+      const next = recordRedEvidence(work, id, evidence, ts);
+      appendJournal(cwd, work.slug, { ts, event: "pass.red", check: id, ...evidence });
+      saveWork(cwd, next);
+      console.log(`${id} red 증거 기록됨 — 결함을 수정한 뒤 gdm pass ${id}`);
+      return;
+    }
+    if (checkKind(check) === "regression" && !check.redEvidence) {
+      throw new GdmError(
+        `${id}는 regression 항목입니다. 먼저 gdm pass ${id} --red로 실패를 재현하세요`,
+        "red_evidence_required",
+      );
+    }
     let evidence: Omit<Evidence, "at">;
     if (check.manual) {
       if (!hasFlag(rest, "manual")) {
@@ -523,11 +649,13 @@ function cmdPass(cwd: string, args: string[]): void {
           "manual_required",
         );
       }
-      evidence = buildManualEvidence(cwd, rest, note);
+      const reviewerValue = readFlag(rest, "reviewer");
+      const reviewer = reviewerValue === undefined ? undefined : safeText(reviewerValue, "reviewer");
+      evidence = buildManualEvidence(cwd, rest, note, reviewer);
     } else {
-      if (hasFlag(rest, "manual") || readFlag(rest, "observed")) {
+      if (hasFlag(rest, "manual") || readFlag(rest, "observed") || readFlag(rest, "reviewer")) {
         throw new GdmError(
-          `${id}는 자동 검증 항목입니다. gdm pass가 검증 명령을 직접 실행하므로 --manual/--observed는 쓸 수 없습니다`,
+          `${id}는 자동 검증 항목입니다. --manual/--observed/--reviewer는 쓸 수 없습니다`,
           "manual_not_allowed",
         );
       }
@@ -611,27 +739,38 @@ function cmdRecheck(cwd: string, args: string[]): void {
   console.log(`재검증 결과: ${targets.length}개 전부 통과 (${proven}/${total})`);
 }
 
-function verifyEvidence(cwd: string, work: Work): { id: string; why: string }[] {
-  const problems: { id: string; why: string }[] = [];
+function verifyEvidence(cwd: string, work: Work): { id: string; why: string; red?: boolean }[] {
+  const problems: { id: string; why: string; red?: boolean }[] = [];
   for (const check of work.checks) {
-    if (check.status !== "proven" || !check.evidence) continue;
-    const path = resolve(cwd, check.evidence.observed);
-    if (!existsSync(path)) {
-      problems.push({ id: check.id, why: `${check.id}: 증거 파일 없음 (${check.evidence.observed})` });
-      continue;
-    }
-    if (sha256(readFileSync(path)) !== check.evidence.sha256) {
-      problems.push({
-        id: check.id,
-        why: `${check.id}: 증거 파일이 pass 이후 변경됨 (${check.evidence.observed})`,
-      });
+    const evidenceItems = [
+      ...(check.redEvidence ? [{ evidence: check.redEvidence, red: true }] : []),
+      ...(check.status === "proven" && check.evidence ? [{ evidence: check.evidence, red: false }] : []),
+    ];
+    for (const item of evidenceItems) {
+      const path = resolve(cwd, item.evidence.observed);
+      const label = item.red ? "red 증거" : "증거";
+      if (!existsSync(path)) {
+        problems.push({
+          id: check.id,
+          why: `${check.id}: ${label} 파일 없음 (${item.evidence.observed})`,
+          red: item.red,
+        });
+        continue;
+      }
+      if (sha256(readFileSync(path)) !== item.evidence.sha256) {
+        problems.push({
+          id: check.id,
+          why: `${check.id}: ${label} 파일이 pass 이후 변경됨 (${item.evidence.observed})`,
+          red: item.red,
+        });
+      }
     }
   }
   return problems;
 }
 
 function auditState(cwd: string, work: Work): string {
-  if (!work.auditRequired) return "";
+  if (!work.auditRequired && work.contract.risk !== "high") return "";
   if (!work.audit) return "검수: 필요 (미실시)";
   if (work.audit.result === "fail") return "검수: 반려";
   if (work.audit.stateHash !== checksHash(work)) return "검수: 무효 (상태 변경됨, 재검수 필요)";
@@ -657,13 +796,21 @@ function cmdAuditBrief(cwd: string, args: string[]): void {
   console.log(contractLine(work));
   for (const value of work.contract.required) console.log(`- 필수: ${value}`);
   for (const value of work.contract.forbidden) console.log(`- 금지: ${value}`);
+  for (const value of work.contract.assumptions ?? []) console.log(`- 가정: ${value}`);
+  for (const value of work.contract.uncertainties ?? []) console.log(`- 불확실성: ${value}`);
+  console.log(`- 허용 경로: ${(work.contract.allowedPaths ?? ["."]).join(", ") || "없음"}`);
+  console.log(`- 금지 경로: ${(work.contract.forbiddenPaths ?? []).join(", ") || "없음"}`);
+  for (const value of work.contract.stopConditions ?? []) console.log(`- 중단 조건: ${value}`);
+  console.log(`- 간소화 증거: ${work.contract.simplificationRequired ? "필수" : "선택"}`);
   console.log("");
   console.log("## 확인 항목과 증거");
   for (const c of work.checks) {
     const how = c.manual ? "(수동 확인)" : c.cmd;
-    console.log(`- ${c.id} [${c.status}] ${c.desc}`);
+    console.log(`- ${c.id} [${c.status}/${checkKind(c)}] ${c.desc}${c.expert ? " (expert)" : ""}`);
     console.log(`  검증: ${how} → 기대: ${c.expect}`);
+    if (c.redEvidence) console.log(`  red 증거: ${c.redEvidence.observed} (sha256 ${c.redEvidence.sha256.slice(0, 12)}…)`);
     if (c.evidence) console.log(`  증거: ${c.evidence.observed} (sha256 ${c.evidence.sha256.slice(0, 12)}…)`);
+    if (c.evidence?.reviewer) console.log(`  reviewer: ${c.evidence.reviewer} · 근거: ${c.evidence.note ?? "—"}`);
   }
   const denied = readJournal(cwd, work.slug).filter((e) => e.event === "denied" || e.event === "plan.edit");
   if (denied.length > 0) {
@@ -735,13 +882,18 @@ function cmdDone(cwd: string, args: string[]): void {
   const ts = now();
   const work = resolveWork(cwd, readFlag(args, "slug"));
   try {
-    if (work.auditRequired && work.audit?.result === "pass") {
+    const scopeProblems = workspaceScopeProblems(work, captureWorkspaceFingerprint(cwd));
+    if (scopeProblems.length > 0) {
+      throw new GdmError(describeScopeProblems(scopeProblems), "scope_violation");
+    }
+    const requiresAudit = work.auditRequired || work.contract.risk === "high";
+    if (requiresAudit && work.audit?.result === "pass") {
       const problems = auditIntegrityProblems(cwd, work.audit);
       if (problems.length > 0) {
         throw new GdmError(`검수 무결성 실패 — 재검수가 필요합니다: ${problems.join(", ")}`, "audit_stale");
       }
     }
-    const auditBindsGitWorkspace = work.auditRequired && work.audit?.result === "pass" && work.audit.workspace !== null;
+    const auditBindsGitWorkspace = requiresAudit && work.audit?.result === "pass" && work.audit.workspace !== null;
     const autoTargets = auditBindsGitWorkspace
       ? []
       : work.checks.filter((c) => c.status === "proven" && !c.manual);
@@ -753,10 +905,15 @@ function cmdDone(cwd: string, args: string[]): void {
         "unproven",
       );
     }
+    const postCheckScopeProblems = workspaceScopeProblems(rechecked, captureWorkspaceFingerprint(cwd));
+    if (postCheckScopeProblems.length > 0) {
+      throw new GdmError(describeScopeProblems(postCheckScopeProblems), "scope_violation");
+    }
     const stale = verifyEvidence(cwd, rechecked);
     if (stale.length > 0) {
-      const ids = stale.map((s) => s.id);
-      const reverted = revertChecks(rechecked, ids);
+      const ids = [...new Set(stale.map((s) => s.id))];
+      const redIds = [...new Set(stale.filter((s) => s.red).map((s) => s.id))];
+      const reverted = revertChecks(rechecked, ids, redIds);
       appendJournal(cwd, work.slug, { ts, event: "evidence_stale", checks: ids });
       saveWork(cwd, reverted);
       throw new GdmError(
@@ -1098,7 +1255,21 @@ function cmdRepair(cwd: string, args: string[]): void {
   console.log(`${slug} 상태 복구 완료: trailing NUL ${removedBytes}바이트 제거`);
 }
 
-const SKILL_NAMES = ["go", "full", "plan", "review", "analyze", "research", "pr", "ui", "db", "design", "reflect"] as const;
+const SKILL_NAMES = [
+  "go",
+  "full",
+  "plan",
+  "review",
+  "analyze",
+  "research",
+  "pr",
+  "ui",
+  "db",
+  "design",
+  "reflect",
+  "email",
+  "document",
+] as const;
 
 function repoVersionFromSkills(): { version: string; root: string } | undefined {
   try {
@@ -1274,7 +1445,11 @@ async function main(): Promise<void> {
         "habit_activation_conflict",
         "habit_event_invalid",
       ]);
-      const policy = new Set(["commit_forbidden", "unchanged_retry", "stale_evidence", "delivery_gate"]);
+      const policy = new Set([
+        "commit_forbidden", "unchanged_retry", "stale_evidence", "delivery_gate", "scope_violation",
+        "red_evidence_required", "red_expected_failure", "red_not_allowed", "simplification_required",
+        "expert_evidence_required", "expert_review_required", "scope_locked",
+      ]);
       const privacy = new Set(["privacy_rejected", "path_rejected"]);
       if (usage.has(error.code)) process.exitCode = 2;
       else if (invalid.has(error.code)) process.exitCode = 3;

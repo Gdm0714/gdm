@@ -11,7 +11,7 @@ function git(cwd: string, args: readonly string[]): { readonly status: number | 
 }
 
 function excluded(path: string): boolean {
-  return path === ".gdm.lock" || path === ".gdm" || path.startsWith(`.gdm${sep}`);
+  return path === ".gdm.lock" || path === ".gdm" || path.startsWith(".gdm/");
 }
 
 export function currentGitPosition(cwd: string): { readonly head: string; readonly branch: string } | null {
@@ -23,31 +23,40 @@ export function currentGitPosition(cwd: string): { readonly head: string; readon
 
 export function captureWorkspaceFingerprint(cwd: string): WorkspaceFingerprint | null {
   const rootResult = git(cwd, ["rev-parse", "--show-toplevel"]);
-  const position = currentGitPosition(cwd);
-  if (rootResult.status !== 0 || position === null) return null;
+  if (rootResult.status !== 0) return null;
   const root = rootResult.stdout.trim();
-  const head = position.head;
+  const headResult = git(root, ["rev-parse", "HEAD"]);
+  const head = headResult.status === 0 && headResult.stdout.trim()
+    ? headResult.stdout.trim().toLowerCase()
+    : "unborn";
   const files = git(root, ["ls-files", "--cached", "--others", "--exclude-standard", "-z"]);
   if (files.status !== 0) return null;
 
   const hash = createHash("sha256");
+  const fingerprints: { path: string; sha256: string }[] = [];
   for (const file of files.stdout.split("\0").filter(Boolean).sort()) {
     const path = resolve(root, file);
-    const fromRoot = relative(root, path);
-    if (fromRoot.startsWith(`..${sep}`) || fromRoot === ".." || excluded(fromRoot)) continue;
-    hash.update(`path\0${fromRoot}\0`);
+    const fromRoot = relative(root, path).split(sep).join("/");
+    if (fromRoot.startsWith("../") || fromRoot === ".." || excluded(fromRoot)) continue;
+    const fileHash = createHash("sha256");
+    const update = (value: string | Uint8Array): void => {
+      hash.update(value);
+      fileHash.update(value);
+    };
+    update(`path\0${fromRoot}\0`);
     try {
       const stat = lstatSync(path);
-      if (stat.isSymbolicLink()) hash.update(`symlink\0${readlinkSync(path)}\0`);
+      if (stat.isSymbolicLink()) update(`symlink\0${readlinkSync(path)}\0`);
       else if (stat.isFile()) {
-        hash.update(`file\0${stat.mode & 0o111 ? "executable" : "regular"}\0`);
-        hash.update(readFileSync(path));
+        update(`file\0${stat.mode & 0o111 ? "executable" : "regular"}\0`);
+        update(readFileSync(path));
       }
     } catch {
-      hash.update("deleted\0");
+      update("deleted\0");
     }
+    fingerprints.push({ path: fromRoot, sha256: fileHash.digest("hex") });
   }
-  return { kind: "git", head, sha256: hash.digest("hex") };
+  return { kind: "git", head, sha256: hash.digest("hex"), files: fingerprints };
 }
 
 export function auditIntegrityProblems(cwd: string, audit: Audit): string[] {
