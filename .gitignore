@@ -1,5 +1,8 @@
 node_modules/
 cli/dist/
+native/.build/
 .gdm/
+.gdm.lock
 .DS_Store
 .omc/
+.omo/

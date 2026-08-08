@@ -1,0 +1,75 @@
+/* gdm native — canonical tokens
+   Claude Design Direction A, corrected by measured contrast gates. */
+
+:root {
+  --surface-terminal: #101315;
+  --surface-status-bar: #15191C;
+  --surface-app: #16191C;
+  --surface-panel: #181C1F;
+  --surface-bar: #1B1F23;
+  --surface-hover: #1E2328;
+  --surface-raised: #1C2126;
+  --surface-selected: #212630;
+
+  --line-structure: #343B42;
+  --line-soft: #23282D;
+  --line-control: #64707A;
+
+  --text-strong: #F0F3F6;
+  --text-primary: #DFE4E8;
+  --text-secondary: #A9B2BA;
+  --text-tertiary: #7B858D;
+  --text-disabled: #6D757D;
+
+  --signal-proven: #5FD08A;
+  --signal-active: #6FB3FF;
+  --signal-attention: #E0B45C;
+  --signal-blocked: #F07B6D;
+
+  --font-ui: -apple-system, "Apple SD Gothic Neo", sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", monospace;
+  --font-size-label: 10px;
+  --font-size-meta: 11px;
+  --font-size-row: 12px;
+  --font-size-body: 13px;
+  --font-size-terminal: 13px;
+  --font-size-title: 16px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+
+  --toolbar-height: 44px;
+  --pane-header-height: 32px;
+  --status-bar-height: 26px;
+  --task-rail-width: 246px;
+  --task-rail-min-width: 198px;
+  --proof-rail-width: 344px;
+  --drawer-height: 244px;
+  --row-height: 38px;
+  --control-min-height: 28px;
+  --compact-breakpoint: 1280px;
+  --agent-activity-breakpoint: 1200px;
+  --agent-activity-popover-width: 352px;
+  --palette-width: 520px;
+
+  --radius-control: 4px;
+  --radius-overlay: 8px;
+  --focus-ring-width: 2px;
+
+  --motion-fade-out: 90ms;
+  --motion-fade-in: 140ms;
+  --motion-state: 180ms;
+  --motion-settle: 200ms;
+  --motion-progress: 220ms;
+  --motion-panel: 240ms;
+  --motion-pulse: 1400ms;
+  --motion-counter-out: 120ms;
+  --motion-counter-in: 180ms;
+  --motion-overlay-backdrop: 120ms;
+  --motion-overlay-selector: 130ms;
+  --motion-overlay-popover: 140ms;
+  --motion-overlay-sheet: 160ms;
+}

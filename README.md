@@ -92,6 +92,7 @@ write_files/delete_files`는 사용자가 양방향 push까지 요청한 경우�
 ```text
 skills/   반복 작업을 위한 gdm 스킬
 cli/      모델 호출 없이 상태와 증거를 판정하는 Bun/TypeScript CLI
+native/   실제 gdm 작업 상태를 읽는 macOS SwiftUI 워크스페이스
 agents/   독립 검수 기준
 install/  바이너리 빌드와 스킬 설치
 ```
@@ -104,6 +105,22 @@ bun run verify
 ```
 
 `verify`는 타입 검사, 커버리지 기준, 전체 테스트, 빌드, 바이너리 스모크 테스트를 한 번만 순서대로 실행한다.
+
+네이티브 워크스페이스는 macOS 14 이상과 Xcode Command Line Tools가 필요하다.
+
+```bash
+cd native
+swift run gdm-native --repo ..
+```
+
+`New Task`는 전용 Git worktree와 그 안의 GDM 계약을 만들고, 왼쪽 작업 목록과 오른쪽 Proof
+Rail은 root legacy 작업과 worktree별 `.gdm/*/checks.json`을 함께 읽는다. `Run verification`은
+선택한 worktree의 open 자동 check를 gdm CLI로 실행한다. 중앙 interactive PTY에서는 task별로
+Shell·Codex·Claude·Gemini와 설치된 로컬 agent를 선택해 실행하고, toolbar의 Agent Activity에서 여러 task의
+실행 현황을 함께 확인한다. 공식 앱이 설치되어 있으면 vendor 원본 아이콘을 런타임에 사용하며,
+아래 drawer는 diff·journal·evidence를 보여준다.
+상세 범위와 현재 제약은
+[`native/README.md`](./native/README.md)에 정리했다.
 
 ## 라이선스
 
