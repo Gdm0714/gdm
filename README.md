@@ -1,6 +1,17 @@
-# gdm
+# Gidem
 
-작업 증거가 다음 습관을 바꾸는 개인 AI 워크플로우다. AI의 말이 아니라 재현 가능한 결과로 작업을 닫고, 반복된 실수만 사람이 검토할 습관 후보로 되돌린다.
+<p align="center">
+  <picture>
+    <source media="(max-width: 480px)" srcset="assets/readme-hero-compact.svg">
+    <img src="assets/readme-hero.svg" width="920" alt="Gidem — Agents run. Evidence decides.">
+  </picture>
+</p>
+
+Gidem은 여러 코딩 에이전트를 작업별 격리 환경에서 실행하고, 터미널·diff·journal·evidence를 한곳에서 확인하는 macOS Native 워크스페이스다. 에이전트의 완료 주장이 아니라 재현 가능한 증거가 작업 종료 여부를 결정한다.
+
+**Agents run. Evidence decides.**
+
+결정적 검증 엔진과 CLI 이름은 `gdm`이다. Gidem은 그 위에서 실제 작업과 에이전트 실행 현황을 보여주는 제품 표면이다. 기반 원칙은 **작업 증거가 다음 습관을 바꾸는 개인 AI 워크플로우**다.
 
 gdm의 흐름은 `약속 → 증명 → 관찰 → 습관 → 비교`다.
 

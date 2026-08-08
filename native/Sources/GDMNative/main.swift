@@ -47,6 +47,9 @@ final class GDMApplicationDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if let icon = GidemBrandAssets.applicationIconImage {
+            NSApplication.shared.applicationIconImage = icon
+        }
         let store = WorkspaceStore(
             repositoryURL: options.repositoryURL,
             demoState: options.demoState,
@@ -60,7 +63,7 @@ final class GDMApplicationDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
-        window.title = "gdm native"
+        window.title = GidemBrandAssets.productName
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.isMovableByWindowBackground = false

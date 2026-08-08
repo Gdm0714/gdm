@@ -229,13 +229,16 @@ private struct WorkspaceToolbar: View {
     var body: some View {
         HStack(spacing: DesignTokens.space3) {
             HStack(spacing: DesignTokens.space2) {
-                ForEach(0..<3, id: \.self) { _ in
-                    Circle()
-                        .fill(DesignTokens.textDisabled)
-                        .frame(width: DesignTokens.space3, height: DesignTokens.space3)
+                GidemBrandMark()
+                    .frame(width: 18, height: 18)
+                if !compact {
+                    Text(GidemBrandAssets.productName)
+                        .font(.system(size: DesignTokens.rowSize, weight: .semibold))
+                        .foregroundStyle(DesignTokens.textStrong)
                 }
             }
-            .accessibilityHidden(true)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(GidemBrandAssets.productName)
 
             Button { store.toggleTasks() } label: {
                 Text(store.isTaskRailVisible ? "◀" : "▶")

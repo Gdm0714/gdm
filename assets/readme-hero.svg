@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 260" width="920" height="260" role="img" aria-labelledby="title desc">
+  <title id="title">Gidem</title>
+  <desc id="desc">Agents run. Evidence decides. 세 실행 노드가 Orbit G를 완성하는 단회 애니메이션.</desc>
+  <style>
+    #static-nodes { display: none; }
+    @media (prefers-reduced-motion: reduce) {
+      #motion-nodes { display: none; }
+      #static-nodes { display: inline; }
+    }
+  </style>
+  <rect x="1" y="1" width="918" height="258" rx="8" fill="#16191C" stroke="#343B42" stroke-width="2"/>
+  <g transform="translate(54 34) scale(3)">
+    <g fill="none" stroke="#F0F3F6" stroke-width="8">
+      <path d="M50 19.4A22 22 0 1 0 54 32"/>
+      <path d="M54 32H48"/>
+    </g>
+    <g id="motion-nodes">
+      <rect x="-3" y="-3" width="6" height="6" rx="1.5" fill="#6FB3FF" opacity="0">
+        <animate attributeName="opacity" from="0" to="1" begin="0.15s" dur="0.01s" fill="freeze"/>
+        <animateMotion path="M50 19.4A22 22 0 1 0 54 32L27 32" begin="0.15s" dur="1.5s" calcMode="spline" keyTimes="0;1" keySplines="0.32 0 0.16 1" fill="freeze"/>
+        <animate attributeName="fill" to="#5FD08A" begin="2.35s" dur="0.25s" fill="freeze"/>
+      </rect>
+      <rect x="-3" y="-3" width="6" height="6" rx="1.5" fill="#6FB3FF" opacity="0">
+        <animate attributeName="opacity" from="0" to="1" begin="0.45s" dur="0.01s" fill="freeze"/>
+        <animateMotion path="M50 19.4A22 22 0 1 0 54 32L35 32" begin="0.45s" dur="1.5s" calcMode="spline" keyTimes="0;1" keySplines="0.32 0 0.16 1" fill="freeze"/>
+        <animate attributeName="fill" to="#5FD08A" begin="2.35s" dur="0.25s" fill="freeze"/>
+      </rect>
+      <rect x="-3" y="-3" width="6" height="6" rx="1.5" fill="#6FB3FF" opacity="0">
+        <animate attributeName="opacity" from="0" to="1" begin="0.75s" dur="0.01s" fill="freeze"/>
+        <animateMotion path="M50 19.4A22 22 0 1 0 54 32L43 32" begin="0.75s" dur="1.5s" calcMode="spline" keyTimes="0;1" keySplines="0.32 0 0.16 1" fill="freeze"/>
+        <animate attributeName="fill" to="#5FD08A" begin="2.35s" dur="0.25s" fill="freeze"/>
+      </rect>
+    </g>
+    <g id="static-nodes" fill="#5FD08A">
+      <rect x="40" y="29" width="6" height="6" rx="1.5"/>
+      <rect x="32" y="29" width="6" height="6" rx="1.5"/>
+      <rect x="24" y="29" width="6" height="6" rx="1.5"/>
+    </g>
+  </g>
+  <text x="310" y="112" fill="#F0F3F6" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="66" font-weight="600" letter-spacing="1.2">Gidem</text>
+  <text x="314" y="151" fill="#A9B2BA" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="19" letter-spacing="1.8">Agents run. Evidence decides.</text>
+  <text x="314" y="192" fill="#7B858D" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="13" letter-spacing="1">CONTRACT → RUN → VERIFY → OBSERVE → IMPROVE</text>
+</svg>

@@ -1,7 +1,10 @@
-# gdm native design system
+# Gidem native design system
 
 - Reference: an aircraft operations board whose right-side maintenance ledger proves whether a task may close.
-- Direction: Claude Design Direction A, with Direction B's signed-evidence grammar in the Proof Rail.
+- Direction: Orbit G identity, with signed-evidence grammar in the Proof Rail.
+- Identity: the G is a workflow track; three nodes complete its crossbar only after evidence is proven.
+- Brand assets: `assets/`; the 16px master drops node gaps, while larger marks keep the three-node rhythm.
+- Brand motion: one 2.6s entrance, no loop, proven final frame; Reduce Motion serves the same frame immediately.
 - Tone: quiet, dense, operational, and legible through a full workday.
 - Theme: dark-only for the first native shell because terminal and evidence panes must share one luminance range.
 - Signature: the Proof Rail is a top-to-bottom argument from contract to delivery, never a dashboard card stack.
