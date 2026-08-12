@@ -117,6 +117,7 @@ export interface Work {
   createdAt: string;
   done: boolean;
   doneAt?: string;
+  verificationPlanSourceFingerprint?: string;
   auditRequired?: boolean;
   audit?: Audit;
   delivery?: DeliveryState;

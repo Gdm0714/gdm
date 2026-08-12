@@ -19,7 +19,7 @@ done
   print -u2 -- "usage: $0 --bin-dir DIR --out DIR --version X.Y.Z"
   exit 2
 }
-for command_name in install mktemp python3; do
+for command_name in bun install mktemp python3; do
   command -v "$command_name" >/dev/null 2>&1 || {
     print -u2 -- "missing release dependency: $command_name"
     exit 1
@@ -53,8 +53,10 @@ done
 }
 mkdir -p "${OUT:h}"
 stage=$(mktemp -d "${OUT:h}/.gdm-release.XXXXXX")
+render_root=$(mktemp -d "${OUT:h}/.gdm-targets.XXXXXX")
 cleanup() {
   [[ -z "$stage" ]] || rm -rf "$stage"
+  [[ -z "$render_root" ]] || rm -rf "$render_root"
 }
 trap cleanup EXIT INT TERM
 
@@ -62,7 +64,31 @@ for asset in $assets; do
   install -m 0755 "$BIN_DIR/$asset" "$stage/$asset"
 done
 
-python3 - "$ROOT" "$stage/gdm-skills.tar.gz" "$epoch" <<'PY'
+mkdir -p "$render_root/targets"
+for target in codex claude; do
+  bun "$ROOT/install/render-skills.ts" \
+    --target "$target" \
+    --source-root "$ROOT/skills" \
+    --agents-root "$ROOT/agents" \
+    --output "$render_root/targets/$target" >/dev/null
+done
+python3 - "$render_root/targets/codex/gdm-target-manifest.json" \
+  "$render_root/targets/claude/gdm-target-manifest.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as source:
+    codex = json.load(source)
+with open(sys.argv[2], encoding="utf-8") as source:
+    claude = json.load(source)
+if codex.get("target") != "codex" or claude.get("target") != "claude":
+    raise SystemExit("generated target manifest identity mismatch")
+for field in ("canonicalSourceSha256", "sourceSha256", "capabilityProfile", "runner"):
+    if codex.get(field) != claude.get(field):
+        raise SystemExit(f"generated target manifest parity mismatch: {field}")
+PY
+
+python3 - "$render_root" "$stage/gdm-skills.tar.gz" "$epoch" <<'PY'
 from pathlib import Path
 import gzip
 import os
@@ -72,11 +98,9 @@ import tarfile
 root = Path(sys.argv[1])
 output = Path(sys.argv[2])
 epoch = int(sys.argv[3])
-paths = []
-for top_level in ("agents", "skills"):
-    base = root / top_level
-    paths.append(base)
-    paths.extend(sorted(base.rglob("*")))
+base = root / "targets"
+paths = [base]
+paths.extend(sorted(base.rglob("*")))
 
 with output.open("xb") as raw:
     with gzip.GzipFile(filename="", mode="wb", fileobj=raw, compresslevel=9, mtime=epoch) as compressed:
@@ -125,5 +149,7 @@ if os.path.lexists(destination):
 os.rename(source, destination)
 PY
 stage=""
+rm -rf "$render_root"
+render_root=""
 
 print -- "packaged GDM $VERSION release assets in $OUT"

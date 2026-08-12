@@ -12,6 +12,8 @@ describe("contained file boundary", () => {
     const result = readContainedFile(cwd, "evidence/result.txt", "observed");
     expect(result.path).toBe("evidence/result.txt");
     expect(result.content).toBe("verified\n");
+    expect(Buffer.from(result.bytes).toString("utf8")).toBe("verified\n");
+    expect(result.bytesBase64).toBe(Buffer.from("verified\n").toString("base64"));
     expect(result.sha256).toHaveLength(64);
   });
 
@@ -23,5 +25,15 @@ describe("contained file boundary", () => {
     for (const value of ["/etc/hosts", "../escape", "link.txt", "missing.txt", "directory"]) {
       expect(() => readContainedFile(cwd, value, "observed")).toThrow();
     }
+  });
+
+  test("enforces an optional byte cap before returning file content", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "gdm-contained-cap-"));
+    writeFileSync(join(cwd, "large.txt"), "123456");
+    expect(() => readContainedFile(cwd, "large.txt", "artifact", {
+      maxBytes: 5,
+      tooLargeCode: "artifact_too_large",
+    })).toThrow(expect.objectContaining({ code: "artifact_too_large" }));
+    expect(readContainedFile(cwd, "large.txt", "artifact", { maxBytes: 6 }).content).toBe("123456");
   });
 });

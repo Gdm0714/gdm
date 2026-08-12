@@ -33,7 +33,7 @@ function auditedRepo(command = "grep -q GOOD product.txt"): { cwd: string; slug:
   ]).exitCode).toBe(0);
   expect(run(cwd, ["pass", "c1", "--slug", slug]).exitCode).toBe(0);
   const report = join(".gdm", slug, "audit-report.md");
-  writeFileSync(join(cwd, report), "# audit\nimplementationModel: Codex\nauditModel: Claude\n");
+  writeFileSync(join(cwd, report), "# audit\n**판정: 통과**\nimplementationModel: Codex\nauditModel: Claude\n");
   return { cwd, slug, report };
 }
 
@@ -52,10 +52,30 @@ describe("audit integrity", () => {
     const outside = verdict(cwd, slug, outsidePath);
     expect(outside.exitCode).toBe(5);
 
-    writeFileSync(join(cwd, report), "implementationModel: Codex\nauditModel: Codex\n");
+    writeFileSync(join(cwd, report), "**판정: 통과**\nimplementationModel: Codex\nauditModel: Codex\n");
     const same = verdict(cwd, slug, report, "Codex", "Codex");
     expect(same.exitCode).not.toBe(0);
     expect(same.stderr).toContain("달라야");
+  });
+
+  test("report verdict marker is singular and matches the requested verdict", () => {
+    const mismatch = auditedRepo();
+    writeFileSync(
+      join(mismatch.cwd, mismatch.report),
+      "# audit\n**판정: 반려**\nimplementationModel: Codex\nauditModel: Claude\n",
+    );
+    const forgedPass = verdict(mismatch.cwd, mismatch.slug, mismatch.report);
+    expect(forgedPass.exitCode).toBe(3);
+    expect(forgedPass.stderr).toContain("오류(audit_verdict_mismatch)");
+
+    const ambiguous = auditedRepo();
+    writeFileSync(
+      join(ambiguous.cwd, ambiguous.report),
+      "**판정: 통과**\n**판정: 반려**\nimplementationModel: Codex\nauditModel: Claude\n",
+    );
+    const duplicate = verdict(ambiguous.cwd, ambiguous.slug, ambiguous.report);
+    expect(duplicate.exitCode).toBe(3);
+    expect(duplicate.stderr).toContain("오류(audit_verdict_invalid)");
   });
 
   test("report or git worktree changes invalidate a passed audit", () => {

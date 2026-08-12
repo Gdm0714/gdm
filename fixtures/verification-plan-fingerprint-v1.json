@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "work": {
+    "slug": "fixture-plan",
+    "brief": "한글 검증 계획 / cli/src",
+    "createdAt": "2026-08-12T00:00:00.000Z",
+    "done": false,
+    "checks": [
+      {
+        "id": "c1",
+        "desc": "수동 확인 / 화면",
+        "cmd": null,
+        "expect": "한글 결과",
+        "manual": true,
+        "status": "open"
+      },
+      {
+        "id": "c2",
+        "desc": "자동 확인",
+        "cmd": "bun test cli/test/fixture.test.ts",
+        "expect": "exit 0 / 성공",
+        "manual": false,
+        "status": "open"
+      }
+    ],
+    "contract": {
+      "required": [
+        "한글 계약",
+        "cli/src/state.ts"
+      ],
+      "forbidden": [
+        "삭제 / 우회"
+      ],
+      "activeHabits": []
+    }
+  },
+  "sha256": "54ff0a8489ae82ec34753f936f662701bbb234e16a0e6f8cca29466c39c18fc8"
+}

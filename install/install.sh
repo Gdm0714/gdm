@@ -66,31 +66,23 @@ cleanup() {
   exit "$status"
 }
 
-stage_source_skills() {
+stage_generated_skills() {
   local root="$1"
-  local output_variable="$2"
-  local stage dir name
+  local target="$2"
+  local output_variable="$3"
+  local stage
   mkdir -p "$root"
   [ -d "$root" ] || {
     echo "gdm 설치 실패: skill 경로가 디렉터리가 아닙니다: $root" >&2
     return 1
   }
   stage="$(mktemp -d "$root/.gdm-stage.XXXXXX")"
-  for dir in "$REPO"/skills/*/; do
-    name="$(basename "$dir")"
-    [ "$name" = "_shared" ] && continue
-    [ -f "${dir%/}/SKILL.md" ] || {
-      echo "gdm 설치 실패: skill 원본이 올바르지 않습니다: ${dir%/}" >&2
-      return 1
-    }
-    ln -s "${dir%/}" "$stage/gdm-$name"
-  done
-  [ -d "$REPO/agents" ] || {
-    echo "gdm 설치 실패: agents 원본이 올바르지 않습니다: $REPO/agents" >&2
-    return 1
-  }
-  ln -s "$REPO/agents" "$stage/gdm-agents"
   printf -v "$output_variable" '%s' "$stage"
+  bun "$REPO/install/render-skills.ts" \
+    --target "$target" \
+    --source-root "$REPO/skills" \
+    --agents-root "$REPO/agents" \
+    --output "$stage" >/dev/null
 }
 
 prepare_skill_swap() {
@@ -99,13 +91,13 @@ prepare_skill_swap() {
   local output_variable="$3"
   local rollback staged name
   rollback="$(mktemp -d "$root/.gdm-rollback.XXXXXX")"
+  printf -v "$output_variable" '%s' "$rollback"
   : >"$rollback/.names"
   for staged in "$stage"/gdm-*; do
     [ -e "$staged" ] || [ -L "$staged" ] || return 1
     name="$(basename "$staged")"
     printf '%s\n' "$name" >>"$rollback/.names"
   done
-  printf -v "$output_variable" '%s' "$rollback"
 }
 
 apply_skill_swap() {
@@ -140,8 +132,70 @@ CODEX_HOME="$CODEX_HOME_DIR" "$BUILD_TMP" agent hook-install \
   --binary "$BUILD_TMP" --dry-run
 
 echo "[2/5] 스킬 대상 사전검증·staging"
-stage_source_skills "$HOME/.claude/skills" CLAUDE_STAGE
-stage_source_skills "$CODEX_HOME_DIR/skills" CODEX_STAGE
+stage_generated_skills "$HOME/.claude/skills" claude CLAUDE_STAGE
+stage_generated_skills "$CODEX_HOME_DIR/skills" codex CODEX_STAGE
+bun -e '
+  import { createHash } from "node:crypto";
+  import { lstatSync, readFileSync } from "node:fs";
+  import { dirname, join } from "node:path";
+  const [claudePath, codexPath] = process.argv.slice(1);
+  const claude = JSON.parse(readFileSync(claudePath, "utf8"));
+  const codex = JSON.parse(readFileSync(codexPath, "utf8"));
+  const hash = (path) => createHash("sha256").update(readFileSync(path)).digest("hex");
+  const exactKeys = (value, expected, label) => {
+    if (Object.keys(value).sort().join("\0") !== [...expected].sort().join("\0")) {
+      throw new Error(`${label} key set mismatch`);
+    }
+  };
+  const validate = (manifestPath, value, target) => {
+    exactKeys(value, ["schemaVersion", "target", "adapterVersion", "canonicalSourceSha256", "sourceSha256", "capabilityProfile", "hook", "runner", "skills"], `${target} manifest`);
+    exactKeys(value.runner, ["contract", "path", "sha256", "adapters"], `${target} runner`);
+    exactKeys(value.runner.adapters, ["codex", "claude"], `${target} adapters`);
+    const expectedProfile = { id: "gdm-read-only-specialist/v1", filesystem: "read-only", delegation: "disabled", mcp: "disabled", shell: "unsupported", browser: "unsupported", network: "unsupported" };
+    const expectedHook = target === "codex"
+      ? { id: "gdm-agent-gate-v1", status: "supported", requiredForTarget: true }
+      : { id: null, status: "not-required", requiredForTarget: false };
+    if (JSON.stringify(value.capabilityProfile) !== JSON.stringify(expectedProfile) ||
+        JSON.stringify(value.hook) !== JSON.stringify(expectedHook) ||
+        value.adapterVersion !== "gdm-target-adapter/v1" ||
+        !/^[0-9a-f]{64}$/.test(value.canonicalSourceSha256) ||
+        !/^[0-9a-f]{64}$/.test(value.sourceSha256)) {
+      throw new Error(`${target} manifest capability/hook/hash mismatch`);
+    }
+    const root = dirname(manifestPath);
+    for (const [label, item] of [["runner", value.runner], ...Object.entries(value.runner.adapters)]) {
+      exactKeys(item, label === "runner" ? ["contract", "path", "sha256", "adapters"] : ["path", "sha256"], `${target} ${label}`);
+      const path = join(root, item.path);
+      const stat = lstatSync(path);
+      if (!stat.isFile() || stat.isSymbolicLink() || (stat.mode & 0o111) === 0 || hash(path) !== item.sha256) {
+        throw new Error(`${target} ${label} bytes/mode mismatch`);
+      }
+    }
+    const names = value.skills.map((skill) => skill.name);
+    if (new Set(names).size !== names.length || names.join("\0") !== [...names].sort().join("\0")) {
+      throw new Error(`${target} skill manifest order/identity mismatch`);
+    }
+    for (const skill of value.skills) {
+      exactKeys(skill, ["name", "sourcePath", "sourceSha256", "renderedSha256"], `${target} skill`);
+      const path = join(root, skill.name, "SKILL.md");
+      const stat = lstatSync(path);
+      if (!stat.isFile() || stat.isSymbolicLink() || hash(path) !== skill.renderedSha256) {
+        throw new Error(`${target} rendered skill mismatch: ${skill.name}`);
+      }
+    }
+  };
+  if (claude.schemaVersion !== "gdm-target-skill-manifest/v1" || claude.target !== "claude" ||
+      codex.schemaVersion !== "gdm-target-skill-manifest/v1" || codex.target !== "codex" ||
+      claude.canonicalSourceSha256 !== codex.canonicalSourceSha256 ||
+      claude.sourceSha256 !== codex.sourceSha256 ||
+      claude.capabilityProfile?.id !== "gdm-read-only-specialist/v1" ||
+      codex.capabilityProfile?.id !== "gdm-read-only-specialist/v1" ||
+      JSON.stringify(claude.runner) !== JSON.stringify(codex.runner)) {
+    throw new Error("generated target skill manifest parity failed");
+  }
+  validate(claudePath, claude, "claude");
+  validate(codexPath, codex, "codex");
+' "$CLAUDE_STAGE/gdm-target-manifest.json" "$CODEX_STAGE/gdm-target-manifest.json"
 
 echo "[3/5] 바이너리·스킬 transactional 교체"
 ROLLBACK_DIR="$(mktemp -d "$BIN_DIR/.gdm-rollback.XXXXXX")"

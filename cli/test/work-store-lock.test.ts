@@ -23,8 +23,12 @@ describe("work repository lock", () => {
       "bun", CLI, "plan", "add", "--slug", "parallel-work",
       "--desc", `check ${index + 1}`, "--cmd", "true", "--expect", "exit 0",
     ], { cwd, stdout: "pipe", stderr: "pipe" }));
-    const exits = await Promise.all(children.map((child) => child.exited));
-    expect(exits).toEqual(Array(count).fill(0));
+    const results = await Promise.all(children.map(async (child) => ({
+      exitCode: await child.exited,
+      stderr: await new Response(child.stderr).text(),
+    })));
+    expect(results, results.filter((result) => result.exitCode !== 0).map((result) => result.stderr).join("\n"))
+      .toEqual(Array.from({ length: count }, () => ({ exitCode: 0, stderr: "" })));
 
     const root = join(cwd, ".gdm", "parallel-work");
     const state = JSON.parse(readFileSync(join(root, "checks.json"), "utf8")) as { checks: unknown[] };

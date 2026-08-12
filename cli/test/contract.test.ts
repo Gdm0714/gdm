@@ -86,7 +86,7 @@ function writeLegacyWork(cwd: string, proven = false): void {
           status: "proven",
           evidence: {
             observed: "out/c1.txt",
-            sha256: "legacy-hash",
+            sha256: "a".repeat(64),
             manual: false,
             at: "2026-07-01T00:00:00.000Z",
           },

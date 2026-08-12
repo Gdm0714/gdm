@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -33,7 +33,7 @@ const REPORT_HASH = "a".repeat(64);
 function audit(work: Work, result: "pass" | "fail") {
   return recordAudit(work, result, "report.md", REPORT_HASH, "Codex", "Claude", null, NOW);
 }
-const EV = { observed: "out/c1.txt", sha256: "abc123", manual: false };
+const EV = { observed: "out/c1.txt", sha256: "a".repeat(64), manual: false };
 
 function sampleWork(): Work {
   let work = initWork("sample", "샘플 작업", NOW);
@@ -90,7 +90,7 @@ describe("passCheck", () => {
   test("open → proven (sha256 포함)", () => {
     const work = passCheck(sampleWork(), "c1", EV, NOW);
     expect(work.checks[0]!.status).toBe("proven");
-    expect(work.checks[0]!.evidence?.sha256).toBe("abc123");
+    expect(work.checks[0]!.evidence?.sha256).toBe("a".repeat(64));
     expect(provenCount(work)).toEqual({ proven: 1, total: 2 });
   });
 
@@ -273,6 +273,58 @@ describe("validateWork", () => {
     const work = { ...sampleWork(), delivery: { issue: 12 } };
     expect(() => validateWork(work, "t")).toThrow(/delivery 형태 오류/);
   });
+
+  test("createdAt/doneAt은 canonical timestamp와 일관된 완료 쌍이어야 함", () => {
+    const work = sampleWork();
+    expect(() => validateWork({ ...work, createdAt: "2026-07-02T00:00:00Z" }, "t")).toThrow(
+      /createdAt canonical timestamp 오류/,
+    );
+    expect(() => validateWork({ ...work, doneAt: NOW }, "t")).toThrow(/done\/doneAt 상태 불일치/);
+    expect(() => validateWork({ ...work, done: true }, "t")).toThrow(/done\/doneAt 상태 불일치/);
+    expect(() => validateWork({ ...work, done: true, doneAt: "not-a-date" }, "t")).toThrow(
+      /doneAt canonical timestamp 오류/,
+    );
+  });
+
+  test("완료로 위조된 open/simplification/expert/audit 상태를 semantic corruption으로 거부", () => {
+    const open = { ...sampleWork(), done: true, doneAt: NOW };
+    expect(() => validateWork(open, "t")).toThrow(/완료 상태.*unproven/);
+
+    let proven = sampleWork();
+    proven = passCheck(proven, "c1", EV, NOW);
+    proven = passCheck(proven, "c2", { ...EV, observed: "out/c2.txt" }, NOW);
+    const completed = closeWork(proven, NOW);
+    expect(() =>
+      validateWork({
+        ...completed,
+        contract: { ...completed.contract, simplificationRequired: true },
+      }, "t")
+    ).toThrow(/simplification_required/);
+    expect(() =>
+      validateWork({
+        ...completed,
+        auditRequired: true,
+      }, "t")
+    ).toThrow(/audit_required/);
+    expect(() =>
+      validateWork({
+        ...completed,
+        contract: { ...completed.contract, risk: "high", verification: "opaque" },
+      }, "t")
+    ).toThrow(/expert_review_required/);
+  });
+
+  test("정상 완료 legacy audit는 optional metadata 없이도 기존 checksHash로 검증", () => {
+    let work = initWork("sample", "샘플", NOW, true);
+    ({ work } = addCheck(work, { desc: "빌드", cmd: "true", expect: "exit 0" }));
+    work = passCheck(work, "c1", EV, NOW);
+    work = audit(work, "pass");
+    const completed = closeWork(work, NOW);
+    const { reportSha256: _hash, implementationModel: _implementation, auditModel: _audit, ...legacyAudit } =
+      completed.audit!;
+    const legacy = { ...completed, audit: legacyAudit };
+    expect(validateWork(legacy, "legacy")).toEqual(legacy);
+  });
 });
 
 describe("store", () => {
@@ -363,5 +415,18 @@ describe("store", () => {
     mkdirSync(join(cwd, ".gdm"), { recursive: true });
     writeFileSync(join(cwd, ".gdm", "presets.json"), "{broken");
     expect(() => loadPresets(cwd)).toThrow(GdmError);
+  });
+
+  test("checks.json symlink는 읽기와 저장 모두 거부하고 외부 파일을 바꾸지 않음", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "gdm-test-"));
+    const outside = join(mkdtempSync(join(tmpdir(), "gdm-outside-")), "checks.json");
+    const original = "outside remains unchanged\n";
+    writeFileSync(outside, original);
+    mkdirSync(join(cwd, ".gdm", "sample"), { recursive: true });
+    symlinkSync(outside, join(cwd, ".gdm", "sample", "checks.json"));
+
+    expect(() => loadWork(cwd, "sample")).toThrow(GdmError);
+    expect(() => saveWork(cwd, sampleWork())).toThrow(GdmError);
+    expect(readFileSync(outside, "utf8")).toBe(original);
   });
 });

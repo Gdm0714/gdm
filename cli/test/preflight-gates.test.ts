@@ -74,7 +74,12 @@ describe("preflight gates", () => {
       expect: "ok",
       manual: false,
       status: "proven" as const,
-      evidence: { observed: "out.txt", sha256: "legacy", manual: false, at: "2026-01-01T00:00:00.000Z" },
+      evidence: {
+        observed: "out.txt",
+        sha256: "a".repeat(64),
+        manual: false,
+        at: "2026-01-01T00:00:00.000Z",
+      },
     }];
     const legacyHash = createHash("sha256").update(JSON.stringify(checks)).digest("hex");
     const work = validateWork({

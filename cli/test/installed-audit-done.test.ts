@@ -67,7 +67,7 @@ describe("installed audit-done capability", () => {
     const evidencePath = join(root, "out", "c1.txt");
     const reportRelative = join(".gdm", slug, "audit-report.md");
     const reportPath = join(cwd, reportRelative);
-    writeFileSync(reportPath, "[APPROVE]\nimplementationModel: Codex\nauditModel: Claude\n");
+    writeFileSync(reportPath, "**판정: 통과**\nimplementationModel: Codex\nauditModel: Claude\n");
     expect(run(binary, cwd, [
       "audit", "verdict", "--pass", "--report", reportRelative,
       "--implementation-model", "Codex", "--audit-model", "Claude", "--slug", slug,
