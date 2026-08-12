@@ -56,9 +56,22 @@ function reclaimDeadOwner(path: string): boolean {
     if (Date.now() - before.mtimeMs < MALFORMED_LOCK_STALE_MS) return false;
   }
   if (processIsAlive(pid)) return false;
-  const current = lstatSync(path);
+  let current: Stats;
+  try {
+    current = lstatSync(path);
+  } catch (error) {
+    // The owner (or another waiter reclaiming the same dead owner) may have
+    // removed the lock after our first lstat. That is successful progress, so
+    // retry acquisition instead of surfacing a generic exit-1 filesystem race.
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return true;
+    throw error;
+  }
   if (!sameIdentity(identity(before), identity(current))) return false;
-  unlinkSync(path);
+  try {
+    unlinkSync(path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
   return true;
 }
 

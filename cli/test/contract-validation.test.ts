@@ -36,6 +36,15 @@ function contractWith(activeHabit: unknown): Readonly<Record<string, unknown>> {
 }
 
 describe("contract validation boundaries", () => {
+  test("OpenAI key prefix does not match inside an ordinary hyphenated word", () => {
+    expect(() => assertNoSensitiveRaw("root task-state fallback", "constraint")).not.toThrow();
+    for (const unsafe of ["sk-abcdef", "sk-private", "sk-example-secret-value"]) {
+      expect(() => assertNoSensitiveRaw(unsafe, "constraint")).toThrow(
+        expect.objectContaining({ code: "privacy_rejected" }),
+      );
+    }
+  });
+
   test("punctuation cannot hide a URI scheme", () => {
     // Given: URI schemes immediately preceded by punctuation rather than whitespace.
     const unsafe = ["메모,data:note", "[data:note]"] as const;

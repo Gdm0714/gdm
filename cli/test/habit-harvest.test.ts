@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import packageJson from "../package.json";
@@ -146,7 +146,7 @@ describe("habit harvest", () => {
       jsonLine({ ts: NOW, event: "denied", code: "repeat-code" }),
       jsonLine({ ts: NOW, event: "denied", code: "repeat-code" }),
       jsonLine({ ts: NOW, event: "unknown" }),
-      "{malformed",
+      jsonLine({ ts: NOW, event: "unknown", extra: "x".repeat(2048) }),
       jsonLine({ ts: NOW, event: "unknown", extra: secret }),
     ]);
     writeWork(cwd, "beta-work", [
@@ -196,7 +196,7 @@ describe("habit harvest", () => {
     const secret = "ghp_private_source";
     writeWork(cwd, "safe-work", [
       jsonLine({ ts: NOW, event: "miss", desc: "검증 누락", extra: secret }),
-      `{"ts":"${NOW}","event":"miss","desc":"${secret}","desc":"덮어쓴 누락"}`,
+      jsonLine({ ts: NOW, event: "miss", desc: secret }),
       jsonLine({ ts: NOW, event: "miss", desc: "두 번째 누락" }),
     ]);
 
@@ -213,6 +213,19 @@ describe("habit harvest", () => {
       expect(output).not.toContain(secret);
       expect(output).not.toContain(createHash("sha256").update(secret).digest("hex"));
     }
+  });
+
+  test("corrupt journal fails closed before habit ledger mutation", () => {
+    const cwd = tempRepo();
+    writeWork(cwd, "corrupt-work", [
+      jsonLine({ ts: NOW, event: "miss", desc: "반영되면 안 됨" }),
+      "{malformed",
+    ]);
+
+    const result = runCli(cwd, ["habit", "harvest", "--json"]);
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain("오류(state_corrupt)");
+    expect(existsSync(join(cwd, ".gdm", "habits", "ledger.jsonl"))).toBe(false);
   });
 
   test("harvest maps message-bearing events yet still skips foreign secrets", () => {

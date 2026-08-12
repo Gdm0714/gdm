@@ -2,7 +2,7 @@
 # 하네스 벤치 채점: judge.sh <t1|t2|t3> <arm>  → results.csv에 한 줄 추가
 set -uo pipefail
 if [ "$#" -ne 2 ]; then
-  echo "usage: $0 <t1|t2|t3> <bare|gdm|omx|lazycodex|workbook>" >&2
+  echo "usage: $0 <t1|t2|t3> <bare|gdm|gdm-graph|omx|lazycodex|workbook>" >&2
   exit 2
 fi
 TASK=$1; ARM=$2
@@ -18,7 +18,7 @@ case $TASK in
   *) echo "bad task: $TASK" >&2; exit 2 ;;
 esac
 case $ARM in
-  bare|gdm|omx|lazycodex|workbook) ;;
+  bare|gdm|gdm-graph|omx|lazycodex|workbook) ;;
   *) echo "bad arm: $ARM" >&2; exit 2 ;;
 esac
 

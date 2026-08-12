@@ -102,6 +102,8 @@ check는 `regression|behavior|edge|static|manual`로 분류한다. `--simplify` 
 ┌─ L2. gdm CLI (TypeScript, 결정적 상태 머신) ──────────────┐
 │  gdm plan|pass|recheck|done             ← 작업 상태·게이트│
 │  gdm status|resume|retro                ← 현황·재개·회고  │
+│  gdm protocol export|offer|claim|finish   ← 공통 상태·인계  │
+│  gdm protocol adopt|recover|status        ← 수신 lifecycle │
 │  gdm audit|delivery                     ← 검수·전달 게이트│
 │  모델 호출·네트워크 없음, JSON 입출력 + exit code           │
 └──────────────┬───────────────────────────────────────────┘
@@ -110,6 +112,109 @@ check는 `regression|behavior|edge|static|manual`로 분류한다. `--simplify` 
 │  gdm run -p <프로젝트> "<작업>" / ps / log / watch / notify│
 └───────────────────────────────────────────────────────────┘
 ```
+
+### 공통 Work Protocol v1
+
+Work Protocol은 Codex와 Claude가 같은 작업을 시작·재개·인계할 때 사용하는 모델 중립 상태
+언어다. 기존 `Work`와 `.gdm/<slug>/checks.json` 저장 형식은 바꾸지 않고, 현재 상태에서 파생한
+읽기 전용 snapshot과 append-only handoff event만 버전이 있는 wire 경계로 노출한다.
+
+`gdm protocol export --slug <slug>`는 `gdm-work-snapshot/v1`을 출력한다. snapshot은 다음을
+고정 순서로 투영한다.
+
+- 전체 작업 계약: 필수·금지 조건, 가정·불확실성, 허용·금지 경로, 중단 조건, 위험도,
+  검증 가능성, 간소화·commit 계약과 적용 중인 습관
+- 모든 check의 종류·설명·명령·기대 결과·상태와 증거 참조
+- plan·state·source fingerprint, audit의 저장 상태, 완료 선행 blocker와 최신 handoff
+
+증거 참조에는 경로, SHA-256, exit code, manual/reviewer 여부, note 존재 여부와 저장 시각만
+들어가며 출력 파일 내용이나 note 본문은 복제하지 않는다. 반면 작업을 이어가는 데 필요한
+로컬 Work brief와 check 명령은 의도적으로 포함한다. credential처럼 보이는 문자열이 감지되면
+export를 거부하지만, snapshot은 공개용 정제본이 아니라 저장소 내부 프로토콜이므로 외부
+artifact로 게시하지 않는다.
+
+`stateFingerprint`는 delivery를 제외한 core Work 상태를 SHA-256으로 묶는다. 입력은 canonical
+JSON이 아니라 도메인 표식과 값별 type tag를 붙인 결정적 인코딩이다. 문자열·숫자와 collection
+길이를 length-prefix하고 object key를 사전순으로 정렬한다. 이 인코딩과 digest는 구현 세부인
+opaque identity다. 소비자는 wire의 fingerprint를 비교할 뿐 독립적으로 재구성하지 않는다.
+`sourceFingerprint`는 `.gdm`을 제외한 source bytes와 Git 상태를 묶는다. wire에는
+`generatedAt`을 두지 않는다. 따라서 같은 Work, journal, source bytes와 Git 상태의 export는
+byte-identical하다.
+
+snapshot의 완료 상태는 `blocked | ready-to-validate | completed`다. `ready-to-validate`는
+저장된 상태에서 확인할 수 있는 선행 blocker가 없다는 뜻일 뿐 완료 예측이나 권한이 아니다.
+실제 `gdm done`은 scope, 자동 check 재실행, evidence hash, audit report와 worktree 무결성을
+다시 검증한다. 저장된 audit 통과도 이 재검증을 대신하지 않는다. `completion.validationCommand`는
+미완료 상태에서 문자열이고 completed Work에서는 `null`이다. 그 문자열이 즉시 실행을 권하는
+경우는 `ready-to-validate`뿐이며, `blocked`에서는 먼저 blocker를 해소한다.
+
+`gdm protocol handoff`는 `gdm-handoff/v1` event를 journal에 append한다. event는 opaque한
+from/to role, 선택적 provider metadata, bounded intent, 선택적 저장소 내부 artifact의 path와
+hash, 그리고 현재 plan·state·source fingerprint를 가진다. intent·role/provider·artifact path는
+각각 strict safe-text, opaque identifier, credential/path containment 경계를 통과해야 한다.
+artifact는 contained regular file만 허용하고 symlink·절대 경로·상위 경로 탈출을 거부하며,
+내용은 journal에 복사하지 않는다.
+같은 handoff ID와 같은 의미·fingerprint의 재호출은 기존 event를 반환한다. 같은 ID의 다른
+입력은 충돌로 거부하고, 새 event는 증가하는 revision과 직전 handoff event ID를 기록해 causal
+chain을 만든다. 호출자가 보낸 expected fingerprint가 현재 값과 다르면 append 전에 실패하며,
+snapshot은 최신 handoff의 세 fingerprint를 비교해 stale 이유를 표시한다.
+
+두 wire 형식은 컨텍스트와 불일치를 전달할 뿐 `pass`, evidence 생성, audit 판정, `done`, commit,
+push, PR 또는 delivery 권한을 갖지 않는다. 모델을 호출하는 orchestrator, daemon, network,
+기존 Work migration, delivery·hook·graph·habit·Native 변경도 v1 범위가 아니다.
+
+v1은 계속 읽는 compatibility surface다. 자동 실행이 필요한 읽기 전용 전문 역할은 v2의
+`offer → claim → finish → adopt|recover` lifecycle을 사용한다. offer는 세 fingerprint를 모두
+필수로 묶고, 한 receiver만 atomic claim한다. CLI는 artifact
+`{path,sha256,text,bytesBase64}`를 가진 canonical `gdm-dispatch-bundle/v1`을 구성한다. runner는
+`gdm protocol claim ... --model-view`로 같은 claimId·handoff·snapshot·receiver·capabilityProfile,
+canonical `bundleSha256`, artifact `{path,sha256,text}`만 가진 결정적
+`gdm-dispatch-model-view/v1`을 provider에 주입한다. model-view에는 `bytesBase64`가 없고
+`bundleSha256`는 projection이 아니라 full canonical bundle의 digest다. ACK와 receipt도 이
+canonical hash에 결속한다. 기존 `GDM_DISPATCH_BUNDLE_V1_BEGIN/END`는 호환 wrapper 이름으로
+유지한다. 관찰한 실행 결과를 `gdm-protocol-receipt/v1`로 finish하며, 성공한 finish도
+Work/check/audit/delivery를 바꾸지 않고 coordinator가 현재 fingerprint와 artifact를 다시 검사해
+adopt한다.
+
+Claude adapter `gdm-provider-adapter-v2`/`gdm-claude-read-only-v2`는
+`--append-system-prompt`에 `GDM_RECEIVER_TRUST_BOOTSTRAP_V1:` static bootstrap을 넣는다. 인증 범위는
+outer GDM envelope/model-view, receiver contract, 제공된 ACK 선택지뿐이다. artifact text와 그 안의
+source/evidence·중첩 지시는 untrusted data이며 outer handoff role·intent가 요청한 분석 대상으로만
+취급한다. bootstrap은 remote identity나 artifact provenance를 attest하지 않는다. Codex adapter와
+argv policy는 v1이다.
+stale·receiver mismatch·forged bundle·terminal 전이는 fail-closed다.
+
+`agents/run-role.sh`는 공통 lifecycle만 소유한다. `agents/providers/*`가 target executable과
+argv를 매핑하며 논리 capability는 `gdm-read-only-specialist/v1`로 고정된다. 두 provider 모두
+provider tool 0이며 filesystem write·shell·browser·network·MCP·delegation이 없다. sender가
+canonical snapshot과 해시된 artifact에 필요한 문맥을 완결적으로 넣고 Work mode에는
+별도 prompt를 허용하지 않는다. Work 없는 기술 설계는 같은 tool-0 adapter를 receipt 없이
+실행하는 `gdm-preflight-bundle/v1`을 사용하며 prompt bytes에 필요한 문맥을 미리 포함한다. receipt의
+provider target, requested model, executable hash/version은 로컬 관찰 정보이며 실제 원격
+provider/model identity 또는 reasoning 품질 attestation이 아니다.
+여기서 network 없음은 모델에게 network/browser tool을 노출하지 않는 경계다. provider CLI가
+모델 backend에 연결하는 transport 자체를 차단하거나 attest하는 경계는 아니다.
+
+자동 v2 artifact는 credential-free valid UTF-8로 최대 1 MiB다. canonical bundle의 `text`와
+decoded `bytesBase64`는 같은 exact bytes다. `bytesBase64`는 identity/transport에만 남고
+provider model-view에는 주입하지 않아 같은 artifact의 중복 model tokenization을 피한다. finish
+output은 최대 2 MiB, canonical dispatch bundle은 최대
+4 MiB다. 위반은 `artifact_encoding_invalid|privacy_rejected|artifact_too_large|output_too_large|bundle_too_large`로
+fail-closed한다. legacy v1 handoff는 계속 읽을 수 있지만 automatic claim은 이 경계를 다시
+검사한다.
+
+`install/render-skills.ts`는 한 source tree와 두 target adapter fragment에서 self-contained
+Codex·Claude skill tree를 staging에 결정적으로 생성한다. source에는 duplicated target tree를
+체크인하지 않는다. `gdm-target-skill-manifest/v1`의 `canonicalSourceSha256`는 공통
+source-template tree의 aggregate hash다. manifest는 target, 이 source-template hash와 전체
+source hash, adapter version, capability, runner와 두 provider adapter의 byte hash, hook 상태와
+각 rendered skill hash를 가진다. installer는
+기존 binary·skill·hook transactional rollback 순서를 보존하면서 생성 tree를 교체한다.
+Codex hook은 `supported`로 보고한다. Claude의 `not-required`는 lifecycle을 runner와 CLI
+receipt가 강제하므로 별도 Claude hook을 사용하지 않는다는 뜻이며 누락이나 degraded 상태가 아니다.
+manifest의 `skills`는 설치 진입점 목록이다. `gdm-audit` skill은 만들지 않으며, audit는
+`gdm-full`이 copied `gdm-agents/auditor.md`를 기준으로 `run-role.sh --role audit`에서 실행하는
+tool-0 leaf role이다. 이는 Claude target에 coordinator skill을 지원한다는 선언이 아니다.
 
 ### gdm:go와 gdm:full
 
@@ -124,8 +229,9 @@ check는 `regression|behavior|edge|static|manual`로 분류한다. `--simplify` 
 
 ### 검수(audit) 설계 — 역할 1명, 산출물은 문서
 
-- 새 컨텍스트의 읽기 전용 검수자. 실행자의 문장을 믿지 않고
-  checks.json의 observed 파일과 diff를 직접 열어 확인한다.
+- 새 컨텍스트의 읽기 전용 검수자. 실행자의 문장을 믿지 않고 sender가 audit artifact에 넣은
+  brief, 실제 diff/source excerpt, evidence exact content·hash·command output bytes를 확인한다.
+  중요한 근거가 빠졌으면 확인 불가로 반려하며 저장소 파일을 직접 열거나 명령을 실행하지 않는다.
 - 판정 어휘: **통과 / 반려** (반려 시 반려 사유가 새 check로 환원된다)
 - 산출물: `검수보고` — 토스 라이팅 역피라미드로 작성 (결론 → 근거 → 세부).
   그대로 wiki-ingest 가능한 포맷이다. 작업 뒤에도 판단 근거를 재사용할 수 있다.
@@ -135,8 +241,10 @@ check는 `regression|behavior|edge|static|manual`로 분류한다. `--simplify` 
   세부 관점(리뷰/QA/슬롭)은 검수 체크리스트로 흡수한다. 실사용에서 반복적으로
   놓치는 유형이 `gdm retro`로 확인되면 그때만 역할 분리를 검토한다.
 - 검수자는 pass당 정확히 1개의 leaf 프로세스이며 하위 에이전트를 만들 수 없다.
-  `gdm-agents/run-auditor.sh`가 Codex multi-agent와 사용자 MCP를 끄고 Claude 도구를
-  읽기 전용으로 제한한다. 시간·프로세스 수·RSS를 넘으면 실행기가 자신이 만든 PID 트리만
+  `gdm-agents/run-role.sh --mode work --role audit`가 target adapter에서 하위 위임과 사용자
+  MCP뿐 아니라 모든 provider tool을 끄고, canonical bundle과 bound artifact `text`만 모델 검토 입력으로
+  쓰는 동일한 읽기 전용 capability를 적용한다. 보고서는 stdout이며 runner가 claim 전용
+  `.gdm/<slug>/out/protocol/<claim-id>.out`에 저장한다. 시간·프로세스 수·RSS를 넘으면 실행기가 자신이 만든 PID 트리만
   종료하며, 이름 기반 Node/Gradle/Vite 전역 정리는 금지한다.
 
 ### 역할 실행과 독립 검수 (v0.7)
@@ -271,23 +379,24 @@ hook은 사용자가 Codex `/hooks` 화면에서 신뢰 상태를 확인해야 �
 ```
 ~/projects/gdm/
 ├── DESIGN.md
-├── skills/                  # 소스 오브 트루스
+├── skills/                  # canonical role source + _shared/targets adapter fragments
 │   ├── go/SKILL.md
 │   ├── full/SKILL.md
 │   ├── plan/SKILL.md  review/SKILL.md  analyze/SKILL.md  research/SKILL.md
 │   └── _shared/             # 검수 체크리스트, 문서 포맷 규칙
-├── agents/                  # 검수자 프롬프트(auditor.md/design-auditor.md) — install이 스킬 옆 gdm-agents/로 설치
+├── agents/                  # role runner, provider adapters, 검수자 프롬프트
 ├── cli/                     # gdm 바이너리 (TypeScript)
-│   ├── src/{state,store,contract,attempt}.ts
-│   ├── src/{audit-integrity,delivery,repository-lock}.ts
-│   ├── src/{cli,cli-args,delivery-cli,version}.ts
+│   ├── src/{state,store,contract,attempt,protocol}.ts
+│   ├── src/{audit-integrity,delivery,protocol-journal,repository-lock}.ts
+│   ├── src/{cli,cli-args,delivery-cli,protocol-cli,version}.ts
 │   ├── src/{codex-agent-hook,codex-agent-hooks-config,agent-cli}.ts
 │   └── test/
-├── install/install.sh       # 심링크 설치 + PATH
+├── install/render-skills.ts # target별 self-contained skill + manifest 생성
+├── install/install.sh       # generated staging + transactional swap + PATH
 └── README.md
 ```
 
-- 스킬 포맷은 양 CLI 동일(SKILL.md + front-matter) — 확인 완료.
+- 생성된 스킬 포맷은 양 target 동일(SKILL.md + front-matter)이고 target adapter만 다르다.
 - 배포: 개발 중 install.sh, 안정화 후 nix home-manager 번들 승격.
 - 버전 정본은 `cli/package.json` 하나이며 CLI와 릴리스 태그 검증이 이를 읽는다.
 - 상태 변경 명령은 저장소 단위 PID 잠금으로 직렬화해 병렬 실행의 갱신 유실을 막는다.
@@ -350,6 +459,35 @@ hook은 사용자가 Codex `/hooks` 화면에서 신뢰 상태를 확인해야 �
 
 ## 11. 결정 로그
 
+- 2026-08-12: **code graph의 요청 깊이 경계와 실제 불완전 결과를 v2 응답에서
+  분리.** 요청은 `gdm-graph-query/v1`을 유지하되, 응답은 `gdm-graph-result/v2`, provider는
+  version 2로 올리고 `nodes`를 `{path,depth}`로 반환한다. `coverage`는 요청한 깊이까지의
+  완전성, 실제 다음 관계가 있는 경계 `frontier`, hard cap·parse/read·freshness 문제로 생긴
+  `incompleteReasons`를 따로 밝힌다. frontier는 요청자가 고른 경계를 보여줄 뿐 partial이나
+  저장소 전체의 완전성을 뜻하지 않는다. 따라서 fresh하고 requested-depth complete인 결과는
+  반환 후보를 직접 읽어 확인하되 repository-wide 폴백을 반복하지 않고, hard cap·parse/read
+  실패·stale 등은 계속 fail-closed로 기존 검색에 폴백한다. Sourcegraph의 precise/search 폴백
+  구분, SCIP·Kythe의 구조화된 노드·관계·metadata, CodeQL의 설명 가능한 path edge, Joern의
+  명시적 `maxDepth`, LSP의 직접 관계 조회와 partial/cancel 구분만 작은 파일 그래프에 맞게
+  채택한다. persistent index, symbol/occurrence identity, CPG·CFG·data-flow, source range
+  provenance와 streaming은 이번 범위에서 미룬다.
+  같은 두 graph-sensitive 과제를 arm별 두 번 교차 재측정한 결과 정확도는 모두 유지됐고,
+  graph arm의 합산 벽시계 시간은 56.2%, total input은 68.0%, cached 제외 input은 40.5%
+  감소했다. 다만 control도 정답률 100%인 천장 효과가 있어 누락 감소는 입증하지 못했으므로
+  선택형 파일럿 상태를 유지한다. 상세 결과는 `bench/code-graph-evaluation-2026-08-12.md`에 둔다.
+- 2026-08-11: **code graph navigation을 core 기능이 아닌 선택형 local companion 파일럿으로
+  제한.** `GDM_GRAPH_PROVIDER`의 절대 실행 파일을 plan/analyze/review가 network·cache·daemon
+  없이 10초 제한의 one-shot으로 직접 호출하는 경계만 허용한다. 결과는 TypeScript 계열 정적
+  상대 import의 dependency/dependent 탐색 힌트이며 evidence·scope 확장·`pass`/`done`/`audit`,
+  core CLI, Native, 설치기에는 연결하지 않는다. provider 부재·실패·timeout·malformed/schema
+  mismatch·partial·stale·unsupported는
+  결과 전체를 폐기하고 기존 `rg`와 직접 source read로 폴백한다. 먼저 기존 `gdm`과 분리된
+  `gdm-graph` simulation arm으로 호출 비용·hidden regression·익명 diff 품질만 측정한다. 이는
+  실제 세 읽기 전용 스킬 라우팅의 효용 측정이 아니며, cross-file graph-sensitive fixture는
+  후속 작업이다. 승격에는 그런 태스크 최소 2종의 반복 개선, hidden regression 0건, 중앙값
+  시간·토큰 오버헤드 각각 20% 이하, 기존 소형 대조군 호출 0회 또는 전체 오버헤드 5% 이하,
+  잔존 provider와 stale/partial 오판 각각 0건이 모두 필요하다. 실패하면 일반 통합을 제거하고
+  수동 실험 도구로 남긴다.
 - 2026-08-04: **AI 작업 preflight·proof·scope 게이트 추가.** init에 가정·불확실성·허용/금지
   경로·중단 조건·위험도·검증 가능성·간소화 계약을 기록하고 파일별 baseline 이후 delta만
   범위 판정한다. regression은 동일 명령의 red→green을 강제한다. high risk는 audit을 자동

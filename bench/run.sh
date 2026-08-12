@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# 하네스 벤치 러너: run.sh <t1|t2|t3> <bare|gdm|omx|lazycodex|workbook>
+# 하네스 벤치 러너: run.sh <t1|t2|t3> <bare|gdm|gdm-graph|omx|lazycodex|workbook>
 set -euo pipefail
 if [ "$#" -ne 2 ]; then
-  echo "usage: $0 <t1|t2|t3> <bare|gdm|omx|lazycodex|workbook>" >&2
+  echo "usage: $0 <t1|t2|t3> <bare|gdm|gdm-graph|omx|lazycodex|workbook>" >&2
   exit 2
 fi
 TASK=$1; ARM=$2
@@ -17,9 +17,26 @@ case $TASK in
   *) echo "bad task: $TASK" >&2; exit 2 ;;
 esac
 case $ARM in
-  bare|gdm|omx|lazycodex|workbook) ;;
+  bare|gdm|gdm-graph|omx|lazycodex|workbook) ;;
   *) echo "bad arm: $ARM" >&2; exit 2 ;;
 esac
+
+# Prevent a caller's environment from accidentally enabling graph navigation
+# in a control arm. The experiment arm alone receives the absolute executable.
+unset GDM_GRAPH_PROVIDER
+if [ "$ARM" = gdm-graph ]; then
+  REPO_ROOT=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
+  GRAPH_PROVIDER="$REPO_ROOT/cli/src/graph-nav-provider.ts"
+  case $GRAPH_PROVIDER in
+    /*) ;;
+    *) echo "graph provider path is not absolute: $GRAPH_PROVIDER" >&2; exit 2 ;;
+  esac
+  [ -f "$GRAPH_PROVIDER" ] && [ -x "$GRAPH_PROVIDER" ] || {
+    echo "graph provider is not an executable file: $GRAPH_PROVIDER" >&2
+    exit 2
+  }
+  export GDM_GRAPH_PROVIDER="$GRAPH_PROVIDER"
+fi
 
 RUN="$TASK-$ARM"; DIR="$RUNS/$RUN"
 mkdir -p "$RUNS/logs"
@@ -46,6 +63,19 @@ PROMPT_FILE="$RUNS/logs/$RUN.prompt.md"
       echo "# 작업 방식: 아래 스킬 지침을 그대로 따르라 (gdm CLI는 PATH에 있다)"
       echo
       cat "$HOME/projects/gdm/skills/go/SKILL.md"
+      ;;
+    gdm-graph)
+      echo "# 작업 방식: 아래 스킬 지침을 그대로 따르라 (gdm CLI는 PATH에 있다)"
+      echo
+      cat "$HOME/projects/gdm/skills/go/SKILL.md"
+      echo
+      echo "# 추가 실험 지침: 선택형 code graph navigation"
+      echo "- 이 arm은 graph 탐색의 호출 비용과 회귀를 재는 시뮬레이션이다. 실제 gdm-plan/analyze/review 라우팅 통합으로 간주하지 마라."
+      echo "- 구체적인 TS/TSX/JS/JSX entry가 있고 관계 조회가 직접 읽을 파일을 좁힐 때만, 작업 전체에서 최대 2회·maxDepth 2 이하로 query하라."
+      echo "- provider는 인자 없는 절대 실행 파일이다. shell timeout wrapper나 command-string 분해 없이 \"\$GDM_GRAPH_PROVIDER\" query를 직접 실행하고 caller 쪽에서 10초로 제한하라."
+      echo "- stdin은 gdm-graph-query/v1 JSON 하나다. root는 현재 Git top-level 절대경로, entry는 안전한 저장소 상대경로, direction은 dependencies 또는 dependents, maxDepth는 필요한 최소값(최대 2)으로 보내라."
+      echo "- 결과는 탐색 후보일 뿐이다. 반환 파일을 직접 읽고 테스트를 실행하라. evidence, allowedPaths 확장, pass/done/audit 판정에 사용하지 마라."
+      echo "- provider 부재·실행 실패·timeout·malformed/schema mismatch·partial·stale·unsupported 응답은 전체를 폐기하고 기존 rg와 직접 source read로 폴백하라. 빈 edge도 영향 없음의 증거가 아니다."
       ;;
     omx)
       echo "# 작업 방식: 아래 스킬 지침을 그대로 따르라"

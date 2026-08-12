@@ -8,7 +8,7 @@ scratch=$(mktemp -d)
 cleanup() { rm -rf "$scratch"; }
 trap cleanup EXIT INT TERM
 
-for command_name in cmp file python3 rg tar; do
+for command_name in bun cmp file python3 rg tar; do
   command -v "$command_name" >/dev/null 2>&1 || {
     print -u2 -- "missing release QA dependency: $command_name"
     exit 1
@@ -39,10 +39,6 @@ assets=(
 )
 
 if [[ -z "$RELEASE_DIR" ]]; then
-  command -v bun >/dev/null 2>&1 || {
-    print -u2 -- "missing release QA dependency: bun"
-    exit 1
-  }
   native="$scratch/native"
   mkdir -p "$native"
   for pair in \
@@ -114,16 +110,25 @@ esac
 }
 
 archive_entries=$(tar -tzf "$RELEASE_DIR/gdm-skills.tar.gz" | sed 's#/$##' | LC_ALL=C sort)
-source_entries=$(cd "$ROOT" && find agents skills -print | LC_ALL=C sort)
+expected_targets="$scratch/expected-targets"
+mkdir -p "$expected_targets/targets"
+for target in codex claude; do
+  bun "$ROOT/install/render-skills.ts" \
+    --target "$target" \
+    --source-root "$ROOT/skills" \
+    --agents-root "$ROOT/agents" \
+    --output "$expected_targets/targets/$target" >/dev/null
+done
+source_entries=$(cd "$expected_targets" && find targets -print | LC_ALL=C sort)
 [[ "$archive_entries" == "$source_entries" ]] || {
-  print -u2 -- "skills archive does not exactly match agents/ and skills/"
+  print -u2 -- "skills archive does not exactly match deterministic target renders"
   exit 1
 }
 if print -r -- "$archive_entries" | rg -q '(^/|(^|/)\.\.?(/|$))'; then
   print -u2 -- "skills archive contains an unsafe path"
   exit 1
 fi
-python3 - "$ROOT" "$RELEASE_DIR/gdm-skills.tar.gz" <<'PY'
+python3 - "$expected_targets" "$RELEASE_DIR/gdm-skills.tar.gz" <<'PY'
 from pathlib import Path
 import os
 import sys
@@ -147,4 +152,4 @@ with tarfile.open(sys.argv[2], "r:gz") as archive:
             )
 PY
 
-print -- "GDM release QA passed: four native targets, deterministic skills, verified checksums"
+print -- "GDM release QA passed: four native targets, deterministic Codex/Claude skills, verified checksums"

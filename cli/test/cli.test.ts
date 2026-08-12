@@ -15,9 +15,10 @@ type CliResult = {
   readonly stderr: string;
 };
 
-function runCli(cwd: string, args: readonly string[]): CliResult {
+function runCli(cwd: string, args: readonly string[], env?: Readonly<Record<string, string>>): CliResult {
   const result = Bun.spawnSync(["bun", CLI, ...args], {
     cwd,
+    env: env === undefined ? undefined : { ...process.env, ...env },
     stdout: "pipe",
     stderr: "pipe",
   });
@@ -161,6 +162,58 @@ describe("CLI regression", () => {
     expect(runCli(cwd, ["done", "--slug", "reg"]).exitCode).toBe(0);
   });
 
+  test("verification commands use an opt-in bounded timeout", () => {
+    // Given: a real check that needs longer than a deliberately tiny timeout.
+    const cwd = tempRepo();
+    runCli(cwd, [
+      "plan",
+      "init",
+      "--slug",
+      "timeout",
+      "--brief",
+      "장시간 검증",
+      "--require",
+      "정상 검증 완료",
+      "--forbid",
+      "무제한 실행",
+    ]);
+    runCli(cwd, [
+      "plan",
+      "add",
+      "--slug",
+      "timeout",
+      "--desc",
+      "느린 검증",
+      "--cmd",
+      "sleep 0.25; printf ok",
+      "--expect",
+      "ok 출력",
+    ]);
+
+    // When: invalid and too-short timeout values are used before the default execution path.
+    const invalid = runCli(cwd, ["pass", "c1", "--slug", "timeout"], {
+      GDM_COMMAND_TIMEOUT_MS: "unbounded",
+    });
+    const outOfRange = runCli(cwd, ["pass", "c1", "--slug", "timeout"], {
+      GDM_COMMAND_TIMEOUT_MS: "3600001",
+    });
+    const timedOut = runCli(cwd, ["pass", "c1", "--slug", "timeout"], {
+      GDM_COMMAND_TIMEOUT_MS: "100",
+    });
+    const passed = runCli(cwd, ["pass", "c1", "--slug", "timeout"]);
+
+    // Then: malformed input is rejected, an explicit timeout fails closed, and no implicit wall-clock
+    // cutoff mistakes laptop suspension or a long local build for a product failure.
+    expect(invalid.exitCode).toBe(2);
+    expect(invalid.stderr).toContain("GDM_COMMAND_TIMEOUT_MS는 밀리초 단위 정수여야 합니다");
+    expect(outOfRange.exitCode).toBe(2);
+    expect(outOfRange.stderr).toContain("GDM_COMMAND_TIMEOUT_MS는 100~3600000 범위여야 합니다");
+    expect(timedOut.exitCode).toBe(1);
+    expect(timedOut.stderr).toContain("ETIMEDOUT");
+    expect(passed.exitCode).toBe(0);
+    expect(passed.stdout).toContain("c1 통과");
+  });
+
   test("audit pass survives done validation without changing audit-bound evidence", () => {
     // Given: an audited automatic check whose command records each execution outside its evidence file.
     const cwd = tempRepo();
@@ -197,7 +250,7 @@ describe("CLI regression", () => {
     expect(runCli(cwd, ["pass", "c1", "--slug", slug]).exitCode).toBe(0);
     const reportRelative = join(".gdm", slug, "audit-report.md");
     const report = join(cwd, reportRelative);
-    writeFileSync(report, "[APPROVE]\nimplementationModel: Codex\nauditModel: Claude\n");
+    writeFileSync(report, "**판정: 통과**\nimplementationModel: Codex\nauditModel: Claude\n");
     expect(runCli(cwd, [
       "audit", "verdict", "--pass", "--report", reportRelative,
       "--implementation-model", "Codex", "--audit-model", "Claude", "--slug", slug,

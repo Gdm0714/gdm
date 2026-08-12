@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "entry",
+    "conclusion",
+    "confidence",
+    "productionDependents",
+    "testDependents",
+    "limitations"
+  ],
+  "properties": {
+    "entry": { "type": "string" },
+    "conclusion": { "type": "string" },
+    "confidence": { "enum": ["high", "medium", "low"] },
+    "productionDependents": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/dependent" }
+    },
+    "testDependents": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/dependent" }
+    },
+    "limitations": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "$defs": {
+    "dependent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "depth", "evidence"],
+      "properties": {
+        "path": { "type": "string" },
+        "depth": { "type": "integer", "minimum": 1, "maximum": 2 },
+        "evidence": { "type": "string" }
+      }
+    }
+  }
+}

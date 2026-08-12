@@ -1,9 +1,9 @@
 #!/usr/bin/env bun
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join, relative, resolve } from "node:path";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import {
   prepareFailure,
   prepareRetry,
@@ -45,8 +45,10 @@ import {
   provenCount,
   recordAudit,
   recordRedEvidence,
+  recordVerificationPlanSourceFingerprint,
   refreshEvidence,
   revertChecks,
+  verificationPlanFingerprint,
 } from "./state.ts";
 import {
   appendJournal,
@@ -68,7 +70,10 @@ import type { Check, Evidence, Work } from "./types.ts";
 import { describeScopeProblems, workspaceScopeProblems } from "./workflow-gates.ts";
 import { VERSION } from "./version.ts";
 import { acquireRepositoryLock } from "./repository-lock.ts";
+import { captureSourceFingerprint } from "./source-fingerprint.ts";
+import { saveVerificationPlanSourceFingerprint } from "./work-source-fingerprint.ts";
 import { cmdDelivery } from "./delivery-cli.ts";
+import { cmdProtocol } from "./protocol-cli.ts";
 import { codexAgentLimitDoctorLines } from "./codex-agent-limit.ts";
 import { AgentCliError, cmdAgent } from "./agent-cli.ts";
 import {
@@ -77,7 +82,24 @@ import {
   resolveCodexHome,
 } from "./codex-agent-hooks-config.ts";
 
-const CMD_TIMEOUT_MS = 300_000;
+const MIN_CMD_TIMEOUT_MS = 100;
+const MAX_CMD_TIMEOUT_MS = 3_600_000;
+
+function commandTimeoutMs(): number | undefined {
+  const raw = process.env.GDM_COMMAND_TIMEOUT_MS?.trim();
+  if (raw === undefined || raw.length === 0) return undefined;
+  if (!/^\d+$/u.test(raw)) {
+    throw new GdmError("GDM_COMMAND_TIMEOUT_MS는 밀리초 단위 정수여야 합니다", "usage");
+  }
+  const parsed = Number(raw);
+  if (!Number.isSafeInteger(parsed) || parsed < MIN_CMD_TIMEOUT_MS || parsed > MAX_CMD_TIMEOUT_MS) {
+    throw new GdmError(
+      `GDM_COMMAND_TIMEOUT_MS는 ${MIN_CMD_TIMEOUT_MS}~${MAX_CMD_TIMEOUT_MS} 범위여야 합니다`,
+      "usage",
+    );
+  }
+  return parsed;
+}
 
 const USAGE = `gdm ${VERSION} — 작업 증거가 다음 습관을 바꾸는 개인 AI 워크플로우
 
@@ -106,13 +128,23 @@ const USAGE = `gdm ${VERSION} — 작업 증거가 다음 습관을 바꾸는 �
   gdm plan add  --from-brief [--dry-run] [--slug <슬러그>]   # brief의 "## 검증 항목" 초안 일괄 등록
   gdm plan list [--json] [--slug <슬러그>]
   gdm plan edit --check <id> [--desc ..] [--cmd ..] [--expect ..] [--kind ..] --reason <사유> [--slug <슬러그>]
-  gdm pass <id> --red [--note <메모>] [--slug <슬러그>]     # regression 항목의 수정 전 실패 증거
-  gdm pass <id> [--note <메모>] [--slug <슬러그>]           # 자동 항목: cmd를 직접 실행해 판정
+  gdm plan source --fingerprint <sha256> [--slug <슬러그>]
+  gdm pass <id> --red [--note <메모>] [--slug <슬러그>] [--expected-plan-fingerprint <sha256>]     # regression 항목의 수정 전 실패 증거
+  gdm pass <id> [--note <메모>] [--slug <슬러그>] [--expected-plan-fingerprint <sha256>]           # 자동 항목: cmd를 직접 실행해 판정
   gdm pass <id> --manual --observed <확인 기록 파일> [--reviewer <검토자>] [...]   # 수동 항목
-  gdm recheck [--check <id>] [--slug <슬러그>]              # 통과한 자동 항목 재실행 (회귀 검출)
+  gdm recheck [--check <id>] [--slug <슬러그>] [--expected-plan-fingerprint <sha256>]              # 통과한 자동 항목 재실행 (회귀 검출)
   gdm audit brief [--json] [--slug <슬러그>]                # 검수자에게 줄 브리핑 패키지 출력
   gdm audit verdict (--pass | --fail) --report <검수보고 파일> --implementation-model <모델> --audit-model <모델> [--slug <슬러그>]
-  gdm done [--slug <슬러그>]
+  gdm done [--slug <슬러그>] [--expected-plan-fingerprint <sha256>]
+  gdm protocol export [--slug <슬러그>] [--expected-plan-fingerprint <sha256>] [--expected-state-fingerprint <sha256>] [--expected-source-fingerprint <sha256>]
+  gdm protocol handoff --slug <슬러그> --handoff-id <id> --from-role <id> --to-role <id> --intent <설명> [--from-provider <id>] [--to-provider <id>] [--artifact <저장소 상대 파일>] [--expected-plan-fingerprint <sha256>] [--expected-state-fingerprint <sha256>] [--expected-source-fingerprint <sha256>]
+  gdm protocol offer --slug <슬러그> --handoff-id <id> --from-role <id> --to-role <id> --intent <설명> --expected-plan-fingerprint <sha256> --expected-state-fingerprint <sha256> --expected-source-fingerprint <sha256> [--from-provider <id>] [--to-provider <id>] [--artifact <저장소 상대 파일>]
+  gdm protocol claim --slug <슬러그> --handoff-event-id <id> --claim-id <id> --receiver-role <id> [--receiver-provider <id>] --capability-profile gdm-read-only-specialist/v1 [--model-requested <id>] [--model-view]
+  gdm protocol finish --slug <슬러그> --claim-id <id> --exit-code <0..255> --output-artifact <저장소 상대 파일> --provider-target <id> --adapter-version <id> --executable <절대경로> --executable-sha256 <sha256> --executable-version <설명> --argv-policy-id <id> [--model-requested <id>] [--failure-code <id>]
+  gdm protocol adopt --slug <슬러그> --claim-id <id>
+  gdm protocol recover --slug <슬러그> --claim-id <id> --reason <사유>
+  gdm protocol status [--slug <슬러그>]
+  gdm workspace fingerprint --json
   gdm status [--json] [--checks]                            # 현재 디렉토리 전체 작업 현황 (--checks: 항목 상세)
   gdm resume [--json] [--slug <슬러그>]
   gdm retro [--all] [--json] [--slug <슬러그>]              # 회고 (--all: 전체 작업 횡단 + 개선 제안)
@@ -146,6 +178,20 @@ function now(): string {
 
 function sha256(data: string | Uint8Array): string {
   return createHash("sha256").update(data).digest("hex");
+}
+
+function assertExpectedPlanFingerprint(work: Work, expected: string | undefined): void {
+  if (expected === undefined) return;
+  if (!/^[0-9a-f]{64}$/u.test(expected)) {
+    throw new GdmError("--expected-plan-fingerprint는 소문자 64자리 SHA-256이어야 합니다", "usage");
+  }
+  const actual = verificationPlanFingerprint(work);
+  if (actual !== expected) {
+    throw new GdmError(
+      `검증 계획 지문이 일치하지 않습니다 (expected ${expected}, actual ${actual})`,
+      "plan_fingerprint_mismatch",
+    );
+  }
 }
 
 function tailLines(text: string, n: number): string {
@@ -320,6 +366,16 @@ function cmdPlanContract(cwd: string, args: string[]): void {
   appendJournal(cwd, work.slug, { event: "contract.commit", ts: result.transition.at, ...result.transition });
   saveWork(cwd, result.work);
   console.log(`커밋 상태: ${result.transition.from} → ${result.transition.to}`);
+}
+
+function cmdPlanSource(cwd: string, args: string[]): void {
+  ensureFlags(args, ["fingerprint", "slug"]);
+  const work = resolveWork(cwd, readFlag(args, "slug"));
+  const fingerprint = readFlag(args, "fingerprint");
+  if (fingerprint === undefined) throw new GdmError("--fingerprint가 필요합니다", "usage");
+  const next = recordVerificationPlanSourceFingerprint(work, fingerprint);
+  saveVerificationPlanSourceFingerprint(cwd, next.slug, fingerprint);
+  console.log(`source fingerprint 기록됨: ${fingerprint}`);
 }
 
 function cmdAttemptFail(cwd: string, args: string[]): void {
@@ -533,7 +589,7 @@ function buildAutoEvidence(
   const result = spawnSync("bash", ["-c", cmd], {
     cwd,
     encoding: "utf8",
-    timeout: CMD_TIMEOUT_MS,
+    timeout: commandTimeoutMs(),
     maxBuffer: 10 * 1024 * 1024,
   });
   const output = `${result.stdout ?? ""}${result.stderr ? `\n[stderr]\n${result.stderr}` : ""}`;
@@ -567,7 +623,7 @@ function buildRedEvidence(
   const result = spawnSync("bash", ["-c", cmd], {
     cwd,
     encoding: "utf8",
-    timeout: CMD_TIMEOUT_MS,
+    timeout: commandTimeoutMs(),
     maxBuffer: 10 * 1024 * 1024,
   });
   const output = `${result.stdout ?? ""}${result.stderr ? `\n[stderr]\n${result.stderr}` : ""}`;
@@ -592,7 +648,7 @@ function validateAutoCommand(cwd: string, cmd: string): string {
   const result = spawnSync("bash", ["-c", cmd], {
     cwd,
     encoding: "utf8",
-    timeout: CMD_TIMEOUT_MS,
+    timeout: commandTimeoutMs(),
     maxBuffer: 10 * 1024 * 1024,
   });
   const output = `${result.stdout ?? ""}${result.stderr ? `\n[stderr]\n${result.stderr}` : ""}`;
@@ -615,8 +671,13 @@ function cmdPass(cwd: string, args: string[]): void {
   const id = args[0] && !args[0].startsWith("--") ? args[0] : undefined;
   if (!id) throw new GdmError("통과시킬 항목 id가 필요합니다: gdm pass <id>", "usage");
   const rest = args.slice(1);
-  ensureFlags(rest, ["observed", "note", "reviewer", "slug"], ["manual", "red"]);
+  ensureFlags(
+    rest,
+    ["observed", "note", "reviewer", "slug", "expected-plan-fingerprint"],
+    ["manual", "red"],
+  );
   const work = resolveWork(cwd, readFlag(rest, "slug"));
+  assertExpectedPlanFingerprint(work, readFlag(rest, "expected-plan-fingerprint"));
   try {
     const check = assertPassable(work, id);
     const noteValue = readFlag(rest, "note");
@@ -713,9 +774,10 @@ function runRecheck(
 }
 
 function cmdRecheck(cwd: string, args: string[]): void {
-  ensureFlags(args, ["check", "slug"]);
+  ensureFlags(args, ["check", "slug", "expected-plan-fingerprint"]);
   const ts = now();
   const initial = resolveWork(cwd, readFlag(args, "slug"));
+  assertExpectedPlanFingerprint(initial, readFlag(args, "expected-plan-fingerprint"));
   const only = readFlag(args, "check");
   const targets = initial.checks.filter(
     (c) => c.status === "proven" && !c.manual && (!only || c.id === only),
@@ -838,6 +900,19 @@ function cmdAuditVerdict(cwd: string, args: string[]): void {
   const auditModel = safeText(readFlag(args, "audit-model") ?? "", "audit-model");
   const contained = readContainedFile(cwd, report, "report");
   if (contained.content.length === 0) throw new GdmError(`검수보고 파일이 비어 있습니다: ${report}`, "report_empty");
+  const verdictLines = contained.content
+    .split(/\r?\n/u)
+    .filter((line) => line.startsWith("**판정:"));
+  if (
+    verdictLines.length !== 1 ||
+    (verdictLines[0] !== "**판정: 통과**" && verdictLines[0] !== "**판정: 반려**")
+  ) {
+    throw new GdmError("검수보고에는 정확한 판정 marker가 하나 있어야 합니다", "audit_verdict_invalid");
+  }
+  const reportPassed = verdictLines[0] === "**판정: 통과**";
+  if (reportPassed !== pass) {
+    throw new GdmError("검수보고의 판정과 --pass/--fail 인자가 일치하지 않습니다", "audit_verdict_mismatch");
+  }
   if (!contained.content.includes(`implementationModel: ${implementationModel}`) || !contained.content.includes(`auditModel: ${auditModel}`)) {
     throw new GdmError("검수보고의 implementationModel 또는 auditModel이 명령 인자와 일치하지 않습니다", "audit_model_mismatch");
   }
@@ -878,10 +953,14 @@ function cmdAuditVerdict(cwd: string, args: string[]): void {
 }
 
 function cmdDone(cwd: string, args: string[]): void {
-  ensureFlags(args, ["slug"]);
+  ensureFlags(args, ["slug", "expected-plan-fingerprint"]);
   const ts = now();
   const work = resolveWork(cwd, readFlag(args, "slug"));
+  assertExpectedPlanFingerprint(work, readFlag(args, "expected-plan-fingerprint"));
   try {
+    // Preserve closeWork's canonical work_done error, but reject before any
+    // scope scan, audit validation, command replay, or evidence mutation.
+    if (work.done) closeWork(work, ts);
     const scopeProblems = workspaceScopeProblems(work, captureWorkspaceFingerprint(cwd));
     if (scopeProblems.length > 0) {
       throw new GdmError(describeScopeProblems(scopeProblems), "scope_violation");
@@ -1282,6 +1361,217 @@ function repoVersionFromSkills(): { version: string; root: string } | undefined 
   }
 }
 
+const TARGET_MANIFEST_KEYS = [
+  "schemaVersion", "target", "adapterVersion", "canonicalSourceSha256", "sourceSha256",
+  "capabilityProfile", "hook", "runner", "skills",
+] as const;
+const TARGET_CAPABILITY_PROFILE = {
+  id: "gdm-read-only-specialist/v1",
+  filesystem: "read-only",
+  delegation: "disabled",
+  mcp: "disabled",
+  shell: "unsupported",
+  browser: "unsupported",
+  network: "unsupported",
+} as const;
+const TARGET_RUNNER = {
+  contract: "gdm-role-runner/v1",
+  path: "gdm-agents/run-role.sh",
+  adapters: {
+    codex: "gdm-agents/providers/codex.sh",
+    claude: "gdm-agents/providers/claude.sh",
+  },
+} as const;
+const TARGET_HASH_RE = /^[0-9a-f]{64}$/u;
+
+type TargetName = "codex" | "claude";
+type TargetManifestDoctor = {
+  readonly target: TargetName;
+  readonly status: "valid" | "drift" | "missing";
+  readonly sourceHash?: string;
+  readonly profile: "gdm-read-only-specialist/v1" | "invalid" | "unavailable";
+  readonly hook: "supported" | "not-required" | "invalid" | "unavailable";
+  readonly runner: "supported" | "invalid" | "unavailable";
+  readonly problems: readonly string[];
+};
+
+function doctorRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function doctorExactKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
+  const actual = Object.keys(value).sort();
+  return actual.length === keys.length && actual.every((key, index) => key === [...keys].sort()[index]);
+}
+
+function doctorExactObject(value: unknown, expected: Readonly<Record<string, unknown>>): boolean {
+  if (!doctorRecord(value) || !doctorExactKeys(value, Object.keys(expected))) return false;
+  return Object.entries(expected).every(([key, expectedValue]) => value[key] === expectedValue);
+}
+
+function doctorContainedRegularFile(root: string, relativePath: string, executable = false): string | undefined {
+  try {
+    const canonicalRoot = realpathSync(root);
+    const path = join(root, relativePath);
+    const stat = lstatSync(path);
+    if (stat.isSymbolicLink() || !stat.isFile() || (executable && (stat.mode & 0o111) === 0)) return undefined;
+    const canonical = realpathSync(path);
+    const fromRoot = relative(canonicalRoot, canonical);
+    if (fromRoot === "" || fromRoot === ".." || fromRoot.startsWith(`..${sep}`) || isAbsolute(fromRoot)) return undefined;
+    return canonical;
+  } catch {
+    return undefined;
+  }
+}
+
+function doctorInstalledHash(root: string, relativePath: string, expectedHash: unknown): boolean {
+  if (typeof expectedHash !== "string" || !TARGET_HASH_RE.test(expectedHash)) return false;
+  const path = doctorContainedRegularFile(root, relativePath, true);
+  return path !== undefined && createHash("sha256").update(readFileSync(path)).digest("hex") === expectedHash;
+}
+
+function doctorRunnerValid(root: string, value: unknown): boolean {
+  if (!doctorRecord(value) || !doctorExactKeys(value, ["contract", "path", "sha256", "adapters"])) return false;
+  if (value.contract !== TARGET_RUNNER.contract || value.path !== TARGET_RUNNER.path ||
+      !doctorInstalledHash(root, TARGET_RUNNER.path, value.sha256) || !doctorRecord(value.adapters) ||
+      !doctorExactKeys(value.adapters, ["codex", "claude"])) return false;
+  for (const provider of ["codex", "claude"] as const) {
+    const adapter = value.adapters[provider];
+    const expectedPath = TARGET_RUNNER.adapters[provider];
+    if (!doctorRecord(adapter) || !doctorExactKeys(adapter, ["path", "sha256"]) ||
+        adapter.path !== expectedPath || !doctorInstalledHash(root, expectedPath, adapter.sha256)) return false;
+  }
+  return true;
+}
+
+function inspectTargetManifest(target: TargetName, skillsRoot: string): TargetManifestDoctor {
+  const manifestPath = join(skillsRoot, "gdm-target-manifest.json");
+  if (!existsSync(manifestPath)) {
+    return {
+      target,
+      status: "missing",
+      profile: "unavailable",
+      hook: "unavailable",
+      runner: "unavailable",
+      problems: ["manifest missing"],
+    };
+  }
+  const problems: string[] = [];
+  let raw: unknown;
+  const containedManifest = doctorContainedRegularFile(skillsRoot, "gdm-target-manifest.json");
+  if (containedManifest === undefined) {
+    problems.push("manifest is not a contained regular file");
+  } else {
+    try {
+      raw = JSON.parse(readFileSync(containedManifest, "utf8"));
+    } catch {
+      problems.push("manifest JSON is malformed");
+    }
+  }
+  if (!doctorRecord(raw)) {
+    return {
+      target,
+      status: "drift",
+      profile: "invalid",
+      hook: "invalid",
+      runner: "invalid",
+      problems: problems.length > 0 ? problems : ["manifest root is invalid"],
+    };
+  }
+  if (!doctorExactKeys(raw, TARGET_MANIFEST_KEYS)) problems.push("top-level schema keys differ");
+  if (raw.schemaVersion !== "gdm-target-skill-manifest/v1") problems.push("schemaVersion differs");
+  if (raw.target !== target) problems.push("target differs from install path");
+  if (raw.adapterVersion !== "gdm-target-adapter/v1") problems.push("adapterVersion differs");
+  const sourceHash = typeof raw.canonicalSourceSha256 === "string" && TARGET_HASH_RE.test(raw.canonicalSourceSha256)
+    ? raw.canonicalSourceSha256
+    : undefined;
+  if (sourceHash === undefined) problems.push("canonical source hash is invalid");
+  if (typeof raw.sourceSha256 !== "string" || !TARGET_HASH_RE.test(raw.sourceSha256)) {
+    problems.push("source hash is invalid");
+  }
+
+  const profileValid = doctorExactObject(raw.capabilityProfile, TARGET_CAPABILITY_PROFILE);
+  if (!profileValid) problems.push("capability profile differs");
+  const expectedHook = target === "codex"
+    ? { id: "gdm-agent-gate-v1", status: "supported", requiredForTarget: true }
+    : { id: null, status: "not-required", requiredForTarget: false };
+  const hookValid = doctorExactObject(raw.hook, expectedHook);
+  if (!hookValid) problems.push("hook capability differs");
+  const runnerValid = doctorRunnerValid(skillsRoot, raw.runner);
+  if (!runnerValid) problems.push("runner or provider adapter contract/hash differs");
+
+  const expectedSkills = [...SKILL_NAMES].map((name) => `gdm-${name}`).sort();
+  if (!Array.isArray(raw.skills)) {
+    problems.push("skills list is invalid");
+  } else {
+    const names: string[] = [];
+    for (const [index, value] of raw.skills.entries()) {
+      if (!doctorRecord(value) || !doctorExactKeys(value, [
+        "name", "sourcePath", "sourceSha256", "renderedSha256",
+      ])) {
+        problems.push(`skill ${index + 1} schema differs`);
+        continue;
+      }
+      const name = typeof value.name === "string" ? value.name : "";
+      names.push(name);
+      if (!/^gdm-[a-z][a-z0-9-]*$/u.test(name) || value.sourcePath !== `skills/${name.slice(4)}`) {
+        problems.push(`skill ${index + 1} identity differs`);
+      }
+      if (typeof value.sourceSha256 !== "string" || !TARGET_HASH_RE.test(value.sourceSha256)) {
+        problems.push(`skill ${name || index + 1} source hash is invalid`);
+      }
+      if (typeof value.renderedSha256 !== "string" || !TARGET_HASH_RE.test(value.renderedSha256)) {
+        problems.push(`skill ${name || index + 1} rendered hash is invalid`);
+        continue;
+      }
+      const skillPath = doctorContainedRegularFile(skillsRoot, `${name}/SKILL.md`);
+      if (skillPath === undefined) {
+        problems.push(`skill ${name || index + 1} is missing or unsafe`);
+      } else {
+        const installedHash = createHash("sha256").update(readFileSync(skillPath)).digest("hex");
+        if (installedHash !== value.renderedSha256) problems.push(`skill ${name} rendered bytes drifted`);
+      }
+    }
+    if (new Set(names).size !== names.length || names.some((name, index) => name !== [...names].sort()[index])) {
+      problems.push("skill names are duplicate or unsorted");
+    }
+    if (names.length !== expectedSkills.length || names.some((name, index) => name !== expectedSkills[index])) {
+      problems.push("installed skill set differs");
+    }
+  }
+  return {
+    target,
+    status: problems.length === 0 ? "valid" : "drift",
+    ...(sourceHash === undefined ? {} : { sourceHash }),
+    profile: profileValid ? "gdm-read-only-specialist/v1" : "invalid",
+    hook: hookValid ? (target === "codex" ? "supported" : "not-required") : "invalid",
+    runner: runnerValid ? "supported" : "invalid",
+    problems,
+  };
+}
+
+function targetManifestDoctorLines(home: string, codexHomePath: string): string[] {
+  const targets = [
+    inspectTargetManifest("codex", join(codexHomePath, "skills")),
+    inspectTargetManifest("claude", join(home, ".claude", "skills")),
+  ] as const;
+  const lines = targets.map((result) => {
+    const prefix = result.status === "valid" ? "OK" : result.status === "missing" ? "WARN" : "ERROR";
+    const source = result.sourceHash === undefined ? "unavailable" : `${result.sourceHash.slice(0, 12)}…`;
+    const detail = result.problems.length === 0 ? "" : ` — ${result.problems.join(", ")}`;
+    return `  protocol target ${result.target}: ${prefix} manifest[${result.status}] source[${source}] profile[${result.profile}] hook[${result.hook}] runner[${result.runner}]${detail}`;
+  });
+  const [codex, claude] = targets;
+  if (codex.sourceHash !== undefined && claude.sourceHash !== undefined) {
+    lines.push(codex.sourceHash === claude.sourceHash
+      ? `  protocol target source parity: OK [${codex.sourceHash.slice(0, 12)}…]`
+      : "  protocol target source parity: ERROR [mismatch]");
+  } else {
+    lines.push("  protocol target source parity: WARN [unavailable]");
+  }
+  return lines;
+}
+
 function cmdDoctor(cwd: string): void {
   console.log(`gdm ${VERSION}`);
   const home = homedir();
@@ -1301,6 +1591,7 @@ function cmdDoctor(cwd: string): void {
   for (const line of codexAgentHookDoctorLines(cwd, codexEnv, process.execPath)) {
     console.log(line);
   }
+  for (const line of targetManifestDoctorLines(home, codexHomePath)) console.log(line);
   for (const name of SKILL_NAMES) {
     const claude = existsSync(join(home, ".claude", "skills", `gdm-${name}`));
     const codex = existsSync(join(codexHomePath, "skills", `gdm-${name}`));
@@ -1318,6 +1609,18 @@ function cmdDoctor(cwd: string): void {
   console.log(`  현재 디렉토리 작업: ${works.length}개 (진행 중 ${active.length}개)`);
 }
 
+function cmdWorkspace(cwd: string, args: string[]): void {
+  const [subcommand, ...rest] = args;
+  if (subcommand !== "fingerprint") {
+    throw new GdmError("workspace 하위 명령은 fingerprint만 지원합니다", "usage");
+  }
+  ensureFlags(rest, [], ["json"]);
+  if (!hasFlag(rest, "json")) {
+    throw new GdmError("gdm workspace fingerprint는 --json이 필요합니다", "usage");
+  }
+  console.log(JSON.stringify(captureSourceFingerprint(cwd)));
+}
+
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   const cwd = process.cwd();
@@ -1330,6 +1633,7 @@ async function main(): Promise<void> {
     command === "miss" || command === "repair" ||
     (command === "plan" && sub !== "list" && !(sub === "contract" && rest.includes("--check-commit"))) ||
     (command === "audit" && sub === "verdict") ||
+    command === "protocol" ||
     (command === "preset" && sub !== "list") ||
     command === "delivery";
   let releaseLock: (() => void) | undefined;
@@ -1343,6 +1647,7 @@ async function main(): Promise<void> {
         else if (sub === "list") cmdPlanList(cwd, planArgs);
         else if (sub === "edit") cmdPlanEdit(cwd, planArgs);
         else if (sub === "contract") cmdPlanContract(cwd, planArgs);
+        else if (sub === "source") cmdPlanSource(cwd, planArgs);
         else {
           console.error(USAGE);
           process.exitCode = 2;
@@ -1395,6 +1700,9 @@ async function main(): Promise<void> {
       case "delivery":
         cmdDelivery(cwd, rest, now());
         break;
+      case "protocol":
+        cmdProtocol(cwd, rest, now());
+        break;
       case "agent":
         cmdAgent(
           cwd,
@@ -1406,6 +1714,9 @@ async function main(): Promise<void> {
         break;
       case "doctor":
         cmdDoctor(cwd);
+        break;
+      case "workspace":
+        cmdWorkspace(cwd, rest);
         break;
       case "--version":
         console.log(VERSION);
@@ -1444,11 +1755,25 @@ async function main(): Promise<void> {
         "habit_activation_locked",
         "habit_activation_conflict",
         "habit_event_invalid",
+        "handoff_id_conflict",
+        "handoff_time_invalid",
+        "receipt_time_invalid",
+        "handoff_not_found", "claim_not_found", "claim_id_conflict", "receipt_conflict", "receipt_transition",
+        "runner_observation_invalid",
+        "receiver_ack_invalid",
+        "artifact_encoding_invalid",
+        "audit_verdict_invalid",
+        "audit_verdict_mismatch",
       ]);
       const policy = new Set([
         "commit_forbidden", "unchanged_retry", "stale_evidence", "delivery_gate", "scope_violation",
         "red_evidence_required", "red_expected_failure", "red_not_allowed", "simplification_required",
-        "expert_evidence_required", "expert_review_required", "scope_locked",
+        "expert_evidence_required", "expert_review_required", "scope_locked", "plan_fingerprint_mismatch",
+        "state_fingerprint_mismatch", "source_fingerprint_mismatch",
+        "capability_unsupported", "receiver_mismatch", "claim_conflict", "bundle_mismatch",
+        "artifact_missing", "artifact_changed",
+        "artifact_too_large", "output_too_large", "bundle_too_large",
+        "output_missing", "output_changed", "receiver_blocked", "provider_executable_changed",
       ]);
       const privacy = new Set(["privacy_rejected", "path_rejected"]);
       if (usage.has(error.code)) process.exitCode = 2;
