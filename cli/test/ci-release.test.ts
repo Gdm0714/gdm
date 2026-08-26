@@ -16,12 +16,14 @@ describe("release packaging policy", () => {
     expect(install).toContain("SHASUMS256.txt가 없어 설치를 중단합니다");
     expect(install).toContain('$tmp/pkg/targets/codex');
     expect(install).toContain('$tmp/pkg/targets/claude');
+    expect(install).toContain('$tmp/pkg/targets/pi');
     expect(install).toContain("validate_staged_target");
     expect(install).toContain("canonicalSourceSha256");
     expect(install).toContain("manifest_runner_hash");
     expect(packager).toContain("install/render-skills.ts");
-    expect(packager).toContain('for target in codex claude');
+    expect(packager).toContain('for target in codex claude pi');
     expect(packager).toContain('"runner"');
     expect(qa).toContain("deterministic target renders");
+    expect(qa).toContain("for target in codex claude pi");
   });
 });

@@ -237,13 +237,38 @@ describe("status --checks", () => {
     expect(withChecks.exitCode).toBe(0);
     const parsed = JSON.parse(withChecks.stdout) as {
       slug: string;
+      blockers: { code: string; message: string }[];
       checks?: { id: string; cmd: string | null; status: string }[];
     }[];
+    expect(parsed[0]!.blockers).toEqual([
+      expect.objectContaining({ code: "unproven", message: expect.stringContaining("c1") }),
+    ]);
     expect(parsed[0]!.checks![0]!.id).toBe("c1");
     expect(parsed[0]!.checks![0]!.cmd).toBe("printf ok");
     expect(parsed[0]!.checks![0]!.status).toBe("open");
     expect(withChecks.stdout).not.toContain("상세확인용브리프본문");
     expect(JSON.parse(withoutChecks.stdout)[0].checks).toBeUndefined();
+  });
+
+  test("retro --all --json은 Work가 없어도 동일한 zero schema를 반환한다", () => {
+    const result = runCli(tempRepo(), ["retro", "--all", "--json"]);
+
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual({
+      works: 0,
+      done: 0,
+      events: 0,
+      denied: {},
+      misses: [],
+      feedback: { good: 0, bad: 0, total: 0 },
+      evalCandidates: [],
+      editCount: 0,
+      recheckFails: 0,
+      suggestions: [],
+      habitCandidates: 0,
+      habitAdopted: 0,
+      habitNext: "gdm habit harvest",
+    });
   });
 });
 

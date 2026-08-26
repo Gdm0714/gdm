@@ -341,4 +341,107 @@ describe("CLI regression", () => {
       suggestions: [expect.stringContaining("edge")],
     });
   });
+
+  test("feedback records one safe event and exposes aggregate eval candidates", () => {
+    // Given: a work that can own explicit user feedback.
+    const cwd = tempRepo();
+    expect(
+      runCli(cwd, [
+        "plan",
+        "init",
+        "--slug",
+        "sample",
+        "--brief",
+        "피드백 테스트",
+        "--require",
+        "기존 변경 보존",
+        "--forbid",
+        "자동 커밋",
+      ]).exitCode,
+    ).toBe(0);
+
+    // When: one positive and one reasoned negative rating are recorded, followed by rejected input.
+    const good = runCli(cwd, ["feedback", "--value", "good", "--slug", "sample", "--json"]);
+    const bad = runCli(cwd, [
+      "feedback",
+      "--value",
+      "bad",
+      "--reason",
+      "  다음 행동이 모호함  ",
+      "--source",
+      "pi",
+      "--slug",
+      "sample",
+      "--json",
+    ]);
+    const reasonlessBad = runCli(cwd, [
+      "feedback", "--value", "bad", "--source", "pi", "--slug", "sample", "--json",
+    ]);
+    const unsafeReason = runCli(cwd, [
+      "feedback", "--value", "bad", "--reason", "줄바꿈\n거부", "--slug", "sample",
+    ]);
+    const unsafeSource = runCli(cwd, [
+      "feedback", "--value", "bad", "--source", "pi/session", "--slug", "sample",
+    ]);
+    const retro = runCli(cwd, ["retro", "--all", "--json"]);
+
+    // Then: only the two valid commands append feedback, and only reasoned bad feedback is an eval candidate.
+    expect(good.exitCode).toBe(0);
+    expect(JSON.parse(good.stdout)).toEqual({ slug: "sample", value: "good", source: "manual" });
+    expect(bad.exitCode).toBe(0);
+    expect(JSON.parse(bad.stdout)).toEqual({
+      slug: "sample",
+      value: "bad",
+      reason: "다음 행동이 모호함",
+      source: "pi",
+    });
+    expect(reasonlessBad.exitCode).toBe(2);
+    expect(reasonlessBad.stdout).toBe("");
+    expect(reasonlessBad.stderr).toContain("--reason");
+    expect(unsafeReason.exitCode).toBe(5);
+    expect(unsafeReason.stderr).toContain("field=reason");
+    expect(unsafeSource.exitCode).toBe(2);
+    expect(unsafeSource.stderr).toContain("field=source opaque identifier");
+
+    const events = readFileSync(join(cwd, ".gdm", "sample", "journal.jsonl"), "utf8")
+      .trimEnd()
+      .split("\n")
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+    expect(events.filter((event) => event.event === "feedback")).toEqual([
+      expect.objectContaining({ event: "feedback", value: "good", source: "manual" }),
+      expect.objectContaining({
+        event: "feedback",
+        value: "bad",
+        reason: "다음 행동이 모호함",
+        source: "pi",
+      }),
+    ]);
+    expect(JSON.parse(retro.stdout)).toMatchObject({
+      misses: [],
+      feedback: { good: 1, bad: 1, total: 2 },
+      evalCandidates: [{ work: "sample", reason: "다음 행동이 모호함", source: "pi" }],
+    });
+  });
+
+  test("feedback without a slug selects the most recently active work", () => {
+    // Given: two active works created by separate CLI processes in activity order.
+    const cwd = tempRepo();
+    for (const slug of ["older", "newer"]) {
+      expect(runCli(cwd, [
+        "plan", "init", "--slug", slug, "--brief", `${slug} feedback target`,
+        "--require", "기존 변경 보존", "--forbid", "자동 커밋",
+      ]).exitCode).toBe(0);
+    }
+
+    // When: feedback is recorded without an explicit slug.
+    const feedback = runCli(cwd, ["feedback", "--value", "good", "--json"]);
+
+    // Then: the newest active work receives the single event.
+    expect(feedback.exitCode).toBe(0);
+    expect(JSON.parse(feedback.stdout)).toEqual({ slug: "newer", value: "good", source: "manual" });
+    const olderJournal = readFileSync(join(cwd, ".gdm", "older", "journal.jsonl"), "utf8");
+    const newerJournal = readFileSync(join(cwd, ".gdm", "newer", "journal.jsonl"), "utf8");
+    expect(olderJournal).not.toContain('"event":"feedback"');
+    expect(newerJournal.match(/"event":"feedback"/gu)).toHaveLength(1);
+  });
 });

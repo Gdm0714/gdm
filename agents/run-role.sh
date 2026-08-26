@@ -7,10 +7,10 @@ ADAPTER_VERSION="gdm-provider-adapter-v1"
 usage() {
   cat >&2 <<'EOF'
 usage:
-  run-role.sh --mode work --provider <codex|claude> --role <plan|analyze|review|audit> \
+  run-role.sh --mode work --provider <codex|claude|pi> --role <plan|analyze|review|audit> \
     --slug <slug> --handoff-event-id <id> --claim-id <id> [--receiver-role <role>] \
     [--workspace <dir>] [--model <model>]
-  run-role.sh --mode preflight --provider <codex|claude> --role <plan|analyze|review|audit> \
+  run-role.sh --mode preflight --provider <codex|claude|pi> --role <plan|analyze|review|audit> \
     --prompt <file> --output <file> [--workspace <dir>] [--model <model>]
 EOF
   exit 64
@@ -52,7 +52,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 case "$mode" in work|preflight) ;; *) usage ;; esac
-case "$provider" in codex|claude) ;; *) usage ;; esac
+case "$provider" in codex|claude|pi) ;; *) usage ;; esac
 case "$role" in plan|analyze|review|audit) ;; *) usage ;; esac
 if [ "$provider" = "claude" ]; then
   ADAPTER_VERSION="gdm-provider-adapter-v2"
@@ -152,6 +152,7 @@ resolve_executable() {
   case "$provider" in
     codex) override_name="GDM_CODEX_EXECUTABLE" ;;
     claude) override_name="GDM_CLAUDE_EXECUTABLE" ;;
+    pi) override_name="GDM_PI_EXECUTABLE" ;;
   esac
   candidate="${!override_name-}"
   if [ -z "$candidate" ]; then
@@ -197,11 +198,11 @@ output_fd_open=0
 provider_executable=""
 provider_sha256=""
 provider_version=""
-if [ "$provider" = "claude" ]; then
-  argv_policy_id="gdm-claude-read-only-v2"
-else
-  argv_policy_id="gdm-codex-read-only-v1"
-fi
+case "$provider" in
+  claude) argv_policy_id="gdm-claude-read-only-v3" ;;
+  codex) argv_policy_id="gdm-codex-read-only-v1" ;;
+  pi) argv_policy_id="gdm-pi-read-only-v1" ;;
+esac
 output_relative=""
 gdm_executable=""
 

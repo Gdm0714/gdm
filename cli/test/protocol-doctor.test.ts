@@ -16,6 +16,7 @@ function fixture(): { readonly cwd: string; readonly home: string; readonly code
   for (const [target, output] of [
     ["codex", join(codexHome, "skills")],
     ["claude", join(home, ".claude", "skills")],
+    ["pi", join(home, ".pi", "agent", "skills")],
   ] as const) {
     const rendered = Bun.spawnSync([
       "bun", RENDERER, "--target", target, "--source-root", join(ROOT, "skills"),
@@ -48,6 +49,7 @@ describe("protocol target manifest doctor", () => {
     expect(healthy).toContain("protocol target codex: OK manifest[valid]");
     expect(healthy).toContain("hook[supported] runner[supported]");
     expect(healthy).toContain("protocol target claude: OK manifest[valid]");
+    expect(healthy).toContain("protocol target pi: OK manifest[valid]");
     expect(healthy).toContain("hook[not-required] runner[supported]");
     expect(healthy).toContain("protocol target source parity: OK");
     expect(healthy).not.toContain("core parity");

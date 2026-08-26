@@ -20,6 +20,14 @@ import { saveVerificationPlanSourceFingerprint } from "../src/work-source-finger
 
 const CLI = join(import.meta.dir, "..", "src", "cli.ts");
 const decoder = new TextDecoder();
+const OUTCOME = {
+  bottleneck: "검증 피드백 지연",
+  desiredOutcome: "회귀 검토 시간 단축",
+  baseline: "주당 4건",
+  target: "주당 1건",
+  unit: "회귀 후보 수",
+  interveneIf: "주당 3건 초과",
+} as const;
 
 function run(cwd: string, args: readonly string[]) {
   const result = Bun.spawnSync([process.execPath, CLI, ...args], {
@@ -57,6 +65,31 @@ function initializedWork(): { readonly cwd: string; readonly slug: string; reado
 }
 
 describe("expected verification plan fingerprint", () => {
+  test("a declared outcome invalidates an expected fingerprint captured before that intent", () => {
+    const { cwd, slug, fingerprint } = initializedWork();
+    const checksPath = join(cwd, ".gdm", slug, "checks.json");
+    const raw = JSON.parse(readFileSync(checksPath, "utf8")) as Record<string, any>;
+    raw.contract.outcome = OUTCOME;
+    writeFileSync(checksPath, `${JSON.stringify(raw, null, 2)}\n`);
+
+    const outcomeFingerprint = verificationPlanFingerprint(loadWork(cwd, slug));
+    expect(outcomeFingerprint).not.toBe(fingerprint);
+    const before = workFiles(cwd, slug);
+    const stale = run(cwd, [
+      "pass", "c1", "--slug", slug, "--expected-plan-fingerprint", fingerprint,
+    ]);
+    expect(stale.exitCode).toBe(4);
+    expect(stale.stderr).toContain("plan_fingerprint_mismatch");
+    expect(workFiles(cwd, slug)).toEqual(before);
+    expect(existsSync(join(cwd, "executions.log"))).toBe(false);
+
+    const current = run(cwd, [
+      "pass", "c1", "--slug", slug, "--expected-plan-fingerprint", outcomeFingerprint,
+    ]);
+    expect(current.exitCode).toBe(0);
+    expect(readFileSync(join(cwd, "executions.log"), "utf8")).toBe("run\n");
+  });
+
   test("pass, recheck, and done reject a stale plan before command or state mutation", () => {
     const { cwd, slug, fingerprint } = initializedWork();
     const stale = "f".repeat(64) === fingerprint ? "e".repeat(64) : "f".repeat(64);

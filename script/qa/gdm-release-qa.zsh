@@ -112,7 +112,7 @@ esac
 archive_entries=$(tar -tzf "$RELEASE_DIR/gdm-skills.tar.gz" | sed 's#/$##' | LC_ALL=C sort)
 expected_targets="$scratch/expected-targets"
 mkdir -p "$expected_targets/targets"
-for target in codex claude; do
+for target in codex claude pi; do
   bun "$ROOT/install/render-skills.ts" \
     --target "$target" \
     --source-root "$ROOT/skills" \
@@ -152,4 +152,4 @@ with tarfile.open(sys.argv[2], "r:gz") as archive:
             )
 PY
 
-print -- "GDM release QA passed: four native targets, deterministic Codex/Claude skills, verified checksums"
+print -- "GDM release QA passed: four native targets, deterministic Codex/Claude/Pi skills, verified checksums"

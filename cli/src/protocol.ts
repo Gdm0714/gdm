@@ -256,6 +256,7 @@ export function protocolStateFingerprint(work: Work): string {
       verification: contract.verification ?? "deterministic",
       simplificationRequired: contract.simplificationRequired ?? false,
       scopeAmendments: contract.scopeAmendments ?? [],
+      ...(contract.outcome === undefined ? {} : { outcome: contract.outcome }),
     },
   });
   return hash.digest("hex");
@@ -459,7 +460,9 @@ function readWorkProtocolReceipts(
 }
 
 function containsCredentialSignature(value: string): boolean {
-  return OPENAI_KEY_RE.test(value) || CREDENTIAL_RE.test(value) || JWT_RE.test(value);
+  const firstDot = value.indexOf(".");
+  return OPENAI_KEY_RE.test(value) || CREDENTIAL_RE.test(value) ||
+    (firstDot >= 0 && value.indexOf(".", firstDot + 1) >= 0 && JWT_RE.test(value));
 }
 
 function automaticArtifact(cwd: string, path: string) {
@@ -569,6 +572,7 @@ export function buildWorkSnapshot(
         latestTransition: work.contract.latestCommitTransition ?? null,
       },
       scopeAmendments: work.contract.scopeAmendments ?? [],
+      ...(work.contract.outcome === undefined ? {} : { outcome: work.contract.outcome }),
     },
     checks: work.checks.map((check) => ({
       id: check.id,
@@ -730,6 +734,39 @@ function canonicalJson(value: unknown): string {
     .filter(([, entry]) => entry !== undefined)
     .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0);
   return `{${entries.map(([key, entry]) => `${JSON.stringify(key)}:${canonicalJson(entry)}`).join(",")}}`;
+}
+
+function canonicalJsonFitsByteLimit(value: unknown, maxBytes: number): boolean {
+  let bytes = 0;
+  const append = (length: number): boolean => {
+    bytes += length;
+    return bytes <= maxBytes;
+  };
+  const visit = (entry: unknown): boolean => {
+    if (entry === null || typeof entry !== "object") {
+      const encoded = JSON.stringify(entry);
+      return append(encoded === undefined ? 0 : Buffer.byteLength(encoded, "utf8"));
+    }
+    if (Array.isArray(entry)) {
+      if (!append(1)) return false;
+      for (let index = 0; index < entry.length; index += 1) {
+        if (index > 0 && !append(1)) return false;
+        if (!visit(entry[index])) return false;
+      }
+      return append(1);
+    }
+    const entries = Object.entries(entry as Record<string, unknown>)
+      .filter(([, nested]) => nested !== undefined)
+      .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0);
+    if (!append(1)) return false;
+    for (let index = 0; index < entries.length; index += 1) {
+      if (index > 0 && !append(1)) return false;
+      const [key, nested] = entries[index]!;
+      if (!append(Buffer.byteLength(JSON.stringify(key), "utf8") + 1) || !visit(nested)) return false;
+    }
+    return append(1);
+  };
+  return visit(value);
 }
 
 function hasExactKeys(value: object, keys: readonly string[]): boolean {
@@ -969,15 +1006,17 @@ function rebuildDispatchBundle(
     capabilityProfile: READ_ONLY_SPECIALIST_PROFILE,
     artifact,
   };
-  const payloadJson = canonicalJson(payload);
-  const bundle = { ...payload, bundleSha256: sha256(payloadJson) };
-  const bundleBytes = Buffer.byteLength(canonicalJson(bundle), "utf8");
-  if (bundleBytes > PROTOCOL_BUNDLE_MAX_BYTES) {
+  if (!canonicalJsonFitsByteLimit(
+    { ...payload, bundleSha256: "0".repeat(64) },
+    PROTOCOL_BUNDLE_MAX_BYTES,
+  )) {
     throw new GdmError(
       `dispatch bundle이 ${PROTOCOL_BUNDLE_MAX_BYTES}바이트 상한을 초과했습니다`,
       "bundle_too_large",
     );
   }
+  const payloadJson = canonicalJson(payload);
+  const bundle = { ...payload, bundleSha256: sha256(payloadJson) };
   assertCanonicalDispatchBundle(bundle);
   return bundle;
 }

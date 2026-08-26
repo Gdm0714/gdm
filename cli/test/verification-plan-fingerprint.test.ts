@@ -11,11 +11,26 @@ type Fixture = {
 };
 
 const fixturePath = join(import.meta.dir, "..", "..", "fixtures", "verification-plan-fingerprint-v1.json");
+const OUTCOME = {
+  bottleneck: "검증 피드백 지연",
+  desiredOutcome: "회귀 검토 시간 단축",
+  baseline: "주당 4건",
+  target: "주당 1건",
+  unit: "회귀 후보 수",
+  interveneIf: "주당 3건 초과",
+} as const;
 
 function fixture(): { readonly work: Work; readonly sha256: string } {
   const parsed = JSON.parse(readFileSync(fixturePath, "utf8")) as Fixture;
   expect(parsed.schemaVersion).toBe(1);
   return { work: parsed.work as Work, sha256: parsed.sha256 };
+}
+
+function withOutcome(work: Work, outcome = OUTCOME): Work {
+  return {
+    ...work,
+    contract: { ...work.contract, outcome },
+  } as unknown as Work;
 }
 
 describe("verification plan fingerprint v1", () => {
@@ -24,6 +39,7 @@ describe("verification plan fingerprint v1", () => {
 
     expect(verificationPlanFingerprint(work)).toBe(sha256);
     expect(sha256).toMatch(/^[0-9a-f]{64}$/u);
+    expect(Object.hasOwn(work.contract, "outcome")).toBe(false);
   });
 
   test("omitted fields and their documented defaults have the same identity", () => {
@@ -80,5 +96,16 @@ describe("verification plan fingerprint v1", () => {
       checks: work.checks.map((check, index) => index === 0 ? { ...check, cmd: "" } : check),
     };
     expect(verificationPlanFingerprint(emptyCommand)).not.toBe(sha256);
+  });
+
+  test("a present outcome and every one of its six fields are bound to plan identity", () => {
+    const { work, sha256 } = fixture();
+    const outcomeFingerprint = verificationPlanFingerprint(withOutcome(work));
+
+    expect(outcomeFingerprint).not.toBe(sha256);
+    for (const field of Object.keys(OUTCOME) as (keyof typeof OUTCOME)[]) {
+      const changed = { ...OUTCOME, [field]: `${OUTCOME[field]} 변경` };
+      expect(verificationPlanFingerprint(withOutcome(work, changed)), field).not.toBe(outcomeFingerprint);
+    }
   });
 });

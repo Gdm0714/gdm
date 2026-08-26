@@ -106,7 +106,7 @@ describe("workflow policy", () => {
     expect(ui).toContain("구체적 시각 결함");
     expect(ui).toContain("개방형 시각 변경이면 gdm-design으로 전환");
     expect(ui).toContain("Claude Design용 프롬프트를 사용자에게 전달");
-    expect(readme).toContain("사용자가 작업을 시작하는 진입점은 Codex 하나");
+    expect(readme).toContain("Claude Code 쪽 스킬은\n  비대화형 설계·검수 역할에 쓰인다");
     expect(readme).toContain("새 화면·레이아웃·프로토타입 생성은 claude.ai/design에서");
     expect(readme).toContain("Chrome이나 브라우저를 자동 조작하지 않는다");
   });

@@ -1,7 +1,9 @@
 ## 설치 대상 어댑터
 
 - target ID: `claude`
-- provider adapter: `gdm-provider-adapter-v2`, argv policy: `gdm-claude-read-only-v2`
+- provider adapter: `gdm-provider-adapter-v2`, argv policy: `gdm-claude-read-only-v3`
+- model 미지정 dispatch는 `claude-fable-5`로 고정한다 — 로컬 Claude 기본 모델 설정에
+  상속되지 않는다. 재정의는 `--model` 인자 또는 `GDM_CLAUDE_MODEL` 환경변수로만 한다.
 - Work 역할 실행 계약: `gdm-agents/run-role.sh --mode work --provider claude --role <role> --slug <slug> --handoff-event-id <event-id> --claim-id <claim-id> --receiver-role <receiver-role>`
 - Work 없는 사전 설계 계약: `gdm-agents/run-role.sh --mode preflight --provider claude --role <role> --prompt <path> --output <path>`
 - capability profile: `gdm-read-only-specialist/v1`

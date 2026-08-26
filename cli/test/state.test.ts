@@ -29,6 +29,14 @@ import type { Work } from "../src/types.ts";
 
 const NOW = "2026-07-02T00:00:00.000Z";
 const REPORT_HASH = "a".repeat(64);
+const OUTCOME = {
+  bottleneck: "검증 피드백 지연",
+  desiredOutcome: "회귀 검토 시간 단축",
+  baseline: "주당 4건",
+  target: "주당 1건",
+  unit: "회귀 후보 수",
+  interveneIf: "주당 3건 초과",
+} as const;
 
 function audit(work: Work, result: "pass" | "fail") {
   return recordAudit(work, result, "report.md", REPORT_HASH, "Codex", "Claude", null, NOW);
@@ -48,6 +56,17 @@ describe("initWork", () => {
     expect(work.slug).toBe("fix-login");
     expect(work.done).toBe(false);
     expect(work.checks).toHaveLength(0);
+    expect(Object.hasOwn(work.contract, "outcome")).toBe(false);
+  });
+
+  test("선언한 outcome은 validateWork에서 여섯 필드 그대로 보존", () => {
+    const work = initWork("fix-login", "로그인 수정", NOW);
+    const validated = validateWork({
+      ...work,
+      contract: { ...work.contract, outcome: OUTCOME },
+    }, "outcome.json");
+
+    expect((validated.contract as unknown as Record<string, unknown>).outcome).toEqual(OUTCOME);
   });
 
   test("잘못된 슬러그 거부", () => {

@@ -1,8 +1,8 @@
 # GDM Work Protocol production v2 평가
 
-평가일: 2026-08-12
-갱신일: 2026-08-13
-상태: **로컬 자동·실제 provider conformance 통과 — 독립 audit와 사용자 설치는 별도 게이트다.**
+평가일: 2026-08-12  
+갱신일: 2026-08-13  
+상태: **로컬 자동·실제 provider conformance 통과 — 독립 audit와 사용자 설치는 별도 게이트다.**  
 대상: source CLI, packaged binary, generated Codex·Claude skills, read-only role runner
 
 ## 지원 주장

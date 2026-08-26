@@ -15,7 +15,7 @@ import {
   writeSync,
 } from "node:fs";
 import { randomUUID } from "node:crypto";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import {
   appendCommittedJournal,
   ensureWorkDirectory,
@@ -303,6 +303,33 @@ export function saveWork(cwd: string, work: Work): void {
   durableAtomicWrite(directory, "work.md", renderWorkMd(validated));
 }
 
+/**
+ * Persist command evidence without following a pre-existing output symlink.
+ * Evidence paths are intentionally narrower than general state filenames: the
+ * caller may only name a check output directly below the work's out directory.
+ */
+export function writeWorkOutput(
+  cwd: string,
+  slug: string,
+  name: string,
+  body: string | Uint8Array,
+): string {
+  if (!/^[a-z0-9][a-z0-9-]*\.txt$/u.test(name)) {
+    throw new GdmError("field=evidence-output category=filename", "path_rejected");
+  }
+  try {
+    const directory = ensureWorkDirectory(cwd, slug, false);
+    const outputDirectory = ensureChildDirectory(directory, "out");
+    durableAtomicWrite(outputDirectory, name, body);
+    return relative(cwd, join(outputDirectory, name));
+  } catch (error) {
+    if (error instanceof GdmError && error.code === "state_corrupt") {
+      throw new GdmError("field=evidence-output category=unsafe-path", "path_rejected");
+    }
+    throw error;
+  }
+}
+
 export function repairTrailingNulWork(
   cwd: string,
   slug: string,
@@ -457,6 +484,19 @@ export function renderWorkMd(work: Work): string {
     "",
     work.brief,
     "",
+    ...(work.contract.outcome
+      ? [
+          "## 선언한 outcome (GDM 미측정)",
+          "",
+          `- 병목: ${work.contract.outcome.bottleneck}`,
+          `- 원하는 결과: ${work.contract.outcome.desiredOutcome}`,
+          `- 기준선: ${work.contract.outcome.baseline}`,
+          `- 목표: ${work.contract.outcome.target}`,
+          `- 단위: ${work.contract.outcome.unit}`,
+          `- 개입 조건: ${work.contract.outcome.interveneIf}`,
+          "",
+        ]
+      : []),
     "## 작업 계약",
     "",
     `- 커밋: ${work.contract.commit}`,

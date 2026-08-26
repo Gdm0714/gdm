@@ -29,6 +29,14 @@ const NOW = "2026-08-12T00:00:00.000Z";
 const LATER = "2026-08-12T00:01:00.000Z";
 const SOURCE: SourceFingerprint = { schemaVersion: 1, sha256: "a".repeat(64), fileCount: 3 };
 const roots: string[] = [];
+const OUTCOME = {
+  bottleneck: "검증 피드백 지연",
+  desiredOutcome: "회귀 검토 시간 단축",
+  baseline: "주당 4건",
+  target: "주당 1건",
+  unit: "회귀 후보 수",
+  interveneIf: "주당 3건 초과",
+} as const;
 
 function tempRoot(): string {
   const root = mkdtempSync(join(tmpdir(), "gdm-protocol-core-"));
@@ -50,6 +58,13 @@ function proven(work = openWork()): Work {
     manual: false,
     note: "Bearer private-note-body",
   }, NOW);
+}
+
+function withOutcome(work: Work, outcome = OUTCOME): Work {
+  return {
+    ...work,
+    contract: { ...work.contract, outcome },
+  } as unknown as Work;
 }
 
 afterEach(() => {
@@ -138,6 +153,7 @@ describe("protocol work snapshot", () => {
     const withEvidence = proven(base);
     const candidates: Work[] = [
       { ...base, brief: "github_pat_privatevalue" },
+      { ...base, brief: "embedded abcdefgh.ijklmnop.qrstuvwx token" },
       { ...base, checks: base.checks.map((check) => ({ ...check, cmd: "echo sk-privatevalue" })) },
       { ...base, contract: { ...base.contract, required: ["BEGIN RSA PRIVATE KEY"] } },
       {
@@ -176,6 +192,24 @@ describe("protocol work snapshot", () => {
       allowedPaths: ["."],
       commit: { state: "forbidden", latestTransition: null },
     });
+    expect(Object.hasOwn(legacy.contract, "outcome")).toBe(false);
+    expect(Object.hasOwn(snapshot.contract, "outcome")).toBe(false);
+  });
+
+  test("projects a declared outcome and binds all six fields to plan and state fingerprints", () => {
+    const base = openWork();
+    const baseSnapshot = buildWorkSnapshot(base, SOURCE, []);
+    const declared = withOutcome(base);
+    const snapshot = buildWorkSnapshot(declared, SOURCE, []);
+
+    expect(snapshot.contract.outcome).toEqual(OUTCOME);
+    expect(snapshot.work.planFingerprint).not.toBe(baseSnapshot.work.planFingerprint);
+    expect(snapshot.work.stateFingerprint).not.toBe(baseSnapshot.work.stateFingerprint);
+    const boundState = protocolStateFingerprint(declared);
+    for (const field of Object.keys(OUTCOME) as (keyof typeof OUTCOME)[]) {
+      const changed = withOutcome(base, { ...OUTCOME, [field]: `${OUTCOME[field]} 변경` });
+      expect(protocolStateFingerprint(changed), field).not.toBe(boundState);
+    }
   });
 
   test("validateWork rejects malformed slugs and incomplete check or evidence records", () => {

@@ -177,7 +177,7 @@ crash·timeout인 경우, 출력이 malformed JSON·schema mismatch인 경우, �
 
 ## 역할 실행과 제한된 병렬 위임
 
-분리 가능한 역할은 Codex/Claude의 네이티브 서브에이전트나 비대화형 CLI로 위임할 수 있다.
+분리 가능한 역할은 설치 target이 제공하는 Codex·Claude·Pi의 제한된 역할 실행기로 위임할 수 있다.
 해당 역할 스킬 전문과 필요한 파일·증거 경로만 전달하고, 사용자의 비밀, 전체 대화,
 불필요한 저장소 원문은 넘기지 않는다. 결과를 받은 뒤 진행자가 실제 파일과 gdm 게이트로
 다시 판정한다.
@@ -269,7 +269,7 @@ Stop 장벽은 한 번만 continuation을 요청하고 재진입에서는 경고
 
 독립 검수는 예외적으로 pass당 정확히 1명의 **leaf 실행**이다. 검수자에는
 `MAX_AGENT_DEPTH: 0`, `MAX_CHILD_AGENTS: 0`을 적용하고 병렬 검수자나 하위 검수자를 만들지
-않는다. Codex/Claude 검수는 설치된 `gdm-agents/run-role.sh --mode work --role audit`로만
+않는다. Codex·Claude·Pi 검수는 설치된 `gdm-agents/run-role.sh --mode work --role audit`로만
 실행해 동일 capability profile로 하위 위임과 사용자 MCP를 제거하고 자원 한도를 적용한다.
 
 진행자는 외부 역할이 만든 루트 PID를 기록하고 종료 시 회수한다. 자원 한도 초과 시 그 PID의

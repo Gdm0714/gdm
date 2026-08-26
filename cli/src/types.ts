@@ -3,6 +3,15 @@ export type CheckKind = "regression" | "behavior" | "edge" | "static" | "manual"
 export type RiskLevel = "low" | "medium" | "high";
 export type VerificationMode = "deterministic" | "inspectable" | "opaque";
 
+export interface OutcomeIntent {
+  readonly bottleneck: string;
+  readonly desiredOutcome: string;
+  readonly baseline: string;
+  readonly target: string;
+  readonly unit: string;
+  readonly interveneIf: string;
+}
+
 export interface Evidence {
   observed: string;
   sha256: string;
@@ -100,6 +109,7 @@ export interface WorkContract {
   readonly verification?: VerificationMode;
   readonly simplificationRequired?: boolean;
   readonly scopeAmendments?: readonly ScopeAmendment[];
+  readonly outcome?: OutcomeIntent;
 }
 
 export interface ScopeAmendment {

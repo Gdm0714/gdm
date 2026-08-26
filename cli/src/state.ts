@@ -107,6 +107,15 @@ export function verificationPlanFingerprint(work: Work): string {
   appendString(contract?.risk ?? "low");
   appendString(contract?.verification ?? "deterministic");
   appendBool(contract?.simplificationRequired ?? false);
+  if (contract?.outcome !== undefined) {
+    appendString("gidem-outcome-intent-v1");
+    appendString(contract.outcome.bottleneck);
+    appendString(contract.outcome.desiredOutcome);
+    appendString(contract.outcome.baseline);
+    appendString(contract.outcome.target);
+    appendString(contract.outcome.unit);
+    appendString(contract.outcome.interveneIf);
+  }
   appendCount(work.checks.length);
   for (const check of work.checks) {
     appendString(check.id);

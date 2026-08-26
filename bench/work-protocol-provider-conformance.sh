@@ -34,7 +34,7 @@ case "$provider" in codex|claude) ;; *) usage ;; esac
 case "$rounds" in *[!0-9]*|"") usage ;; esac
 [ "$rounds" -ge 1 ] && [ "$rounds" -le 10 ] || usage
 if [ "$provider" = "claude" ]; then
-  expected_policy_id="gdm-claude-read-only-v2"
+  expected_policy_id="gdm-claude-read-only-v3"
 else
   expected_policy_id="gdm-codex-read-only-v1"
 fi

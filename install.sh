@@ -9,6 +9,7 @@
 #   GDM_BASE_URL  다운로드 베이스 URL 재정의 (미러·오프라인 설치용)
 #   GDM_SKIP_VERIFY=1 체크섬 검증 생략 (신뢰할 수 있는 오프라인 소스에서만 사용)
 #   CODEX_HOME    Codex 설정·스킬 경로 (상대 경로는 설치 실행 디렉터리 기준)
+#   PI_CODING_AGENT_DIR Pi 설정·스킬 경로 (기본: ~/.pi/agent, 상대 경로는 설치 실행 디렉터리 기준)
 #
 # 저장소 클론에서 개발용으로 설치하려면 install/install.sh 를 쓴다.
 set -euo pipefail
@@ -25,6 +26,11 @@ case "${CODEX_HOME:-}" in
   "") CODEX_HOME_DIR="$HOME/.codex" ;;
   /*) CODEX_HOME_DIR="$CODEX_HOME" ;;
   *) CODEX_HOME_DIR="$INSTALL_CWD/$CODEX_HOME" ;;
+esac
+case "${PI_CODING_AGENT_DIR:-}" in
+  "") PI_AGENT_DIR="$HOME/.pi/agent" ;;
+  /*) PI_AGENT_DIR="$PI_CODING_AGENT_DIR" ;;
+  *) PI_AGENT_DIR="$INSTALL_CWD/$PI_CODING_AGENT_DIR" ;;
 esac
 
 err() { echo "gdm 설치 실패: $*" >&2; exit 1; }
@@ -56,12 +62,17 @@ fi
 tmp="$(mktemp -d)"
 ROLLBACK_DIR=""
 INSTALL_TMP=""
+PI_LAUNCHER_TMP=""
 CLAUDE_STAGE=""
 CODEX_STAGE=""
+PI_STAGE=""
 CLAUDE_SKILL_ROLLBACK=""
 CODEX_SKILL_ROLLBACK=""
+PI_SKILL_ROLLBACK=""
 BINARY_OLD_MOVED=0
 BINARY_NEW_INSTALLED=0
+PI_BINARY_OLD_MOVED=0
+PI_BINARY_NEW_INSTALLED=0
 INSTALL_COMMITTED=0
 
 # Called by cleanup(), which itself is invoked through the EXIT trap.
@@ -91,8 +102,12 @@ cleanup() {
   set +e
   if [ "$INSTALL_COMMITTED" = "0" ]; then
     # Skill roots may coincide, so unwind in the reverse order of installation.
+    rollback_skill_swap "$PI_AGENT_DIR/skills" "$PI_STAGE" "$PI_SKILL_ROLLBACK"
     rollback_skill_swap "$CODEX_HOME_DIR/skills" "$CODEX_STAGE" "$CODEX_SKILL_ROLLBACK"
     rollback_skill_swap "$HOME/.claude/skills" "$CLAUDE_STAGE" "$CLAUDE_SKILL_ROLLBACK"
+    if [ "$PI_BINARY_NEW_INSTALLED" = "1" ]; then
+      [ ! -e "$BIN_DIR/gdm-pi" ] && [ ! -L "$BIN_DIR/gdm-pi" ] || rm -f "$BIN_DIR/gdm-pi"
+    fi
     if [ "$BINARY_NEW_INSTALLED" = "1" ]; then
       [ ! -e "$BIN_DIR/gdm" ] && [ ! -L "$BIN_DIR/gdm" ] || rm -f "$BIN_DIR/gdm"
     fi
@@ -100,12 +115,19 @@ cleanup() {
       { [ -e "$ROLLBACK_DIR/gdm" ] || [ -L "$ROLLBACK_DIR/gdm" ]; }; then
       mv "$ROLLBACK_DIR/gdm" "$BIN_DIR/gdm"
     fi
+    if [ "$PI_BINARY_OLD_MOVED" = "1" ] && [ -n "$ROLLBACK_DIR" ] &&
+      { [ -e "$ROLLBACK_DIR/gdm-pi" ] || [ -L "$ROLLBACK_DIR/gdm-pi" ]; }; then
+      mv "$ROLLBACK_DIR/gdm-pi" "$BIN_DIR/gdm-pi"
+    fi
   fi
   [ -z "$CLAUDE_STAGE" ] || rm -rf "$CLAUDE_STAGE"
   [ -z "$CODEX_STAGE" ] || rm -rf "$CODEX_STAGE"
+  [ -z "$PI_STAGE" ] || rm -rf "$PI_STAGE"
   [ -z "$CLAUDE_SKILL_ROLLBACK" ] || rm -rf "$CLAUDE_SKILL_ROLLBACK"
   [ -z "$CODEX_SKILL_ROLLBACK" ] || rm -rf "$CODEX_SKILL_ROLLBACK"
+  [ -z "$PI_SKILL_ROLLBACK" ] || rm -rf "$PI_SKILL_ROLLBACK"
   [ -z "$INSTALL_TMP" ] || rm -f "$INSTALL_TMP"
+  [ -z "$PI_LAUNCHER_TMP" ] || rm -f "$PI_LAUNCHER_TMP"
   [ -z "$ROLLBACK_DIR" ] || rm -rf "$ROLLBACK_DIR"
   rm -rf "$tmp"
   exit "$status"
@@ -186,7 +208,8 @@ validate_staged_target() {
     '    "contract": "gdm-role-runner/v1",' \
     '    "path": "gdm-agents/run-role.sh",' \
     '        "path": "gdm-agents/providers/codex.sh",' \
-    '        "path": "gdm-agents/providers/claude.sh",'; do
+    '        "path": "gdm-agents/providers/claude.sh",' \
+    '        "path": "gdm-agents/providers/pi.sh",'; do
     grep -Fqx "$expected" "$manifest" || err "target manifest capability/runner가 올바르지 않습니다: $target"
   done
   if [ "$target" = "codex" ]; then
@@ -198,13 +221,13 @@ validate_staged_target() {
     grep -Fqx '    "id": null,' "$manifest" &&
       grep -Fqx '    "status": "not-required",' "$manifest" &&
       grep -Fqx '    "requiredForTarget": false' "$manifest" || \
-      err "Claude target hook manifest가 올바르지 않습니다"
+      err "외부 target hook manifest가 올바르지 않습니다: $target"
   fi
   runner_hash="$(manifest_runner_hash "$manifest")" || err "runner hash가 없습니다: $target"
   [ "$runner_hash" = "$(sha256_path "$stage/gdm-agents/run-role.sh")" ] &&
     [ -x "$stage/gdm-agents/run-role.sh" ] && [ ! -L "$stage/gdm-agents/run-role.sh" ] || \
     err "runner bytes 또는 mode가 manifest와 다릅니다: $target"
-  for adapter_target in codex claude; do
+  for adapter_target in codex claude pi; do
     adapter_hash="$(manifest_adapter_hash "$manifest" "$adapter_target")" || \
       err "provider adapter hash가 없습니다: $target/$adapter_target"
     [ "$adapter_hash" = "$(sha256_path "$stage/gdm-agents/providers/$adapter_target.sh")" ] &&
@@ -289,7 +312,8 @@ chmod +x "$tmp/gdm"
 echo "[3/7] 번들 구조·Codex 게이트 사전검증"
 mkdir -p "$tmp/pkg"
 tar -xzf "$tmp/skills.tar.gz" -C "$tmp/pkg"
-[ -d "$tmp/pkg/targets/codex" ] && [ -d "$tmp/pkg/targets/claude" ] || \
+[ -d "$tmp/pkg/targets/codex" ] && [ -d "$tmp/pkg/targets/claude" ] && \
+  [ -d "$tmp/pkg/targets/pi" ] || \
   err "target 스킬 번들 구조가 올바르지 않습니다"
 CODEX_HOME="$CODEX_HOME_DIR" "$tmp/gdm" agent hook-install \
   --binary "$tmp/gdm" --dry-run
@@ -297,15 +321,21 @@ CODEX_HOME="$CODEX_HOME_DIR" "$tmp/gdm" agent hook-install \
 echo "[4/7] 스킬 대상 사전검증·staging"
 stage_remote_skills "$HOME/.claude/skills" claude CLAUDE_STAGE
 stage_remote_skills "$CODEX_HOME_DIR/skills" codex CODEX_STAGE
+stage_remote_skills "$PI_AGENT_DIR/skills" pi PI_STAGE
 validate_staged_target "$CLAUDE_STAGE" claude
 validate_staged_target "$CODEX_STAGE" codex
+validate_staged_target "$PI_STAGE" pi
 for parity_field in canonicalSourceSha256 sourceSha256; do
   [ "$(manifest_top_value "$CLAUDE_STAGE/gdm-target-manifest.json" "$parity_field")" = \
-    "$(manifest_top_value "$CODEX_STAGE/gdm-target-manifest.json" "$parity_field")" ] || \
+    "$(manifest_top_value "$CODEX_STAGE/gdm-target-manifest.json" "$parity_field")" ] && \
+    [ "$(manifest_top_value "$CLAUDE_STAGE/gdm-target-manifest.json" "$parity_field")" = \
+    "$(manifest_top_value "$PI_STAGE/gdm-target-manifest.json" "$parity_field")" ] || \
     err "target manifest source parity가 다릅니다: $parity_field"
 done
 [ "$(manifest_runner_hash "$CLAUDE_STAGE/gdm-target-manifest.json")" = \
-  "$(manifest_runner_hash "$CODEX_STAGE/gdm-target-manifest.json")" ] || \
+  "$(manifest_runner_hash "$CODEX_STAGE/gdm-target-manifest.json")" ] && \
+  [ "$(manifest_runner_hash "$CLAUDE_STAGE/gdm-target-manifest.json")" = \
+  "$(manifest_runner_hash "$PI_STAGE/gdm-target-manifest.json")" ] || \
   err "target manifest runner parity가 다릅니다"
 
 echo "[5/7] 바이너리·스킬 transactional 교체"
@@ -314,22 +344,37 @@ if { [ -e "$BIN_DIR/gdm" ] || [ -L "$BIN_DIR/gdm" ]; } &&
   [ ! -f "$BIN_DIR/gdm" ] && [ ! -L "$BIN_DIR/gdm" ]; then
   err "기존 바이너리 경로가 일반 파일이 아닙니다: $BIN_DIR/gdm"
 fi
+if { [ -e "$BIN_DIR/gdm-pi" ] || [ -L "$BIN_DIR/gdm-pi" ]; } &&
+  [ ! -f "$BIN_DIR/gdm-pi" ] && [ ! -L "$BIN_DIR/gdm-pi" ]; then
+  err "기존 Pi 실행기 경로가 일반 파일이 아닙니다: $BIN_DIR/gdm-pi"
+fi
 INSTALL_TMP="$(mktemp "$BIN_DIR/.gdm.tmp.XXXXXX")"
 cp "$tmp/gdm" "$INSTALL_TMP"
 chmod 755 "$INSTALL_TMP"
+PI_LAUNCHER_TMP="$(mktemp "$BIN_DIR/.gdm-pi.tmp.XXXXXX")"
+cp "$PI_STAGE/gdm-agents/pi/gdm-pi" "$PI_LAUNCHER_TMP"
+chmod 755 "$PI_LAUNCHER_TMP"
 ROLLBACK_DIR="$(mktemp -d "$BIN_DIR/.gdm-rollback.XXXXXX")"
 prepare_skill_swap "$HOME/.claude/skills" "$CLAUDE_STAGE" CLAUDE_SKILL_ROLLBACK
 prepare_skill_swap "$CODEX_HOME_DIR/skills" "$CODEX_STAGE" CODEX_SKILL_ROLLBACK
+prepare_skill_swap "$PI_AGENT_DIR/skills" "$PI_STAGE" PI_SKILL_ROLLBACK
 if [ -e "$BIN_DIR/gdm" ] || [ -L "$BIN_DIR/gdm" ]; then
   mv "$BIN_DIR/gdm" "$ROLLBACK_DIR/gdm"
   BINARY_OLD_MOVED=1
 fi
+if [ -e "$BIN_DIR/gdm-pi" ] || [ -L "$BIN_DIR/gdm-pi" ]; then
+  mv "$BIN_DIR/gdm-pi" "$ROLLBACK_DIR/gdm-pi"
+  PI_BINARY_OLD_MOVED=1
+fi
 mv "$INSTALL_TMP" "$BIN_DIR/gdm"
 BINARY_NEW_INSTALLED=1
+mv "$PI_LAUNCHER_TMP" "$BIN_DIR/gdm-pi"
+PI_BINARY_NEW_INSTALLED=1
 echo "  → $BIN_DIR/gdm"
 apply_skill_swap "$HOME/.claude/skills" "$CLAUDE_STAGE" "$CLAUDE_SKILL_ROLLBACK"
 apply_skill_swap "$CODEX_HOME_DIR/skills" "$CODEX_STAGE" "$CODEX_SKILL_ROLLBACK"
-echo "  → $HOME/.claude/skills, $CODEX_HOME_DIR/skills"
+apply_skill_swap "$PI_AGENT_DIR/skills" "$PI_STAGE" "$PI_SKILL_ROLLBACK"
+echo "  → $HOME/.claude/skills, $CODEX_HOME_DIR/skills, $PI_AGENT_DIR/skills"
 
 echo "[6/7] Codex 에이전트 게이트 commit"
 CODEX_HOME="$CODEX_HOME_DIR" "$BIN_DIR/gdm" agent hook-install \
@@ -364,5 +409,5 @@ if ! CODEX_HOME="$CODEX_HOME_DIR" "$BIN_DIR/gdm" doctor; then
 fi
 
 echo
-echo "설치 완료. 사용: 프로젝트에서 \$gdm-go / \$gdm-full 스킬, 또는 gdm --help"
+echo "설치 완료. 사용: 프로젝트에서 gdm-pi [auto|go|full], \$gdm-go / \$gdm-full 또는 gdm --help"
 exit 0

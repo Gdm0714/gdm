@@ -25,7 +25,7 @@ const TARGET_FRAGMENT_RE = /<!-- GDM_TARGET_FRAGMENT_V1:([a-z0-9-]+) -->/gu;
 const HASH_RE = /^[0-9a-f]{64}$/u;
 const READ_ONLY_SKILLS = new Set(["analyze", "plan", "review"]);
 
-type Target = "codex" | "claude";
+type Target = "codex" | "claude" | "pi";
 
 type Arguments = {
   readonly target: Target;
@@ -44,13 +44,13 @@ function parseArguments(argv: readonly string[]): Arguments {
     const flag = argv[index];
     const value = argv[index + 1];
     if (flag === undefined || value === undefined || !flag.startsWith("--")) {
-      fail("usage: render-skills.ts --target <codex|claude> --output <dir> [--source-root <dir>] [--agents-root <dir>]");
+      fail("usage: render-skills.ts --target <codex|claude|pi> --output <dir> [--source-root <dir>] [--agents-root <dir>]");
     }
     values.set(flag, value);
   }
   const target = values.get("--target");
   const output = values.get("--output");
-  if ((target !== "codex" && target !== "claude") || output === undefined) {
+  if ((target !== "codex" && target !== "claude" && target !== "pi") || output === undefined) {
     fail("--target and --output are required");
   }
   const repositoryRoot = resolve(import.meta.dir, "..");
@@ -117,7 +117,7 @@ function splitFrontmatter(source: string, path: string): { readonly frontmatter:
 }
 
 function targetFragment(sourceRoot: string, target: Target, name: string): string {
-  const fileName = target === "codex" ? `codex-${name}.md` : `claude-${name}.md`;
+  const fileName = `${target}-${name}.md`;
   const path = join(sourceRoot, "_shared", "targets", "fragments", fileName);
   regularFile(path);
   return readFileSync(path, "utf8").trimEnd();
@@ -140,7 +140,7 @@ function renderCore(sourceRoot: string, target: Target, skillName: string, body:
 }
 
 function renderFrontmatter(sourceRoot: string, target: Target, skillName: string, source: string): string {
-  if (target === "codex") return source;
+  if (target !== "claude") return source;
   const descriptionName = READ_ONLY_SKILLS.has(skillName)
     ? "claude-read-only-description.txt"
     : "claude-unsupported-description.txt";
@@ -182,6 +182,7 @@ function main(): void {
     join(args.agentsRoot, "run-role.sh"),
     join(args.agentsRoot, "providers", "codex.sh"),
     join(args.agentsRoot, "providers", "claude.sh"),
+    join(args.agentsRoot, "providers", "pi.sh"),
   ]) {
     regularFile(path);
     if ((lstatSync(path).mode & 0o111) === 0) fail(`executable role runner file required: ${path}`);
@@ -226,8 +227,8 @@ function main(): void {
     if (/\b(?:claude\s+-p|codex\s+exec)\b/iu.test(withoutAdapter)) {
       fail(`direct provider invocation escaped target adapter: ${skillPath}`);
     }
-    if (args.target === "claude" && /GDM_AGENT_ENVELOPE_V1|multi_agent_v2|hook caller|native (?:Codex )?root session/iu.test(withoutAdapter)) {
-      fail(`Codex native delegation guarantee escaped Claude adapter: ${skillPath}`);
+    if (args.target !== "codex" && /GDM_AGENT_ENVELOPE_V1|multi_agent_v2|hook caller|native (?:Codex )?root session/iu.test(withoutAdapter)) {
+      fail(`Codex native delegation guarantee escaped ${args.target} adapter: ${skillPath}`);
     }
 
     const destination = join(args.output, `gdm-${directoryName}`);
@@ -260,6 +261,7 @@ function main(): void {
   const runnerPath = join(args.output, "gdm-agents", "run-role.sh");
   const codexAdapterPath = join(args.output, "gdm-agents", "providers", "codex.sh");
   const claudeAdapterPath = join(args.output, "gdm-agents", "providers", "claude.sh");
+  const piAdapterPath = join(args.output, "gdm-agents", "providers", "pi.sh");
   const manifest = {
     schemaVersion: MANIFEST_SCHEMA,
     target: args.target,
@@ -291,6 +293,10 @@ function main(): void {
           path: "gdm-agents/providers/claude.sh",
           sha256: sha256(readFileSync(claudeAdapterPath)),
         },
+        pi: {
+          path: "gdm-agents/providers/pi.sh",
+          sha256: sha256(readFileSync(piAdapterPath)),
+        },
       },
     },
     skills,
@@ -298,7 +304,8 @@ function main(): void {
   if (!HASH_RE.test(manifest.canonicalSourceSha256) || !HASH_RE.test(manifest.sourceSha256) ||
       !HASH_RE.test(manifest.runner.sha256) ||
       !HASH_RE.test(manifest.runner.adapters.codex.sha256) ||
-      !HASH_RE.test(manifest.runner.adapters.claude.sha256)) {
+      !HASH_RE.test(manifest.runner.adapters.claude.sha256) ||
+      !HASH_RE.test(manifest.runner.adapters.pi.sha256)) {
     fail("manifest hash invariant failed");
   }
   writeFileSync(

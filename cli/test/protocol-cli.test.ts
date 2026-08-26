@@ -7,6 +7,22 @@ import { fileURLToPath } from "node:url";
 
 const CLI = fileURLToPath(new URL("../src/cli.ts", import.meta.url));
 const roots: string[] = [];
+const OUTCOME = {
+  bottleneck: "검증 피드백 지연",
+  desiredOutcome: "회귀 검토 시간 단축",
+  baseline: "주당 4건",
+  target: "주당 1건",
+  unit: "회귀 후보 수",
+  interveneIf: "주당 3건 초과",
+} as const;
+const OUTCOME_ARGS = [
+  "--bottleneck", OUTCOME.bottleneck,
+  "--desired-outcome", OUTCOME.desiredOutcome,
+  "--baseline", OUTCOME.baseline,
+  "--target", OUTCOME.target,
+  "--unit", OUTCOME.unit,
+  "--intervene-if", OUTCOME.interveneIf,
+] as const;
 
 setDefaultTimeout(15_000);
 
@@ -42,7 +58,7 @@ function runCli(cwd: string, args: readonly string[]): CliResult {
   };
 }
 
-function initializeWork(cwd: string): void {
+function initializeWork(cwd: string, extraPlanArgs: readonly string[] = []): void {
   const initialized = runCli(cwd, [
     "plan",
     "init",
@@ -69,6 +85,7 @@ function initializeWork(cwd: string): void {
     "--verification",
     "inspectable",
     "--simplify",
+    ...extraPlanArgs,
   ]);
   expect(initialized).toMatchObject({ exitCode: 0, stderr: "" });
   const added = runCli(cwd, [
@@ -187,6 +204,7 @@ describe("work protocol CLI", () => {
       commit: { state: "forbidden", latestTransition: null },
       scopeAmendments: [],
     });
+    expect(Object.hasOwn(snapshot.contract, "outcome")).toBe(false);
     expect(snapshot.checks).toEqual([
       {
         id: "c1",
@@ -209,6 +227,18 @@ describe("work protocol CLI", () => {
     ]);
     expect(snapshot.completion.validationCommand).toBe("gdm done --slug sample");
     expect(snapshot.latestHandoff).toBeNull();
+  });
+
+  test("exports the complete declared outcome from CLI-owned Work state", () => {
+    const cwd = tempRepository();
+    initializeWork(cwd, OUTCOME_ARGS);
+
+    const snapshot = exportSnapshot(cwd);
+    expect(snapshot.contract.outcome).toEqual(OUTCOME);
+    const persisted = JSON.parse(
+      readFileSync(join(cwd, ".gdm", "sample", "checks.json"), "utf8"),
+    ) as Record<string, any>;
+    expect(persisted.contract.outcome).toEqual(OUTCOME);
   });
 
   test("records idempotent causal handoffs and reports staleness", () => {

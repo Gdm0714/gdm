@@ -7,6 +7,14 @@ import { validateHabitEventFields } from "../src/habit-validation.ts";
 const NOW = "2026-07-10T00:00:00.000Z";
 const HABIT_ID = "h-26e6439115bc8179";
 const RULE_HASH = "a".repeat(64);
+const OUTCOME = {
+  bottleneck: "검증 피드백 지연",
+  desiredOutcome: "회귀 검토 시간 단축",
+  baseline: "주당 4건",
+  target: "주당 1건",
+  unit: "회귀 후보 수",
+  interveneIf: "주당 3건 초과",
+} as const;
 
 const ACTIVE_HABIT = {
   habitId: HABIT_ID,
@@ -35,7 +43,44 @@ function contractWith(activeHabit: unknown): Readonly<Record<string, unknown>> {
   };
 }
 
+function persistedContract(outcome?: unknown): Readonly<Record<string, unknown>> {
+  return {
+    required: [],
+    forbidden: [],
+    activeHabits: [],
+    commit: "forbidden",
+    ...(outcome === undefined ? {} : { outcome }),
+  };
+}
+
 describe("contract validation boundaries", () => {
+  test("persisted outcome is optional, but when present all six safe fields are preserved", () => {
+    const legacy = normalizeContract(persistedContract()) as unknown as Record<string, unknown>;
+    const declared = normalizeContract(persistedContract(OUTCOME)) as unknown as Record<string, unknown>;
+
+    expect(Object.hasOwn(legacy, "outcome")).toBe(false);
+    expect(declared.outcome).toEqual(OUTCOME);
+  });
+
+  test("partial, extra, unbounded, or unsafe persisted outcome fails closed", () => {
+    const { interveneIf: _missing, ...partial } = OUTCOME;
+    const malformed: readonly unknown[] = [
+      partial,
+      { ...OUTCOME, transcript: "not part of outcome intent" },
+      { ...OUTCOME, target: 1 },
+      { ...OUTCOME, baseline: "" },
+      { ...OUTCOME, desiredOutcome: "가".repeat(241) },
+      { ...OUTCOME, bottleneck: "sk-private-outcome" },
+      { ...OUTCOME, interveneIf: "/tmp/raw-session" },
+    ];
+
+    const errors = malformed.map((outcome) =>
+      captureGdmError(() => normalizeContract(persistedContract(outcome)))
+    );
+    expect(errors.map((error) => error.code)).toEqual(malformed.map(() => "state_corrupt"));
+    expect(errors.every((error) => !error.message.includes("private-outcome"))).toBe(true);
+  });
+
   test("OpenAI key prefix does not match inside an ordinary hyphenated word", () => {
     expect(() => assertNoSensitiveRaw("root task-state fallback", "constraint")).not.toThrow();
     for (const unsafe of ["sk-abcdef", "sk-private", "sk-example-secret-value"]) {

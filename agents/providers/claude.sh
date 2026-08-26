@@ -55,7 +55,10 @@ argv=(
   --disable-slash-commands
   --append-system-prompt "$receiver_bootstrap"
 )
-[ -z "$model" ] || argv+=(--model "$model")
+# claude 역할 모델은 Claude Code의 /model 기본값에 상속되지 않게 고정한다.
+# 재정의는 --model 인자 또는 GDM_CLAUDE_MODEL 환경변수로만 한다.
+[ -n "$model" ] || model="${GDM_CLAUDE_MODEL:-claude-fable-5}"
+argv+=(--model "$model")
 
 cd "$workspace"
 unset OLDPWD

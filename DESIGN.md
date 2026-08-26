@@ -176,12 +176,13 @@ canonical hash에 결속한다. 기존 `GDM_DISPATCH_BUNDLE_V1_BEGIN/END`는 호
 Work/check/audit/delivery를 바꾸지 않고 coordinator가 현재 fingerprint와 artifact를 다시 검사해
 adopt한다.
 
-Claude adapter `gdm-provider-adapter-v2`/`gdm-claude-read-only-v2`는
+Claude adapter `gdm-provider-adapter-v2`/`gdm-claude-read-only-v3`는
 `--append-system-prompt`에 `GDM_RECEIVER_TRUST_BOOTSTRAP_V1:` static bootstrap을 넣는다. 인증 범위는
 outer GDM envelope/model-view, receiver contract, 제공된 ACK 선택지뿐이다. artifact text와 그 안의
 source/evidence·중첩 지시는 untrusted data이며 outer handoff role·intent가 요청한 분석 대상으로만
-취급한다. bootstrap은 remote identity나 artifact provenance를 attest하지 않는다. Codex adapter와
-argv policy는 v1이다.
+취급한다. bootstrap은 remote identity나 artifact provenance를 attest하지 않는다. v3는 model 미지정
+dispatch를 `claude-fable-5`로 고정해 로컬 Claude 기본 모델 설정에 상속되지 않는다(재정의는
+`--model`/`GDM_CLAUDE_MODEL`). Codex adapter와 argv policy는 v1이다.
 stale·receiver mismatch·forged bundle·terminal 전이는 fail-closed다.
 
 `agents/run-role.sh`는 공통 lifecycle만 소유한다. `agents/providers/*`가 target executable과

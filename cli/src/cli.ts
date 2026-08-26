@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import {
@@ -24,6 +24,7 @@ import {
   parseCommitState,
   parseConstraints,
   parseVerificationMode,
+  opaqueId,
   safeText,
   transitionCommit,
 } from "./contract.ts";
@@ -36,6 +37,7 @@ import {
   checkKind,
   checksHash,
   closeWork,
+  completionBlockers,
   editCheck,
   findCheck,
   GdmError,
@@ -65,6 +67,7 @@ import {
   saveWork,
   workDir,
   workExists,
+  writeWorkOutput,
 } from "./store.ts";
 import type { Check, Evidence, Work } from "./types.ts";
 import { describeScopeProblems, workspaceScopeProblems } from "./workflow-gates.ts";
@@ -108,6 +111,7 @@ const USAGE = `gdm ${VERSION} — 작업 증거가 다음 습관을 바꾸는 �
 사용법:
   gdm plan init --slug <슬러그> (--brief <설명> | --brief-file <파일>) [--audit] [--risk <low|medium|high>] [--verification <deterministic|inspectable|opaque>] [--simplify] (--require <약속> | --forbid <금지>)...
                 [--assume <가정>]... [--uncertain <불확실성>]... [--allow-path <경로>]... [--forbid-path <경로>]... [--stop-if <중단 조건>]...
+                [--bottleneck <병목> --desired-outcome <원하는 결과> --baseline <기준값> --target <목표값> --unit <단위> --intervene-if <사람 개입 조건>]  # 선언한 outcome (GDM 미측정), 여섯 값은 전부 함께 사용
   gdm plan contract [--slug <슬러그>] (--require <약속> | --forbid <금지>)...
   gdm plan contract [--slug <슬러그>] (--allow-path <경로> | --forbid-path <경로> | --remove-allow-path <경로> | --remove-forbid-path <경로>)... --reason <사유>
   gdm plan contract [--slug <슬러그>] --commit <forbidden|explicitly-approved> --reason <사유>
@@ -148,6 +152,8 @@ const USAGE = `gdm ${VERSION} — 작업 증거가 다음 습관을 바꾸는 �
   gdm status [--json] [--checks]                            # 현재 디렉토리 전체 작업 현황 (--checks: 항목 상세)
   gdm resume [--json] [--slug <슬러그>]
   gdm retro [--all] [--json] [--slug <슬러그>]              # 회고 (--all: 전체 작업 횡단 + 개선 제안)
+  gdm feedback --value good [--reason <사유>] [--source <id>] [--slug <슬러그>] [--json]
+  gdm feedback --value bad --reason <사유> [--source <id>] [--slug <슬러그>] [--json]
   gdm miss --desc <내용> [--type <유형>] [--check <id>] [--slug <슬러그>]  # 게이트 통과 후 발견된 결함 기록
   gdm repair state --slug <슬러그> --trailing-nul               # 끝의 NUL 손상만 명시적으로 복구
   gdm delivery prepare --slug <슬러그> --issue <id> --branch <브랜치> --head <sha>
@@ -227,18 +233,57 @@ function contractLine(work: Work): string {
   return `계약: 필수 ${work.contract.required.length} · 금지 ${work.contract.forbidden.length} · 위험 ${work.contract.risk ?? "low"} · 검증 ${work.contract.verification ?? "deterministic"} · 커밋 ${work.contract.commit}`;
 }
 
+function declaredOutcomeLines(work: Work): string[] {
+  const outcome = work.contract.outcome;
+  if (outcome === undefined) return [];
+  return [
+    `병목: ${outcome.bottleneck}`,
+    `원하는 결과: ${outcome.desiredOutcome}`,
+    `baseline: ${outcome.baseline}`,
+    `target: ${outcome.target}`,
+    `unit: ${outcome.unit}`,
+    `사람 개입 조건: ${outcome.interveneIf}`,
+  ];
+}
+
 function cmdPlanInit(cwd: string, args: string[]): void {
   ensureFlags(
     args,
     [
       "slug", "brief", "brief-file", "require", "forbid", "assume", "uncertain", "allow-path",
-      "forbid-path", "stop-if", "risk", "verification",
+      "forbid-path", "stop-if", "risk", "verification", "bottleneck", "desired-outcome", "baseline",
+      "target", "unit", "intervene-if",
     ],
     ["audit", "simplify"],
   );
   const ts = now();
   const slug = readFlag(args, "slug");
   if (!slug) throw new GdmError("--slug가 필요합니다", "usage");
+  const outcomeValues = {
+    bottleneck: readFlag(args, "bottleneck"),
+    desiredOutcome: readFlag(args, "desired-outcome"),
+    baseline: readFlag(args, "baseline"),
+    target: readFlag(args, "target"),
+    unit: readFlag(args, "unit"),
+    interveneIf: readFlag(args, "intervene-if"),
+  };
+  const outcomeCount = Object.values(outcomeValues).filter((value) => value !== undefined).length;
+  if (outcomeCount !== 0 && outcomeCount !== 6) {
+    throw new GdmError(
+      "outcome 여섯 플래그(--bottleneck, --desired-outcome, --baseline, --target, --unit, --intervene-if)는 전부 함께 사용해야 합니다",
+      "usage",
+    );
+  }
+  const outcome = outcomeCount === 0
+    ? undefined
+    : {
+        bottleneck: outcomeValues.bottleneck!,
+        desiredOutcome: outcomeValues.desiredOutcome!,
+        baseline: outcomeValues.baseline!,
+        target: outcomeValues.target!,
+        unit: outcomeValues.unit!,
+        interveneIf: outcomeValues.interveneIf!,
+      };
   const constraints = parseConstraints(readFlags(args, "require"), readFlags(args, "forbid"));
   const risk = parseRiskLevel(readFlag(args, "risk"));
   const verification = parseVerificationMode(readFlag(args, "verification"));
@@ -252,6 +297,7 @@ function cmdPlanInit(cwd: string, args: string[]): void {
     risk,
     verification,
     simplificationRequired: hasFlag(args, "simplify"),
+    outcome,
   });
   const briefFile = readFlag(args, "brief-file");
   let brief: string | undefined;
@@ -582,9 +628,6 @@ function buildAutoEvidence(
   cmd: string,
   note?: string,
 ): Omit<Evidence, "at"> {
-  const outDir = join(workDir(cwd, slug), "out");
-  mkdirSync(outDir, { recursive: true });
-  const outPath = join(outDir, `${id}.txt`);
   console.log(`실행: ${cmd}`);
   const result = spawnSync("bash", ["-c", cmd], {
     cwd,
@@ -594,8 +637,7 @@ function buildAutoEvidence(
   });
   const output = `${result.stdout ?? ""}${result.stderr ? `\n[stderr]\n${result.stderr}` : ""}`;
   const body = `$ ${cmd}\n(exit ${result.status})\n\n${output}`;
-  writeFileSync(outPath, body);
-  const observed = relative(cwd, outPath);
+  const observed = writeWorkOutput(cwd, slug, `${id}.txt`, body);
   if (result.error) {
     throw new GdmError(`검증 명령 실행 실패: ${result.error.message}`, "cmd_failed");
   }
@@ -616,9 +658,6 @@ function buildRedEvidence(
   cmd: string,
   note?: string,
 ): Omit<Evidence, "at"> {
-  const outDir = join(workDir(cwd, slug), "out");
-  mkdirSync(outDir, { recursive: true });
-  const outPath = join(outDir, `${id}-red.txt`);
   console.log(`red 재현: ${cmd}`);
   const result = spawnSync("bash", ["-c", cmd], {
     cwd,
@@ -628,8 +667,7 @@ function buildRedEvidence(
   });
   const output = `${result.stdout ?? ""}${result.stderr ? `\n[stderr]\n${result.stderr}` : ""}`;
   const body = `$ ${cmd}\n(exit ${result.status})\n\n${output}`;
-  writeFileSync(outPath, body);
-  const observed = relative(cwd, outPath);
+  const observed = writeWorkOutput(cwd, slug, `${id}-red.txt`, body);
   if (result.error || result.status === null) {
     throw new GdmError(`red 재현 명령 실행 실패: ${result.error?.message ?? "종료 상태 없음"}`, "cmd_failed");
   }
@@ -809,17 +847,20 @@ function verifyEvidence(cwd: string, work: Work): { id: string; why: string; red
       ...(check.status === "proven" && check.evidence ? [{ evidence: check.evidence, red: false }] : []),
     ];
     for (const item of evidenceItems) {
-      const path = resolve(cwd, item.evidence.observed);
       const label = item.red ? "red 증거" : "증거";
-      if (!existsSync(path)) {
+      let actualHash: string;
+      try {
+        actualHash = readContainedFile(cwd, item.evidence.observed, `${check.id}-${label}`).sha256;
+      } catch (error) {
+        if (!(error instanceof GdmError)) throw error;
         problems.push({
           id: check.id,
-          why: `${check.id}: ${label} 파일 없음 (${item.evidence.observed})`,
+          why: `${check.id}: ${label} 파일을 안전하게 읽을 수 없음 (${item.evidence.observed}; ${error.code})`,
           red: item.red,
         });
         continue;
       }
-      if (sha256(readFileSync(path)) !== item.evidence.sha256) {
+      if (actualHash !== item.evidence.sha256) {
         problems.push({
           id: check.id,
           why: `${check.id}: ${label} 파일이 pass 이후 변경됨 (${item.evidence.observed})`,
@@ -864,6 +905,12 @@ function cmdAuditBrief(cwd: string, args: string[]): void {
   console.log(`- 금지 경로: ${(work.contract.forbiddenPaths ?? []).join(", ") || "없음"}`);
   for (const value of work.contract.stopConditions ?? []) console.log(`- 중단 조건: ${value}`);
   console.log(`- 간소화 증거: ${work.contract.simplificationRequired ? "필수" : "선택"}`);
+  const outcomeLines = declaredOutcomeLines(work);
+  if (outcomeLines.length > 0) {
+    console.log("");
+    console.log("## 선언한 outcome (GDM 미측정)");
+    for (const line of outcomeLines) console.log(`- ${line}`);
+  }
   console.log("");
   console.log("## 확인 항목과 증거");
   for (const c of work.checks) {
@@ -1026,6 +1073,7 @@ function cmdStatus(cwd: string, args: string[]): void {
         done: w.done,
         proven,
         total,
+        blockers: completionBlockers(w),
         audit: auditState(cwd, w),
         contract: w.contract,
         delivery: w.delivery ?? null,
@@ -1068,6 +1116,11 @@ function cmdResume(cwd: string, args: string[]): void {
   console.log(workHeader(work));
   console.log(`목표: ${work.brief}`);
   console.log(contractLine(work));
+  const outcomeLines = declaredOutcomeLines(work);
+  if (outcomeLines.length > 0) {
+    console.log("선언한 outcome (GDM 미측정):");
+    for (const line of outcomeLines) console.log(`  - ${line}`);
+  }
   const audit = auditState(cwd, work);
   if (audit) console.log(audit);
   if (work.delivery) {
@@ -1116,9 +1169,61 @@ function cmdMiss(cwd: string, args: string[]): void {
   console.log(`집계: gdm retro --all (게이트 구멍 리포트)`);
 }
 
-function cmdRetroAll(cwd: string, json: boolean): void {
+function resolveFeedbackWork(cwd: string, given?: string): Work {
+  if (given !== undefined) return resolveWorkForRead(cwd, given);
   const works = listWorks(cwd);
   if (works.length === 0) {
+    throw new GdmError("작업이 없습니다. gdm plan init으로 시작하세요", "no_active");
+  }
+  const active = works.filter((work) => !work.done);
+  const candidates = active.length > 0 ? active : works;
+  return candidates
+    .map((work) => ({
+      work,
+      ts: journalTail(cwd, work.slug, 1)[0]?.ts ?? work.createdAt,
+    }))
+    .sort((left, right) => {
+      const time = right.ts.localeCompare(left.ts);
+      return time !== 0 ? time : left.work.slug.localeCompare(right.work.slug);
+    })[0]!.work;
+}
+
+function cmdFeedback(cwd: string, args: string[]): void {
+  ensureFlags(args, ["value", "reason", "source", "slug"], ["json"]);
+  const value = readFlag(args, "value");
+  if (value !== "good" && value !== "bad") {
+    throw new GdmError("--value는 good 또는 bad여야 합니다", "usage");
+  }
+  const reasonValue = readFlag(args, "reason");
+  const reason = reasonValue === undefined ? undefined : safeText(reasonValue, "reason", 240);
+  const source = opaqueId(readFlag(args, "source") ?? "manual", "source");
+  if (value === "bad" && reason === undefined) {
+    throw new GdmError("--value bad에는 --reason <사유>가 필요합니다", "usage");
+  }
+  const work = resolveFeedbackWork(cwd, readFlag(args, "slug"));
+  appendJournal(cwd, work.slug, {
+    ts: now(),
+    event: "feedback",
+    value,
+    ...(reason === undefined ? {} : { reason }),
+    source,
+  });
+  const result = {
+    slug: work.slug,
+    value,
+    ...(reason === undefined ? {} : { reason }),
+    source,
+  };
+  if (hasFlag(args, "json")) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+  console.log(`피드백 기록: ${work.slug} — ${value} (${source})`);
+}
+
+function cmdRetroAll(cwd: string, json: boolean): void {
+  const works = listWorks(cwd);
+  if (works.length === 0 && !json) {
     console.log("작업이 없습니다");
     return;
   }
@@ -1126,6 +1231,8 @@ function cmdRetroAll(cwd: string, json: boolean): void {
   const deniedByCode = new Map<string, number>();
   const editReasons: { work: string; check?: unknown; reason?: unknown }[] = [];
   const misses: { work: string; type?: unknown; check?: unknown; desc?: unknown }[] = [];
+  const feedback = { good: 0, bad: 0, total: 0 };
+  const evalCandidates: { work: string; reason: string; source: string }[] = [];
   let recheckFails = 0;
   let events = 0;
   for (const w of works) {
@@ -1138,6 +1245,16 @@ function cmdRetroAll(cwd: string, json: boolean): void {
         editReasons.push({ work: w.slug, check: e.check, reason: e.reason });
       } else if (e.event === "miss") {
         misses.push({ work: w.slug, type: e.type, check: e.check, desc: e.desc });
+      } else if (e.event === "feedback" && (e.value === "good" || e.value === "bad")) {
+        feedback[e.value]++;
+        feedback.total++;
+        if (e.value === "bad" && typeof e.reason === "string" && e.reason.length > 0) {
+          evalCandidates.push({
+            work: w.slug,
+            reason: e.reason,
+            source: typeof e.source === "string" ? e.source : "unknown",
+          });
+        }
       } else if (e.event === "recheck" && e.ok === false) {
         recheckFails++;
       }
@@ -1169,6 +1286,8 @@ function cmdRetroAll(cwd: string, json: boolean): void {
           events,
           denied: Object.fromEntries(deniedByCode),
           misses,
+          feedback,
+          evalCandidates,
           editCount: editReasons.length,
           recheckFails,
           suggestions,
@@ -1185,6 +1304,7 @@ function cmdRetroAll(cwd: string, json: boolean): void {
   console.log(
     `# 전체 회고 — 작업 ${works.length}개(완료 ${works.filter((w) => w.done).length}), 이벤트 ${events}건, 탈출 결함 ${misses.length}건`,
   );
+  console.log(`피드백: good ${feedback.good}건 · bad ${feedback.bad}건 · 전체 ${feedback.total}건`);
   console.log(`습관: 후보 ${habits.candidates}개 · 채택 ${habits.adopted}개 · 다음 ${habits.next}`);
   if (misses.length > 0) {
     console.log("탈출 결함 (게이트 구멍):");
@@ -1380,11 +1500,12 @@ const TARGET_RUNNER = {
   adapters: {
     codex: "gdm-agents/providers/codex.sh",
     claude: "gdm-agents/providers/claude.sh",
+    pi: "gdm-agents/providers/pi.sh",
   },
 } as const;
 const TARGET_HASH_RE = /^[0-9a-f]{64}$/u;
 
-type TargetName = "codex" | "claude";
+type TargetName = "codex" | "claude" | "pi";
 type TargetManifestDoctor = {
   readonly target: TargetName;
   readonly status: "valid" | "drift" | "missing";
@@ -1434,8 +1555,8 @@ function doctorRunnerValid(root: string, value: unknown): boolean {
   if (!doctorRecord(value) || !doctorExactKeys(value, ["contract", "path", "sha256", "adapters"])) return false;
   if (value.contract !== TARGET_RUNNER.contract || value.path !== TARGET_RUNNER.path ||
       !doctorInstalledHash(root, TARGET_RUNNER.path, value.sha256) || !doctorRecord(value.adapters) ||
-      !doctorExactKeys(value.adapters, ["codex", "claude"])) return false;
-  for (const provider of ["codex", "claude"] as const) {
+      !doctorExactKeys(value.adapters, ["codex", "claude", "pi"])) return false;
+  for (const provider of ["codex", "claude", "pi"] as const) {
     const adapter = value.adapters[provider];
     const expectedPath = TARGET_RUNNER.adapters[provider];
     if (!doctorRecord(adapter) || !doctorExactKeys(adapter, ["path", "sha256"]) ||
@@ -1550,10 +1671,11 @@ function inspectTargetManifest(target: TargetName, skillsRoot: string): TargetMa
   };
 }
 
-function targetManifestDoctorLines(home: string, codexHomePath: string): string[] {
+function targetManifestDoctorLines(home: string, codexHomePath: string, piAgentPath: string): string[] {
   const targets = [
     inspectTargetManifest("codex", join(codexHomePath, "skills")),
     inspectTargetManifest("claude", join(home, ".claude", "skills")),
+    inspectTargetManifest("pi", join(piAgentPath, "skills")),
   ] as const;
   const lines = targets.map((result) => {
     const prefix = result.status === "valid" ? "OK" : result.status === "missing" ? "WARN" : "ERROR";
@@ -1561,10 +1683,10 @@ function targetManifestDoctorLines(home: string, codexHomePath: string): string[
     const detail = result.problems.length === 0 ? "" : ` — ${result.problems.join(", ")}`;
     return `  protocol target ${result.target}: ${prefix} manifest[${result.status}] source[${source}] profile[${result.profile}] hook[${result.hook}] runner[${result.runner}]${detail}`;
   });
-  const [codex, claude] = targets;
-  if (codex.sourceHash !== undefined && claude.sourceHash !== undefined) {
-    lines.push(codex.sourceHash === claude.sourceHash
-      ? `  protocol target source parity: OK [${codex.sourceHash.slice(0, 12)}…]`
+  const sourceHashes = targets.map((target) => target.sourceHash);
+  if (sourceHashes.every((hash): hash is string => hash !== undefined)) {
+    lines.push(sourceHashes.every((hash) => hash === sourceHashes[0])
+      ? `  protocol target source parity: OK [${sourceHashes[0]!.slice(0, 12)}…]`
       : "  protocol target source parity: ERROR [mismatch]");
   } else {
     lines.push("  protocol target source parity: WARN [unavailable]");
@@ -1577,6 +1699,10 @@ function cmdDoctor(cwd: string): void {
   const home = homedir();
   const codexEnv = { ...process.env, HOME: process.env.HOME ?? home };
   const codexHomePath = resolveCodexHome(cwd, codexEnv);
+  const configuredPiAgentPath = process.env.PI_CODING_AGENT_DIR;
+  const piAgentPath = configuredPiAgentPath === undefined || configuredPiAgentPath.length === 0
+    ? join(home, ".pi", "agent")
+    : isAbsolute(configuredPiAgentPath) ? resolve(configuredPiAgentPath) : resolve(cwd, configuredPiAgentPath);
   const repo = repoVersionFromSkills();
   if (repo) {
     if (repo.version === VERSION) {
@@ -1591,16 +1717,18 @@ function cmdDoctor(cwd: string): void {
   for (const line of codexAgentHookDoctorLines(cwd, codexEnv, process.execPath)) {
     console.log(line);
   }
-  for (const line of targetManifestDoctorLines(home, codexHomePath)) console.log(line);
+  for (const line of targetManifestDoctorLines(home, codexHomePath, piAgentPath)) console.log(line);
   for (const name of SKILL_NAMES) {
     const claude = existsSync(join(home, ".claude", "skills", `gdm-${name}`));
     const codex = existsSync(join(codexHomePath, "skills", `gdm-${name}`));
+    const pi = existsSync(join(piAgentPath, "skills", `gdm-${name}`));
     const mark = (ok: boolean) => (ok ? "OK" : "없음");
-    console.log(`  gdm-${name}: claude[${mark(claude)}] codex[${mark(codex)}]`);
+    console.log(`  gdm-${name}: claude[${mark(claude)}] codex[${mark(codex)}] pi[${mark(pi)}]`);
   }
   if (SKILL_NAMES.some((name) =>
     !existsSync(join(home, ".claude", "skills", `gdm-${name}`)) ||
-    !existsSync(join(codexHomePath, "skills", `gdm-${name}`))
+    !existsSync(join(codexHomePath, "skills", `gdm-${name}`)) ||
+    !existsSync(join(piAgentPath, "skills", `gdm-${name}`))
   )) {
     console.log(`  → 누락 스킬은 재설치로 채웁니다: curl -fsSL https://raw.githubusercontent.com/Gdm0714/gdm/main/install.sh | bash (소스 설치는 install/install.sh)`);
   }
@@ -1630,7 +1758,7 @@ async function main(): Promise<void> {
   // work-state lock here turns concurrent observations into avoidable lock timeouts.
   const mutating =
     command === "pass" || command === "attempt" || command === "recheck" || command === "done" ||
-    command === "miss" || command === "repair" ||
+    command === "feedback" || command === "miss" || command === "repair" ||
     (command === "plan" && sub !== "list" && !(sub === "contract" && rest.includes("--check-commit"))) ||
     (command === "audit" && sub === "verdict") ||
     command === "protocol" ||
@@ -1687,6 +1815,9 @@ async function main(): Promise<void> {
         break;
       case "retro":
         cmdRetro(cwd, rest);
+        break;
+      case "feedback":
+        cmdFeedback(cwd, rest);
         break;
       case "preset":
         cmdPreset(cwd, rest);

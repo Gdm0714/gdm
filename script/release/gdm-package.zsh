@@ -65,7 +65,7 @@ for asset in $assets; do
 done
 
 mkdir -p "$render_root/targets"
-for target in codex claude; do
+for target in codex claude pi; do
   bun "$ROOT/install/render-skills.ts" \
     --target "$target" \
     --source-root "$ROOT/skills" \
@@ -73,7 +73,8 @@ for target in codex claude; do
     --output "$render_root/targets/$target" >/dev/null
 done
 python3 - "$render_root/targets/codex/gdm-target-manifest.json" \
-  "$render_root/targets/claude/gdm-target-manifest.json" <<'PY'
+  "$render_root/targets/claude/gdm-target-manifest.json" \
+  "$render_root/targets/pi/gdm-target-manifest.json" <<'PY'
 import json
 import sys
 
@@ -81,10 +82,13 @@ with open(sys.argv[1], encoding="utf-8") as source:
     codex = json.load(source)
 with open(sys.argv[2], encoding="utf-8") as source:
     claude = json.load(source)
-if codex.get("target") != "codex" or claude.get("target") != "claude":
+with open(sys.argv[3], encoding="utf-8") as source:
+    pi = json.load(source)
+if (codex.get("target") != "codex" or claude.get("target") != "claude" or
+        pi.get("target") != "pi"):
     raise SystemExit("generated target manifest identity mismatch")
 for field in ("canonicalSourceSha256", "sourceSha256", "capabilityProfile", "runner"):
-    if codex.get(field) != claude.get(field):
+    if codex.get(field) != claude.get(field) or codex.get(field) != pi.get(field):
         raise SystemExit(f"generated target manifest parity mismatch: {field}")
 PY
 

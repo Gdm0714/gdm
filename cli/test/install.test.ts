@@ -123,7 +123,7 @@ function remoteAssets(withChecksums: boolean): { directory: string; asset: strin
   const arch = process.arch === "arm64" ? "arm64" : "x64";
   const asset = `gdm-${os}-${arch}`;
   expect(run("bun", ROOT, ["build", "cli/src/cli.ts", "--compile", "--outfile", join(directory, asset)]).exitCode).toBe(0);
-  for (const target of ["codex", "claude"] as const) {
+  for (const target of ["codex", "claude", "pi"] as const) {
     expect(run("bun", ROOT, [
       "install/render-skills.ts",
       "--target", target,
@@ -190,24 +190,31 @@ function installGdm(): InstalledGdm {
 function seedExistingInstall(home: string): {
   readonly binary: string;
   readonly binaryBytes: Buffer;
+  readonly piLauncher: string;
+  readonly piLauncherBytes: Buffer;
   readonly skillPaths: readonly string[];
   readonly skillBytes: Buffer;
 } {
   const binary = join(home, ".local", "bin", "gdm");
   const binaryBytes = Buffer.from("#!/bin/sh\nprintf old-gdm\n", "utf8");
+  const piLauncher = join(home, ".local", "bin", "gdm-pi");
+  const piLauncherBytes = Buffer.from("#!/bin/sh\nprintf old-gdm-pi\n", "utf8");
   const skillBytes = Buffer.from("old skill\n", "utf8");
   mkdirSync(join(home, ".local", "bin"), { recursive: true });
   writeFileSync(binary, binaryBytes);
   chmodSync(binary, 0o755);
+  writeFileSync(piLauncher, piLauncherBytes);
+  chmodSync(piLauncher, 0o755);
   const skillPaths = [
     join(home, ".claude", "skills", "gdm-go", "SKILL.md"),
     join(home, ".codex", "skills", "gdm-go", "SKILL.md"),
+    join(home, ".pi", "agent", "skills", "gdm-go", "SKILL.md"),
   ];
   for (const path of skillPaths) {
     mkdirSync(join(path, ".."), { recursive: true });
     writeFileSync(path, skillBytes);
   }
-  return { binary, binaryBytes, skillPaths, skillBytes };
+  return { binary, binaryBytes, piLauncher, piLauncherBytes, skillPaths, skillBytes };
 }
 
 function expectExistingInstallUnchanged(
@@ -215,6 +222,9 @@ function expectExistingInstallUnchanged(
 ): void {
   expect(readFileSync(seeded.binary, "utf8")).toBe(
     seeded.binaryBytes.toString("utf8"),
+  );
+  expect(readFileSync(seeded.piLauncher, "utf8")).toBe(
+    seeded.piLauncherBytes.toString("utf8"),
   );
   for (const path of seeded.skillPaths) {
     expect(readFileSync(path, "utf8")).toBe(seeded.skillBytes.toString("utf8"));
@@ -233,13 +243,15 @@ function expectNoInstallerTransactionArtifacts(home: string): void {
     join(home, ".local", "bin"),
     join(home, ".claude", "skills"),
     join(home, ".codex", "skills"),
+    join(home, ".pi", "agent", "skills"),
   ]) {
     if (!existsSync(directory) || !lstatSync(directory).isDirectory()) continue;
     expect(
       readdirSync(directory).filter((name) =>
         name.startsWith(".gdm-stage.") ||
         name.startsWith(".gdm-rollback.") ||
-        name.startsWith(".gdm.tmp.")
+        name.startsWith(".gdm.tmp.") ||
+        name.startsWith(".gdm-pi.tmp.")
       ),
     ).toEqual([]);
   }
@@ -324,6 +336,11 @@ describe("gdm installation and workflow skills", () => {
     const home = tempDirectory("gdm-remote-home-");
     const bin = join(home, "bin");
     mkdirSync(bin, { recursive: true });
+    const userPiSkill = join(home, ".pi", "agent", "skills", "user-owned", "SKILL.md");
+    const userPiSettings = join(home, ".pi", "agent", "settings.json");
+    mkdirSync(join(userPiSkill, ".."), { recursive: true });
+    writeFileSync(userPiSkill, "keep user Pi skill\n");
+    writeFileSync(userPiSettings, "keep user Pi settings\n");
     const installed = runEnv("bash", ROOT, [REMOTE_INSTALL], {
       ...process.env,
       HOME: home,
@@ -341,6 +358,8 @@ describe("gdm installation and workflow skills", () => {
     expect(installedHooks).toContain(join(bin, "gdm"));
     expect(existsSync(join(home, ".claude", "skills", "gdm-go", "SKILL.md"))).toBe(true);
     expect(existsSync(join(home, ".codex", "skills", "gdm-pr", "SKILL.md"))).toBe(true);
+    expect(existsSync(join(home, ".pi", "agent", "skills", "gdm-go", "SKILL.md"))).toBe(true);
+    expect(lstatSync(join(bin, "gdm-pi")).mode & 0o111).not.toBe(0);
     const installedGo = readFileSync(join(home, ".codex", "skills", "gdm-go", "SKILL.md"), "utf8");
     const installedFull = readFileSync(join(home, ".codex", "skills", "gdm-full", "SKILL.md"), "utf8");
     const installedResearch = readFileSync(join(home, ".codex", "skills", "gdm-research", "SKILL.md"), "utf8");
@@ -349,6 +368,8 @@ describe("gdm installation and workflow skills", () => {
     const installedRunner = readFileSync(join(home, ".codex", "skills", "gdm-agents", "run-role.sh"), "utf8");
     const installedCodexAdapter = readFileSync(join(home, ".codex", "skills", "gdm-agents", "providers", "codex.sh"), "utf8");
     const installedClaudeAdapter = readFileSync(join(home, ".codex", "skills", "gdm-agents", "providers", "claude.sh"), "utf8");
+    const installedPiAdapter = readFileSync(join(home, ".pi", "agent", "skills", "gdm-agents", "providers", "pi.sh"), "utf8");
+    const installedPiGo = readFileSync(join(home, ".pi", "agent", "skills", "gdm-go", "SKILL.md"), "utf8");
     expect(installedGo).toContain("Codex native delegation contract");
     expect(installedGo).toContain("일반 역할은 leaf가 아니다");
     expect(installedFull).toContain("같은 구현 모델의 에이전트는 여러 명이어도 된다");
@@ -384,10 +405,15 @@ describe("gdm installation and workflow skills", () => {
     expect(installedClaudeAdapter).toContain('--tools ""');
     expect(installedClaudeAdapter).toContain("--no-chrome");
     expect(installedClaudeAdapter).toContain("--disable-slash-commands");
+    expect(installedPiAdapter).toContain("--no-tools");
+    expect(installedPiAdapter).toContain("--no-context-files");
+    expect(installedPiGo).toContain("Pi bounded delegation contract");
     expect(installedRunner).toContain('CAPABILITY_PROFILE="gdm-read-only-specialist/v1"');
     expect(installedRunner).toContain("max_processes");
     expect(installedRunner).toContain("stop_owned_tree");
     expect(installedRunner).not.toContain("pkill");
+    expect(readFileSync(userPiSkill, "utf8")).toBe("keep user Pi skill\n");
+    expect(readFileSync(userPiSettings, "utf8")).toBe("keep user Pi settings\n");
   });
 
   test("source installer preserves user hooks and config while updating only its handlers", () => {
@@ -455,7 +481,7 @@ describe("gdm installation and workflow skills", () => {
     }
   });
 
-  test("source installer rolls binary and both skill roots back when the real hook commit fails", () => {
+  test("source installer rolls both launchers and all skill roots back when the real hook commit fails", () => {
     const home = tempDirectory("gdm-source-hook-rollback-");
     const seeded = seedExistingInstall(home);
     const lock = seedLiveHookLock(home);
@@ -499,8 +525,11 @@ describe("gdm installation and workflow skills", () => {
 
   test("source installer replaces legacy skill directories with generated targets and preserves unrelated skills", () => {
     const home = tempDirectory("gdm-source-skill-migration-");
-    for (const host of [".claude", ".codex"]) {
-      const root = join(home, host, "skills");
+    for (const root of [
+      join(home, ".claude", "skills"),
+      join(home, ".codex", "skills"),
+      join(home, ".pi", "agent", "skills"),
+    ]) {
       mkdirSync(join(root, "gdm-go"), { recursive: true });
       writeFileSync(join(root, "gdm-go", "stale.txt"), "stale\n");
       mkdirSync(join(root, "user-owned"), { recursive: true });
@@ -510,8 +539,11 @@ describe("gdm installation and workflow skills", () => {
     const installed = run("bash", ROOT, [INSTALL], home);
 
     expect(installed.exitCode).toBe(0);
-    for (const host of [".claude", ".codex"]) {
-      const root = join(home, host, "skills");
+    for (const root of [
+      join(home, ".claude", "skills"),
+      join(home, ".codex", "skills"),
+      join(home, ".pi", "agent", "skills"),
+    ]) {
       const migrated = join(root, "gdm-go");
       expect(lstatSync(migrated).isDirectory()).toBe(true);
       expect(lstatSync(join(migrated, "SKILL.md")).isFile()).toBe(true);
@@ -698,7 +730,7 @@ describe("gdm installation and workflow skills", () => {
     }
   });
 
-  test("remote installer rolls binary and both skill roots back when the real hook commit fails", () => {
+  test("remote installer rolls both launchers and all skill roots back when the real hook commit fails", () => {
     const assets = sharedVerifiedRemoteAssets();
     const home = tempDirectory("gdm-remote-hook-rollback-");
     const seeded = seedExistingInstall(home);
@@ -825,7 +857,7 @@ describe("gdm installation and workflow skills", () => {
     expect(existsSync(join(home, ".codex", "skills", "gdm-go"))).toBe(true);
   });
 
-  test("every skill has discoverable metadata and reflect installs for both hosts", () => {
+  test("every skill has discoverable metadata and reflect installs for all targets", () => {
     // Given: an isolated HOME and every repository skill.
     const installed = installGdm();
 
@@ -840,8 +872,11 @@ describe("gdm installation and workflow skills", () => {
     }
 
     // Then: reflect and a target manifest are visible to both hosts.
-    for (const host of [".claude", ".codex"]) {
-      const root = join(installed.home, host, "skills");
+    for (const root of [
+      join(installed.home, ".claude", "skills"),
+      join(installed.home, ".codex", "skills"),
+      join(installed.home, ".pi", "agent", "skills"),
+    ]) {
       expect(lstatSync(join(root, "gdm-reflect")).isDirectory()).toBe(true);
       expect(lstatSync(join(root, "gdm-reflect", "SKILL.md")).isFile()).toBe(true);
       expect(lstatSync(join(root, "gdm-target-manifest.json")).isFile()).toBe(true);
