@@ -1,0 +1,2 @@
+import { defineConfig, devices } from '@playwright/test';
+export default defineConfig({ testDir: './tests', timeout: 30000, use: { baseURL: 'http://127.0.0.1:4173', ...devices['Desktop Chrome'], launchOptions: { executablePath: `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1228/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing`, args: ['--headless=new', '--no-sandbox'] } }, webServer: { command: 'bun run dev -- --host 127.0.0.1 --port 4173 --strictPort', port: 4173, reuseExistingServer: false }, reporter: [['list']] });

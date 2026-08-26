@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="180" height="180" role="img" aria-labelledby="title desc">
+  <title id="title">Gidem Orbit G</title>
+  <desc id="desc">세 개의 노드가 도킹해 완성된 Gidem 로고</desc>
+  <g fill="none" stroke="#F0F3F6" stroke-width="8">
+    <path d="M50 19.4A22 22 0 1 0 54 32"/>
+    <path d="M54 32H48"/>
+  </g>
+  <g fill="#5FD08A">
+    <rect x="40" y="29" width="6" height="6" rx="1.5"/>
+    <rect x="32" y="29" width="6" height="6" rx="1.5"/>
+    <rect x="24" y="29" width="6" height="6" rx="1.5"/>
+  </g>
+</svg>
