@@ -189,7 +189,7 @@ extension·shell·edit·write·재위임은 제거한다. child 결과는 탐색
 
 ## 선택형 대화형 도구
 
-gdm CLI와 CI에는 필수가 아니지만, 로컬 대화형 작업에서는 다음 도구를 감지해 사용한다.
+gdm CLI에는 필수가 아니지만, 로컬 대화형 작업에서는 다음 도구를 감지해 사용한다.
 
 - [terminal-browser](https://github.com/zenbu-labs/terminal-browser): 웹 UI check를 실제
   브라우저 pane에서 재현하고 `snapshot`, `click`, `fill`, `eval` 결과를 gdm 증거에 연결한다.
@@ -198,7 +198,7 @@ gdm CLI와 CI에는 필수가 아니지만, 로컬 대화형 작업에서는 다
   gdm-review는 사용자 주도 리뷰의 저장된 코멘트를 CLI로 읽고, 에이전트 주도 리뷰의 발견은
   사용자가 요청한 경우에만 `Codex` 작성자로 기록한다.
 
-두 도구와 Codex 스킬은 각각의 공식 설치 방법으로 별도 설치한다. 사용할 수 없거나 CI처럼
+두 도구와 Codex 스킬은 각각의 공식 설치 방법으로 별도 설치한다. 사용할 수 없거나
 비대화형인 환경에서는 기존 자동 테스트·텍스트 리뷰로 폴백하며, gdm 설치기가 자동으로
 설치하지 않는다. tuicr는 gdm-full의 독립 검수자를 대신하지 않는다.
 

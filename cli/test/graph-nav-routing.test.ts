@@ -28,6 +28,7 @@ function installedSkillNames(): string[] {
 
 function readableFilesUnder(path: string): string[] {
   const absolute = join(ROOT, path);
+  if (!existsSync(absolute)) return [];
   return readdirSync(absolute, { withFileTypes: true }).flatMap((entry) => {
     if (entry.name.startsWith(".")) return [];
     const relative = `${path}/${entry.name}`;
