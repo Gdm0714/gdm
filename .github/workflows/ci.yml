@@ -55,3 +55,17 @@ jobs:
           done
           count="$(find skills -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')"
           echo "스킬 ${count}개 front-matter 정상"
+
+  native:
+    name: Native Swift 검증
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Native 테스트
+        working-directory: native
+        run: swift test
