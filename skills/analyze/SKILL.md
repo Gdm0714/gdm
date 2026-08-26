@@ -23,52 +23,58 @@ description: |
 - IMPORTANT: 루트 진행자는 질문 범위, 근거 확인, 가설 비교, 최종 종합을 소유한다. 각 추적은
   경쟁 가설·독립 코드 경계, 필요한 전문성·fresh context, 로그·호출 경로 탐색의 노이즈를
   보고 직접 수행하거나 읽기 전용 역할에 맡긴다.
-- IMPORTANT: 일반 분석 역할은 새로 발견한 독립 가설이나 코드 경계를 하위 역할에 맡길 수
-  있다. 같은 네이티브 Codex 루트 세션에서 진행자를 제외한 모든 세대의 활성 spawned agent를
-  합쳐 동시에 최대 4명이며 자식이 만든 자식도 같은 세션 상한에 포함된다. 같은 전체 분석을
-  다시 넘기는 자기복제형 재위임과 끝이 정해지지 않은 팬아웃만 금지한다. 진행자가 각 근거를
-  직접 확인해 종합한다.
-- IMPORTANT: 모든 spawn 메시지 첫 줄에 `GDM_AGENT_ENVELOPE_V1=` 단일행 JSON과 역할·scope·
-  ownership·산출물·검증·종료 조건·`blockedBy`를 넣는다. 위임 lease는
-  `INITIAL_SPAWN_ATTEMPT_BUDGET: 16`, `SPAWN_ATTEMPT_EXTENSION: 4`,
-  `MAX_TOTAL_SPAWNS_PER_ROOT: 32`, `DEFAULT_CHILD_QUOTA: 1`, `MAX_CHILD_QUOTA: 2`,
-  `MAX_AGENT_DEPTH: 3`이다. 일반 역할의 기본 quota는 1이며 일괄 leaf로 만들지 않는다.
-  허용된 시도는 누적 예산을 소비하고 실패·취소된 spawn도 예산을 돌려주지 않는다. 초기 16을
-  다 쓰면 pending/running 역할이 하나도 없을 때만 다음 spawn에서 4개 예산을 자동으로 열며,
-  활성 역할이 남은 동안에는 확장하지 않는다. timeout은
-  대기 호출의 종료일 뿐 workflow 결과 확정이 아니다. structured 역할의 scope와
-  ownership resource는 cwd 기준 `.`·`..`·상대/절대 별칭을 정규화한다. 활성 역할과 같은
-  canonical scope 또는 겹치는 write resource는 거부하지만, 이는 선언 guardrail이며
-  symlink·대소문자까지 잠그는 운영체제 파일 lock은 아니다.
-  `SubagentStop`은 child turn의 stop 관찰이자 sequencing hint일 뿐 영구 thread 종료나 성공
-  증명이 아니다. 다른 Stop handler가 continuation을 요청할 수 있고, idle thread는
-  `followup_task`로 재사용될 수 있으며, interrupt는 Stop 관찰을 남기지 않을 수 있다. 원장에서
-  해당 identity에 연결된 `stopped` 관찰은 active/ownership lease를 협력적으로 해제하고
-  `blockedBy`를 열 수 있지만 hard runtime proof가 아니다. 루트 진행자는 deliverable/verify와
-  실제 작업 겹침 부재를 확인해야 한다. `failed|expired`는 active/ownership lease에서는
-  빠져도 `blockedBy`를 만족하지 않으며, 30분 lease expiry도 완료가 아니다. 의존 분석과 최종 종합은 산출물 결과를
-  `completed|failed|cancelled|inconclusive` 중 하나로 별도 판정한다. 이 workflow 결과는
-  lifecycle 관찰과 분리한다.
-- IMPORTANT: 훅이 실행되는 하나의 네이티브 Codex 루트 세션 트리에서 절대 누적 32는 하드
-  상한이고, 동시 4는 현재 세션의 유효 Codex 설정이 4일 때 네이티브 하드 상한이다. 하위
-  hook caller agent id가 structured 부모와 일대일로 결속될 때 부모별
-  quota/depth/canDelegate를 기계적으로 검사한다. caller id가 없는 호환 런타임은 원장에
-  선언한 부모가 있을 때만 nonterminal/quota/depth/canDelegate를 검사하는 degraded
-  fallback을 쓰며, 이를 부모 신원 하드 경계라고 주장하지 않는다. `multi_agent_v2` spawn
-  응답에는 agent id가 없으므로 unresolved V2가 포함된 identity-ambiguous 구간만 직렬화한다.
-  unresolved V1끼리는 병렬 가능하고, identity가 연결된 뒤 active agent 실행도 병렬 가능하다.
-  same-axis 후속 작업으로 idle thread를 재사용할 수 있지만 훅은 이전 ownership/delegation을
-  기계적으로 갱신하지 못한다. 루트 진행자는 실제 작업 겹침을 피하고 새 bounded delegation이
-  필요하면 새 lease를 선언해 생성한다. 비대화형 CLI·별도 세션을 합친 논리 작업 전체의 동시
-  4·초기 16·4개 자동 확장·절대 누적 32는 협력적 운영 규칙이다.
 
-아래 한 줄은 형식 예시일 뿐이다. 복사하기 전에 `taskId`, `parentId`, `role`, `scope`,
-`ownership.mode/resources`, `deliverable`, `verify`, `stopWhen`, `canDelegate`,
-`childQuota`(quota), `depth`, `blockedBy` 값을 작업에 맞게 모두 바꾼다.
+<!-- GDM_TARGET_FRAGMENT_V1:delegation -->
 
-```text
-GDM_AGENT_ENVELOPE_V1={"taskId":"example-task","parentId":"root","role":"bounded-worker","scope":"docs/example","ownership":{"mode":"read","resources":["docs/example.md"]},"deliverable":"Evidence-backed result","verify":"Confirm cited file and result","stopWhen":"Deliverable and verification are complete","canDelegate":false,"childQuota":0,"depth":1,"blockedBy":[]}
+## 선택형 코드 그래프 내비게이션
+
+`GRAPH_NAV_PROVIDER: env:GDM_GRAPH_PROVIDER`, `COMPANION_TOOL_POLICY: optional`이다. 로그·스택
+트레이스와 로컬 검색으로 entry를 먼저 고정한 뒤, 간접 호출 경로나 경쟁 가설의 코드 경계가
+불명확할 때만 쓴다. `dependencies`는 entry가 의존하는 방향, `dependents`는 entry에 의존하는
+영향 방향이다. 현재 Git root와 repository-relative entry 하나를 고정하고 질문을 가르는 데
+필요한 가장 작은 `maxDepth`를 1부터 5 사이에서 고른다.
+
+`GDM_GRAPH_PROVIDER`는 인자가 섞이지 않은 절대 실행 파일 경로 하나여야 한다. 경로가 유효하면
+`"$GDM_GRAPH_PROVIDER" query`에 다음 v1 request object를 JSON stdin으로 전달한다.
+
+```json
+{"schemaVersion":"gdm-graph-query/v1","root":"/absolute/git/root","entry":"repo/relative/file.ts","direction":"dependencies","maxDepth":1}
 ```
+
+`direction`은 `dependencies|dependents`, `maxDepth`는 정수 1..5만 허용한다. 호출자는 환경변수
+값을 공백으로 나누거나 command string으로 다시 파싱하지 않고 실행 파일 경로 한 개와 `query`
+인자를 고정한다. terminal tool이 command string 인터페이스만 제공하면 위처럼 변수를 한 토큰으로
+quote한다. `sh -c`, `zsh -lc`, `eval`, command string parsing은 금지한다. caller-side 제한은
+10초이며 terminal tool의 timeout을 사용하고 shell `timeout` wrapper는 쓰지 않는다.
+
+성공 출력은 `"schemaVersion":"gdm-graph-result/v2"`와 `provider`, `entry`, `direction`,
+`nodes[{path,depth}]`, `edges`, `candidateTests`, `unresolved`, `limitations`,
+`coverage{scope,requestedMaxDepth,completeWithinRequestedDepth,frontier,incompleteReasons}`,
+`freshness{algorithm,consistent,visitedFiles}`, `truncated`를 가진 JSON object여야 한다.
+`coverage.scope`는 요청한 root·entry·direction·depth 안의 bounded coverage를 뜻하며 저장소 전체의
+완전성을 뜻하지 않는다. provider가 미설정이거나 값이 인자 없는 절대 경로
+하나가 아니거나 경로가 missing·실행 불가인 경우, 프로세스가 non-zero로 끝나거나
+crash·timeout인 경우, 출력이 malformed JSON·schema mismatch인 경우, 또는 결과가 stale이거나
+`freshness.consistent=false`인 경우에는 결과 전체를 버리고 Read/Glob/Grep로 폴백해 실제 소스를
+직접 읽는다.
+
+`limitations`의 capability 설명만 있다는 이유로 정상 결과를 실패로 바꾸지는 않는다. 다만
+요청 자체가 지원 범위 밖이거나 `coverage.completeWithinRequestedDepth=false`, `truncated=true`,
+관련 `unresolved`, parse error처럼 이번 순회가 partial·unsupported임을 알리는 항목이 있으면
+반환된 경로는 추가로 열어볼 navigation hint로만 쓸 수 있다. 그 경우 기존 Read/Glob/Grep 탐색도
+반드시 수행해 누락을 보완하며, 빈 edge나 알려진 edge만으로 영향 범위를 결론내리지 않는다.
+
+반대로 결과가 fresh이고 `coverage.completeWithinRequestedDepth=true`, `truncated=false`이며 관련
+`unresolved`가 없으면 repository-wide Read/Glob/Grep 폴백을 수행하지 않는다. 그래도 반환된
+`nodes`·`edges`·`candidateTests`의 후보 소스는 직접 열어 확인한다. `coverage.frontier`는 요청한
+`requestedMaxDepth` 경계에서 더 이어질 수 있는 노드다. frontier가 있다는 사실만으로 partial인
+것은 아니며 저장소 전체의 complete를 뜻하지도 않는다. 질문에 경계 너머가 필요하면 5 이하로
+`maxDepth`를 늘려 다시 조회하거나 Read/Glob/Grep로 폴백한다.
+
+정상 결과도 탐색할 파일·심볼·테스트 후보를 주는 navigation hint일 뿐이다. 실제 소스를 직접
+열어 확인하기 전에는 가설의 주장이나 증거가 아니다. 그래프 출력만으로 작업 계약의 범위 확장을
+정당화하거나 `gdm pass`, `gdm done`, audit 판정을 만들 수 없다. 후보 경로는 아래 절차에서
+실제 코드와 로그·실행 프로브로 지지하거나 반박한다.
 
 ## 프로세스
 

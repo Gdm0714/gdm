@@ -60,8 +60,10 @@
   오류·timeout은 Codex 대체 사유가 아니다. 원인을 보고하고 사용자 조치가 필요한 상태로
   멈춘다. `HTTP 429`, `rate_limit`, `quota exceeded`, 사용량 한도처럼 리밋임이 명확할
   때만 원인을 계약·결과에 기록하고 Codex가 설계 또는 디자인을 대신할 수 있다.
-- 외부 모델에는 비밀·토큰·자격증명, 전체 대화, 불필요한 저장소 원문을 보내지 않는다.
-  필요한 요구와 파일 경계만 전달한다. Claude CLI와 Claude Design 호출도 아래의 비대화형
+- 외부 모델에는 비밀·토큰·자격증명, 전체 대화, 전체 저장소 원문을 보내지 않는다. tool-0
+  전문 역할에는 plan/analyze용 bounded code excerpt(경로·라인·내용)·계약·결정 질문 또는
+  review/audit용 실제 diff·관련 source excerpt·evidence를 자동 v2의 credential-free valid
+  UTF-8, 최대 1 MiB artifact에 완결적으로 넣는다. Claude CLI와 Claude Design 호출도 아래의 비대화형
   CLI 협력적 예산·PID 회수 규칙에 포함한다.
 
 ## 대화형 테스트·리뷰 도구 라우팅
@@ -106,6 +108,62 @@ tuicr나 multiplexer가 없거나 비대화형 리뷰이면 기존 텍스트 `gd
 알린다. gdm 설치기는 두 companion tool을 자동 설치하지 않는다. tuicr 세션이나 사용자 코멘트는
 구현 모델과 다른 fresh-context auditor가 아니므로 gdm-full의 독립 검수를 대신할 수 없다.
 
+## 선택형 코드 그래프 내비게이션
+
+- `GRAPH_NAV_PROVIDER: env:GDM_GRAPH_PROVIDER`
+- `COMPANION_TOOL_POLICY: optional`
+- `GRAPH_NAV_SKILLS: gdm-plan,gdm-analyze,gdm-review`
+
+코드 그래프는 plan·analyze·review에서 로컬 검색으로 찾은 한 파일의 의존 관계나 영향 경계를
+좁혀야 할 때만 선택적으로 쓴다. `dependencies`는 그 파일이 의존하는 방향, `dependents`는 그
+파일에 의존하는 영향 방향이다. 현재 Git root와 repository-relative entry 하나를 고정하고,
+질문을 가르는 데 필요한 가장 작은 `maxDepth`를 1부터 5 사이에서 고른다. 전체 저장소를
+무경계로 탐색하거나 다른 스킬에서 자동 실행하지 않는다.
+
+`GDM_GRAPH_PROVIDER`는 인자가 섞이지 않은 절대 실행 파일 경로 하나여야 한다. 경로가 유효하면
+`"$GDM_GRAPH_PROVIDER" query`에 다음 v1 request object를 JSON stdin으로 전달한다.
+
+```json
+{"schemaVersion":"gdm-graph-query/v1","root":"/absolute/git/root","entry":"repo/relative/file.ts","direction":"dependencies","maxDepth":1}
+```
+
+`direction`은 `dependencies|dependents`, `maxDepth`는 정수 1..5만 허용한다. 위 표기는 절대 경로를
+따옴표로 보호한다는 뜻이다. 호출자는 환경변수 값을 공백으로 나누거나 command string으로 다시
+파싱하지 않고 실행 파일 경로 한 개와 `query` 인자를 고정한다. terminal tool이 command string
+인터페이스만 제공하면 위처럼 변수를 한 토큰으로 quote한다. `sh -c`, `zsh -lc`, `eval`, command
+string parsing은 금지한다. caller-side 제한은 10초이며 terminal tool의 timeout을 사용하고 shell
+`timeout` wrapper는 쓰지 않는다.
+
+성공 출력은 `"schemaVersion":"gdm-graph-result/v2"`와 `provider`, `entry`, `direction`,
+`nodes[{path,depth}]`, `edges`, `candidateTests`, `unresolved`, `limitations`,
+`coverage{scope,requestedMaxDepth,completeWithinRequestedDepth,frontier,incompleteReasons}`,
+`freshness{algorithm,consistent,visitedFiles}`, `truncated`를 가진 JSON object여야 한다.
+`coverage.scope`는 요청한 root·entry·direction·depth 안의 bounded coverage를 뜻하며 저장소 전체의
+완전성을 뜻하지 않는다. provider가 미설정이거나 값이 인자 없는 절대 경로
+하나가 아니거나 경로가 missing·실행 불가인 경우, 프로세스가 non-zero로 끝나거나
+crash·timeout인 경우, 출력이 malformed JSON·schema mismatch인 경우, 또는 결과가 stale이거나
+`freshness.consistent=false`인 경우에는 결과 전체를 버리고 Read/Glob/Grep로 폴백해 실제 소스를
+직접 읽는다.
+
+`limitations`의 capability 설명만 있다는 이유로 정상 결과를 실패로 바꾸지는 않는다. 다만
+요청 자체가 지원 범위 밖이거나 `coverage.completeWithinRequestedDepth=false`, `truncated=true`,
+관련 `unresolved`, parse error처럼 이번 순회가 partial·unsupported임을 알리는 항목이 있으면
+반환된 경로는 추가로 열어볼 navigation hint로만 쓸 수 있다. 그 경우 기존 Read/Glob/Grep 탐색도
+반드시 수행해 누락을 보완하며, 빈 edge나 알려진 edge만으로 영향 범위를 결론내리지 않는다.
+
+반대로 결과가 fresh이고 `coverage.completeWithinRequestedDepth=true`, `truncated=false`이며 관련
+`unresolved`가 없으면 repository-wide Read/Glob/Grep 폴백을 수행하지 않는다. 그래도 반환된
+`nodes`·`edges`·`candidateTests`의 후보 소스는 직접 열어 확인한다. `coverage.frontier`는 요청한
+`requestedMaxDepth` 경계에서 더 이어질 수 있는 노드다. frontier가 있다는 사실만으로 partial인
+것은 아니며 저장소 전체의 complete를 뜻하지도 않는다. 질문에 경계 너머가 필요하면 5 이하로
+`maxDepth`를 늘려 다시 조회하거나 Read/Glob/Grep로 폴백한다.
+
+정상 결과도 탐색할 파일·심볼·테스트 후보를 주는 navigation hint일 뿐이다. 실제 소스를 직접
+열어 확인하기 전에는 주장이나 증거가 아니다. 그래프 출력만으로 작업 계약의 범위 확장을
+정당화하거나 `gdm pass`, `gdm done`, audit 판정을 만들 수 없다. provider 부재·실패는 companion
+기능의 부재일 뿐 plan·analyze·review 자체를 차단하지 않으며, gdm은 provider를 설치하거나 상주
+프로세스로 시작하지 않는다.
+
 ## 검수 독립성
 
 검수 모델은 실제 diff를 만든 구현 모델과 달라야 한다. 조율자나 스킬 이름이 아니라 실제
@@ -119,14 +177,14 @@ tuicr나 multiplexer가 없거나 비대화형 리뷰이면 기존 텍스트 `gd
 
 ## 역할 실행과 제한된 병렬 위임
 
-분리 가능한 역할은 Codex/Claude의 네이티브 서브에이전트나 비대화형 CLI로 위임할 수 있다.
+분리 가능한 역할은 설치 target이 제공하는 Codex·Claude·Pi의 제한된 역할 실행기로 위임할 수 있다.
 해당 역할 스킬 전문과 필요한 파일·증거 경로만 전달하고, 사용자의 비밀, 전체 대화,
 불필요한 저장소 원문은 넘기지 않는다. 결과를 받은 뒤 진행자가 실제 파일과 gdm 게이트로
 다시 판정한다.
 
 일반 역할은 leaf가 아니며, 작업 중 새로 발견한 독립 경계가 있거나 전문성·fresh context·
-컨텍스트 분리가 유리하면 하위 역할을 만들 수 있다. 운영 규칙은 하나의 네이티브 Codex 루트
-세션 트리에서 루트 진행자를 제외한 모든 세대의 활성 spawned agent를 합쳐 동시에 최대
+컨텍스트 분리가 유리하면 하위 역할을 만들 수 있다. 운영 규칙은 하나의 hook-enabled native root
+session tree에서 루트 진행자를 제외한 모든 세대의 활성 spawned agent를 합쳐 동시에 최대
 4명이다 (`MAX_ACTIVE_SUBAGENTS: 4`). 현재 세션의 유효
 `max_concurrent_threads_per_session = 4`이면 Codex도 이를 네이티브 하드 상한으로 강제한다.
 새 역할을 만들기 전에 같은 루트 세션 트리의 활성 수를 확인하고, 빈 슬롯이 없으면 완료를
@@ -142,7 +200,7 @@ tuicr나 multiplexer가 없거나 비대화형 리뷰이면 기존 텍스트 `gd
 이는 선언을 검사하는 guardrail이지 symlink·대소문자까지 잠그는 운영체제 파일 lock은 아니다.
 각 메시지는 계약 다음에 실행 지시, 산출물, 검증 방법, `stopWhen`을 자체 완결적으로 적는다.
 
-`MAX_TOTAL_SPAWNS_PER_ROOT: 32`에서 ROOT는 하나의 네이티브 Codex root session을 뜻한다.
+`MAX_TOTAL_SPAWNS_PER_ROOT: 32`에서 ROOT는 하나의 hook-enabled native root session을 뜻한다.
 같은 세션 트리의 제한은 `INITIAL_SPAWN_ATTEMPT_BUDGET: 16`,
 `SPAWN_ATTEMPT_EXTENSION: 4`, 절대 누적 32, `DEFAULT_CHILD_QUOTA: 1`,
 `MAX_CHILD_QUOTA: 2`, `MAX_AGENT_DEPTH: 3`이다.
@@ -157,9 +215,9 @@ tuicr나 multiplexer가 없거나 비대화형 리뷰이면 기존 텍스트 `gd
 입력·caller가 바뀌는 경우도 거부한다. Pre보다 먼저 온 unmatched Post는 세션당 32개까지만
 보관하고 동일 replay만 상태 변경 없이 허용한다. 예산이 없으면 새 역할 대신 기존 역할에
 후속 작업을 보내거나 진행자가 직접 통합한다.
-훅이 실행되는 하나의 네이티브 Codex 루트 세션 트리에서 절대 누적 32는 하드 상한이고, 동시 4는
-현재 세션의 유효 Codex 설정이 4일 때 네이티브 하드 상한이다. 사용자 `config.toml`만으로
-유효값을 단정하지 않고 `/debug-config`에서 계층을 확인한다. 비대화형 CLI와 별도 Codex
+훅이 실행되는 하나의 native root session tree에서 절대 누적 32는 하드 상한이고, 동시 4는
+해당 target runtime의 유효 설정이 4일 때 native hard 상한이다. 사용자 설정 파일만으로
+유효값을 단정하지 않고 target의 debug config에서 계층을 확인한다. 비대화형 CLI와 별도
 세션을 합친 논리 작업 전체의 동시 4·초기 16·4개 자동 확장·절대 누적 32는 원장을 공유하는
 하드 경계가 아니라 진행자가
 지키는 협력적 운영 규칙이다.
@@ -195,7 +253,7 @@ V1/V2는 병렬로 유지한다. structured V2 자식의 caller는 active unreso
 V1이어도 V2여도 정책 검사와 같은 트랜잭션에서 결속하며, 거부 시 원장을 바꾸지 않는다.
 Pre/Post matcher는 정확한 내장 이름 외에 `[A-Za-z0-9_-]{1,64}spawn_agent` flat 이름을
 전달한다. suffix 도구는 공백 없는 `task_name`과 비어 있지 않은 문자열 `message`가 모두
-있을 때만 V2 spawn으로 센다. 다만 Codex의 custom V2 namespace 규칙상 예약된 `mcp`,
+있을 때만 V2 spawn으로 센다. 다만 hook input의 custom V2 namespace 규칙상 예약된 `mcp`,
 `mcp__*`, Responses namespace는 같은 shape라도 통과시키고 원장에는 넣지 않는다. flat
 이름은 namespace provenance를 증명하지 못하므로 이는 보수적인 shape 분류이며, shape가
 없는 suffix 호출도 통과시킨다.
@@ -206,13 +264,13 @@ Post evidence를 보존하고 일반 expiry reason만 지운다. 이미 stopped�
 Start는 stop 신호를 바꾸지 않는다. 예약과 연결하지 못한 lifecycle 관찰도 세션당 32개로
 제한하고 30분 뒤 Stop 계산에서 제거한다.
 진행자는 `deliverable`과 `verify`를 직접 확인해 결과를 통합해야 한다.
-user hook은 gdm 계약이 없는 일반 Codex spawn도 막지 않고 같은 세션 절대 누적 32에만 포함한다.
+user hook은 gdm 계약이 없는 일반 native spawn도 막지 않고 같은 세션 절대 누적 32에만 포함한다.
 Stop 장벽은 한 번만 continuation을 요청하고 재진입에서는 경고만 해 무한 루프를 만들지 않는다.
 
 독립 검수는 예외적으로 pass당 정확히 1명의 **leaf 실행**이다. 검수자에는
 `MAX_AGENT_DEPTH: 0`, `MAX_CHILD_AGENTS: 0`을 적용하고 병렬 검수자나 하위 검수자를 만들지
-않는다. Codex/Claude 검수는 설치된 `gdm-agents/run-auditor.sh`로만 실행해 에이전트 도구와
-사용자 MCP를 제거하고 자원 한도를 적용한다.
+않는다. Codex·Claude·Pi 검수는 설치된 `gdm-agents/run-role.sh --mode work --role audit`로만
+실행해 동일 capability profile로 하위 위임과 사용자 MCP를 제거하고 자원 한도를 적용한다.
 
 진행자는 외부 역할이 만든 루트 PID를 기록하고 종료 시 회수한다. 자원 한도 초과 시 그 PID의
 하위 트리만 종료한다. NEVER: `node`, `gradle`, `vite`, `codex`, `claude` 같은 프로세스

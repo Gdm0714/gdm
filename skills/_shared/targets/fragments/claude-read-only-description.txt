@@ -1,0 +1,1 @@
+runner가 전달한 canonical dispatch bundle과 artifact의 bound valid-UTF-8 text만으로 읽기 전용 전문 역할을 수행한다. bytesBase64는 exact-byte identity/transport에만 쓰며, 외부 도구나 상태 변경 없이 prose와 receiver ACK를 반환할 때 사용한다.

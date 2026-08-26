@@ -9,6 +9,7 @@
 #   GDM_BASE_URL  다운로드 베이스 URL 재정의 (미러·오프라인 설치용)
 #   GDM_SKIP_VERIFY=1 체크섬 검증 생략 (신뢰할 수 있는 오프라인 소스에서만 사용)
 #   CODEX_HOME    Codex 설정·스킬 경로 (상대 경로는 설치 실행 디렉터리 기준)
+#   PI_CODING_AGENT_DIR Pi 설정·스킬 경로 (기본: ~/.pi/agent, 상대 경로는 설치 실행 디렉터리 기준)
 #
 # 저장소 클론에서 개발용으로 설치하려면 install/install.sh 를 쓴다.
 set -euo pipefail
@@ -25,6 +26,11 @@ case "${CODEX_HOME:-}" in
   "") CODEX_HOME_DIR="$HOME/.codex" ;;
   /*) CODEX_HOME_DIR="$CODEX_HOME" ;;
   *) CODEX_HOME_DIR="$INSTALL_CWD/$CODEX_HOME" ;;
+esac
+case "${PI_CODING_AGENT_DIR:-}" in
+  "") PI_AGENT_DIR="$HOME/.pi/agent" ;;
+  /*) PI_AGENT_DIR="$PI_CODING_AGENT_DIR" ;;
+  *) PI_AGENT_DIR="$INSTALL_CWD/$PI_CODING_AGENT_DIR" ;;
 esac
 
 err() { echo "gdm 설치 실패: $*" >&2; exit 1; }
@@ -56,12 +62,17 @@ fi
 tmp="$(mktemp -d)"
 ROLLBACK_DIR=""
 INSTALL_TMP=""
+PI_LAUNCHER_TMP=""
 CLAUDE_STAGE=""
 CODEX_STAGE=""
+PI_STAGE=""
 CLAUDE_SKILL_ROLLBACK=""
 CODEX_SKILL_ROLLBACK=""
+PI_SKILL_ROLLBACK=""
 BINARY_OLD_MOVED=0
 BINARY_NEW_INSTALLED=0
+PI_BINARY_OLD_MOVED=0
+PI_BINARY_NEW_INSTALLED=0
 INSTALL_COMMITTED=0
 
 # Called by cleanup(), which itself is invoked through the EXIT trap.
@@ -91,8 +102,12 @@ cleanup() {
   set +e
   if [ "$INSTALL_COMMITTED" = "0" ]; then
     # Skill roots may coincide, so unwind in the reverse order of installation.
+    rollback_skill_swap "$PI_AGENT_DIR/skills" "$PI_STAGE" "$PI_SKILL_ROLLBACK"
     rollback_skill_swap "$CODEX_HOME_DIR/skills" "$CODEX_STAGE" "$CODEX_SKILL_ROLLBACK"
     rollback_skill_swap "$HOME/.claude/skills" "$CLAUDE_STAGE" "$CLAUDE_SKILL_ROLLBACK"
+    if [ "$PI_BINARY_NEW_INSTALLED" = "1" ]; then
+      [ ! -e "$BIN_DIR/gdm-pi" ] && [ ! -L "$BIN_DIR/gdm-pi" ] || rm -f "$BIN_DIR/gdm-pi"
+    fi
     if [ "$BINARY_NEW_INSTALLED" = "1" ]; then
       [ ! -e "$BIN_DIR/gdm" ] && [ ! -L "$BIN_DIR/gdm" ] || rm -f "$BIN_DIR/gdm"
     fi
@@ -100,12 +115,19 @@ cleanup() {
       { [ -e "$ROLLBACK_DIR/gdm" ] || [ -L "$ROLLBACK_DIR/gdm" ]; }; then
       mv "$ROLLBACK_DIR/gdm" "$BIN_DIR/gdm"
     fi
+    if [ "$PI_BINARY_OLD_MOVED" = "1" ] && [ -n "$ROLLBACK_DIR" ] &&
+      { [ -e "$ROLLBACK_DIR/gdm-pi" ] || [ -L "$ROLLBACK_DIR/gdm-pi" ]; }; then
+      mv "$ROLLBACK_DIR/gdm-pi" "$BIN_DIR/gdm-pi"
+    fi
   fi
   [ -z "$CLAUDE_STAGE" ] || rm -rf "$CLAUDE_STAGE"
   [ -z "$CODEX_STAGE" ] || rm -rf "$CODEX_STAGE"
+  [ -z "$PI_STAGE" ] || rm -rf "$PI_STAGE"
   [ -z "$CLAUDE_SKILL_ROLLBACK" ] || rm -rf "$CLAUDE_SKILL_ROLLBACK"
   [ -z "$CODEX_SKILL_ROLLBACK" ] || rm -rf "$CODEX_SKILL_ROLLBACK"
+  [ -z "$PI_SKILL_ROLLBACK" ] || rm -rf "$PI_SKILL_ROLLBACK"
   [ -z "$INSTALL_TMP" ] || rm -f "$INSTALL_TMP"
+  [ -z "$PI_LAUNCHER_TMP" ] || rm -f "$PI_LAUNCHER_TMP"
   [ -z "$ROLLBACK_DIR" ] || rm -rf "$ROLLBACK_DIR"
   rm -rf "$tmp"
   exit "$status"
@@ -114,18 +136,115 @@ trap cleanup EXIT
 
 stage_remote_skills() {
   local root="$1"
-  local output_variable="$2"
-  local stage dir name
+  local target="$2"
+  local output_variable="$3"
+  local stage source staged
   mkdir -p "$root"
   [ -d "$root" ] || err "skill 경로가 디렉터리가 아닙니다: $root"
   stage="$(mktemp -d "$root/.gdm-stage.XXXXXX")"
-  for dir in "$tmp"/pkg/skills/*/; do
-    name="$(basename "$dir")"
-    [ "$name" = "_shared" ] && continue
-    cp -R "${dir%/}" "$stage/gdm-$name"
-  done
-  cp -R "$tmp/pkg/agents" "$stage/gdm-agents"
   printf -v "$output_variable" '%s' "$stage"
+  source="$tmp/pkg/targets/$target"
+  [ -d "$source" ] || err "target skill bundle이 없습니다: $target"
+  [ -f "$source/gdm-target-manifest.json" ] && [ ! -L "$source/gdm-target-manifest.json" ] || \
+    err "target skill manifest가 없습니다: $target"
+  if find "$source" -type l -print -quit | grep -q .; then
+    err "target skill bundle에 symlink가 있습니다: $target"
+  fi
+  for staged in "$source"/gdm-*; do
+    [ -e "$staged" ] && [ ! -L "$staged" ] || err "target skill bundle 항목이 올바르지 않습니다: $staged"
+    cp -R "$staged" "$stage/$(basename "$staged")"
+  done
+}
+
+sha256_path() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" | awk '{print $1}'
+  else
+    err "sha256sum 또는 shasum이 필요합니다"
+  fi
+}
+
+manifest_top_value() {
+  awk -F'"' -v key="$2" '$1 == "  " && $2 == key { print $4; found=1; exit } END { if (!found) exit 1 }' "$1"
+}
+
+manifest_runner_hash() {
+  awk -F'"' '/^  "runner": \{/ { runner=1; next } runner && /^    "sha256":/ { print $4; found=1; exit } END { if (!found) exit 1 }' "$1"
+}
+
+manifest_adapter_hash() {
+  awk -F'"' -v target="$2" '$0 == "      \"" target "\": {" { adapter=1; next } adapter && /^        "sha256":/ { print $4; found=1; exit } END { if (!found) exit 1 }' "$1"
+}
+
+validate_staged_target() {
+  local stage="$1" target="$2"
+  local manifest="$stage/gdm-target-manifest.json"
+  local top_keys runner_hash adapter_target adapter_hash skill_name skill_hash hash_field hash_value
+  [ -f "$manifest" ] && [ ! -L "$manifest" ] || err "target manifest가 일반 파일이 아닙니다: $target"
+  top_keys="$(awk -F'"' '/^  "[^"]+":/ { print $2 }' "$manifest" | tr '\n' ' ')"
+  [ "$top_keys" = "schemaVersion target adapterVersion canonicalSourceSha256 sourceSha256 capabilityProfile hook runner skills " ] || \
+    err "target manifest schema key가 올바르지 않습니다: $target"
+  [ "$(manifest_top_value "$manifest" schemaVersion)" = "gdm-target-skill-manifest/v1" ] || \
+    err "target manifest schema가 올바르지 않습니다: $target"
+  [ "$(manifest_top_value "$manifest" target)" = "$target" ] || \
+    err "target manifest identity가 올바르지 않습니다: $target"
+  [ "$(manifest_top_value "$manifest" adapterVersion)" = "gdm-target-adapter/v1" ] || \
+    err "target adapter version이 올바르지 않습니다: $target"
+  for hash_field in canonicalSourceSha256 sourceSha256; do
+    hash_value="$(manifest_top_value "$manifest" "$hash_field")" || err "target manifest hash가 없습니다: $target/$hash_field"
+    case "$hash_value" in *[!0-9a-f]*) err "target manifest hash가 올바르지 않습니다: $target/$hash_field" ;; esac
+    [ "${#hash_value}" -eq 64 ] || err "target manifest hash 길이가 올바르지 않습니다: $target/$hash_field"
+  done
+  for expected in \
+    '    "id": "gdm-read-only-specialist/v1",' \
+    '    "filesystem": "read-only",' \
+    '    "delegation": "disabled",' \
+    '    "mcp": "disabled",' \
+    '    "shell": "unsupported",' \
+    '    "browser": "unsupported",' \
+    '    "network": "unsupported"' \
+    '    "contract": "gdm-role-runner/v1",' \
+    '    "path": "gdm-agents/run-role.sh",' \
+    '        "path": "gdm-agents/providers/codex.sh",' \
+    '        "path": "gdm-agents/providers/claude.sh",' \
+    '        "path": "gdm-agents/providers/pi.sh",'; do
+    grep -Fqx "$expected" "$manifest" || err "target manifest capability/runner가 올바르지 않습니다: $target"
+  done
+  if [ "$target" = "codex" ]; then
+    grep -Fqx '    "id": "gdm-agent-gate-v1",' "$manifest" &&
+      grep -Fqx '    "status": "supported",' "$manifest" &&
+      grep -Fqx '    "requiredForTarget": true' "$manifest" || \
+      err "Codex target hook manifest가 올바르지 않습니다"
+  else
+    grep -Fqx '    "id": null,' "$manifest" &&
+      grep -Fqx '    "status": "not-required",' "$manifest" &&
+      grep -Fqx '    "requiredForTarget": false' "$manifest" || \
+      err "외부 target hook manifest가 올바르지 않습니다: $target"
+  fi
+  runner_hash="$(manifest_runner_hash "$manifest")" || err "runner hash가 없습니다: $target"
+  [ "$runner_hash" = "$(sha256_path "$stage/gdm-agents/run-role.sh")" ] &&
+    [ -x "$stage/gdm-agents/run-role.sh" ] && [ ! -L "$stage/gdm-agents/run-role.sh" ] || \
+    err "runner bytes 또는 mode가 manifest와 다릅니다: $target"
+  for adapter_target in codex claude pi; do
+    adapter_hash="$(manifest_adapter_hash "$manifest" "$adapter_target")" || \
+      err "provider adapter hash가 없습니다: $target/$adapter_target"
+    [ "$adapter_hash" = "$(sha256_path "$stage/gdm-agents/providers/$adapter_target.sh")" ] &&
+      [ -x "$stage/gdm-agents/providers/$adapter_target.sh" ] &&
+      [ ! -L "$stage/gdm-agents/providers/$adapter_target.sh" ] || \
+      err "provider adapter bytes 또는 mode가 manifest와 다릅니다: $target/$adapter_target"
+  done
+  while IFS="$(printf '\t')" read -r skill_name skill_hash; do
+    case "$skill_name" in gdm-*) ;; *) err "manifest skill name이 올바르지 않습니다: $target" ;; esac
+    case "${skill_name#gdm-}" in ""|*[!a-z0-9-]*) err "manifest skill name이 올바르지 않습니다: $target" ;; esac
+    [ -f "$stage/$skill_name/SKILL.md" ] && [ ! -L "$stage/$skill_name/SKILL.md" ] || \
+      err "manifest skill 파일이 없습니다: $target/$skill_name"
+    [ "$skill_hash" = "$(sha256_path "$stage/$skill_name/SKILL.md")" ] || \
+      err "rendered skill hash가 다릅니다: $target/$skill_name"
+  done <<EOF
+$(awk -F'"' '/^  "skills": \[/ { skills=1; next } skills && /^      "name":/ { name=$4 } skills && /^      "renderedSha256":/ { print name "\t" $4; count++ } END { if (!count) exit 1 }' "$manifest")
+EOF
 }
 
 prepare_skill_swap() {
@@ -134,13 +253,13 @@ prepare_skill_swap() {
   local output_variable="$3"
   local rollback staged name
   rollback="$(mktemp -d "$root/.gdm-rollback.XXXXXX")"
+  printf -v "$output_variable" '%s' "$rollback"
   : >"$rollback/.names"
   for staged in "$stage"/gdm-*; do
     [ -e "$staged" ] || [ -L "$staged" ] || return 1
     name="$(basename "$staged")"
     printf '%s\n' "$name" >>"$rollback/.names"
   done
-  printf -v "$output_variable" '%s' "$rollback"
 }
 
 apply_skill_swap() {
@@ -193,13 +312,31 @@ chmod +x "$tmp/gdm"
 echo "[3/7] 번들 구조·Codex 게이트 사전검증"
 mkdir -p "$tmp/pkg"
 tar -xzf "$tmp/skills.tar.gz" -C "$tmp/pkg"
-[ -d "$tmp/pkg/skills" ] && [ -d "$tmp/pkg/agents" ] || err "스킬 번들 구조가 올바르지 않습니다"
+[ -d "$tmp/pkg/targets/codex" ] && [ -d "$tmp/pkg/targets/claude" ] && \
+  [ -d "$tmp/pkg/targets/pi" ] || \
+  err "target 스킬 번들 구조가 올바르지 않습니다"
 CODEX_HOME="$CODEX_HOME_DIR" "$tmp/gdm" agent hook-install \
   --binary "$tmp/gdm" --dry-run
 
 echo "[4/7] 스킬 대상 사전검증·staging"
-stage_remote_skills "$HOME/.claude/skills" CLAUDE_STAGE
-stage_remote_skills "$CODEX_HOME_DIR/skills" CODEX_STAGE
+stage_remote_skills "$HOME/.claude/skills" claude CLAUDE_STAGE
+stage_remote_skills "$CODEX_HOME_DIR/skills" codex CODEX_STAGE
+stage_remote_skills "$PI_AGENT_DIR/skills" pi PI_STAGE
+validate_staged_target "$CLAUDE_STAGE" claude
+validate_staged_target "$CODEX_STAGE" codex
+validate_staged_target "$PI_STAGE" pi
+for parity_field in canonicalSourceSha256 sourceSha256; do
+  [ "$(manifest_top_value "$CLAUDE_STAGE/gdm-target-manifest.json" "$parity_field")" = \
+    "$(manifest_top_value "$CODEX_STAGE/gdm-target-manifest.json" "$parity_field")" ] && \
+    [ "$(manifest_top_value "$CLAUDE_STAGE/gdm-target-manifest.json" "$parity_field")" = \
+    "$(manifest_top_value "$PI_STAGE/gdm-target-manifest.json" "$parity_field")" ] || \
+    err "target manifest source parity가 다릅니다: $parity_field"
+done
+[ "$(manifest_runner_hash "$CLAUDE_STAGE/gdm-target-manifest.json")" = \
+  "$(manifest_runner_hash "$CODEX_STAGE/gdm-target-manifest.json")" ] && \
+  [ "$(manifest_runner_hash "$CLAUDE_STAGE/gdm-target-manifest.json")" = \
+  "$(manifest_runner_hash "$PI_STAGE/gdm-target-manifest.json")" ] || \
+  err "target manifest runner parity가 다릅니다"
 
 echo "[5/7] 바이너리·스킬 transactional 교체"
 mkdir -p "$BIN_DIR"
@@ -207,22 +344,37 @@ if { [ -e "$BIN_DIR/gdm" ] || [ -L "$BIN_DIR/gdm" ]; } &&
   [ ! -f "$BIN_DIR/gdm" ] && [ ! -L "$BIN_DIR/gdm" ]; then
   err "기존 바이너리 경로가 일반 파일이 아닙니다: $BIN_DIR/gdm"
 fi
+if { [ -e "$BIN_DIR/gdm-pi" ] || [ -L "$BIN_DIR/gdm-pi" ]; } &&
+  [ ! -f "$BIN_DIR/gdm-pi" ] && [ ! -L "$BIN_DIR/gdm-pi" ]; then
+  err "기존 Pi 실행기 경로가 일반 파일이 아닙니다: $BIN_DIR/gdm-pi"
+fi
 INSTALL_TMP="$(mktemp "$BIN_DIR/.gdm.tmp.XXXXXX")"
 cp "$tmp/gdm" "$INSTALL_TMP"
 chmod 755 "$INSTALL_TMP"
+PI_LAUNCHER_TMP="$(mktemp "$BIN_DIR/.gdm-pi.tmp.XXXXXX")"
+cp "$PI_STAGE/gdm-agents/pi/gdm-pi" "$PI_LAUNCHER_TMP"
+chmod 755 "$PI_LAUNCHER_TMP"
 ROLLBACK_DIR="$(mktemp -d "$BIN_DIR/.gdm-rollback.XXXXXX")"
 prepare_skill_swap "$HOME/.claude/skills" "$CLAUDE_STAGE" CLAUDE_SKILL_ROLLBACK
 prepare_skill_swap "$CODEX_HOME_DIR/skills" "$CODEX_STAGE" CODEX_SKILL_ROLLBACK
+prepare_skill_swap "$PI_AGENT_DIR/skills" "$PI_STAGE" PI_SKILL_ROLLBACK
 if [ -e "$BIN_DIR/gdm" ] || [ -L "$BIN_DIR/gdm" ]; then
   mv "$BIN_DIR/gdm" "$ROLLBACK_DIR/gdm"
   BINARY_OLD_MOVED=1
 fi
+if [ -e "$BIN_DIR/gdm-pi" ] || [ -L "$BIN_DIR/gdm-pi" ]; then
+  mv "$BIN_DIR/gdm-pi" "$ROLLBACK_DIR/gdm-pi"
+  PI_BINARY_OLD_MOVED=1
+fi
 mv "$INSTALL_TMP" "$BIN_DIR/gdm"
 BINARY_NEW_INSTALLED=1
+mv "$PI_LAUNCHER_TMP" "$BIN_DIR/gdm-pi"
+PI_BINARY_NEW_INSTALLED=1
 echo "  → $BIN_DIR/gdm"
 apply_skill_swap "$HOME/.claude/skills" "$CLAUDE_STAGE" "$CLAUDE_SKILL_ROLLBACK"
 apply_skill_swap "$CODEX_HOME_DIR/skills" "$CODEX_STAGE" "$CODEX_SKILL_ROLLBACK"
-echo "  → $HOME/.claude/skills, $CODEX_HOME_DIR/skills"
+apply_skill_swap "$PI_AGENT_DIR/skills" "$PI_STAGE" "$PI_SKILL_ROLLBACK"
+echo "  → $HOME/.claude/skills, $CODEX_HOME_DIR/skills, $PI_AGENT_DIR/skills"
 
 echo "[6/7] Codex 에이전트 게이트 commit"
 CODEX_HOME="$CODEX_HOME_DIR" "$BIN_DIR/gdm" agent hook-install \
@@ -257,5 +409,5 @@ if ! CODEX_HOME="$CODEX_HOME_DIR" "$BIN_DIR/gdm" doctor; then
 fi
 
 echo
-echo "설치 완료. 사용: 프로젝트에서 \$gdm-go / \$gdm-full 스킬, 또는 gdm --help"
+echo "설치 완료. 사용: 프로젝트에서 gdm-pi [auto|go|full], \$gdm-go / \$gdm-full 또는 gdm --help"
 exit 0
