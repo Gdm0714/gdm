@@ -15,9 +15,10 @@ type CliResult = {
   readonly stderr: string;
 };
 
-function runCli(cwd: string, args: readonly string[]): CliResult {
+function runCli(cwd: string, args: readonly string[], env?: Readonly<Record<string, string>>): CliResult {
   const result = Bun.spawnSync(["bun", CLI, ...args], {
     cwd,
+    env: env === undefined ? undefined : { ...process.env, ...env },
     stdout: "pipe",
     stderr: "pipe",
   });
@@ -161,6 +162,58 @@ describe("CLI regression", () => {
     expect(runCli(cwd, ["done", "--slug", "reg"]).exitCode).toBe(0);
   });
 
+  test("verification commands use an opt-in bounded timeout", () => {
+    // Given: a real check that needs longer than a deliberately tiny timeout.
+    const cwd = tempRepo();
+    runCli(cwd, [
+      "plan",
+      "init",
+      "--slug",
+      "timeout",
+      "--brief",
+      "장시간 검증",
+      "--require",
+      "정상 검증 완료",
+      "--forbid",
+      "무제한 실행",
+    ]);
+    runCli(cwd, [
+      "plan",
+      "add",
+      "--slug",
+      "timeout",
+      "--desc",
+      "느린 검증",
+      "--cmd",
+      "sleep 0.25; printf ok",
+      "--expect",
+      "ok 출력",
+    ]);
+
+    // When: invalid and too-short timeout values are used before the default execution path.
+    const invalid = runCli(cwd, ["pass", "c1", "--slug", "timeout"], {
+      GDM_COMMAND_TIMEOUT_MS: "unbounded",
+    });
+    const outOfRange = runCli(cwd, ["pass", "c1", "--slug", "timeout"], {
+      GDM_COMMAND_TIMEOUT_MS: "3600001",
+    });
+    const timedOut = runCli(cwd, ["pass", "c1", "--slug", "timeout"], {
+      GDM_COMMAND_TIMEOUT_MS: "100",
+    });
+    const passed = runCli(cwd, ["pass", "c1", "--slug", "timeout"]);
+
+    // Then: malformed input is rejected, an explicit timeout fails closed, and no implicit wall-clock
+    // cutoff mistakes laptop suspension or a long local build for a product failure.
+    expect(invalid.exitCode).toBe(2);
+    expect(invalid.stderr).toContain("GDM_COMMAND_TIMEOUT_MS는 밀리초 단위 정수여야 합니다");
+    expect(outOfRange.exitCode).toBe(2);
+    expect(outOfRange.stderr).toContain("GDM_COMMAND_TIMEOUT_MS는 100~3600000 범위여야 합니다");
+    expect(timedOut.exitCode).toBe(1);
+    expect(timedOut.stderr).toContain("ETIMEDOUT");
+    expect(passed.exitCode).toBe(0);
+    expect(passed.stdout).toContain("c1 통과");
+  });
+
   test("audit pass survives done validation without changing audit-bound evidence", () => {
     // Given: an audited automatic check whose command records each execution outside its evidence file.
     const cwd = tempRepo();
@@ -197,7 +250,7 @@ describe("CLI regression", () => {
     expect(runCli(cwd, ["pass", "c1", "--slug", slug]).exitCode).toBe(0);
     const reportRelative = join(".gdm", slug, "audit-report.md");
     const report = join(cwd, reportRelative);
-    writeFileSync(report, "[APPROVE]\nimplementationModel: Codex\nauditModel: Claude\n");
+    writeFileSync(report, "**판정: 통과**\nimplementationModel: Codex\nauditModel: Claude\n");
     expect(runCli(cwd, [
       "audit", "verdict", "--pass", "--report", reportRelative,
       "--implementation-model", "Codex", "--audit-model", "Claude", "--slug", slug,
@@ -287,5 +340,108 @@ describe("CLI regression", () => {
       misses: [{ work: "sample", type: "edge", check: "c1", desc: "경계 조건 누락" }],
       suggestions: [expect.stringContaining("edge")],
     });
+  });
+
+  test("feedback records one safe event and exposes aggregate eval candidates", () => {
+    // Given: a work that can own explicit user feedback.
+    const cwd = tempRepo();
+    expect(
+      runCli(cwd, [
+        "plan",
+        "init",
+        "--slug",
+        "sample",
+        "--brief",
+        "피드백 테스트",
+        "--require",
+        "기존 변경 보존",
+        "--forbid",
+        "자동 커밋",
+      ]).exitCode,
+    ).toBe(0);
+
+    // When: one positive and one reasoned negative rating are recorded, followed by rejected input.
+    const good = runCli(cwd, ["feedback", "--value", "good", "--slug", "sample", "--json"]);
+    const bad = runCli(cwd, [
+      "feedback",
+      "--value",
+      "bad",
+      "--reason",
+      "  다음 행동이 모호함  ",
+      "--source",
+      "pi",
+      "--slug",
+      "sample",
+      "--json",
+    ]);
+    const reasonlessBad = runCli(cwd, [
+      "feedback", "--value", "bad", "--source", "pi", "--slug", "sample", "--json",
+    ]);
+    const unsafeReason = runCli(cwd, [
+      "feedback", "--value", "bad", "--reason", "줄바꿈\n거부", "--slug", "sample",
+    ]);
+    const unsafeSource = runCli(cwd, [
+      "feedback", "--value", "bad", "--source", "pi/session", "--slug", "sample",
+    ]);
+    const retro = runCli(cwd, ["retro", "--all", "--json"]);
+
+    // Then: only the two valid commands append feedback, and only reasoned bad feedback is an eval candidate.
+    expect(good.exitCode).toBe(0);
+    expect(JSON.parse(good.stdout)).toEqual({ slug: "sample", value: "good", source: "manual" });
+    expect(bad.exitCode).toBe(0);
+    expect(JSON.parse(bad.stdout)).toEqual({
+      slug: "sample",
+      value: "bad",
+      reason: "다음 행동이 모호함",
+      source: "pi",
+    });
+    expect(reasonlessBad.exitCode).toBe(2);
+    expect(reasonlessBad.stdout).toBe("");
+    expect(reasonlessBad.stderr).toContain("--reason");
+    expect(unsafeReason.exitCode).toBe(5);
+    expect(unsafeReason.stderr).toContain("field=reason");
+    expect(unsafeSource.exitCode).toBe(2);
+    expect(unsafeSource.stderr).toContain("field=source opaque identifier");
+
+    const events = readFileSync(join(cwd, ".gdm", "sample", "journal.jsonl"), "utf8")
+      .trimEnd()
+      .split("\n")
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+    expect(events.filter((event) => event.event === "feedback")).toEqual([
+      expect.objectContaining({ event: "feedback", value: "good", source: "manual" }),
+      expect.objectContaining({
+        event: "feedback",
+        value: "bad",
+        reason: "다음 행동이 모호함",
+        source: "pi",
+      }),
+    ]);
+    expect(JSON.parse(retro.stdout)).toMatchObject({
+      misses: [],
+      feedback: { good: 1, bad: 1, total: 2 },
+      evalCandidates: [{ work: "sample", reason: "다음 행동이 모호함", source: "pi" }],
+    });
+  });
+
+  test("feedback without a slug selects the most recently active work", () => {
+    // Given: two active works created by separate CLI processes in activity order.
+    const cwd = tempRepo();
+    for (const slug of ["older", "newer"]) {
+      expect(runCli(cwd, [
+        "plan", "init", "--slug", slug, "--brief", `${slug} feedback target`,
+        "--require", "기존 변경 보존", "--forbid", "자동 커밋",
+      ]).exitCode).toBe(0);
+    }
+
+    // When: feedback is recorded without an explicit slug.
+    const feedback = runCli(cwd, ["feedback", "--value", "good", "--json"]);
+
+    // Then: the newest active work receives the single event.
+    expect(feedback.exitCode).toBe(0);
+    expect(JSON.parse(feedback.stdout)).toEqual({ slug: "newer", value: "good", source: "manual" });
+    const olderJournal = readFileSync(join(cwd, ".gdm", "older", "journal.jsonl"), "utf8");
+    const newerJournal = readFileSync(join(cwd, ".gdm", "newer", "journal.jsonl"), "utf8");
+    expect(olderJournal).not.toContain('"event":"feedback"');
+    expect(newerJournal.match(/"event":"feedback"/gu)).toHaveLength(1);
   });
 });

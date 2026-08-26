@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto";
-import { existsSync, lstatSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, lstatSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { opaqueId } from "./contract.ts";
 import { parseHarvestJson } from "./habit-json.ts";
 import { createObservation } from "./habit.ts";
 import { appendHabitEvents, readHabitLedger } from "./habit-store.ts";
 import { workSlug } from "./habit-validation.ts";
+import { readCommittedJournal } from "./journal-file.ts";
 import type { HabitEvent, HabitTaxonomy } from "./habit.ts";
 
 type EventClass = "miss" | "denied-repeat" | "recheck-failed" | "plan-edit";
@@ -73,10 +74,10 @@ function mapping(
     : { eventClass: "denied-repeat", pattern: "recovery.repeated-denial", taxonomy: "recovery" };
 }
 
-function journalFiles(cwd: string): readonly { readonly slug: string; readonly path: string }[] {
+function workDirectories(cwd: string): readonly string[] {
   const root = join(cwd, ".gdm");
   if (!existsSync(root) || !lstatSync(root).isDirectory() || lstatSync(root).isSymbolicLink()) return [];
-  const files: { slug: string; path: string }[] = [];
+  const slugs: string[] = [];
   for (const name of readdirSync(root).sort()) {
     let slug: string;
     try {
@@ -85,18 +86,14 @@ function journalFiles(cwd: string): readonly { readonly slug: string; readonly p
       continue;
     }
     const directory = join(root, name);
-    const path = join(directory, "journal.jsonl");
     if (
       !existsSync(directory) ||
       !lstatSync(directory).isDirectory() ||
-      lstatSync(directory).isSymbolicLink() ||
-      !existsSync(path) ||
-      !lstatSync(path).isFile() ||
-      lstatSync(path).isSymbolicLink()
+      lstatSync(directory).isSymbolicLink()
     ) continue;
-    files.push({ slug, path });
+    slugs.push(slug);
   }
-  return files;
+  return slugs;
 }
 
 export function harvestHabits(cwd: string, at: string): HarvestResult {
@@ -104,14 +101,17 @@ export function harvestHabits(cwd: string, at: string): HarvestResult {
   let scanned = 0;
   let skippedUnsafe = 0;
   let skippedUnrecognized = 0;
-  for (const file of journalFiles(cwd)) {
+  for (const slug of workDirectories(cwd)) {
     const denied = new Map<string, number>();
-    const lines = readFileSync(file.path, "utf8").split("\n");
-    for (const [index, raw] of lines.entries()) {
-      if (raw.length === 0 && index === lines.length - 1) continue;
+    const events = readCommittedJournal(cwd, slug);
+    for (const [index, event] of events.entries()) {
       scanned++;
       let value: unknown;
       try {
+        // Re-run the privacy scanner over the parsed committed event. Array
+        // order is the original 1-based JSONL line order, preserving stable
+        // sourceToken identities while keeping all file I/O behind the anchor.
+        const raw = JSON.stringify(event);
         if (raw.length === 0 || Buffer.byteLength(raw, "utf8") >= 2048) throw new Error("unsafe");
         value = parseHarvestJson(raw, "harvest");
       } catch {
@@ -123,7 +123,7 @@ export function harvestHabits(cwd: string, at: string): HarvestResult {
         skippedUnrecognized++;
         continue;
       }
-      candidates.push({ slug: file.slug, line: index + 1, mapping: recognized });
+      candidates.push({ slug, line: index + 1, mapping: recognized });
     }
   }
   let working = readHabitLedger(cwd);

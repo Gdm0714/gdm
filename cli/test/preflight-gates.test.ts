@@ -7,6 +7,22 @@ import { checkKind, checksHash, validateWork } from "../src/state.ts";
 
 const CLI = join(import.meta.dir, "..", "src", "cli.ts");
 const decoder = new TextDecoder();
+const OUTCOME = {
+  bottleneck: "검증 피드백 지연",
+  desiredOutcome: "회귀 검토 시간 단축",
+  baseline: "주당 4건",
+  target: "주당 1건",
+  unit: "회귀 후보 수",
+  interveneIf: "주당 3건 초과",
+} as const;
+const OUTCOME_ARGS = [
+  "--bottleneck", OUTCOME.bottleneck,
+  "--desired-outcome", OUTCOME.desiredOutcome,
+  "--baseline", OUTCOME.baseline,
+  "--target", OUTCOME.target,
+  "--unit", OUTCOME.unit,
+  "--intervene-if", OUTCOME.interveneIf,
+] as const;
 
 function tempDir(): string {
   return mkdtempSync(join(tmpdir(), "gdm-preflight-"));
@@ -74,7 +90,12 @@ describe("preflight gates", () => {
       expect: "ok",
       manual: false,
       status: "proven" as const,
-      evidence: { observed: "out.txt", sha256: "legacy", manual: false, at: "2026-01-01T00:00:00.000Z" },
+      evidence: {
+        observed: "out.txt",
+        sha256: "a".repeat(64),
+        manual: false,
+        at: "2026-01-01T00:00:00.000Z",
+      },
     }];
     const legacyHash = createHash("sha256").update(JSON.stringify(checks)).digest("hex");
     const work = validateWork({
@@ -116,8 +137,48 @@ describe("preflight gates", () => {
       verification: "opaque",
       simplificationRequired: true,
     });
+    expect(Object.hasOwn(work.contract, "outcome")).toBe(false);
     expect(work.baseline.kind).toBe("git");
     expect(work.baseline.files).toEqual(expect.arrayContaining([expect.objectContaining({ path: "sentinel.txt" })]));
+  });
+
+  test("plan init persists and renders a complete declared outcome without claiming measurement", () => {
+    const cwd = committedRepo();
+    const result = run(cwd, [
+      "plan", "init", "--slug", "declared-outcome", "--brief", "outcome intent",
+      "--require", "기존 동작 보존", "--forbid", "자동 성과 주장",
+      ...OUTCOME_ARGS,
+    ]);
+
+    expect(result).toMatchObject({ exitCode: 0, stderr: "" });
+    const work = JSON.parse(
+      readFileSync(join(cwd, ".gdm", "declared-outcome", "checks.json"), "utf8"),
+    ) as Record<string, any>;
+    expect(work.contract.outcome).toEqual(OUTCOME);
+    const markdown = readFileSync(join(cwd, ".gdm", "declared-outcome", "work.md"), "utf8");
+    expect(markdown).toContain("## 선언한 outcome (GDM 미측정)");
+    for (const value of Object.values(OUTCOME)) expect(markdown).toContain(value);
+  });
+
+  test("outcome flags are all-or-none and unsafe input is rejected before Work persistence", () => {
+    const partialCwd = committedRepo();
+    const partial = run(partialCwd, [
+      "plan", "init", "--slug", "partial-outcome", "--brief", "partial intent",
+      "--require", "원자적 생성", "--bottleneck", OUTCOME.bottleneck,
+    ]);
+    expect(partial.exitCode).toBe(2);
+    expect(partial.stderr).toMatch(/outcome|여섯/u);
+    expect(existsSync(join(partialCwd, ".gdm", "partial-outcome"))).toBe(false);
+
+    const unsafeCwd = committedRepo();
+    const unsafe = run(unsafeCwd, [
+      "plan", "init", "--slug", "unsafe-outcome", "--brief", "unsafe intent",
+      "--require", "privacy 보존",
+      ...OUTCOME_ARGS.map((value, index) => index === 1 ? "sk-private-outcome" : value),
+    ]);
+    expect(unsafe.exitCode).toBe(5);
+    expect(unsafe.stderr).toContain("privacy_rejected");
+    expect(existsSync(join(unsafeCwd, ".gdm", "unsafe-outcome"))).toBe(false);
   });
 
   test("an unborn Git repository still gets a usable scope baseline", () => {

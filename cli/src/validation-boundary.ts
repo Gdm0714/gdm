@@ -6,7 +6,10 @@ const DIFF_RE = /(?:diff --git|@@|--- |\+\+\+ )/iu;
 const ABSOLUTE_PATH_RE = /(?:^|[\s(])(?:\/|~(?:\/|$)|[a-z]:[\\/]|\\\\)/iu;
 const URI_RE = /(?:^|[^A-Za-z0-9+.-])[A-Za-z][A-Za-z0-9+.-]*:/u;
 const DOLLAR_OR_EQUALS_RE = /[$=]/u;
-const SECRET_RE = /(?:sk-|ghp_|github_pat_|AKIA|Bearer |BEGIN [A-Z ]*PRIVATE KEY)/iu;
+// Keep the original fail-closed `sk-` policy, but require a token boundary so
+// ordinary words such as "task-state" are not mistaken for credentials.
+const OPENAI_KEY_RE = /(?:^|[^A-Za-z0-9])sk-[A-Za-z0-9_-]+/iu;
+const SECRET_RE = /(?:ghp_|github_pat_|AKIA|Bearer |BEGIN [A-Z ]*PRIVATE KEY)/iu;
 const JWT_RE = /[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/u;
 const RFC3339_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u;
 const FORBIDDEN_RULE_SEGMENTS = [".obsidian", "obsidian", "session", "sessions"] as const;
@@ -21,6 +24,7 @@ export function containsSensitiveRaw(value: string): boolean {
     ABSOLUTE_PATH_RE.test(value) ||
     URI_RE.test(value) ||
     DOLLAR_OR_EQUALS_RE.test(value) ||
+    OPENAI_KEY_RE.test(value) ||
     SECRET_RE.test(value) ||
     JWT_RE.test(value)
   );

@@ -9,6 +9,7 @@ import type {
   WorkContract,
   WorkspaceFingerprint,
 } from "./types.ts";
+import { isCanonicalTimestamp } from "./validation-boundary.ts";
 
 export class GdmError extends Error {
   constructor(
@@ -54,6 +55,86 @@ export function initWork(
 
 export function checksHash(work: Work): string {
   return createHash("sha256").update(JSON.stringify(work.checks)).digest("hex");
+}
+
+/**
+ * Hash only the user-approved verification plan. Runtime fields such as check
+ * status and evidence are intentionally excluded so executing the plan does
+ * not change its identity.
+ */
+export function verificationPlanFingerprint(work: Work): string {
+  const hash = createHash("sha256");
+  const appendCount = (count: number): void => {
+    const encoded = Buffer.allocUnsafe(8);
+    encoded.writeBigUInt64BE(BigInt(count));
+    hash.update(encoded);
+  };
+  const appendString = (value: string): void => {
+    const encoded = Buffer.from(value, "utf8");
+    appendCount(encoded.byteLength);
+    hash.update(encoded);
+  };
+  const appendBool = (value: boolean): void => {
+    hash.update(Uint8Array.of(value ? 1 : 0));
+  };
+  const appendStrings = (values: readonly string[]): void => {
+    appendCount(values.length);
+    for (const value of values) appendString(value);
+  };
+  const appendNullableString = (value: string | null | undefined): void => {
+    if (value === null || value === undefined) {
+      hash.update(Uint8Array.of(0));
+      return;
+    }
+    hash.update(Uint8Array.of(1));
+    appendString(value);
+  };
+
+  // Work loaded through validateWork always has a normalized contract. The
+  // fallbacks also make the canonical format explicit for legacy producers.
+  const contract = work.contract as Partial<WorkContract> | undefined;
+  appendString("gidem-verification-plan-v1");
+  appendString(work.brief);
+  appendBool(work.auditRequired ?? false);
+  appendStrings(contract?.required ?? []);
+  appendStrings(contract?.forbidden ?? []);
+  appendString(contract?.commit ?? "forbidden");
+  appendStrings(contract?.assumptions ?? []);
+  appendStrings(contract?.uncertainties ?? []);
+  appendStrings(contract?.allowedPaths ?? ["."]);
+  appendStrings(contract?.forbiddenPaths ?? []);
+  appendStrings(contract?.stopConditions ?? []);
+  appendString(contract?.risk ?? "low");
+  appendString(contract?.verification ?? "deterministic");
+  appendBool(contract?.simplificationRequired ?? false);
+  if (contract?.outcome !== undefined) {
+    appendString("gidem-outcome-intent-v1");
+    appendString(contract.outcome.bottleneck);
+    appendString(contract.outcome.desiredOutcome);
+    appendString(contract.outcome.baseline);
+    appendString(contract.outcome.target);
+    appendString(contract.outcome.unit);
+    appendString(contract.outcome.interveneIf);
+  }
+  appendCount(work.checks.length);
+  for (const check of work.checks) {
+    appendString(check.id);
+    appendString(check.desc);
+    appendNullableString(check.cmd);
+    appendString(check.expect);
+    appendBool(check.manual);
+    appendString(check.kind ?? (check.manual ? "manual" : "behavior"));
+    appendBool(check.expert ?? false);
+  }
+  return hash.digest("hex");
+}
+
+export function recordVerificationPlanSourceFingerprint(work: Work, fingerprint: string): Work {
+  if (work.done) throw new GdmError("완료된 작업의 source fingerprint는 바꿀 수 없습니다", "work_done");
+  if (!/^[0-9a-f]{64}$/u.test(fingerprint)) {
+    throw new GdmError("--fingerprint는 소문자 64자리 SHA-256이어야 합니다", "usage");
+  }
+  return { ...work, verificationPlanSourceFingerprint: fingerprint };
 }
 
 export function recordAudit(
@@ -294,23 +375,46 @@ export function refreshEvidence(work: Work, id: string, evidence: Omit<Evidence,
   return replaceCheck(work, { ...check, evidence: { ...evidence, at: now } });
 }
 
-export function closeWork(work: Work, now: string): Work {
-  if (work.done) throw new GdmError("이미 완료된 작업입니다", "work_done");
+export type CompletionBlockerCode =
+  | "no_checks"
+  | "unproven"
+  | "simplification_required"
+  | "expert_review_required"
+  | "audit_required"
+  | "audit_failed"
+  | "audit_stale";
+
+export interface CompletionBlocker {
+  readonly code: CompletionBlockerCode;
+  readonly message: string;
+}
+
+/**
+ * Project the persisted-state prerequisites that closeWork owns. Filesystem
+ * scope, automatic command replay, and evidence/audit file integrity remain
+ * gdm done responsibilities and are intentionally not predicted here.
+ */
+export function completionBlockers(work: Work): readonly CompletionBlocker[] {
+  if (work.done) return [];
+  const blockers: CompletionBlocker[] = [];
   if (work.checks.length === 0) {
-    throw new GdmError("확인 항목이 하나도 없습니다. gdm plan add로 항목부터 세우세요", "no_checks");
+    blockers.push({
+      code: "no_checks",
+      message: "확인 항목이 하나도 없습니다. gdm plan add로 항목부터 세우세요",
+    });
   }
-  const open = work.checks.filter((c) => c.status !== "proven");
+  const open = work.checks.filter((check) => check.status !== "proven");
   if (open.length > 0) {
-    const list = open.map((c) => `${c.id}(${c.desc})`).join(", ");
-    throw new GdmError(`미통과 항목 ${open.length}개: ${list}`, "unproven");
+    const list = open.map((check) => `${check.id}(${check.desc})`).join(", ");
+    blockers.push({ code: "unproven", message: `미통과 항목 ${open.length}개: ${list}` });
   }
   if (work.contract.simplificationRequired) {
     const staticProof = work.checks.some((check) => check.status === "proven" && checkKind(check) === "static");
     if (!staticProof) {
-      throw new GdmError(
-        "간소화 확인이 필요합니다. --kind static 항목을 추가하고 불필요한 복잡성이 없음을 증명하세요",
-        "simplification_required",
-      );
+      blockers.push({
+        code: "simplification_required",
+        message: "간소화 확인이 필요합니다. --kind static 항목을 추가하고 불필요한 복잡성이 없음을 증명하세요",
+      });
     }
   }
   if (work.contract.risk === "high" && work.contract.verification === "opaque") {
@@ -319,23 +423,31 @@ export function closeWork(work: Work, now: string): Work {
         Boolean(check.evidence?.reviewer?.trim()) && Boolean(check.evidence?.note?.trim()),
     );
     if (!expertProof) {
-      throw new GdmError(
-        "high+opaque 작업은 전문가 확인이 필요합니다. --manual --expert 항목과 reviewer·판단 근거를 제출하세요",
-        "expert_review_required",
-      );
+      blockers.push({
+        code: "expert_review_required",
+        message: "high+opaque 작업은 전문가 확인이 필요합니다. --manual --expert 항목과 reviewer·판단 근거를 제출하세요",
+      });
     }
   }
   if (work.auditRequired || work.contract.risk === "high") {
     if (!work.audit) {
-      throw new GdmError("검수가 필요한 작업입니다. gdm audit brief → 검수자 → gdm audit verdict", "audit_required");
-    }
-    if (work.audit.result !== "pass") {
-      throw new GdmError("검수가 반려됐습니다. 반려 사유를 해결하고 재검수하세요", "audit_failed");
-    }
-    if (work.audit.stateHash !== checksHash(work)) {
-      throw new GdmError("검수 이후 항목 상태가 바뀌었습니다. 재검수가 필요합니다", "audit_stale");
+      blockers.push({
+        code: "audit_required",
+        message: "검수가 필요한 작업입니다. gdm audit brief → 검수자 → gdm audit verdict",
+      });
+    } else if (work.audit.result !== "pass") {
+      blockers.push({ code: "audit_failed", message: "검수가 반려됐습니다. 반려 사유를 해결하고 재검수하세요" });
+    } else if (work.audit.stateHash !== checksHash(work)) {
+      blockers.push({ code: "audit_stale", message: "검수 이후 항목 상태가 바뀌었습니다. 재검수가 필요합니다" });
     }
   }
+  return blockers;
+}
+
+export function closeWork(work: Work, now: string): Work {
+  if (work.done) throw new GdmError("이미 완료된 작업입니다", "work_done");
+  const blocker = completionBlockers(work)[0];
+  if (blocker !== undefined) throw new GdmError(blocker.message, blocker.code);
   return { ...work, done: true, doneAt: now };
 }
 
@@ -354,13 +466,53 @@ export function validateWork(raw: unknown, source: string): Work {
   const work = raw as Work;
   if (typeof work.slug !== "string" || typeof work.brief !== "string") bad("slug/brief 누락");
   if (typeof work.done !== "boolean") bad("done 누락");
+  if (
+    work.verificationPlanSourceFingerprint !== undefined &&
+    !/^[0-9a-f]{64}$/u.test(work.verificationPlanSourceFingerprint)
+  ) bad("verificationPlanSourceFingerprint 형태 오류");
   if (!Array.isArray(work.checks)) bad("checks가 배열이 아님");
+  try {
+    validateSlug(work.slug);
+  } catch {
+    bad("slug 형태 오류");
+  }
+  if (typeof work.createdAt !== "string" || !isCanonicalTimestamp(work.createdAt)) {
+    bad("createdAt canonical timestamp 오류");
+  }
+  if (work.auditRequired !== undefined && typeof work.auditRequired !== "boolean") {
+    bad("auditRequired 형태 오류");
+  }
+  if (work.doneAt !== undefined && (typeof work.doneAt !== "string" || !isCanonicalTimestamp(work.doneAt))) {
+    bad("doneAt canonical timestamp 오류");
+  }
+  if (work.done !== (work.doneAt !== undefined)) bad("done/doneAt 상태 불일치");
+  if (work.doneAt !== undefined && work.doneAt < work.createdAt) bad("doneAt이 createdAt보다 빠름");
   const checks: Check[] = [];
   for (const check of work.checks) {
-    if (typeof check?.id !== "string" || typeof check?.desc !== "string") bad("check 형태 오류");
+    if (
+      typeof check !== "object" || check === null || typeof check.id !== "string" ||
+      typeof check.desc !== "string" || (typeof check.cmd !== "string" && check.cmd !== null) ||
+      typeof check.expect !== "string" || typeof check.manual !== "boolean"
+    ) bad("check 형태 오류");
     if (check.status !== "open" && check.status !== "proven") bad(`${check.id}: status 값 오류`);
-    if (check.status === "proven" && !check.evidence?.sha256) {
+    const validEvidence = (evidence: Evidence | undefined): evidence is Evidence =>
+      evidence !== undefined && typeof evidence === "object" &&
+      typeof evidence.observed === "string" && evidence.observed.length > 0 &&
+      typeof evidence.sha256 === "string" && /^[0-9a-f]{64}$/u.test(evidence.sha256) &&
+      typeof evidence.manual === "boolean" && typeof evidence.at === "string" &&
+      isCanonicalTimestamp(evidence.at) &&
+      (
+        evidence.exitCode === undefined ||
+        (typeof evidence.exitCode === "number" && Number.isSafeInteger(evidence.exitCode))
+      ) &&
+      (evidence.note === undefined || typeof evidence.note === "string") &&
+      (evidence.reviewer === undefined || typeof evidence.reviewer === "string");
+    if (check.evidence !== undefined && !validEvidence(check.evidence)) bad(`${check.id}: evidence 형태 오류`);
+    if (check.status === "proven" && !validEvidence(check.evidence)) {
       bad(`${check.id}: 증거 없이 proven — 상태 파일이 gdm 외부에서 수정됨`);
+    }
+    if (check.evidence !== undefined && check.evidence.manual !== check.manual) {
+      bad(`${check.id}: evidence manual 불일치`);
     }
     const kind = check.kind === undefined ? (check.manual ? "manual" : "behavior") : check.kind;
     if (kind !== "regression" && kind !== "behavior" && kind !== "edge" && kind !== "static" && kind !== "manual") {
@@ -374,9 +526,9 @@ export function validateWork(raw: unknown, source: string): Work {
     if (
       check.redEvidence !== undefined &&
       (
-        kind !== "regression" || !check.redEvidence.observed || !check.redEvidence.sha256 ||
+        !validEvidence(check.redEvidence) || kind !== "regression" ||
         check.redEvidence.manual || typeof check.redEvidence.exitCode !== "number" ||
-        check.redEvidence.exitCode === 0 || typeof check.redEvidence.at !== "string" ||
+        check.redEvidence.exitCode === 0 ||
         (check.evidence?.at !== undefined && check.redEvidence.at > check.evidence.at)
       )
     ) {
@@ -407,8 +559,32 @@ export function validateWork(raw: unknown, source: string): Work {
     ) bad("delivery.mergeApproval 형태 오류");
     if (delivery.merged && typeof delivery.merged.sha !== "string") bad("delivery.merged 형태 오류");
   }
+  if (work.audit !== undefined) {
+    const audit = work.audit;
+    if (
+      typeof audit !== "object" || audit === null ||
+      (audit.result !== "pass" && audit.result !== "fail") ||
+      typeof audit.report !== "string" || audit.report.length === 0 ||
+      typeof audit.stateHash !== "string" || !/^[0-9a-f]{64}$/u.test(audit.stateHash) ||
+      typeof audit.at !== "string" || !isCanonicalTimestamp(audit.at) ||
+      (
+        audit.reportSha256 !== undefined &&
+        (typeof audit.reportSha256 !== "string" || !/^[0-9a-f]{64}$/u.test(audit.reportSha256))
+      ) ||
+      (audit.implementationModel !== undefined && typeof audit.implementationModel !== "string") ||
+      (audit.auditModel !== undefined && typeof audit.auditModel !== "string")
+    ) bad("audit 형태 오류");
+    if (audit.workspace !== undefined && audit.workspace !== null) validateFingerprint(audit.workspace, bad);
+  }
   if (work.baseline !== undefined && work.baseline !== null) validateFingerprint(work.baseline, bad);
-  return { ...work, checks, contract: normalizeContract(work.contract) };
+  const validated = { ...work, checks, contract: normalizeContract(work.contract) };
+  if (validated.done) {
+    const blockers = completionBlockers({ ...validated, done: false, doneAt: undefined });
+    if (blockers.length > 0) {
+      bad(`완료 상태가 선행 조건과 모순됨: ${blockers.map((blocker) => blocker.code).join(", ")}`);
+    }
+  }
+  return validated;
 }
 
 function validateFingerprint(fingerprint: WorkspaceFingerprint, bad: (why: string) => never): void {

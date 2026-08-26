@@ -9,6 +9,7 @@ import type {
   VerificationMode,
   Work,
   WorkContract,
+  OutcomeIntent,
 } from "./types.ts";
 import {
   containsSensitiveRaw,
@@ -40,6 +41,7 @@ export type PreflightInput = {
   readonly risk?: RiskLevel;
   readonly verification?: VerificationMode;
   readonly simplificationRequired?: boolean;
+  readonly outcome?: OutcomeIntent;
 };
 
 export type ScopeMutationInput = {
@@ -191,6 +193,27 @@ export function defaultContract(): WorkContract {
   };
 }
 
+const OUTCOME_KEYS = ["bottleneck", "desiredOutcome", "baseline", "target", "unit", "interveneIf"] as const;
+
+function normalizeOutcome(value: unknown, stored: boolean): OutcomeIntent | undefined {
+  if (value === undefined) return undefined;
+  const fail = (): never => {
+    throw new GdmError(stored ? "상태 파일의 contract.outcome 형식이 잘못됐습니다" : "outcome 형식이 잘못됐습니다", stored ? "state_corrupt" : "usage");
+  };
+  if (!isRecord(value) || Object.keys(value).length !== OUTCOME_KEYS.length ||
+    OUTCOME_KEYS.some((key) => !Object.prototype.hasOwnProperty.call(value, key))) return fail();
+  try {
+    const result = Object.fromEntries(OUTCOME_KEYS.map((key) => {
+      if (typeof value[key] !== "string") return fail();
+      return [key, safeText(value[key], `outcome.${key}`)];
+    })) as unknown as OutcomeIntent;
+    return result;
+  } catch (error) {
+    if (stored) throw new GdmError("상태 파일의 contract.outcome 형식이 잘못됐습니다", "state_corrupt");
+    throw error;
+  }
+}
+
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -286,6 +309,7 @@ export function normalizeContract(value: unknown): WorkContract {
     verification: parseStoredVerification(value.verification),
     simplificationRequired: parseStoredBoolean(value.simplificationRequired, false, "simplificationRequired"),
     scopeAmendments: parseStoredAmendments(value.scopeAmendments),
+    ...(value.outcome === undefined ? {} : { outcome: normalizeOutcome(value.outcome, true)! }),
   };
   if (value.latestCommitTransition === undefined) return base;
   const transition = parseTransition(value.latestCommitTransition);
@@ -361,6 +385,7 @@ export function createContract(input: ConstraintInput, preflight: PreflightInput
     risk: preflight.risk ?? "low",
     verification: preflight.verification ?? "deterministic",
     simplificationRequired: preflight.simplificationRequired ?? false,
+    ...(preflight.outcome === undefined ? {} : { outcome: normalizeOutcome(preflight.outcome, false)! }),
   };
 }
 
