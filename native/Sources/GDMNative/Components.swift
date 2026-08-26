@@ -308,15 +308,43 @@ struct EmptyWorkspaceView: View {
             Text("아직 gdm 작업이 없습니다")
                 .font(.system(size: DesignTokens.titleSize, weight: .semibold))
                 .foregroundStyle(DesignTokens.textStrong)
-            Text("작업 계약을 만들면 검증 기록과 diff가 이 화면에 묶입니다.")
+                .accessibilityAddTraits(.isHeader)
+            Text("작업 계약을 만들면 agent, 검증 기록, diff가 한 worktree에 묶입니다.")
                 .font(.system(size: DesignTokens.bodySize))
                 .foregroundStyle(DesignTokens.textSecondary)
                 .multilineTextAlignment(.center)
-            Button("새 작업 만들기", action: onNewTask)
-                .buttonStyle(OperationalButtonStyle())
+            VStack(alignment: .leading, spacing: DesignTokens.space2) {
+                quickStartStep("1", "새 작업과 완료 조건을 만듭니다")
+                quickStartStep("2", "Codex·Claude·Gemini가 검증 항목을 제안합니다")
+                quickStartStep("3", "승인 후 ⌘R로 실행하고 Proof를 확인합니다")
+            }
+            .padding(DesignTokens.space3)
+            .background(DesignTokens.surfacePanel)
+            .overlay {
+                RoundedRectangle(cornerRadius: DesignTokens.controlRadius)
+                    .stroke(DesignTokens.lineControl, lineWidth: 1)
+            }
+            Button("새 작업 만들기  ⌘N", action: onNewTask)
+                .buttonStyle(OperationalButtonStyle(emphasized: true))
+                .accessibilityLabel("새 작업 만들기")
+                .accessibilityHint("Command N")
         }
         .padding(DesignTokens.space5)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(DesignTokens.surfaceTerminal)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Gidem 처음 시작하기")
+    }
+
+    private func quickStartStep(_ number: String, _ detail: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: DesignTokens.space3) {
+            Text(number)
+                .font(.system(size: DesignTokens.metaSize, weight: .semibold, design: .monospaced))
+                .foregroundStyle(DesignTokens.active)
+            Text(detail)
+                .font(.system(size: DesignTokens.bodySize))
+                .foregroundStyle(DesignTokens.textPrimary)
+        }
+        .accessibilityElement(children: .combine)
     }
 }

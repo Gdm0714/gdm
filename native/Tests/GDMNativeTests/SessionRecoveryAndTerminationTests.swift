@@ -21,6 +21,7 @@ final class SessionRecoveryAndTerminationTests: XCTestCase {
         let session = try XCTUnwrap(persisted["lastSession"] as? [String: Any])
 
         XCTAssertEqual(Set(session.keys), ["kind", "outcome", "startedAt"])
+        XCTAssertNil(persisted["sessionsByLane"], "Legacy records must keep an absent canonical map absent.")
         XCTAssertNil(persisted["pid"])
         XCTAssertNil(persisted["pgid"])
         XCTAssertNil(persisted["environment"])
@@ -53,6 +54,7 @@ final class SessionRecoveryAndTerminationTests: XCTestCase {
         let recovered = try registry.recoverInterruptedSessions(at: recoveryDate)
 
         XCTAssertTrue(unrelatedProbe.isRunning, "Recovery must not scan, attach, or signal processes.")
+        XCTAssertNil(recovered.tasks.first?.sessionsByLane)
         XCTAssertEqual(recovered.tasks.first?.lastSession?.outcome, .interrupted)
         XCTAssertNil(
             recovered.tasks.first?.lastSession?.endedAt,

@@ -52,6 +52,10 @@ struct WorkspaceRegistry: Sendable {
             .appendingPathComponent("native", isDirectory: true)
     }
 
+    var gdmDirectoryURL: URL {
+        repositoryURL.appendingPathComponent(".gdm", isDirectory: true)
+    }
+
     var registryURL: URL {
         registryDirectoryURL.appendingPathComponent("workspace.json", isDirectory: false)
     }
@@ -148,16 +152,98 @@ struct WorkspaceRegistry: Sendable {
         return updatedRecord
     }
 
+    /// Persists one lane without collapsing sibling sessions. The first lane
+    /// update intentionally starts the canonical map instead of guessing a lane
+    /// identity for legacy `lastSession` metadata.
+    @discardableResult
+    func updateSession(
+        recordID: UUID,
+        laneID: String,
+        session: PersistedSessionRecord
+    ) throws -> WorkspaceRegistryRecord {
+        guard !laneID.isEmpty else {
+            throw WorkspaceRegistryError.invalidRecord("session lane ID가 비어 있습니다")
+        }
+        var updatedRecord: WorkspaceRegistryRecord?
+        _ = try update { document in
+            guard let index = document.tasks.firstIndex(where: { $0.id == recordID }) else {
+                throw WorkspaceRegistryError.missingRecord(recordID)
+            }
+            var sessions = document.tasks[index].sessionsByLane ?? [:]
+            sessions[laneID] = session
+            document.tasks[index].sessionsByLane = sessions
+            document.tasks[index].lastSession = Self.projectLastSession(from: sessions)
+            updatedRecord = document.tasks[index]
+        }
+        guard let updatedRecord else {
+            throw WorkspaceRegistryError.missingRecord(recordID)
+        }
+        return updatedRecord
+    }
+
+    /// Removes a lane only from the canonical map. A nil map is legacy,
+    /// lane-less metadata and cannot safely be attributed to the requested ID.
+    @discardableResult
+    func removeSession(recordID: UUID, laneID: String) throws -> WorkspaceRegistryRecord {
+        guard !laneID.isEmpty else {
+            throw WorkspaceRegistryError.invalidRecord("session lane ID가 비어 있습니다")
+        }
+        var updatedRecord: WorkspaceRegistryRecord?
+        _ = try update { document in
+            guard let index = document.tasks.firstIndex(where: { $0.id == recordID }) else {
+                throw WorkspaceRegistryError.missingRecord(recordID)
+            }
+            if var sessions = document.tasks[index].sessionsByLane {
+                sessions.removeValue(forKey: laneID)
+                document.tasks[index].sessionsByLane = sessions
+                document.tasks[index].lastSession = Self.projectLastSession(from: sessions)
+            }
+            updatedRecord = document.tasks[index]
+        }
+        guard let updatedRecord else {
+            throw WorkspaceRegistryError.missingRecord(recordID)
+        }
+        return updatedRecord
+    }
+
+    /// Compatibility projection for older app builds and task-level summaries.
+    /// A live lane wins; otherwise the most recently ended lane is shown.
+    static func projectLastSession(
+        from sessionsByLane: [String: PersistedSessionRecord]
+    ) -> PersistedSessionRecord? {
+        let active = sessionsByLane.filter { $0.value.outcome == .active }
+        let candidates = active.isEmpty ? sessionsByLane : active
+        return candidates.max { lhs, rhs in
+            let leftTimestamp = active.isEmpty
+                ? lhs.value.endedAt ?? lhs.value.startedAt
+                : lhs.value.startedAt
+            let rightTimestamp = active.isEmpty
+                ? rhs.value.endedAt ?? rhs.value.startedAt
+                : rhs.value.startedAt
+            let leftDate = sessionDate(leftTimestamp)
+            let rightDate = sessionDate(rightTimestamp)
+            if leftDate != rightDate { return leftDate < rightDate }
+            if leftTimestamp != rightTimestamp { return leftTimestamp < rightTimestamp }
+            return lhs.key < rhs.key
+        }?.value
+    }
+
     /// On app restart an active persisted session is only historical metadata.
     /// This method does not inspect processes, attach, scan, or signal anything.
     @discardableResult
     func recoverInterruptedSessions(at _: Date = Date()) throws -> WorkspaceRegistryDocument {
         return try update { document in
             for index in document.tasks.indices {
-                guard var session = document.tasks[index].lastSession,
-                      session.outcome == .active else {
+                if var sessions = document.tasks[index].sessionsByLane {
+                    for laneID in Array(sessions.keys) where sessions[laneID]?.outcome == .active {
+                        sessions[laneID]?.outcome = .interrupted
+                    }
+                    document.tasks[index].sessionsByLane = sessions
+                    document.tasks[index].lastSession = Self.projectLastSession(from: sessions)
                     continue
                 }
+                guard var session = document.tasks[index].lastSession,
+                      session.outcome == .active else { continue }
                 session.outcome = .interrupted
                 // Recovery proves only that this process is not attached to the
                 // former session. It does not prove when that session ended, so
@@ -169,6 +255,14 @@ struct WorkspaceRegistry: Sendable {
 
     static func taskKey(for id: UUID) -> String {
         "worktree:\(id.uuidString.lowercased())"
+    }
+
+    private static func sessionDate(_ value: String) -> Date {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: value) { return date }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: value) ?? .distantPast
     }
 
     private func validateReservation(
@@ -206,7 +300,7 @@ struct WorkspaceRegistry: Sendable {
     }
 
     private func loadUnlocked() throws -> WorkspaceRegistryDocument {
-        guard Self.pathExistsIncludingDanglingSymlink(registryURL.path) else {
+        guard try WorkspaceStatePathBoundary.validateOptionalRegularFile(registryURL) else {
             return WorkspaceRegistryDocument()
         }
         let data = try Data(contentsOf: registryURL)
@@ -216,6 +310,7 @@ struct WorkspaceRegistry: Sendable {
     }
 
     private func persistUnlocked(_ document: WorkspaceRegistryDocument) throws {
+        _ = try WorkspaceStatePathBoundary.validateOptionalRegularFile(registryURL)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         var data = try encoder.encode(document)
@@ -252,7 +347,9 @@ struct WorkspaceRegistry: Sendable {
     }
 
     private func syncFile(at url: URL) throws {
-        let descriptor = url.path.withCString { Darwin.open($0, O_RDONLY | O_CLOEXEC) }
+        let descriptor = url.path.withCString {
+            Darwin.open($0, O_RDONLY | O_CLOEXEC | O_NOFOLLOW)
+        }
         guard descriptor >= 0 else {
             throw WorkspaceRegistryError.systemCall(operation: "open", path: url.path, code: errno)
         }
@@ -264,7 +361,7 @@ struct WorkspaceRegistry: Sendable {
 
     private func syncDirectory() throws {
         let descriptor = registryDirectoryURL.path.withCString {
-            Darwin.open($0, O_RDONLY | O_CLOEXEC)
+            Darwin.open($0, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW)
         }
         guard descriptor >= 0 else {
             throw WorkspaceRegistryError.systemCall(
@@ -284,13 +381,10 @@ struct WorkspaceRegistry: Sendable {
     }
 
     private func withExclusiveLock<T>(_ body: () throws -> T) throws -> T {
-        try FileManager.default.createDirectory(
-            at: registryDirectoryURL,
-            withIntermediateDirectories: true
-        )
+        try prepareRegistryDirectory()
 
         let descriptor = lockURL.path.withCString {
-            Darwin.open($0, O_CREAT | O_RDWR | O_CLOEXEC, S_IRUSR | S_IWUSR)
+            Darwin.open($0, O_CREAT | O_RDWR | O_CLOEXEC | O_NOFOLLOW, S_IRUSR | S_IWUSR)
         }
         guard descriptor >= 0 else {
             throw WorkspaceRegistryError.systemCall(operation: "open", path: lockURL.path, code: errno)
@@ -303,6 +397,28 @@ struct WorkspaceRegistry: Sendable {
         }
         defer { _ = posixFlock(descriptor, LOCK_UN) }
         return try body()
+    }
+
+    private func prepareRegistryDirectory() throws {
+        try WorkspaceStatePathBoundary.validateWorkspaceDirectory(repositoryURL)
+        try ensureRealDirectory(gdmDirectoryURL)
+        try ensureRealDirectory(registryDirectoryURL)
+        // Revalidate both parents after creation so pre-existing or raced
+        // symlink components fail before lock or registry file access.
+        try WorkspaceStatePathBoundary.validateWorkspaceDirectory(gdmDirectoryURL)
+        try WorkspaceStatePathBoundary.validateWorkspaceDirectory(registryDirectoryURL)
+    }
+
+    private func ensureRealDirectory(_ url: URL) throws {
+        if Self.pathExistsIncludingDanglingSymlink(url.path) {
+            try WorkspaceStatePathBoundary.validateWorkspaceDirectory(url)
+            return
+        }
+        let result = url.path.withCString { Darwin.mkdir($0, S_IRWXU) }
+        if result != 0, errno != EEXIST {
+            throw WorkspaceRegistryError.systemCall(operation: "mkdir", path: url.path, code: errno)
+        }
+        try WorkspaceStatePathBoundary.validateWorkspaceDirectory(url)
     }
 
     static func normalizedPath(_ path: String) -> String {

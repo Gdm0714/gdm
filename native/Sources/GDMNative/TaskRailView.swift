@@ -42,14 +42,14 @@ struct TaskRailView: View {
                 SectionLabel(title: "Tasks · \(store.tasks.count)")
                 Spacer()
                 Button {
-                    store.isNewTaskPresented = true
+                    store.presentNewTask()
                 } label: {
                     Text("+  ⌘N")
                         .font(.system(size: DesignTokens.labelSize, design: .monospaced))
                         .foregroundStyle(DesignTokens.textSecondary)
                 }
                 .buttonStyle(.plain)
-                .keyboardShortcut("n", modifiers: .command)
+                .disabled(!store.canPresentNewTask)
                 .accessibilityLabel("새 작업 만들기")
             }
 
@@ -59,6 +59,7 @@ struct TaskRailView: View {
                         TaskRowView(
                             task: task,
                             state: store.displayState(for: task),
+                            planState: store.verificationPlanState(for: task),
                             isSelected: selectedTaskKey == task.id
                         ) {
                             onSelect(task)
@@ -76,6 +77,7 @@ struct TaskRailView: View {
                                 TaskRowView(
                                     task: task,
                                     state: store.displayState(for: task),
+                                    planState: store.verificationPlanState(for: task),
                                     isSelected: selectedTaskKey == task.id
                                 ) {
                                     onSelect(task)
@@ -149,6 +151,7 @@ private struct ProvenHistoryDisclosure: View {
 private struct TaskRowView: View {
     let task: WorkspaceTask
     let state: TaskDisplayState
+    let planState: VerificationPlanState
     let isSelected: Bool
     let action: () -> Void
     @State private var isHovering = false
@@ -196,12 +199,27 @@ private struct TaskRowView: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovering = $0 }
-        .accessibilityLabel("\(task.slug), \(state.rawValue), \(proofCount) proven")
+        .accessibilityLabel("\(task.slug), \(state.rawValue), \(proofAccessibilityLabel)")
     }
 
     private var proofCount: String {
         guard let work = task.document else { return "—/—" }
-        return "\(work.provenCount)/\(work.checks.count)"
+        switch planState {
+        case .needsPlan: return "NO CHECKS"
+        case .reviewRequired: return "\(work.checks.count) TO REVIEW"
+        case .approved: return "\(work.provenCount)/\(work.checks.count)"
+        case .unavailable: return "—/—"
+        }
+    }
+
+    private var proofAccessibilityLabel: String {
+        guard let work = task.document else { return "proof status unavailable" }
+        switch planState {
+        case .needsPlan: return "verification plan needed"
+        case .reviewRequired: return "\(work.checks.count) checks awaiting approval"
+        case .approved: return "\(work.provenCount) of \(work.checks.count) checks proven"
+        case .unavailable: return "proof status unavailable"
+        }
     }
 
     private var detail: String {

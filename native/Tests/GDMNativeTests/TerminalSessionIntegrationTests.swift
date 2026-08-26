@@ -452,7 +452,8 @@ final class TerminalSessionIntegrationTests: XCTestCase {
         let session = TerminalSession(
             taskID: "real-pty",
             generation: 1,
-            specification: specification
+            specification: specification,
+            terminalDriver: SwiftTermTerminalDriver()
         )
         session.resize(to: NSSize(width: 800, height: 400))
         session.start()
@@ -510,6 +511,7 @@ final class TerminalSessionIntegrationTests: XCTestCase {
                 environment: environment,
                 currentDirectory: root
             ),
+            terminalDriver: SwiftTermTerminalDriver(),
             stopPolicy: TerminalStopPolicy(
                 gracePeriodNanoseconds: 50_000_000,
                 pollIntervalNanoseconds: 5_000_000,
@@ -561,6 +563,7 @@ final class TerminalSessionIntegrationTests: XCTestCase {
                     environment: environment,
                     currentDirectory: root
                 ),
+                terminalDriver: SwiftTermTerminalDriver(),
                 stopPolicy: TerminalStopPolicy(
                     gracePeriodNanoseconds: 100_000_000,
                     pollIntervalNanoseconds: 1_000_000,

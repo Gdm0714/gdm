@@ -54,6 +54,11 @@
   --agent-activity-breakpoint: 1200px;
   --agent-activity-popover-width: 352px;
   --palette-width: 520px;
+  --split-divider-width: 1px;
+  --split-divider-hit-size: 10px;
+  --pane-min-width: 180px;
+  --pane-min-height: 120px;
+  --file-tree-indent: 14px;
 
   --radius-control: 4px;
   --radius-overlay: 8px;

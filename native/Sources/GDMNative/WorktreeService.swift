@@ -243,7 +243,6 @@ enum WorktreeServiceError: Error, LocalizedError {
     case invalidVerification(String)
     case invalidConstraint(String)
     case repositoryMismatch(expected: String, actual: String)
-    case gdmUnavailable(String)
     case registryCollision(String)
     case legacyCollision(String)
     case branchCollision(String)
@@ -269,8 +268,6 @@ enum WorktreeServiceError: Error, LocalizedError {
             return "작업 계약이 올바르지 않습니다: \(message)"
         case .repositoryMismatch(let expected, let actual):
             return "선택한 저장소 root와 Git top-level이 다릅니다 (기대: \(expected), 실제: \(actual))"
-        case .gdmUnavailable(let root):
-            return "root 저장소에서 GDM executable을 찾지 못했습니다: \(root)/cli/dist/gdm 또는 cli/src/cli.ts"
         case .registryCollision(let message):
             return "workspace registry 충돌: \(message)"
         case .legacyCollision(let slug):
@@ -366,6 +363,7 @@ struct WorktreeService: Sendable {
                 selectedAgent: request.selectedAgent,
                 lastSession: nil,
                 lastError: nil,
+                checksApprovalRequired: true,
                 createdAt: createdAt
             )
             document.tasks.append(record)
@@ -518,10 +516,12 @@ struct WorktreeService: Sendable {
             .standardizedFileURL
     }
 
+    static func isValidSlug(_ slug: String) -> Bool {
+        slug.range(of: "^[a-z0-9][a-z0-9-]{1,50}$", options: .regularExpression) != nil
+    }
+
     private func validate(_ request: WorktreeProvisioningRequest) throws {
-        let slugPattern = try NSRegularExpression(pattern: "^[a-z0-9][a-z0-9-]{1,50}$")
-        let range = NSRange(request.slug.startIndex..<request.slug.endIndex, in: request.slug)
-        guard slugPattern.firstMatch(in: request.slug, range: range)?.range == range else {
+        guard Self.isValidSlug(request.slug) else {
             throw WorktreeServiceError.invalidSlug(request.slug)
         }
         guard !request.brief.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -544,21 +544,7 @@ struct WorktreeService: Sendable {
         if let injectedGDMInvocation {
             return injectedGDMInvocation
         }
-
-        let compiled = repositoryURL.appendingPathComponent("cli/dist/gdm", isDirectory: false)
-        if FileManager.default.isExecutableFile(atPath: compiled.path) {
-            return CommandInvocation(executable: compiled.path, prefixArguments: [])
-        }
-
-        let source = repositoryURL.appendingPathComponent("cli/src/cli.ts", isDirectory: false)
-        if FileManager.default.fileExists(atPath: source.path) {
-            return CommandInvocation(
-                executable: "/usr/bin/env",
-                prefixArguments: ["bun", source.path]
-            )
-        }
-
-        throw WorktreeServiceError.gdmUnavailable(repositoryURL.path)
+        return try GDMToolchainLocator.require()
     }
 
     private func preflight(

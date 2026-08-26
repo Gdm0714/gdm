@@ -236,7 +236,7 @@ struct CommandResult: Sendable {
     let output: String
 }
 
-struct CommandInvocation: Sendable {
+struct CommandInvocation: Equatable, Sendable {
     let executable: String
     let prefixArguments: [String]
 }
@@ -270,22 +270,6 @@ enum CommandRunner {
         }
     }
 
-    static func gdm(at repositoryURL: URL) -> CommandInvocation {
-        let compiled = repositoryURL.appendingPathComponent("cli/dist/gdm")
-        if FileManager.default.isExecutableFile(atPath: compiled.path) {
-            return CommandInvocation(executable: compiled.path, prefixArguments: [])
-        }
-
-        let source = repositoryURL.appendingPathComponent("cli/src/cli.ts")
-        if FileManager.default.fileExists(atPath: source.path) {
-            return CommandInvocation(
-                executable: "/usr/bin/env",
-                prefixArguments: ["bun", source.path]
-            )
-        }
-
-        return CommandInvocation(executable: "/usr/bin/env", prefixArguments: ["gdm"])
-    }
 }
 
 private extension String {

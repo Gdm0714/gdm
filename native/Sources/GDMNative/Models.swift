@@ -1,4 +1,9 @@
+import CryptoKit
 import Foundation
+
+enum GidemPreferences {
+    static let lastRepositoryPathKey = "GidemLastRepositoryPath"
+}
 
 struct EvidenceRecord: Codable, Equatable, Sendable {
     let observed: String
@@ -29,9 +34,15 @@ struct CheckRecord: Codable, Identifiable, Equatable, Sendable {
 struct WorkContractRecord: Codable, Equatable, Sendable {
     let required: [String]
     let forbidden: [String]
-    let commit: String
+    let commit: String?
+    var assumptions: [String]? = nil
+    var uncertainties: [String]? = nil
+    var allowedPaths: [String]? = nil
+    var forbiddenPaths: [String]? = nil
+    var stopConditions: [String]? = nil
     let risk: String?
     let verification: String?
+    var simplificationRequired: Bool? = nil
 }
 
 struct AuditRecord: Codable, Equatable, Sendable {
@@ -88,16 +99,59 @@ struct WorkDocument: Codable, Identifiable, Equatable, Sendable {
     let delivery: DeliveryRecord?
     let checks: [CheckRecord]
     let contract: WorkContractRecord
+    var verificationPlanSourceFingerprint: String? = nil
 
     var provenCount: Int { checks.filter(\.isProven).count }
     var allChecksProven: Bool { !checks.isEmpty && checks.allSatisfy(\.isProven) }
+    /// A stable revision of the verification contract only. Runtime status and
+    /// evidence are deliberately excluded so proving a check does not revoke
+    /// the user's approval of the plan that defined it.
+    var verificationPlanFingerprint: String? {
+        guard !checks.isEmpty else { return nil }
+        var encoder = VerificationPlanFingerprintEncoder()
+        encoder.appendString("gidem-verification-plan-v1")
+        encoder.appendString(brief)
+        encoder.appendBool(auditRequired ?? false)
+        encoder.appendStrings(contract.required)
+        encoder.appendStrings(contract.forbidden)
+        encoder.appendString(contract.commit ?? "forbidden")
+        encoder.appendStrings(contract.assumptions ?? [])
+        encoder.appendStrings(contract.uncertainties ?? [])
+        encoder.appendStrings(contract.allowedPaths ?? ["."])
+        encoder.appendStrings(contract.forbiddenPaths ?? [])
+        encoder.appendStrings(contract.stopConditions ?? [])
+        encoder.appendString(contract.risk ?? "low")
+        encoder.appendString(contract.verification ?? "deterministic")
+        encoder.appendBool(contract.simplificationRequired ?? false)
+        encoder.appendUInt64(UInt64(checks.count))
+        for check in checks {
+            encoder.appendString(check.id)
+            encoder.appendString(check.desc)
+            encoder.appendNullableString(check.cmd)
+            encoder.appendString(check.expect)
+            encoder.appendBool(check.manual)
+            encoder.appendString(check.kind ?? (check.manual ? "manual" : "behavior"))
+            encoder.appendBool(check.expert ?? false)
+        }
+        return SHA256.hash(data: encoder.data)
+            .map { String(format: "%02x", $0) }
+            .joined()
+    }
     var auditPassed: Bool { audit?.result == "pass" }
     var canComplete: Bool {
         allChecksProven && (!(auditRequired ?? false) || auditPassed)
     }
 
     var blockers: [ProofBlocker] {
-        var result = checks
+        var result: [ProofBlocker] = []
+        if checks.isEmpty {
+            result.append(ProofBlocker(
+                glyph: "○",
+                message: "검증 항목이 아직 정의되지 않았습니다.",
+                tone: .attention
+            ))
+        }
+        result += checks
             .filter { !$0.isProven }
             .map { ProofBlocker(glyph: "○", message: "\($0.id) \($0.desc) — 증거 없음", tone: .blocked) }
         if audit?.result == "fail" {
@@ -106,6 +160,40 @@ struct WorkDocument: Codable, Identifiable, Equatable, Sendable {
             result.append(ProofBlocker(glyph: "○", message: "High risk 독립 검수가 아직 없습니다", tone: .attention))
         }
         return result
+    }
+}
+
+private struct VerificationPlanFingerprintEncoder {
+    private(set) var data = Data()
+
+    mutating func appendUInt64(_ value: UInt64) {
+        for shift in stride(from: 56, through: 0, by: -8) {
+            data.append(UInt8(truncatingIfNeeded: value >> UInt64(shift)))
+        }
+    }
+
+    mutating func appendString(_ value: String) {
+        let bytes = Data(value.utf8)
+        appendUInt64(UInt64(bytes.count))
+        data.append(bytes)
+    }
+
+    mutating func appendBool(_ value: Bool) {
+        data.append(value ? 1 : 0)
+    }
+
+    mutating func appendStrings(_ values: [String]) {
+        appendUInt64(UInt64(values.count))
+        for value in values { appendString(value) }
+    }
+
+    mutating func appendNullableString(_ value: String?) {
+        guard let value else {
+            data.append(0)
+            return
+        }
+        data.append(1)
+        appendString(value)
     }
 }
 
@@ -148,7 +236,16 @@ struct WorkspaceRegistryRecord: Codable, Identifiable, Equatable, Sendable {
     var phase: WorkspaceProvisioningPhase
     var selectedAgent: String?
     var lastSession: PersistedSessionRecord?
+    /// When present, this lane-keyed map is the canonical session history.
+    /// `lastSession` remains a compatibility projection for older app builds.
+    var sessionsByLane: [String: PersistedSessionRecord]? = nil
     var lastError: String?
+    var layout: PaneLayoutRecord? = nil
+    /// New native tasks require a human review before their generated check
+    /// plan can drive implementation. `nil` preserves pre-gate workspaces.
+    var checksApprovalRequired: Bool? = nil
+    var approvedChecksFingerprint: String? = nil
+    var checksApprovedAt: String? = nil
     let createdAt: String
 }
 
@@ -240,6 +337,9 @@ enum AgentActivityState: String, Equatable, Sendable {
     case starting
     case active
     case waiting
+    case needsYou
+    case handingOff
+    case verifying
     case stopping
     case interrupted
     case launchFailed
@@ -250,6 +350,9 @@ enum AgentActivityState: String, Equatable, Sendable {
         case .unavailable: "—"
         case .idle, .ended: "○"
         case .starting, .waiting: "◔"
+        case .needsYou: "!"
+        case .handingOff: "⇢"
+        case .verifying: "◐"
         case .active: "●"
         case .stopping: "◑"
         case .interrupted: "⊘"
@@ -264,6 +367,9 @@ enum AgentActivityState: String, Equatable, Sendable {
         case .starting: "starting…"
         case .active: "active"
         case .waiting: "waiting for input"
+        case .needsYou: "Needs You"
+        case .handingOff: "handing off…"
+        case .verifying: "verifying"
         case .stopping: "stopping…"
         case .interrupted: "interrupted · not attached"
         case .launchFailed: "launch failed"
@@ -273,9 +379,9 @@ enum AgentActivityState: String, Equatable, Sendable {
 
     var tone: SignalTone {
         switch self {
-        case .starting, .active:
+        case .starting, .active, .handingOff, .verifying:
             .active
-        case .waiting, .stopping, .interrupted:
+        case .waiting, .needsYou, .stopping, .interrupted:
             .attention
         case .launchFailed:
             .blocked
@@ -286,14 +392,14 @@ enum AgentActivityState: String, Equatable, Sendable {
 
     /// Only process hand-off states pulse. Settled live states are static.
     var isUnsettled: Bool {
-        self == .starting || self == .stopping
+        self == .starting || self == .handingOff || self == .stopping
     }
 
     /// Counts sessions that are still live/owned, including bounded cleanup.
     /// This also controls whether the elapsed Timeline keeps ticking.
     var isRunning: Bool {
         switch self {
-        case .starting, .active, .waiting, .stopping: true
+        case .starting, .active, .waiting, .needsYou, .handingOff, .verifying, .stopping: true
         case .unavailable, .idle, .interrupted, .launchFailed, .ended: false
         }
     }
@@ -301,14 +407,17 @@ enum AgentActivityState: String, Equatable, Sendable {
     var summaryRank: Int {
         switch self {
         case .launchFailed: 0
-        case .waiting: 1
-        case .interrupted: 2
-        case .starting: 3
-        case .stopping: 4
-        case .active: 5
-        case .ended: 6
-        case .idle: 7
-        case .unavailable: 8
+        case .needsYou: 1
+        case .waiting: 2
+        case .interrupted: 3
+        case .starting: 4
+        case .handingOff: 5
+        case .stopping: 6
+        case .verifying: 7
+        case .active: 8
+        case .ended: 9
+        case .idle: 10
+        case .unavailable: 11
         }
     }
 }
@@ -316,9 +425,10 @@ enum AgentActivityState: String, Equatable, Sendable {
 /// A safe, display-only task/session row. It intentionally has no PID,
 /// prompt, command, environment, or terminal transcript fields.
 struct AgentActivityItem: Identifiable, Equatable, Sendable {
-    var id: String { taskID }
+    var id: String { laneID.map { "\(taskID)#\($0)" } ?? taskID }
 
     let taskID: String
+    let laneID: String?
     let agent: AgentKind
     let state: AgentActivityState
     let taskSlug: String
@@ -326,6 +436,28 @@ struct AgentActivityItem: Identifiable, Equatable, Sendable {
     let worktreePath: String
     let startedAt: Date?
     let endedAt: Date?
+
+    init(
+        taskID: String,
+        laneID: String? = nil,
+        agent: AgentKind,
+        state: AgentActivityState,
+        taskSlug: String,
+        branch: String?,
+        worktreePath: String,
+        startedAt: Date?,
+        endedAt: Date?
+    ) {
+        self.taskID = taskID
+        self.laneID = laneID
+        self.agent = agent
+        self.state = state
+        self.taskSlug = taskSlug
+        self.branch = branch
+        self.worktreePath = worktreePath
+        self.startedAt = startedAt
+        self.endedAt = endedAt
+    }
 
     func elapsedSeconds(at now: Date = Date()) -> Int? {
         guard let startedAt else { return nil }
@@ -382,7 +514,9 @@ struct ProofBlocker: Identifiable, Equatable, Sendable {
 }
 
 enum TaskDisplayState: String, Sendable {
-    case planned = "PLANNED"
+    case needsPlan = "PLAN NEEDED"
+    case reviewPlan = "REVIEW PLAN"
+    case planned = "READY"
     case working = "WORKING"
     case waitingInput = "WAITING FOR INPUT"
     case waitingCI = "WAITING CI"
@@ -400,7 +534,9 @@ enum TaskDisplayState: String, Sendable {
         case .waitingInput, .waitingCI: "◔"
         case .blocked, .rejected: "✕"
         case .disconnected: "⊘"
-        case .planned: "○"
+        case .needsPlan: "○"
+        case .reviewPlan: "◔"
+        case .planned: "●"
         }
     }
 
@@ -408,11 +544,18 @@ enum TaskDisplayState: String, Sendable {
         switch self {
         case .proven: .proven
         case .working, .verifying: .active
-        case .waitingInput, .waitingCI: .attention
+        case .needsPlan, .reviewPlan, .waitingInput, .waitingCI: .attention
         case .blocked, .rejected, .disconnected: .blocked
         case .planned: .neutral
         }
     }
+}
+
+enum VerificationPlanState: Equatable, Sendable {
+    case unavailable
+    case needsPlan
+    case reviewRequired
+    case approved
 }
 
 enum CheckDisplayState: Equatable, Sendable {

@@ -10,7 +10,7 @@ enum GidemBrandAssets {
     static let applicationIconImage = image(named: "gidem-icon-1024", template: false)
 
     private static func image(named name: String, template: Bool) -> NSImage? {
-        guard let url = Bundle.module.url(forResource: name, withExtension: "svg"),
+        guard let url = GidemApplicationResources.bundle.url(forResource: name, withExtension: "svg"),
               let image = NSImage(contentsOf: url) else {
             return nil
         }

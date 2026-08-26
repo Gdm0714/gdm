@@ -14,7 +14,10 @@ extension EnvironmentValues {
 
 enum DesignTokens {
     private static let values: [String: String] = {
-        guard let url = Bundle.module.url(forResource: "design-tokens", withExtension: "css"),
+        guard let url = GidemApplicationResources.bundle.url(
+            forResource: "design-tokens",
+            withExtension: "css"
+        ),
               let css = try? String(contentsOf: url, encoding: .utf8) else {
             return [:]
         }
@@ -100,6 +103,11 @@ enum DesignTokens {
     static let agentActivityBreakpoint = number("--agent-activity-breakpoint")
     static let agentActivityPopoverWidth = number("--agent-activity-popover-width")
     static let paletteWidth = number("--palette-width")
+    static let splitDividerWidth = number("--split-divider-width")
+    static let splitDividerHitSize = number("--split-divider-hit-size")
+    static let paneMinimumWidth = number("--pane-min-width")
+    static let paneMinimumHeight = number("--pane-min-height")
+    static let fileTreeIndent = number("--file-tree-indent")
     static let controlRadius = number("--radius-control")
     static let overlayRadius = number("--radius-overlay")
     static let focusRingWidth = number("--focus-ring-width")

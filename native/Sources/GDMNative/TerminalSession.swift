@@ -11,6 +11,7 @@ enum TerminalTermination: Equatable, Sendable {
     case ownershipLost
     case waitFailed(Int32)
     case reapTimedOut
+    case driverStopped
     case unknownWaitStatus(Int32?)
 
     var label: String {
@@ -21,6 +22,7 @@ enum TerminalTermination: Equatable, Sendable {
         case .ownershipLost: "ended · ownership not attached"
         case .waitFailed(let errorNumber): "ended · waitpid error \(errorNumber)"
         case .reapTimedOut: "ended · reap timed out"
+        case .driverStopped: "stopped"
         case .unknownWaitStatus(let status): "ended · unknown status \(status.map(String.init) ?? "nil")"
         }
     }
@@ -39,6 +41,13 @@ enum TerminalSessionState: Equatable, Sendable {
         switch self {
         case .starting, .running, .stopping: true
         case .idle, .ended: false
+        }
+    }
+
+    var acceptsInput: Bool {
+        switch self {
+        case .starting, .running: true
+        case .idle, .stopping, .ended: false
         }
     }
 
@@ -67,8 +76,8 @@ enum TerminalStopResult: Equatable, Sendable {
         switch self {
         case .reaped:
             return true
-        case .alreadyEnded(.exited), .alreadyEnded(.signaled):
-            // Natural exits are reaped by SwiftTerm before its delegate callback.
+        case .alreadyEnded(.exited), .alreadyEnded(.signaled), .alreadyEnded(.driverStopped):
+            // Natural exits are reaped by the active backend before its callback.
             return true
         case .alreadyEnded, .notRunning, .alreadyStopping, .invalidOwnership,
              .ownershipLost, .waitFailed, .reapTimedOut:
@@ -185,16 +194,33 @@ struct SystemStopClock: StopClock {
 }
 
 @MainActor
+enum TerminalLifecycleOwnership: Equatable, Sendable {
+    /// Gidem owns PID/PGID validation, signaling, and waitpid.
+    case hostReaper
+    /// The embedded terminal backend owns signaling and child reaping.
+    case terminalDriver
+}
+
+@MainActor
 protocol TerminalDriving: AnyObject {
     var hostedView: NSView { get }
     var processIdentifier: pid_t { get }
     var isRunning: Bool { get }
+    var lifecycleOwnership: TerminalLifecycleOwnership { get }
     var onProcessTerminated: ((Int32?) -> Void)? { get set }
 
     func start(_ specification: AgentLaunchSpecification)
     func terminate()
     func send(_ bytes: [UInt8])
+    func sendPaste(_ text: String)
     func resize(to size: NSSize)
+    func setHostActionHandler(_ handler: ((TerminalHostAction) -> Bool)?)
+}
+
+extension TerminalDriving {
+    var lifecycleOwnership: TerminalLifecycleOwnership { .hostReaper }
+    func sendPaste(_ text: String) { send(Array(text.utf8)) }
+    func setHostActionHandler(_ handler: ((TerminalHostAction) -> Bool)?) {}
 }
 
 @MainActor
@@ -232,6 +258,18 @@ final class SwiftTermTerminalDriver:
 
     func send(_ bytes: [UInt8]) {
         swiftTermView.process.send(data: bytes[...])
+    }
+
+    func sendPaste(_ text: String) {
+        let bracketedPasteStart: [UInt8] = [0x1B, 0x5B, 0x32, 0x30, 0x30, 0x7E]
+        let bracketedPasteEnd: [UInt8] = [0x1B, 0x5B, 0x32, 0x30, 0x31, 0x7E]
+        if swiftTermView.terminal.bracketedPasteMode {
+            swiftTermView.process.send(data: bracketedPasteStart[...])
+        }
+        swiftTermView.process.send(data: Array(text.utf8)[...])
+        if swiftTermView.terminal.bracketedPasteMode {
+            swiftTermView.process.send(data: bracketedPasteEnd[...])
+        }
     }
 
     func resize(to size: NSSize) {
@@ -283,6 +321,7 @@ private struct ExplicitCleanupProgress: Equatable, Sendable {
 final class TerminalSession: ObservableObject, Identifiable {
     let id: UUID
     let taskID: String
+    private(set) var laneID: String
     let generation: UInt64
     let specification: AgentLaunchSpecification
     let startedAt: Date
@@ -295,7 +334,11 @@ final class TerminalSession: ObservableObject, Identifiable {
 
     var terminalView: NSView { terminalDriver.hostedView }
     var processIdentifier: pid_t? {
-        processIdentity?.processIdentifier ?? launchCandidate?.processIdentifier
+        if terminalDriver.lifecycleOwnership == .terminalDriver {
+            let observed = terminalDriver.processIdentifier
+            return observed > 1 ? observed : nil
+        }
+        return processIdentity?.processIdentifier ?? launchCandidate?.processIdentifier
     }
 
     private let terminalDriver: any TerminalDriving
@@ -322,6 +365,7 @@ final class TerminalSession: ObservableObject, Identifiable {
     init(
         id: UUID = UUID(),
         taskID: String,
+        laneID: String = "default",
         generation: UInt64,
         specification: AgentLaunchSpecification,
         terminalDriver: (any TerminalDriving)? = nil,
@@ -334,9 +378,10 @@ final class TerminalSession: ObservableObject, Identifiable {
     ) {
         self.id = id
         self.taskID = taskID
+        self.laneID = laneID
         self.generation = generation
         self.specification = specification
-        self.terminalDriver = terminalDriver ?? SwiftTermTerminalDriver()
+        self.terminalDriver = terminalDriver ?? TerminalBackendFactory.makeDefault()
         self.signaler = signaler
         self.childReaper = childReaper
         self.processGroupResolver = processGroupResolver
@@ -360,9 +405,23 @@ final class TerminalSession: ObservableObject, Identifiable {
         }
         terminalDriver.start(specification)
 
+        if terminalDriver.lifecycleOwnership == .terminalDriver {
+            if let pendingNaturalTermination {
+                self.pendingNaturalTermination = nil
+                finish(with: Self.decodeWaitStatus(pendingNaturalTermination.rawStatus))
+                return
+            }
+            guard terminalDriver.isRunning else {
+                finish(with: .launchFailed("terminal backend did not create a PTY child"))
+                return
+            }
+            transition(to: .running)
+            return
+        }
+
         let pid = terminalDriver.processIdentifier
         guard pid > 1 else {
-            finish(with: .launchFailed("SwiftTerm did not create a PTY child"))
+            finish(with: .launchFailed("terminal backend did not create a PTY child"))
             return
         }
 
@@ -397,6 +456,10 @@ final class TerminalSession: ObservableObject, Identifiable {
         }
     }
 
+    fileprivate func assignLaneID(_ laneID: String) {
+        self.laneID = laneID
+    }
+
     func send(_ data: Data) {
         guard state == .running else { return }
         terminalDriver.send(Array(data))
@@ -406,12 +469,21 @@ final class TerminalSession: ObservableObject, Identifiable {
         send(Data(text.utf8))
     }
 
+    func sendPaste(text: String) {
+        guard state == .running else { return }
+        terminalDriver.sendPaste(text)
+    }
+
     func sendControlC() {
         send(Data([0x03]))
     }
 
     func resize(to size: NSSize) {
         terminalDriver.resize(to: size)
+    }
+
+    func setHostActionHandler(_ handler: ((TerminalHostAction) -> Bool)?) {
+        terminalDriver.setHostActionHandler(handler)
     }
 
     @discardableResult
@@ -424,6 +496,9 @@ final class TerminalSession: ObservableObject, Identifiable {
         case .idle:
             return .notRunning
         case .starting:
+            if terminalDriver.lifecycleOwnership == .terminalDriver {
+                return stopDriverOwnedTerminal()
+            }
             guard let candidate = launchCandidate else { return .notRunning }
             stopRequestedWhileStarting = true
             let task = Task { @MainActor [weak self] in
@@ -448,6 +523,10 @@ final class TerminalSession: ObservableObject, Identifiable {
             break
         }
 
+        if terminalDriver.lifecycleOwnership == .terminalDriver {
+            return stopDriverOwnedTerminal()
+        }
+
         guard let identity = processIdentity,
               identity.sessionID == id,
               identity.generation == generation,
@@ -464,6 +543,20 @@ final class TerminalSession: ObservableObject, Identifiable {
             return await self.stopConfirmedProcess(identity)
         }
         return await awaitStopTask(task)
+    }
+
+    private func stopDriverOwnedTerminal() -> TerminalStopResult {
+        guard state == .starting || state == .running else {
+            return stopResultForCurrentState()
+        }
+        transition(to: .stopping)
+        // Ghostty owns its subprocess group and performs the final wait while
+        // freeing the surface. Gidem must never signal or wait on its observed
+        // foreground process-group identifier.
+        terminalDriver.terminate()
+        let termination = TerminalTermination.driverStopped
+        finish(with: termination)
+        return .reaped(termination)
     }
 
     private func stopWhileStarting(
@@ -726,11 +819,13 @@ final class TerminalSession: ObservableObject, Identifiable {
                 return
             }
         case .running:
-            guard let identity = processIdentity,
-                  identity.sessionID == sessionID,
-                  identity.generation == generation,
-                  identity.processIdentifier == observedPID else {
-                return
+            if terminalDriver.lifecycleOwnership == .hostReaper {
+                guard let identity = processIdentity,
+                      identity.sessionID == sessionID,
+                      identity.generation == generation,
+                      identity.processIdentifier == observedPID else {
+                    return
+                }
             }
         case .idle, .stopping, .ended:
             return
@@ -924,22 +1019,57 @@ final class TerminalSession: ObservableObject, Identifiable {
 /// Immutable metadata safe for all-task activity aggregation. Process identity,
 /// arguments, environment, prompt, command, and terminal content stay private to
 /// the owning session.
-struct TerminalSessionSnapshot: Identifiable, Equatable, Sendable {
+struct TerminalSessionLaneKey: Codable, Hashable, Identifiable, Sendable {
+    let taskID: String
+    let laneID: String
+
+    init(taskID: String, laneID: String = "default") {
+        self.taskID = taskID
+        self.laneID = laneID
+    }
+
+    var id: String { "\(taskID)#\(laneID)" }
+}
+
+typealias SessionKey = TerminalSessionLaneKey
+
+struct TerminalSessionSnapshot: Identifiable, Equatable, Sendable, CustomReflectable {
     let id: UUID
     let taskID: String
+    let laneID: String
     let generation: UInt64
     let agent: AgentKind
     let state: TerminalSessionState
     let startedAt: Date
+
+    // Keep legacy diagnostics focused on the original safe fields while the
+    // lane identity remains available through the explicit `laneID` property.
+    var customMirror: Mirror {
+        Mirror(
+            self,
+            children: [
+                "id": id,
+                "taskID": taskID,
+                "generation": generation,
+                "agent": agent,
+                "state": state,
+                "startedAt": startedAt
+            ],
+            displayStyle: .struct
+        )
+    }
 }
 
 enum TerminalSessionManagerError: LocalizedError, Equatable {
     case sessionAlreadyActive(String)
+    case sessionLaneAlreadyActive(TerminalSessionLaneKey)
 
     var errorDescription: String? {
         switch self {
         case .sessionAlreadyActive(let taskID):
             "Task \(taskID) already has an active terminal session."
+        case .sessionLaneAlreadyActive(let key):
+            "Task \(key.taskID) lane \(key.laneID) already has an active terminal session."
         }
     }
 }
@@ -952,19 +1082,32 @@ final class TerminalSessionManager: ObservableObject {
         _ specification: AgentLaunchSpecification
     ) -> TerminalSession
 
-    @Published private(set) var sessions: [String: TerminalSession] = [:]
+    typealias LaneSessionFactory = @MainActor (
+        _ key: TerminalSessionLaneKey,
+        _ generation: UInt64,
+        _ specification: AgentLaunchSpecification
+    ) -> TerminalSession
+
+    @Published private(set) var sessions: [TerminalSessionLaneKey: TerminalSession] = [:]
 
     var hasActiveSessions: Bool {
         sessions.values.contains { $0.state.isActive }
     }
 
-    private var generations: [String: UInt64] = [:]
-    private let sessionFactory: SessionFactory
+    private var generations: [TerminalSessionLaneKey: UInt64] = [:]
+    private let sessionFactory: LaneSessionFactory
 
-    init(sessionFactory: SessionFactory? = nil) {
-        self.sessionFactory = sessionFactory ?? { taskID, generation, specification in
-            TerminalSession(
-                taskID: taskID,
+    init(
+        sessionFactory: SessionFactory? = nil,
+        laneSessionFactory: LaneSessionFactory? = nil
+    ) {
+        self.sessionFactory = laneSessionFactory ?? { key, generation, specification in
+            if let sessionFactory {
+                return sessionFactory(key.taskID, generation, specification)
+            }
+            return TerminalSession(
+                taskID: key.taskID,
+                laneID: key.laneID,
                 generation: generation,
                 specification: specification
             )
@@ -972,15 +1115,37 @@ final class TerminalSessionManager: ObservableObject {
     }
 
     func session(for taskID: String) -> TerminalSession? {
-        sessions[taskID]
+        let defaultSession = sessions[TerminalSessionLaneKey(taskID: taskID)]
+        if defaultSession?.state.isActive == true {
+            return defaultSession
+        }
+        let activeSiblings = sessions
+            .filter { entry in
+                entry.key.taskID == taskID && entry.value.state.isActive
+            }
+            .sorted { lhs, rhs in
+                lhs.key.laneID < rhs.key.laneID
+            }
+        if let activeSibling = activeSiblings.first?.value {
+            return activeSibling
+        }
+        return defaultSession
+    }
+
+    func session(for key: TerminalSessionLaneKey) -> TerminalSession? {
+        sessions[key]
+    }
+
+    func nextGeneration(for key: TerminalSessionLaneKey) -> UInt64 {
+        (generations[key] ?? 0) &+ 1
     }
 
     func snapshot() -> [TerminalSessionSnapshot] {
-        sessions.values
-            .map { session in
+        sessions.map { key, session in
                 TerminalSessionSnapshot(
                     id: session.id,
-                    taskID: session.taskID,
+                    taskID: key.taskID,
+                    laneID: key.laneID,
                     generation: session.generation,
                     agent: session.specification.agent,
                     state: session.state,
@@ -991,8 +1156,43 @@ final class TerminalSessionManager: ObservableObject {
                 if lhs.taskID != rhs.taskID {
                     return lhs.taskID.localizedStandardCompare(rhs.taskID) == .orderedAscending
                 }
+                if lhs.laneID != rhs.laneID { return lhs.laneID < rhs.laneID }
                 return lhs.generation < rhs.generation
             }
+    }
+
+    @discardableResult
+    func start(
+        key: TerminalSessionLaneKey,
+        specification: AgentLaunchSpecification
+    ) throws -> TerminalSession {
+        if let existing = sessions[key], existing.state.isActive {
+            throw TerminalSessionManagerError.sessionLaneAlreadyActive(key)
+        }
+
+        let generation = (generations[key] ?? 0) &+ 1
+        generations[key] = generation
+        let session = sessionFactory(key, generation, specification)
+        session.assignLaneID(key.laneID)
+        sessions[key] = session
+        session.start()
+        return session
+    }
+
+    @discardableResult
+    func start(
+        taskID: String,
+        laneID: String,
+        specification: AgentLaunchSpecification
+    ) throws -> TerminalSession {
+        do {
+            return try start(
+                key: TerminalSessionLaneKey(taskID: taskID, laneID: laneID),
+                specification: specification
+            )
+        } catch TerminalSessionManagerError.sessionLaneAlreadyActive {
+            throw TerminalSessionManagerError.sessionAlreadyActive(taskID)
+        }
     }
 
     @discardableResult
@@ -1000,37 +1200,89 @@ final class TerminalSessionManager: ObservableObject {
         taskID: String,
         specification: AgentLaunchSpecification
     ) throws -> TerminalSession {
-        if let existing = sessions[taskID], existing.state.isActive {
+        do {
+            return try start(
+                key: TerminalSessionLaneKey(taskID: taskID),
+                specification: specification
+            )
+        } catch TerminalSessionManagerError.sessionLaneAlreadyActive {
             throw TerminalSessionManagerError.sessionAlreadyActive(taskID)
         }
-
-        let generation = (generations[taskID] ?? 0) &+ 1
-        generations[taskID] = generation
-        let session = sessionFactory(taskID, generation, specification)
-        sessions[taskID] = session
-        session.start()
-        return session
     }
 
-    func stop(taskID: String) async -> TerminalStopResult {
-        guard let session = sessions[taskID] else { return .notRunning }
+    func stop(key: TerminalSessionLaneKey) async -> TerminalStopResult {
+        guard let session = sessions[key] else { return .notRunning }
         return await session.stop()
     }
 
-    func stopAll() async -> [String: TerminalStopResult] {
-        let activeSessions = sessions.filter { $0.value.state.isActive }
-        return await withTaskGroup(of: (String, TerminalStopResult).self) { group in
-            for (taskID, session) in activeSessions {
-                group.addTask {
-                    (taskID, await session.stop())
-                }
-            }
+    func stop(taskID: String) async -> TerminalStopResult {
+        guard let session = session(for: taskID) else { return .notRunning }
+        return await session.stop()
+    }
 
-            var results: [String: TerminalStopResult] = [:]
-            for await (taskID, result) in group {
-                results[taskID] = result
+    func stopAllLanes() async -> [TerminalSessionLaneKey: TerminalStopResult] {
+        let activeSessions = sessions.filter { $0.value.state.isActive }
+        return await withTaskGroup(of: (TerminalSessionLaneKey, TerminalStopResult).self) { group in
+            for (key, session) in activeSessions {
+                group.addTask { (key, await session.stop()) }
             }
+            var results: [TerminalSessionLaneKey: TerminalStopResult] = [:]
+            for await (key, result) in group { results[key] = result }
             return results
+        }
+    }
+
+    func stopAll() async -> [String: TerminalStopResult] {
+        let laneResults = await stopAllLanes()
+        var results: [String: TerminalStopResult] = [:]
+        for (key, result) in laneResults {
+            guard let existing = results[key.taskID] else {
+                results[key.taskID] = result
+                continue
+            }
+            // Preserve the legacy shape while failing closed if any lane did
+            // not produce a clean reap proof.
+            if !Self.stopResultAllowsQuit(result) {
+                results[key.taskID] = result
+            } else {
+                results[key.taskID] = existing
+            }
+        }
+        return results
+    }
+
+    /// Drops completed terminal surfaces when their workspace is no longer in
+    /// scope. Active children are never removed by this operation.
+    @discardableResult
+    func discardInactiveSessions() -> Int {
+        let inactiveKeys = sessions.compactMap { key, session in
+            session.state.isActive ? nil : key
+        }
+        for key in inactiveKeys {
+            sessions.removeValue(forKey: key)
+            generations.removeValue(forKey: key)
+        }
+        return inactiveKeys.count
+    }
+
+    @discardableResult
+    func discardInactiveSession(key: TerminalSessionLaneKey) -> Bool {
+        guard let session = sessions[key], !session.state.isActive else { return false }
+        sessions.removeValue(forKey: key)
+        generations.removeValue(forKey: key)
+        return true
+    }
+
+    private static func stopResultAllowsQuit(_ result: TerminalStopResult) -> Bool {
+        switch result {
+        case .reaped, .notRunning: true
+        case .alreadyEnded(let termination):
+            switch termination {
+            case .exited, .signaled, .launchFailed, .driverStopped: true
+            case .ownershipLost, .waitFailed, .reapTimedOut, .unknownWaitStatus: false
+            }
+        case .alreadyStopping, .invalidOwnership, .ownershipLost, .waitFailed, .reapTimedOut:
+            false
         }
     }
 }

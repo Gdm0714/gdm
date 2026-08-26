@@ -4,34 +4,87 @@ import SwiftUI
 
 struct LaunchOptions {
     let repositoryURL: URL
+    let requiresRepositorySelection: Bool
+    let shouldPersistRepositorySelection: Bool
     let demo: Bool
     let demoState: String?
     let screenshotURL: URL?
+    let backgroundQA: Bool
     let width: CGFloat
     let height: CGFloat
 
     init(arguments: [String]) {
+        let cwd = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
+        let rememberedRepository = UserDefaults.standard
+            .string(forKey: GidemPreferences.lastRepositoryPathKey)
+            .map { URL(fileURLWithPath: $0, isDirectory: true).standardizedFileURL }
+        self.init(
+            arguments: arguments,
+            currentDirectoryURL: cwd,
+            rememberedRepositoryURL: rememberedRepository,
+            isRepositoryRoot: Self.isRepositoryRoot
+        )
+    }
+
+    init(
+        arguments: [String],
+        currentDirectoryURL: URL,
+        rememberedRepositoryURL: URL?,
+        isRepositoryRoot: (URL) -> Bool
+    ) {
         func value(after flag: String) -> String? {
             guard let index = arguments.firstIndex(of: flag), arguments.indices.contains(index + 1) else { return nil }
             return arguments[index + 1]
         }
 
-        let cwd = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
+        let cwd = currentDirectoryURL.standardizedFileURL
         if let repository = value(after: "--repo") {
-            repositoryURL = URL(fileURLWithPath: repository, isDirectory: true).standardizedFileURL
-        } else if FileManager.default.fileExists(atPath: cwd.appendingPathComponent(".gdm").path) {
+            let explicitRepository = URL(fileURLWithPath: repository, isDirectory: true).standardizedFileURL
+            repositoryURL = explicitRepository
+            requiresRepositorySelection = !isRepositoryRoot(explicitRepository)
+            shouldPersistRepositorySelection = !requiresRepositorySelection
+        } else if let rememberedRepository = rememberedRepositoryURL?.standardizedFileURL,
+                  isRepositoryRoot(rememberedRepository) {
+            repositoryURL = rememberedRepository
+            requiresRepositorySelection = false
+            shouldPersistRepositorySelection = false
+        } else if isRepositoryRoot(cwd) {
             repositoryURL = cwd
-        } else if FileManager.default.fileExists(atPath: cwd.deletingLastPathComponent().appendingPathComponent(".gdm").path) {
-            repositoryURL = cwd.deletingLastPathComponent()
+            requiresRepositorySelection = false
+            shouldPersistRepositorySelection = true
+        } else if isRepositoryRoot(cwd.deletingLastPathComponent()) {
+            repositoryURL = cwd.deletingLastPathComponent().standardizedFileURL
+            requiresRepositorySelection = false
+            shouldPersistRepositorySelection = true
         } else {
             repositoryURL = cwd
+            requiresRepositorySelection = true
+            shouldPersistRepositorySelection = false
         }
 
         demo = arguments.contains("--demo")
         demoState = value(after: "--demo-state")
         screenshotURL = value(after: "--screenshot").map { URL(fileURLWithPath: $0) }
+        backgroundQA = arguments.contains("--background-qa")
         width = CGFloat(Double(value(after: "--width") ?? "1440") ?? 1440)
         height = CGFloat(Double(value(after: "--height") ?? "900") ?? 900)
+    }
+
+    private static func isRepositoryRoot(_ url: URL) -> Bool {
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory),
+              isDirectory.boolValue else { return false }
+        let result = CommandRunner.run(
+            executable: "/usr/bin/git",
+            arguments: ["rev-parse", "--show-toplevel"],
+            directory: url
+        )
+        guard result.exitCode == 0 else { return false }
+        let discovered = URL(
+            fileURLWithPath: result.output.trimmingCharacters(in: .whitespacesAndNewlines),
+            isDirectory: true
+        ).resolvingSymlinksInPath().standardizedFileURL
+        return discovered.path == url.resolvingSymlinksInPath().standardizedFileURL.path
     }
 }
 
@@ -47,11 +100,13 @@ final class GDMApplicationDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        GidemApplicationMenu.install()
         if let icon = GidemBrandAssets.applicationIconImage {
             NSApplication.shared.applicationIconImage = icon
         }
         let store = WorkspaceStore(
             repositoryURL: options.repositoryURL,
+            requiresRepositorySelection: options.requiresRepositorySelection,
             demoState: options.demoState,
             isDemo: options.demo
         )
@@ -70,9 +125,27 @@ final class GDMApplicationDelegate: NSObject, NSApplicationDelegate {
         window.minSize = NSSize(width: 1024, height: 700)
         window.contentView = NSHostingView(rootView: content)
         window.center()
-        window.makeKeyAndOrderFront(nil)
-        NSApplication.shared.activate(ignoringOtherApps: true)
+        if options.backgroundQA {
+            // Interactive QA posts keyboard and accessibility actions directly
+            // to this process. Keep the window mounted for AX inspection without
+            // interrupting the user's foreground application.
+            window.orderBack(nil)
+        } else {
+            window.makeKeyAndOrderFront(nil)
+            NSApplication.shared.activate(ignoringOtherApps: true)
+        }
         self.window = window
+        if !options.demo, options.shouldPersistRepositorySelection {
+            UserDefaults.standard.set(
+                options.repositoryURL.path,
+                forKey: GidemPreferences.lastRepositoryPathKey
+            )
+        }
+        if !options.demo, !options.backgroundQA, options.requiresRepositorySelection {
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .gidemOpenRepository, object: nil)
+            }
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
@@ -93,6 +166,7 @@ func renderScreenshot(options: LaunchOptions, destination: URL) throws {
     application.setActivationPolicy(.prohibited)
     let store = WorkspaceStore(
         repositoryURL: options.repositoryURL,
+        requiresRepositorySelection: options.requiresRepositorySelection,
         demoState: options.demoState,
         isDemo: options.demo
     )
@@ -110,7 +184,9 @@ func renderScreenshot(options: LaunchOptions, destination: URL) throws {
     window.contentView = hostingView
     window.orderBack(nil)
     hostingView.layoutSubtreeIfNeeded()
-    RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.15))
+    // The longest mount transition is 240 ms. Capture only after every
+    // overlay has reached its settled state so visual QA is deterministic.
+    RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.35))
     hostingView.layoutSubtreeIfNeeded()
 
     guard let representation = hostingView.bitmapImageRepForCachingDisplay(in: hostingView.bounds) else {
@@ -123,6 +199,16 @@ func renderScreenshot(options: LaunchOptions, destination: URL) throws {
     try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
     try data.write(to: destination, options: .atomic)
     window.orderOut(nil)
+}
+
+if ToolchainSmokeCLI.isInvocation(CommandLine.arguments) {
+    exit(ToolchainSmokeCLI.run(arguments: CommandLine.arguments))
+}
+if AgentEventCLI.isInvocation(CommandLine.arguments) {
+    exit(AgentEventCLI.run(arguments: CommandLine.arguments))
+}
+if TerminalSmokeCLI.isInvocation(CommandLine.arguments) {
+    exit(TerminalSmokeCLI.run(arguments: CommandLine.arguments))
 }
 
 let options = LaunchOptions(arguments: CommandLine.arguments)
@@ -138,6 +224,6 @@ if let destination = options.screenshotURL {
     let application = NSApplication.shared
     let delegate = GDMApplicationDelegate(options: options)
     application.delegate = delegate
-    application.setActivationPolicy(.regular)
+    application.setActivationPolicy(options.backgroundQA ? .accessory : .regular)
     application.run()
 }

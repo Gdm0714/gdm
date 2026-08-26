@@ -20,6 +20,9 @@ final class AgentActivityIntegrationTests: XCTestCase {
             (.starting, "◔", "starting…", .active, true),
             (.active, "●", "active", .active, false),
             (.waiting, "◔", "waiting for input", .attention, false),
+            (.needsYou, "!", "Needs You", .attention, false),
+            (.handingOff, "⇢", "handing off…", .active, true),
+            (.verifying, "◐", "verifying", .active, false),
             (.stopping, "◑", "stopping…", .attention, true),
             (.interrupted, "⊘", "interrupted · not attached", .attention, false),
             (.launchFailed, "✕", "launch failed", .blocked, false),
@@ -36,6 +39,9 @@ final class AgentActivityIntegrationTests: XCTestCase {
         XCTAssertTrue(AgentActivityState.starting.isRunning)
         XCTAssertTrue(AgentActivityState.active.isRunning)
         XCTAssertTrue(AgentActivityState.waiting.isRunning)
+        XCTAssertTrue(AgentActivityState.needsYou.isRunning)
+        XCTAssertTrue(AgentActivityState.handingOff.isRunning)
+        XCTAssertTrue(AgentActivityState.verifying.isRunning)
         XCTAssertTrue(AgentActivityState.stopping.isRunning)
     }
 
@@ -124,7 +130,7 @@ final class AgentActivityIntegrationTests: XCTestCase {
             taskID: "task-a",
             specification: makeSpecification(agent: .codex, directory: worktree)
         )
-        XCTAssertEqual(first.state, .ended(.launchFailed("SwiftTerm did not create a PTY child")))
+        XCTAssertEqual(first.state, .ended(.launchFailed("terminal backend did not create a PTY child")))
         let second = try manager.start(
             taskID: "task-a",
             specification: makeSpecification(agent: .gemini, directory: worktree)
@@ -232,7 +238,7 @@ final class AgentActivityIntegrationTests: XCTestCase {
         for item in store.agentActivityItems {
             let fields = Set(Mirror(reflecting: item).children.compactMap(\.label))
             XCTAssertEqual(fields, [
-                "taskID", "agent", "state", "taskSlug", "branch", "worktreePath", "startedAt", "endedAt"
+                "taskID", "laneID", "agent", "state", "taskSlug", "branch", "worktreePath", "startedAt", "endedAt"
             ])
             XCTAssertTrue(fields.isDisjoint(with: [
                 "pid", "processIdentifier", "prompt", "command", "arguments", "environment", "transcript"
@@ -269,6 +275,97 @@ final class AgentActivityIntegrationTests: XCTestCase {
         XCTAssertEqual(store.agentActivitySummary(for: .codex).state, .ended)
         XCTAssertEqual(store.agentActivitySummary(for: .shell).state, .active)
         XCTAssertEqual(store.agentActivitySummary(for: .gemini).state, .idle)
+    }
+
+    @MainActor
+    func testAgentOperationsDemoBuildsFourTerminalLanesWithExplicitOwnership() {
+        var launchCount = 0
+        let manager = TerminalSessionManager { _, _, _ in
+            launchCount += 1
+            fatalError("Agent Operations demo must never launch a terminal process")
+        }
+        let store = WorkspaceStore(
+            repositoryURL: URL(fileURLWithPath: "/tmp/gdm-demo", isDirectory: true),
+            demoState: "agent-operations",
+            isDemo: true,
+            terminalSessions: manager
+        )
+
+        let terminalPanes = store.workbench.layout.root.leaves.compactMap { leaf -> TerminalPaneState? in
+            guard case .terminal(let terminal) = leaf.content else { return nil }
+            return terminal
+        }
+        XCTAssertEqual(launchCount, 0)
+        XCTAssertTrue(manager.snapshot().isEmpty)
+        XCTAssertEqual(terminalPanes.count, 4)
+        XCTAssertEqual(Set(terminalPanes.map(\.agent)), Set(AgentKind.allCases))
+        XCTAssertEqual(store.agentActivityItems.count, 4)
+        XCTAssertEqual(store.agentActivityLiveCount, 4)
+        XCTAssertEqual(store.agentActivitySummary(for: .codex).state, .needsYou)
+        XCTAssertEqual(store.agentActivitySummary(for: .claude).state, .active)
+        XCTAssertEqual(store.agentActivitySummary(for: .gemini).state, .verifying)
+        XCTAssertEqual(store.agentActivitySummary(for: .shell).state, .handingOff)
+
+        let coordination = store.agentActivityItems.compactMap(store.coordinationStatus(for:))
+        XCTAssertEqual(coordination.filter { $0.coordinationRole == .primary }.count, 1)
+        XCTAssertEqual(coordination.filter { $0.coordinationRole == .secondary }.count, 3)
+        XCTAssertEqual(coordination.filter(\.ownsInput).count, 1)
+        XCTAssertTrue(store.terminalTranscript(laneID: terminalPanes.first {
+            $0.agent == .codex
+        }?.laneID).contains("NEEDS YOU"))
+    }
+
+    @MainActor
+    func testAgentOperationsActionsFocusHandoffAndOpenDiffProofWithoutLaunchingProcesses() throws {
+        var launchCount = 0
+        let manager = TerminalSessionManager { _, _, _ in
+            launchCount += 1
+            fatalError("Agent Operations actions must not launch a demo process")
+        }
+        let store = WorkspaceStore(
+            repositoryURL: URL(fileURLWithPath: "/tmp/gdm-demo", isDirectory: true),
+            demoState: "agent-operations",
+            isDemo: true,
+            terminalSessions: manager
+        )
+        let codex = try XCTUnwrap(store.agentActivityItems.first { $0.agent == .codex })
+        let claude = try XCTUnwrap(store.agentActivityItems.first { $0.agent == .claude })
+        let initialDiff = store.diffText
+
+        store.focusAgentActivityItem(claude)
+        let focusedLane = try XCTUnwrap(store.workbench.layout.focusedLeaf).content
+        guard case .terminal(let focusedTerminal) = focusedLane else {
+            return XCTFail("Focus must reveal the selected terminal lane")
+        }
+        XCTAssertEqual(focusedTerminal.laneID.uuidString.lowercased(), claude.laneID)
+        XCTAssertTrue(store.coordinationStatus(for: claude)?.ownsInput == true)
+        XCTAssertEqual(
+            store.diffText,
+            initialDiff,
+            "Focusing an item in the selected task must not synchronously reload its repository details."
+        )
+
+        let target = try XCTUnwrap(store.handoffTargets(for: codex).first {
+            $0.identity.laneID == claude.laneID
+        })
+        XCTAssertEqual(store.handoffTargetLabel(target), "Claude")
+        store.handoffAgentActivityItem(codex, to: target.identity)
+        let refreshedClaude = try XCTUnwrap(store.agentActivityItems.first { $0.agent == .claude })
+        XCTAssertEqual(store.coordinationStatus(for: refreshedClaude)?.coordinationRole, .primary)
+
+        store.showDiff(for: refreshedClaude)
+        guard case .diff = store.workbench.layout.focusedLeaf?.content else {
+            return XCTFail("Diff action must reveal and focus a Diff pane")
+        }
+        store.showProof(for: refreshedClaude)
+        guard case .proof = store.workbench.layout.focusedLeaf?.content else {
+            return XCTFail("Proof action must reveal and focus a Proof pane")
+        }
+        XCTAssertEqual(store.diffText, initialDiff)
+
+        store.stopAgentActivityItem(refreshedClaude)
+        XCTAssertEqual(launchCount, 0)
+        XCTAssertTrue(manager.snapshot().isEmpty)
     }
 
     @MainActor
@@ -316,6 +413,40 @@ final class AgentActivityIntegrationTests: XCTestCase {
         XCTAssertEqual(store.selectedAgent, .shell)
         XCTAssertTrue(store.agentActivityItems.isEmpty)
         XCTAssertEqual(store.agentActivitySummaries.map(\.agent), AgentKind.allCases)
+    }
+
+    @MainActor
+    func testDetachedLiveSessionRemainsVisibleAndCanBeStopped() async throws {
+        let root = try makeTemporaryDirectory()
+        let fixture = ActivityManagerFixture()
+        let manager = fixture.makeManager()
+        let key = TerminalSessionLaneKey(taskID: "missing-task", laneID: UUID().uuidString.lowercased())
+        _ = try manager.start(
+            key: key,
+            specification: makeSpecification(agent: .codex, directory: root)
+        )
+        let store = WorkspaceStore(repositoryURL: root, terminalSessions: manager)
+        store.tasks = []
+
+        store.refreshAgentActivity()
+
+        XCTAssertEqual(store.agentActivityLiveCount, 1)
+        let detached = try XCTUnwrap(store.agentActivityItems.first)
+        XCTAssertEqual(detached.taskSlug, "Detached session")
+        XCTAssertFalse(store.isAgentActivityItemAttached(detached))
+
+        let otherRepository = try makeTemporaryDirectory()
+        store.switchRepository(to: otherRepository)
+
+        XCTAssertEqual(store.repositoryURL.standardizedFileURL, root.standardizedFileURL)
+        XCTAssertTrue(store.errorMessage?.contains("session 1개") == true)
+        XCTAssertTrue(store.errorMessage?.contains("Codex") == true)
+        XCTAssertEqual(store.agentActivityLiveCount, 1)
+
+        store.stopAgentActivityItem(detached)
+        try await waitUntil { !manager.hasActiveSessions }
+
+        XCTAssertEqual(store.agentActivityLiveCount, 0)
     }
 
     private func makeTemporaryDirectory() throws -> URL {
@@ -379,12 +510,56 @@ final class AgentActivityIntegrationTests: XCTestCase {
         return WorkspaceTask(
             id: id,
             slug: slug,
-            document: nil,
+            document: WorkDocument(
+                slug: slug,
+                brief: "Agent activity fixture",
+                createdAt: "2026-08-07T10:00:00Z",
+                done: false,
+                doneAt: nil,
+                auditRequired: false,
+                audit: nil,
+                delivery: nil,
+                checks: [CheckRecord(
+                    id: "c1",
+                    desc: "activity fixture remains runnable",
+                    cmd: "true",
+                    expect: "command succeeds",
+                    manual: false,
+                    kind: "behavior",
+                    expert: false,
+                    status: "open",
+                    redEvidence: nil,
+                    evidence: nil
+                )],
+                contract: WorkContractRecord(
+                    required: ["preserve activity"],
+                    forbidden: ["duplicate session"],
+                    commit: "forbidden",
+                    risk: "low",
+                    verification: "deterministic"
+                )
+            ),
             location: .worktree(record: record, verifiedURL: worktree),
             health: .ready,
             statusMessage: nil
         )
     }
+
+    @MainActor
+    private func waitUntil(
+        timeoutIterations: Int = 500,
+        condition: @MainActor () -> Bool
+    ) async throws {
+        for _ in 0..<timeoutIterations {
+            if condition() { return }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        throw AgentActivityTestError.timeout
+    }
+}
+
+private enum AgentActivityTestError: Error {
+    case timeout
 }
 
 @MainActor
@@ -401,9 +576,14 @@ private final class ActivityManagerFixture {
                 generation: generation,
                 specification: specification,
                 terminalDriver: ActivityTerminalDriver(pid: nextPID),
+                signaler: ActivitySignaler(),
+                childReaper: ActivityReaper(),
                 processGroupResolver: ActivityGroupResolver(matchesChild: !shouldRemainStarting),
                 clock: ActivityClock(),
                 stopPolicy: TerminalStopPolicy(
+                    gracePeriodNanoseconds: 0,
+                    pollIntervalNanoseconds: 0,
+                    postKillReapTimeoutNanoseconds: 1,
                     ownershipStabilizationTimeoutNanoseconds: 0,
                     ownershipPollIntervalNanoseconds: 0
                 )
@@ -440,4 +620,15 @@ private struct ActivityGroupResolver: ProcessGroupResolving {
 private struct ActivityClock: StopClock {
     func nowNanoseconds() -> UInt64 { 0 }
     func sleep(nanoseconds: UInt64) async { await Task.yield() }
+}
+
+private actor ActivityReaper: ChildReaping {
+    func poll(processIdentifier: pid_t) async -> ChildWaitResult {
+        .reaped(rawStatus: 0)
+    }
+}
+
+private struct ActivitySignaler: ProcessSignaling, @unchecked Sendable {
+    func sendToProcessGroup(_ processGroup: pid_t, signal: Int32) -> POSIXSignalResult { .success }
+    func sendToProcess(_ processIdentifier: pid_t, signal: Int32) -> POSIXSignalResult { .success }
 }

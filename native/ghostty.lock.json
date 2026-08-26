@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/ghostty-org/ghostty.git",
+  "commit": "bb876a0d286b661089b7f40dd3a6488d629beffe",
+  "license": "MIT",
+  "zigVersion": "0.16.0",
+  "zigOverlay": "github:mitchellh/zig-overlay/5386fea92c45b154bbeb52d14ef5504f82eda86c#brew.\"0.16.0\"",
+  "xcframeworkTarget": "native",
+  "optimize": "ReleaseFast",
+  "apiHeaderSha256": "78e9c24b99d68dd1638d877ff9e75334a2b2ff6b399391f5ba11f3c66ce3d782",
+  "moduleMapSha256": "89611e758f375e218a49fd4f07919b708d240138149f6398425664b72b37d8d5",
+  "exportedSymbolsSha256": "0cb33a7cea43f0c48d715346c5a2cb01ffd27c9681201c12208d6ab8e67f4825",
+  "resourcesSha256": "fa3160779cdf94db5bb475ebd69d9a98ad27bff7c2fd832aa48b36fe720a7d99"
+}

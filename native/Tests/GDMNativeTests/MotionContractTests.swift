@@ -53,16 +53,17 @@ final class MotionContractTests: XCTestCase {
 
     func testPulseExistsOnlyForTruthfullyUnsettledAgentStates() {
         let allStates: [AgentActivityState] = [
-            .unavailable, .idle, .starting, .active, .waiting,
+            .unavailable, .idle, .starting, .active, .waiting, .needsYou,
+            .handingOff, .verifying,
             .stopping, .interrupted, .launchFailed, .ended
         ]
         let unsettled = allStates.filter(\.isUnsettled)
 
-        XCTAssertEqual(unsettled, [.starting, .stopping])
+        XCTAssertEqual(unsettled, [.starting, .handingOff, .stopping])
         for state in allStates {
             XCTAssertEqual(
                 MotionPolicy.allowsPulse(isUnsettled: state.isUnsettled, reduceMotion: false),
-                state == .starting || state == .stopping
+                state == .starting || state == .handingOff || state == .stopping
             )
         }
         XCTAssertFalse(MotionPolicy.allowsPulse(isUnsettled: true, reduceMotion: true))
@@ -71,7 +72,8 @@ final class MotionContractTests: XCTestCase {
 
     func testAgentLivenessNeverUsesProvenGreen() {
         let states: [AgentActivityState] = [
-            .unavailable, .idle, .starting, .active, .waiting,
+            .unavailable, .idle, .starting, .active, .waiting, .needsYou,
+            .handingOff, .verifying,
             .stopping, .interrupted, .launchFailed, .ended
         ]
         XCTAssertFalse(states.contains { $0.tone == .proven })

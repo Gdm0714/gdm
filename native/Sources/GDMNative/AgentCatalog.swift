@@ -53,6 +53,39 @@ struct AgentLaunchSpecification: Equatable, Sendable {
             .map { "\($0.key)=\($0.value)" }
             .sorted()
     }
+
+    func addingEnvironment(_ values: [String: String]) -> Self {
+        var updated = environment
+        for (key, value) in values { updated[key] = value }
+        return Self(
+            agent: agent,
+            executableURL: executableURL,
+            arguments: arguments,
+            environment: updated,
+            currentDirectory: currentDirectory
+        )
+    }
+
+    func appendingArgument(_ value: String) -> Self {
+        Self(
+            agent: agent,
+            executableURL: executableURL,
+            arguments: arguments + [value],
+            environment: environment,
+            currentDirectory: currentDirectory
+        )
+    }
+
+    func prependingPathDirectory(_ directory: URL) -> Self {
+        let path = directory.standardizedFileURL.path
+        guard path.hasPrefix("/") else { return self }
+        var entries = (environment["PATH"] ?? "")
+            .split(separator: ":")
+            .map(String.init)
+        entries.removeAll { $0 == path }
+        entries.insert(path, at: 0)
+        return addingEnvironment(["PATH": entries.joined(separator: ":")])
+    }
 }
 
 enum AgentCatalogError: LocalizedError, Equatable {
@@ -101,6 +134,39 @@ struct AgentCatalog: Sendable {
         }
 
         var launchEnvironment = environment
+        // A terminal embedded in Gidem is a new session boundary. Never leak
+        // the parent multiplexer identity into its shell or agent processes;
+        // doing so can reattach an existing Herdr/tmux/zellij workspace.
+        let parentSessionKeys = launchEnvironment.keys.filter { key in
+            key == "TMUX"
+                || key == "ZELLIJ"
+                || ["TMUX_", "HERDR_", "GDMUX_", "CMUX_", "ZELLIJ_"].contains {
+                    key.hasPrefix($0)
+                }
+        }
+        for key in parentSessionKeys {
+            launchEnvironment.removeValue(forKey: key)
+        }
+        // Gidem owns a fresh interactive terminal boundary. A parent automation
+        // session may deliberately disable ANSI output, but that opt-out must
+        // not make an embedded Ghostty session monochrome.
+        launchEnvironment.removeValue(forKey: "NO_COLOR")
+        for key in ["FORCE_COLOR", "CLICOLOR", "CLICOLOR_FORCE"] {
+            let value = launchEnvironment[key]?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+            if value == "0" || value == "false" || value == "no" {
+                launchEnvironment.removeValue(forKey: key)
+            }
+        }
+        launchEnvironment["GIDEM_TERMINAL"] = "1"
+        // Finder-launched applications inherit a minimal PATH. Agents often
+        // launch MCP servers as child commands (for example, `npx`), so give
+        // the child an ordered, absolute search path that includes every
+        // executable-discovery directory.
+        launchEnvironment["PATH"] = launchPathDirectories
+            .map(\.path)
+            .joined(separator: ":")
         launchEnvironment["TERM"] = "xterm-256color"
         launchEnvironment["COLORTERM"] = "truecolor"
         let localeKeys = ["LC_ALL", "LC_CTYPE", "LANG"]
@@ -164,25 +230,61 @@ struct AgentCatalog: Sendable {
             return uniqueAbsoluteDirectories(configuredSearchDirectories)
         }
 
-        let pathDirectories = (environment["PATH"] ?? "")
-            .split(separator: ":", omittingEmptySubsequences: true)
-            .map(String.init)
-            .filter { $0.hasPrefix("/") }
-            .map { URL(fileURLWithPath: $0, isDirectory: true) }
-        let conventionalDirectories = [
+        return launchPathDirectories
+    }
+
+    private var launchPathDirectories: [URL] {
+        let inheritedDirectories = (environment["PATH"] ?? "")
+            .split(separator: ":", omittingEmptySubsequences: false)
+            .compactMap { entry -> URL? in
+                let path = String(entry)
+                guard path.hasPrefix("/") else { return nil }
+                return URL(fileURLWithPath: path, isDirectory: true)
+            }
+        return uniqueAbsoluteDirectories(
+            inheritedDirectories
+                + (configuredSearchDirectories ?? [])
+                + conventionalPathDirectories
+        )
+    }
+
+    private var conventionalPathDirectories: [URL] {
+        // PATH permits absent directories. Keep these deterministic even when a
+        // package manager/profile has not been installed yet (or appears later).
+        var directories = [
             homeDirectory.appendingPathComponent(".local/bin", isDirectory: true),
             URL(fileURLWithPath: "/opt/homebrew/bin", isDirectory: true),
             URL(fileURLWithPath: "/usr/local/bin", isDirectory: true),
-            homeDirectory.appendingPathComponent(".bun/bin", isDirectory: true)
+            homeDirectory.appendingPathComponent(".bun/bin", isDirectory: true),
+            homeDirectory.appendingPathComponent(".nix-profile/bin", isDirectory: true)
         ]
-        return uniqueAbsoluteDirectories(pathDirectories + conventionalDirectories)
+
+        let accountName = homeDirectory.lastPathComponent
+        if !accountName.isEmpty {
+            directories.append(
+                URL(fileURLWithPath: "/etc/profiles/per-user", isDirectory: true)
+                    .appendingPathComponent(accountName, isDirectory: true)
+                    .appendingPathComponent("bin", isDirectory: true)
+            )
+        }
+
+        directories.append(contentsOf: [
+            URL(fileURLWithPath: "/nix/var/nix/profiles/default/bin", isDirectory: true),
+            URL(fileURLWithPath: "/run/current-system/sw/bin", isDirectory: true),
+            URL(fileURLWithPath: "/usr/bin", isDirectory: true),
+            URL(fileURLWithPath: "/bin", isDirectory: true),
+            URL(fileURLWithPath: "/usr/sbin", isDirectory: true),
+            URL(fileURLWithPath: "/sbin", isDirectory: true)
+        ])
+        return directories
     }
 
     private func uniqueAbsoluteDirectories(_ directories: [URL]) -> [URL] {
         var seen: Set<String> = []
         return directories.compactMap { directory in
+            guard directory.isFileURL, directory.path.hasPrefix("/") else { return nil }
             let standardized = directory.standardizedFileURL
-            guard standardized.path.hasPrefix("/"), seen.insert(standardized.path).inserted else {
+            guard seen.insert(standardized.path).inserted else {
                 return nil
             }
             return standardized

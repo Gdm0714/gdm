@@ -7,10 +7,37 @@ import XCTest
 
 final class WorktreeProofLoopIntegrationTests: XCTestCase {
     @MainActor
+    func testWorkspaceStoreCreatesTaskWithoutRepositoryLocalGDM() async throws {
+        let fixture = try GitFixture.make(installGDM: false)
+        defer { fixture.remove() }
+        let store = WorkspaceStore(repositoryURL: fixture.repositoryURL)
+
+        store.createTask(
+            slug: "arbitrary-repository",
+            brief: "use the Gidem-owned toolchain",
+            required: "preserve the selected repository",
+            forbidden: "automatic commits",
+            risk: "medium"
+        )
+        for _ in 0..<1_000 where store.isProvisioning {
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+
+        XCTAssertFalse(store.isProvisioning)
+        XCTAssertNil(store.errorMessage)
+        let task = try XCTUnwrap(store.tasks.first(where: { $0.slug == "arbitrary-repository" }))
+        XCTAssertEqual(store.verificationPlanState(for: task), .needsPlan)
+        XCTAssertTrue(task.location.registryRecord?.checksApprovalRequired == true)
+    }
+
+    @MainActor
     func testCleanupPendingStopRemainsRunningVisibleAndPersistedActive() async throws {
         let fixture = try GitFixture.make()
         defer { fixture.remove() }
-        let service = WorktreeService(repositoryURL: fixture.repositoryURL)
+        let service = WorktreeService(
+            repositoryURL: fixture.repositoryURL,
+            gdmInvocation: fixture.gdmInvocation
+        )
         let record = try service.provision(
             WorktreeProvisioningRequest(slug: "cleanup-pending", brief: "preserve active cleanup")
         )
@@ -64,7 +91,10 @@ final class WorktreeProofLoopIntegrationTests: XCTestCase {
     func testMappedWorkspaceSymlinkSwapPreventsAgentLaunch() async throws {
         let fixture = try GitFixture.make()
         defer { fixture.remove() }
-        let service = WorktreeService(repositoryURL: fixture.repositoryURL)
+        let service = WorktreeService(
+            repositoryURL: fixture.repositoryURL,
+            gdmInvocation: fixture.gdmInvocation
+        )
         let record = try service.provision(
             WorktreeProvisioningRequest(slug: "launch-symlink", brief: "reject stale cwd")
         )
@@ -176,10 +206,14 @@ final class WorktreeProofLoopIntegrationTests: XCTestCase {
             let fixture = try GitFixture.make()
             defer { fixture.remove() }
             let slug = "nonzero-\(action.rawValue)"
-            let service = WorktreeService(repositoryURL: fixture.repositoryURL)
+            let service = WorktreeService(
+                repositoryURL: fixture.repositoryURL,
+                gdmInvocation: fixture.gdmInvocation
+            )
             let record = try service.provision(
                 WorktreeProvisioningRequest(slug: slug, brief: "preserve command error")
             )
+            try fixture.enableLegacyApprovalCompatibility(for: [record.id])
             if action != .pass {
                 let pass = CommandRunner.run(
                     executable: fixture.gdmURL.path,
@@ -233,11 +267,15 @@ final class WorktreeProofLoopIntegrationTests: XCTestCase {
         for (component, action) in scenarios {
             let fixture = try GitFixture.make()
             defer { fixture.remove() }
-            let service = WorktreeService(repositoryURL: fixture.repositoryURL)
+            let service = WorktreeService(
+                repositoryURL: fixture.repositoryURL,
+                gdmInvocation: fixture.gdmInvocation
+            )
             let slug = "symlink-\(component.rawValue)"
             let record = try service.provision(
                 WorktreeProvisioningRequest(slug: slug, brief: "reject symlink state")
             )
+            try fixture.enableLegacyApprovalCompatibility(for: [record.id])
             let worktreeURL = URL(fileURLWithPath: record.worktreePath, isDirectory: true)
             if action != .pass {
                 let pass = CommandRunner.run(
@@ -302,7 +340,8 @@ final class WorktreeProofLoopIntegrationTests: XCTestCase {
         let sabotagingRunner = ProvisionStateSabotagingRunner(sandboxURL: fixture.sandboxURL)
         let service = WorktreeService(
             repositoryURL: fixture.repositoryURL,
-            runner: sabotagingRunner.runner
+            runner: sabotagingRunner.runner,
+            gdmInvocation: fixture.gdmInvocation
         )
 
         XCTAssertThrowsError(
@@ -331,13 +370,17 @@ final class WorktreeProofLoopIntegrationTests: XCTestCase {
     func testVerificationStateStaysScopedToOriginTaskAcrossSelectionChanges() async throws {
         let fixture = try GitFixture.make()
         defer { fixture.remove() }
-        let service = WorktreeService(repositoryURL: fixture.repositoryURL)
-        _ = try service.provision(
+        let service = WorktreeService(
+            repositoryURL: fixture.repositoryURL,
+            gdmInvocation: fixture.gdmInvocation
+        )
+        let taskARecord = try service.provision(
             WorktreeProvisioningRequest(slug: "scope-task-a", brief: "task A")
         )
-        _ = try service.provision(
+        let taskBRecord = try service.provision(
             WorktreeProvisioningRequest(slug: "scope-task-b", brief: "task B")
         )
+        try fixture.enableLegacyApprovalCompatibility(for: [taskARecord.id, taskBRecord.id])
         let blocker = BlockingMutationRunner()
         let store = WorkspaceStore(
             repositoryURL: fixture.repositoryURL,
@@ -384,7 +427,10 @@ final class WorktreeProofLoopIntegrationTests: XCTestCase {
             work: makeWork(slug: "legacy-agent", createdAt: "2026-08-07T00:00:00.000Z"),
             to: fixture.repositoryURL
         )
-        let service = WorktreeService(repositoryURL: fixture.repositoryURL)
+        let service = WorktreeService(
+            repositoryURL: fixture.repositoryURL,
+            gdmInvocation: fixture.gdmInvocation
+        )
         _ = try service.provision(
             WorktreeProvisioningRequest(slug: "mapped-agent", brief: "persist selected agent")
         )
@@ -410,7 +456,10 @@ final class WorktreeProofLoopIntegrationTests: XCTestCase {
             work: makeWork(slug: "legacy-live-agent", createdAt: "2026-08-07T00:00:00.000Z"),
             to: fixture.repositoryURL
         )
-        let service = WorktreeService(repositoryURL: fixture.repositoryURL)
+        let service = WorktreeService(
+            repositoryURL: fixture.repositoryURL,
+            gdmInvocation: fixture.gdmInvocation
+        )
         _ = try service.provision(
             WorktreeProvisioningRequest(slug: "mapped-selector", brief: "switch target")
         )
@@ -469,7 +518,10 @@ final class WorktreeProofLoopIntegrationTests: XCTestCase {
         let fixture = try GitFixture.make()
         defer { fixture.remove() }
 
-        let service = WorktreeService(repositoryURL: fixture.repositoryURL)
+        let service = WorktreeService(
+            repositoryURL: fixture.repositoryURL,
+            gdmInvocation: fixture.gdmInvocation
+        )
         let record = try service.provision(
             WorktreeProvisioningRequest(
                 slug: "proof-loop",
@@ -541,7 +593,10 @@ final class WorktreeProofLoopIntegrationTests: XCTestCase {
         defer { fixture.remove() }
         let recorder = ProvisioningProgressRecorder()
 
-        let record = try WorktreeService(repositoryURL: fixture.repositoryURL).provision(
+        let record = try WorktreeService(
+            repositoryURL: fixture.repositoryURL,
+            gdmInvocation: fixture.gdmInvocation
+        ).provision(
             WorktreeProvisioningRequest(
                 slug: "truthful-progress",
                 brief: "emit real provisioning boundaries"
@@ -568,7 +623,10 @@ final class WorktreeProofLoopIntegrationTests: XCTestCase {
         let legacy = makeWork(slug: "legacy-root", createdAt: "2026-08-07T00:00:00.000Z")
         try write(work: legacy, to: fixture.repositoryURL)
 
-        let service = WorktreeService(repositoryURL: fixture.repositoryURL)
+        let service = WorktreeService(
+            repositoryURL: fixture.repositoryURL,
+            gdmInvocation: fixture.gdmInvocation
+        )
         let record = try service.provision(
             WorktreeProvisioningRequest(slug: "mapped-task", brief: "mapped task")
         )
@@ -596,7 +654,10 @@ final class WorktreeProofLoopIntegrationTests: XCTestCase {
     func testTraversalLegacyBranchAndDanglingPathCollisionsFailBeforeGitMutation() throws {
         let fixture = try GitFixture.make()
         defer { fixture.remove() }
-        let service = WorktreeService(repositoryURL: fixture.repositoryURL)
+        let service = WorktreeService(
+            repositoryURL: fixture.repositoryURL,
+            gdmInvocation: fixture.gdmInvocation
+        )
 
         XCTAssertThrowsError(
             try service.provision(
@@ -663,7 +724,10 @@ final class WorktreeProofLoopIntegrationTests: XCTestCase {
     func testDuplicateReservationIsRejectedAndOriginalReadyWorktreeIsUntouched() throws {
         let fixture = try GitFixture.make()
         defer { fixture.remove() }
-        let service = WorktreeService(repositoryURL: fixture.repositoryURL)
+        let service = WorktreeService(
+            repositoryURL: fixture.repositoryURL,
+            gdmInvocation: fixture.gdmInvocation
+        )
         let original = try service.provision(
             WorktreeProvisioningRequest(slug: "duplicate-task", brief: "first")
         )
@@ -688,7 +752,10 @@ final class WorktreeProofLoopIntegrationTests: XCTestCase {
     func testFailedPlanInitPreservesWorktreeBranchPartialStateAndFailedRecord() throws {
         let fixture = try GitFixture.make(gdmMode: .failPlan)
         defer { fixture.remove() }
-        let service = WorktreeService(repositoryURL: fixture.repositoryURL)
+        let service = WorktreeService(
+            repositoryURL: fixture.repositoryURL,
+            gdmInvocation: fixture.gdmInvocation
+        )
 
         XCTAssertThrowsError(
             try service.provision(
@@ -720,7 +787,10 @@ final class WorktreeProofLoopIntegrationTests: XCTestCase {
     func testRecoveryPromotesCompleteCreatingRecordButMissingMappingNeverFallsBackToRoot() throws {
         let fixture = try GitFixture.make()
         defer { fixture.remove() }
-        let service = WorktreeService(repositoryURL: fixture.repositoryURL)
+        let service = WorktreeService(
+            repositoryURL: fixture.repositoryURL,
+            gdmInvocation: fixture.gdmInvocation
+        )
         let ready = try service.provision(
             WorktreeProvisioningRequest(slug: "recover-task", brief: "recover fixture")
         )
@@ -894,7 +964,21 @@ private extension WorktreeProofLoopIntegrationTests {
     func write(work: WorkDocument, to workspaceURL: URL) throws {
         let directory = workspaceURL.appendingPathComponent(".gdm/\(work.slug)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        var data = try JSONEncoder().encode(work)
+        let encoded = try JSONEncoder().encode(work)
+        guard var object = try JSONSerialization.jsonObject(with: encoded) as? [String: Any],
+              var contract = object["contract"] as? [String: Any] else {
+            throw NSError(
+                domain: "GDMNative.WorktreeTests.Fixture",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "fixture work contract encoding failed"]
+            )
+        }
+        // `gdm plan source` validates the complete CLI contract before adding
+        // the source baseline. Keep this legacy Swift fixture CLI-shaped so the
+        // test exercises that boundary instead of bypassing it.
+        contract["activeHabits"] = []
+        object["contract"] = contract
+        var data = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
         data.append(0x0A)
         try data.write(to: directory.appendingPathComponent("checks.json"))
     }
@@ -1123,7 +1207,28 @@ private struct GitFixture {
     let repositoryURL: URL
     let gdmURL: URL
 
-    static func make(gdmMode: GDMMode = .success) throws -> GitFixture {
+    var gdmInvocation: CommandInvocation {
+        CommandInvocation(executable: gdmURL.path, prefixArguments: [])
+    }
+
+    /// These mutation-boundary tests predate verification-plan approval and
+    /// intentionally exercise the documented nil compatibility path. New
+    /// provisioning behavior remains covered by the c1 regression above.
+    func enableLegacyApprovalCompatibility(for recordIDs: [UUID]) throws {
+        let ids = Set(recordIDs)
+        _ = try WorkspaceRegistry(repositoryURL: repositoryURL).update { document in
+            for index in document.tasks.indices where ids.contains(document.tasks[index].id) {
+                document.tasks[index].checksApprovalRequired = nil
+                document.tasks[index].approvedChecksFingerprint = nil
+                document.tasks[index].checksApprovedAt = nil
+            }
+        }
+    }
+
+    static func make(
+        gdmMode: GDMMode = .success,
+        installGDM: Bool = true
+    ) throws -> GitFixture {
         let sandbox = FileManager.default.temporaryDirectory
             .appendingPathComponent("GDMNativeWorktreeTests-\(UUID().uuidString)", isDirectory: true)
         let repository = sandbox.appendingPathComponent("fixture-repository", isDirectory: true)
@@ -1140,7 +1245,9 @@ private struct GitFixture {
         try fixture.git(["add", "README.md"])
         try fixture.git(["commit", "-m", "fixture base"])
         try fixture.git(["branch", "-M", "main"])
-        try fixture.installGDM(mode: gdmMode)
+        if installGDM {
+            try fixture.installGDM(mode: gdmMode)
+        }
         return fixture
     }
 
@@ -1200,9 +1307,9 @@ private struct GitFixture {
         write_checks() {
           status="$1"
           done_value="$2"
-          evidence="null"
+          evidence_field=""
           if [ "$status" = "proven" ]; then
-            evidence='{"observed":".gdm/'"$slug"'/out/c1.txt","sha256":"fixture","exitCode":0,"manual":false,"note":null,"reviewer":null,"at":"2026-08-07T00:00:01.000Z"}'
+            evidence_field=', "evidence": {"observed":".gdm/'"$slug"'/out/c1.txt","sha256":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","exitCode":0,"manual":false,"at":"2026-08-07T00:00:01.000Z"}'
           fi
           cat > "$state_dir/checks.json" <<JSON
         {
@@ -1210,10 +1317,7 @@ private struct GitFixture {
           "brief": "fixture work",
           "createdAt": "2026-08-07T00:00:00.000Z",
           "done": $done_value,
-          "doneAt": null,
           "auditRequired": false,
-          "audit": null,
-          "delivery": null,
           "checks": [{
             "id": "c1",
             "desc": "fixture check",
@@ -1222,13 +1326,12 @@ private struct GitFixture {
             "manual": false,
             "kind": "behavior",
             "expert": false,
-            "status": "$status",
-            "redEvidence": null,
-            "evidence": $evidence
+            "status": "$status"$evidence_field
           }],
           "contract": {
             "required": [],
             "forbidden": [],
+            "activeHabits": [],
             "commit": "forbidden",
             "risk": "low",
             "verification": "deterministic"

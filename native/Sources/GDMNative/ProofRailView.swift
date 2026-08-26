@@ -11,11 +11,11 @@ struct ProofRailView: View {
                 Spacer()
                 if let work = store.selectedWork {
                     MotionCounterText(
-                        "\(work.provenCount) / \(work.checks.count) PROVEN",
+                        planCounter(for: work),
                         settled: store.activeCheckID == nil
                     )
                         .font(.system(size: DesignTokens.labelSize, weight: .medium, design: .monospaced))
-                        .foregroundStyle(work.canComplete ? DesignTokens.proven : DesignTokens.attention)
+                        .foregroundStyle(store.canCompleteSelectedTask ? DesignTokens.proven : DesignTokens.attention)
                 }
             }
 
@@ -23,6 +23,7 @@ struct ProofRailView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
                         ContractSection(work: work)
+                        VerificationPlanSection(store: store, work: work)
                         StageStrip(work: work, store: store)
                         ForEach(work.checks) { check in
                             ProofCheckRow(check: check, state: store.displayState(for: check))
@@ -53,6 +54,15 @@ struct ProofRailView: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel("완료 근거 레일")
     }
+
+    private func planCounter(for work: WorkDocument) -> String {
+        switch store.selectedVerificationPlanState {
+        case .needsPlan: "PLAN NEEDED"
+        case .reviewRequired: "\(work.checks.count) TO REVIEW"
+        case .approved: "\(work.provenCount) / \(work.checks.count) PROVEN"
+        case .unavailable: "UNAVAILABLE"
+        }
+    }
 }
 
 private struct ContractSection: View {
@@ -66,23 +76,196 @@ private struct ContractSection: View {
                 .foregroundStyle(DesignTokens.textPrimary)
                 .lineSpacing(DesignTokens.space1)
                 .fixedSize(horizontal: false, vertical: true)
-            if let required = work.contract.required.first {
-                Text("필수 · \(required)")
-                    .font(.system(size: DesignTokens.metaSize))
-                    .foregroundStyle(DesignTokens.textSecondary)
-                    .lineLimit(2)
-            }
-            if let forbidden = work.contract.forbidden.first {
-                Text("금지 · \(forbidden)")
-                    .font(.system(size: DesignTokens.metaSize))
-                    .foregroundStyle(DesignTokens.textSecondary)
-                    .lineLimit(2)
-            }
+            ContractValueGroup(label: "필수", values: work.contract.required)
+            ContractValueGroup(label: "금지", values: work.contract.forbidden)
+            ContractValueGroup(label: "가정", values: work.contract.assumptions ?? [])
+            ContractValueGroup(label: "불확실성", values: work.contract.uncertainties ?? [])
+            ContractValueGroup(label: "허용 경로", values: work.contract.allowedPaths ?? ["."])
+            ContractValueGroup(label: "금지 경로", values: work.contract.forbiddenPaths ?? [])
+            ContractValueGroup(label: "중단 조건", values: work.contract.stopConditions ?? [])
+            ContractMetadataRow(label: "커밋", value: normalizedCommitPolicy)
+            ContractMetadataRow(label: "위험도", value: work.contract.risk ?? "low")
+            ContractMetadataRow(label: "검증", value: work.contract.verification ?? "deterministic")
+            ContractMetadataRow(label: "독립 검수", value: (work.auditRequired ?? false) ? "필수" : "선택")
+            ContractMetadataRow(
+                label: "단순화 검토",
+                value: (work.contract.simplificationRequired ?? false) ? "필수" : "선택"
+            )
         }
         .padding(DesignTokens.space3)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(DesignTokens.surfacePanel)
         .overlay(alignment: .bottom) { TokenDivider() }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("작업 계약")
+    }
+
+    private var normalizedCommitPolicy: String {
+        let value = work.contract.commit ?? "forbidden"
+        return value.isEmpty ? "forbidden" : value
+    }
+}
+
+private struct ContractValueGroup: View {
+    let label: String
+    let values: [String]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.space1) {
+            Text(label.uppercased())
+                .font(.system(size: DesignTokens.labelSize, weight: .medium, design: .monospaced))
+                .foregroundStyle(DesignTokens.textTertiary)
+            if values.isEmpty {
+                Text("없음")
+                    .font(.system(size: DesignTokens.metaSize))
+                    .foregroundStyle(DesignTokens.textTertiary)
+            } else {
+                ForEach(Array(values.enumerated()), id: \.offset) { _, value in
+                    Text("· \(value)")
+                        .font(.system(size: DesignTokens.metaSize))
+                        .foregroundStyle(DesignTokens.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label), \(values.isEmpty ? "없음" : values.joined(separator: ", "))")
+    }
+}
+
+private struct ContractMetadataRow: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: DesignTokens.space2) {
+            Text(label.uppercased())
+                .font(.system(size: DesignTokens.labelSize, weight: .medium, design: .monospaced))
+                .foregroundStyle(DesignTokens.textTertiary)
+            Spacer(minLength: DesignTokens.space2)
+            Text(value)
+                .font(.system(size: DesignTokens.metaSize, design: .monospaced))
+                .foregroundStyle(DesignTokens.textSecondary)
+                .multilineTextAlignment(.trailing)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label), \(value)")
+    }
+}
+
+private struct VerificationPlanSection: View {
+    @ObservedObject var store: WorkspaceStore
+    let work: WorkDocument
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.space2) {
+            HStack(spacing: DesignTokens.space2) {
+                SignalMarker(glyph: glyph, label: label, tone: tone)
+                Spacer(minLength: 0)
+                if state == .reviewRequired {
+                    Text("\(work.checks.count) CHECKS")
+                        .font(.system(size: DesignTokens.metaSize, design: .monospaced))
+                        .foregroundStyle(DesignTokens.textTertiary)
+                }
+            }
+
+            Text(title)
+                .font(.system(size: DesignTokens.bodySize, weight: .semibold))
+                .foregroundStyle(DesignTokens.textPrimary)
+            Text(detail)
+                .font(.system(size: DesignTokens.metaSize))
+                .foregroundStyle(DesignTokens.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            switch state {
+            case .needsPlan:
+                Button(action: { store.startVerificationPlanning() }) {
+                    Text(store.isVerificationPlanningPreparationPending
+                        ? "소스 기준점 확인 중…"
+                        : "\(plannerName)로 검증 계획 만들기")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(OperationalButtonStyle(emphasized: true))
+                .disabled(!canPlan)
+                .accessibilityHint("에이전트에게 계획 전용 요청을 보내며, 이후 소스나 Git index가 바뀌면 승인이 차단됩니다")
+            case .reviewRequired:
+                Button(action: store.approveSelectedVerificationPlan) {
+                    Text(store.isPlanApprovalPending ? "변경 여부 확인 중…" : "검증 계획 승인")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(OperationalButtonStyle(emphasized: true))
+                .disabled(!store.canApproveSelectedVerificationPlan)
+
+                Button(action: { store.startVerificationPlanning() }) {
+                    Text("\(plannerName)로 계획 다시 검토")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(OperationalButtonStyle())
+                .disabled(!canPlan)
+            case .approved, .unavailable:
+                EmptyView()
+            }
+        }
+        .padding(DesignTokens.space3)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(state == .reviewRequired ? DesignTokens.surfaceSelected : DesignTokens.surfacePanel)
+        .overlay(alignment: .bottom) { TokenDivider() }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("검증 계획, \(label)")
+    }
+
+    private var state: VerificationPlanState { store.selectedVerificationPlanState }
+    private var plannerName: String { store.verificationPlannerAgent?.displayName ?? "AI agent" }
+    private var canPlan: Bool {
+        !store.isDemo
+            && !store.isCommandRunning
+            && !store.isPlanApprovalPending
+            && !store.isVerificationPlanningPreparationPending
+            && store.selectedTask?.canMutate == true
+            && store.verificationPlannerAgent != nil
+    }
+    private var glyph: String {
+        switch state {
+        case .approved: "✓"
+        case .reviewRequired: "◔"
+        case .needsPlan: "○"
+        case .unavailable: "⊘"
+        }
+    }
+    private var label: String {
+        switch state {
+        case .approved: "PLAN APPROVED"
+        case .reviewRequired: "REVIEW REQUIRED"
+        case .needsPlan: "PLAN NEEDED"
+        case .unavailable: "UNAVAILABLE"
+        }
+    }
+    private var tone: SignalTone {
+        switch state {
+        case .approved: .proven
+        case .reviewRequired, .needsPlan: .attention
+        case .unavailable: .blocked
+        }
+    }
+    private var title: String {
+        switch state {
+        case .approved: "검증 계획 준비됨"
+        case .reviewRequired: "검증 항목을 확인해 주세요"
+        case .needsPlan: "무엇으로 완료를 증명할지 먼저 정합니다"
+        case .unavailable: "검증 계획을 불러올 수 없습니다"
+        }
+    }
+    private var detail: String {
+        switch state {
+        case .approved:
+            "승인된 \(work.checks.count)개 항목을 기준으로 구현과 검증을 진행합니다."
+        case .reviewRequired:
+            "계획 전용 요청으로 만든 자동·수동 확인 항목입니다. 계약과 기대 결과를 확인하세요. 계획 이후 소스나 Git index가 바뀌면 승인이 차단됩니다."
+        case .needsPlan:
+            "목표와 제약은 정해졌지만 검증 항목은 비어 있습니다. 에이전트에게 계획 전용 요청을 보낸 뒤 승인을 기다립니다. 그 사이 소스나 Git index가 바뀌면 승인할 수 없습니다."
+        case .unavailable:
+            "작업 workspace와 checks.json 상태를 확인하세요."
+        }
     }
 }
 
@@ -372,18 +555,18 @@ private struct CompletionGate: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.space2) {
             Button {
-                if work.canComplete { store.completeSelectedTask() }
+                if store.canCompleteSelectedTask { store.completeSelectedTask() }
                 else { store.areBlockersPresented.toggle() }
             } label: {
-                Text(work.done ? "Verified" : (work.canComplete ? "Complete verified task" : "Complete — unavailable"))
+                Text(work.done ? "Verified" : (store.canCompleteSelectedTask ? "Complete verified task" : "Complete — unavailable"))
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(OperationalButtonStyle(
-                emphasis: work.canComplete && !work.done ? .proven : .standard
+                emphasis: store.canCompleteSelectedTask && !work.done ? .proven : .standard
             ))
             .disabled(work.done || store.isDemo || store.selectedTask?.canMutate != true)
 
-            if let blocker = work.blockers.first {
+            if let blocker = blockers.first {
                 HStack(alignment: .top, spacing: DesignTokens.space2) {
                     Text(blocker.glyph)
                     Text(blocker.message)
@@ -398,7 +581,7 @@ private struct CompletionGate: View {
 
             if store.areBlockersPresented {
                 VStack(alignment: .leading, spacing: DesignTokens.space2) {
-                    ForEach(work.blockers) { blocker in
+                    ForEach(blockers) { blocker in
                         Text("\(blocker.glyph) \(blocker.message)")
                             .font(.system(size: DesignTokens.metaSize))
                             .foregroundStyle(color(for: blocker.tone))
@@ -410,5 +593,9 @@ private struct CompletionGate: View {
         .padding(DesignTokens.space3)
         .background(DesignTokens.surfaceStatusBar)
         .overlay(alignment: .top) { TokenDivider() }
+    }
+
+    private var blockers: [ProofBlocker] {
+        store.selectedCompletionBlockers
     }
 }

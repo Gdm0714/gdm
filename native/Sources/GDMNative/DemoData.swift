@@ -168,6 +168,8 @@ enum DemoData {
         switch state {
         case "working": .working
         case "waiting-input": .waitingInput
+        case "no-checks", "no-checks-proof": .needsPlan
+        case "review-plan", "review-plan-proof": .reviewPlan
         case "failed-check": .blocked
         case "all-proven": .proven
         case "audit-required": .blocked
@@ -179,6 +181,8 @@ enum DemoData {
 
     private static func loginWork(state: String?) -> WorkDocument {
         let allProven = state == "all-proven"
+        let noChecks = state == "no-checks" || state == "no-checks-proof"
+        let reviewPlan = state == "review-plan" || state == "review-plan-proof"
         let auditRequired = state == "audit-required" || state == "audit-rejected"
         let audit: AuditRecord? = state == "audit-rejected"
             ? AuditRecord(result: "fail", report: "재시도 횟수의 경계 조건 증거가 부족합니다.", at: timestamp)
@@ -202,14 +206,14 @@ enum DemoData {
                 mergeApproval: nil,
                 merged: nil
             ),
-            checks: [
+            checks: noChecks ? [] : [
                 check(
                     id: "c1",
                     desc: "로그인 회귀 재현",
                     command: "bun test cli/test/session.test.ts",
                     kind: "regression",
                     proven: allProven,
-                    red: evidence(sha: "7a44d0e9", exitCode: 1),
+                    red: reviewPlan ? nil : evidence(sha: "7a44d0e9", exitCode: 1),
                     proof: allProven ? evidence(sha: "c2e11a92", exitCode: 0) : nil
                 ),
                 check(
@@ -217,8 +221,8 @@ enum DemoData {
                     desc: "만료된 세션을 한 번만 갱신",
                     command: "bun test cli/test/session.test.ts -t \"refreshes once\"",
                     kind: "behavior",
-                    proven: true,
-                    proof: evidence(sha: "2f91ca42", exitCode: 0)
+                    proven: !reviewPlan,
+                    proof: reviewPlan ? nil : evidence(sha: "2f91ca42", exitCode: 0)
                 ),
                 check(
                     id: "c3",

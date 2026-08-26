@@ -26,6 +26,23 @@ final class GDMNativeTests: XCTestCase {
         XCTAssertTrue(work.blockers.isEmpty)
     }
 
+    func testEmptyCheckSetIsAnExplicitCompletionBlocker() throws {
+        let workspace = DemoData.workspace(state: "no-checks")
+        let work = try XCTUnwrap(workspace.works.first)
+
+        XCTAssertTrue(work.checks.isEmpty)
+        XCTAssertFalse(work.allChecksProven)
+        XCTAssertFalse(work.canComplete)
+        XCTAssertEqual(workspace.taskStates[work.slug], .needsPlan)
+        XCTAssertEqual(work.blockers, [
+            ProofBlocker(
+                glyph: "○",
+                message: "검증 항목이 아직 정의되지 않았습니다.",
+                tone: .attention
+            )
+        ])
+    }
+
     func testRejectedAuditRemainsAFirstClassBlocker() throws {
         let workspace = DemoData.workspace(state: "audit-rejected")
         let work = try XCTUnwrap(workspace.works.first)
@@ -115,7 +132,14 @@ final class GDMNativeTests: XCTestCase {
             "activity-interrupted",
             "activity-launch-failed",
             "activity-stopping",
-            "activity-ended"
+            "activity-ended",
+            "agent-operations",
+            "agent-operations-popover",
+            "no-checks",
+            "no-checks-proof",
+            "review-plan",
+            "review-plan-proof",
+            "split-overflow"
         ]
 
         for state in states {
@@ -139,6 +163,28 @@ final class GDMNativeTests: XCTestCase {
     }
 
     @MainActor
+    func testNewTaskProvisioningDemoIsStaticAndShowsTheBoundedSheetState() {
+        var launchCount = 0
+        let manager = TerminalSessionManager { _, _, _ in
+            launchCount += 1
+            fatalError("New Task screenshot demos must never launch a terminal session")
+        }
+        let store = WorkspaceStore(
+            repositoryURL: URL(fileURLWithPath: "/tmp/gdm", isDirectory: true),
+            demoState: "new-task-provisioning",
+            isDemo: true,
+            terminalSessions: manager
+        )
+
+        XCTAssertEqual(launchCount, 0)
+        XCTAssertTrue(manager.sessions.isEmpty)
+        XCTAssertTrue(store.presentsNewTaskProvisioningInDemo)
+        XCTAssertTrue(store.isNewTaskPresented)
+        XCTAssertTrue(store.isProvisioning)
+        XCTAssertEqual(store.provisioningStep, .gdmContract)
+    }
+
+    @MainActor
     func testAgentActivityDemoElapsedClockIsDeterministic() throws {
         let store = WorkspaceStore(
             repositoryURL: URL(fileURLWithPath: "/tmp/gdm", isDirectory: true),
@@ -150,5 +196,86 @@ final class GDMNativeTests: XCTestCase {
 
         XCTAssertEqual(claude.elapsedLabel(at: DemoData.agentActivityReferenceDate), "1:00:00")
         XCTAssertEqual(codex.elapsedLabel(at: DemoData.agentActivityReferenceDate), "ran 41:08")
+    }
+}
+
+final class CommandPaletteNavigationTests: XCTestCase {
+    func testArrowNavigationWrapsAndRecoversFromAStaleSelection() {
+        let ids = ["command:run", "task:alpha", "file:README.md"]
+
+        XCTAssertEqual(
+            CommandPaletteNavigation.move(selection: nil, orderedIDs: ids, direction: .next),
+            "command:run"
+        )
+        XCTAssertEqual(
+            CommandPaletteNavigation.move(selection: "file:README.md", orderedIDs: ids, direction: .next),
+            "command:run"
+        )
+        XCTAssertEqual(
+            CommandPaletteNavigation.move(selection: "command:run", orderedIDs: ids, direction: .previous),
+            "file:README.md"
+        )
+        XCTAssertEqual(
+            CommandPaletteNavigation.move(selection: "removed", orderedIDs: ids, direction: .previous),
+            "file:README.md"
+        )
+        XCTAssertNil(
+            CommandPaletteNavigation.move(selection: "removed", orderedIDs: [], direction: .next)
+        )
+    }
+
+    func testTaskSlugValidationMatchesTheCreationBoundary() {
+        XCTAssertFalse(WorktreeService.isValidSlug("a"))
+        XCTAssertTrue(WorktreeService.isValidSlug("a1"))
+        XCTAssertTrue(WorktreeService.isValidSlug(String(repeating: "a", count: 51)))
+        XCTAssertFalse(WorktreeService.isValidSlug(String(repeating: "a", count: 52)))
+        XCTAssertFalse(WorktreeService.isValidSlug("Fix-login"))
+        XCTAssertFalse(WorktreeService.isValidSlug("fix login"))
+        XCTAssertFalse(WorktreeService.isValidSlug("fix_login"))
+    }
+
+    func testWorkbenchUsesTabsBeforePaneContentBecomesUnreadable() {
+        XCTAssertTrue(WorkbenchPresentation.shouldUseTabs(
+            compact: false,
+            availableWidth: 519,
+            availableHeight: 700,
+            requiredWidth: 520,
+            requiredHeight: 300
+        ))
+        XCTAssertFalse(WorkbenchPresentation.shouldUseTabs(
+            compact: false,
+            availableWidth: 520,
+            availableHeight: 700,
+            requiredWidth: 520,
+            requiredHeight: 300
+        ))
+        XCTAssertTrue(WorkbenchPresentation.shouldUseTabs(
+            compact: true,
+            availableWidth: 1200,
+            availableHeight: 900,
+            requiredWidth: 520,
+            requiredHeight: 300
+        ))
+    }
+
+    @MainActor
+    func testVisiblePaneCloseUsesTheSameBusyGuardAsKeyboardCommands() throws {
+        let repository = FileManager.default.temporaryDirectory
+            .appendingPathComponent("gidem-close-guard-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: repository, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: repository) }
+
+        let store = WorkspaceStore(repositoryURL: repository)
+        let paneID = try XCTUnwrap(store.workbench.layout.root.orderedLeafIDs.last)
+        let initialCount = store.workbench.layout.root.orderedLeafIDs.count
+        XCTAssertGreaterThan(initialCount, 1)
+
+        store.isCommandRunning = true
+        store.closePane(paneID)
+        XCTAssertEqual(store.workbench.layout.root.orderedLeafIDs.count, initialCount)
+
+        store.isCommandRunning = false
+        store.closePane(paneID)
+        XCTAssertEqual(store.workbench.layout.root.orderedLeafIDs.count, initialCount - 1)
     }
 }
