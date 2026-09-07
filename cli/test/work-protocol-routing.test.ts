@@ -88,19 +88,15 @@ describe("vendor-neutral work protocol routing", () => {
     expect(lifecycle).toContain("canonical dispatch bundle은 최대 4 MiB");
     expect(lifecycle).toContain("artifact_encoding_invalid|privacy_rejected|artifact_too_large|output_too_large|bundle_too_large");
     expect(lifecycle).toContain("`finish`에는 호출자가 정하는 `--status`가 없다");
-    expect(readme).toContain(
-      "runner가 관찰한 metadata일 뿐 원격 identity나 reasoning 품질이 같다는 증명이 아니다",
-    );
-    expect(readme).toMatch(
-      /provider CLI가[\s\S]*모델 backend에 연결하는 transport까지 차단한다는 뜻은 아니다/u,
-    );
-    expect(readme).toMatch(
-      /canonical artifact[\s\S]*\{path,sha256,text,bytesBase64\}[\s\S]*gdm-dispatch-model-view\/v1[\s\S]*\{path,sha256,text\}[\s\S]*`bytesBase64`는 없다/u,
-    );
-    expect(readme).toMatch(
-      /GDM_RECEIVER_TRUST_BOOTSTRAP_V1:[\s\S]*ACK 선택지만[\s\S]*artifact text[\s\S]*신뢰하지 않는 분석 데이터/u,
-    );
-    expect(readme).toContain("원격 model identity나 artifact provenance attestation이 아니다");
+    expect(readme).toMatch(/snapshot과[\s\S]*handoff는[\s\S]*권한을 부여하지 않는다/u);
+    expect(readme).toContain("[`DESIGN.md`](./DESIGN.md)");
+    for (const implementationDetail of [
+      "gdm-dispatch-bundle/v1",
+      "bytesBase64",
+      "GDM_RECEIVER_TRUST_BOOTSTRAP_V1:",
+    ]) {
+      expect(readme).not.toContain(implementationDetail);
+    }
     expect(design).toMatch(
       /실제 원격\s+provider\/model identity 또는 reasoning 품질 attestation이 아니다/u,
     );

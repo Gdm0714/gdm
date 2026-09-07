@@ -125,11 +125,13 @@ describe("workflow policy", () => {
     const design = readFileSync(join(ROOT, "DESIGN.md"), "utf8");
     const readme = readFileSync(join(ROOT, "README.md"), "utf8");
 
-    for (const text of [go, full, plan, auditor, design, readme]) {
+    for (const text of [go, full, plan, auditor, design]) {
       expect(text).toMatch(/가정|assume/);
       expect(text).toMatch(/허용.*경로|allow-path|allowedPaths/);
       expect(text).toMatch(/risk|위험도|위험/);
     }
+    expect(readme).toContain("--allow-path");
+    expect(readme).toContain("--risk");
     expect(go).toContain("gdm pass <id> --red");
     expect(go).toContain("`--simplify`");
     expect(go).toContain("라인 수나 diff 크기만으로");
@@ -141,7 +143,7 @@ describe("workflow policy", () => {
     expect(auditor).toContain("baseline 이후 변경 경로");
     expect(auditor).toContain("red non-zero 증거");
     expect(design).toContain("기존 상태에는 `low`, `deterministic`, 전체 경로 허용");
-    expect(readme).toContain("기존 상태 파일은 `low + deterministic + 전체 경로 허용`");
+    expect(readme).toContain("[`DESIGN.md`](./DESIGN.md)");
   });
 
   test("full binds audit identity and workspace while PR delivery is machine-gated", () => {
