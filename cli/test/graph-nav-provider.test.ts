@@ -119,6 +119,57 @@ function edgePairs(result: Result): readonly string[] {
 }
 
 describe("graph navigation provider", () => {
+  test("keeps the v2 stdout contract byte-stable", () => {
+    const root = repository("gdm-graph-golden-");
+    write(root, "src/entry.ts", "import './dependency.ts';\n");
+    write(root, "src/dependency.ts", "export const dependency = true;\n");
+
+    const outcome = invoke(request(root, { maxDepth: 1 }));
+    expect(outcome.exitCode, outcome.stderr).toBe(0);
+    expect(outcome.stdout).toBe(`${JSON.stringify({
+      schemaVersion: "gdm-graph-result/v2",
+      provider: { name: "gdm-ts-relative-imports", version: 2 },
+      entry: "src/entry.ts",
+      direction: "dependencies",
+      nodes: [
+        { path: "src/dependency.ts", depth: 1 },
+        { path: "src/entry.ts", depth: 0 },
+      ],
+      edges: [
+        { from: "src/entry.ts", to: "src/dependency.ts", via: "relative-import" },
+      ],
+      candidateTests: [],
+      unresolved: [],
+      limitations: [
+        "bare-package-imports-outside-relative-graph",
+        "lexical-scan-only:no-tsconfig-or-package-resolution",
+        "module-dependency-graph-only:no-symbol-or-call-analysis",
+        "static-relative-imports-only:dynamic-import-require-bare-package-and-tsconfig-alias-unsupported",
+      ],
+      freshness: {
+        algorithm: "sha256-visited-files",
+        consistent: true,
+        visitedFiles: 2,
+      },
+      coverage: {
+        scope: "requested-depth",
+        requestedMaxDepth: 1,
+        completeWithinRequestedDepth: true,
+        frontier: [],
+        incompleteReasons: [],
+      },
+      truncated: false,
+      limits: {
+        maxDepth: 5,
+        maxCandidateFiles: 512,
+        maxFileBytes: 512 * 1024,
+        maxTotalReadBytes: 8 * 1024 * 1024,
+        maxEdges: 4_096,
+        maxUnresolved: 512,
+      },
+    })}\n`);
+  });
+
   test("returns relative import dependencies and dependents", () => {
     const root = repository("gdm-graph-links-");
     write(root, "src/entry.ts", `

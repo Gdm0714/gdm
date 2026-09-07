@@ -77,6 +77,7 @@ import { captureSourceFingerprint } from "./source-fingerprint.ts";
 import { saveVerificationPlanSourceFingerprint } from "./work-source-fingerprint.ts";
 import { cmdDelivery } from "./delivery-cli.ts";
 import { cmdProtocol } from "./protocol-cli.ts";
+import { cmdContext } from "./context-nav-command.ts";
 import { codexAgentLimitDoctorLines } from "./codex-agent-limit.ts";
 import { AgentCliError, cmdAgent } from "./agent-cli.ts";
 import {
@@ -149,6 +150,8 @@ const USAGE = `gdm ${VERSION} — 작업 증거가 다음 습관을 바꾸는 �
   gdm protocol recover --slug <슬러그> --claim-id <id> --reason <사유>
   gdm protocol status [--slug <슬러그>]
   gdm workspace fingerprint --json
+  gdm context query                                      # trusted Git root의 bounded Context Pack JSON을 stdin request로 조회
+  gdm context status                                     # one-shot provider capability 조회
   gdm status [--json] [--checks]                            # 현재 디렉토리 전체 작업 현황 (--checks: 항목 상세)
   gdm resume [--json] [--slug <슬러그>]
   gdm retro [--all] [--json] [--slug <슬러그>]              # 회고 (--all: 전체 작업 횡단 + 개선 제안)
@@ -1833,6 +1836,9 @@ async function main(): Promise<void> {
         break;
       case "protocol":
         cmdProtocol(cwd, rest, now());
+        break;
+      case "context":
+        cmdContext(rest, rest[0] === "query" ? readFileSync(0, "utf8") : "", process.env);
         break;
       case "agent":
         cmdAgent(
