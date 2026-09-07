@@ -145,6 +145,10 @@ describe("Pi xhigh GDM harness policy", () => {
       GDM_CAPTURE_PROFILE: fake.profile,
       PATH: `${join(home, "fake")}:${process.env.PATH ?? ""}`,
     };
+    delete env.GDM_PI_PROFILE;
+    delete env.GDM_PI_IMPLEMENTATION_MODEL;
+    delete env.GDM_PI_AUDIT_MODEL;
+    delete env.GDM_PI_AGENT_DIR;
 
     const launched = run("bash", [LAUNCHER, "--print", "Inspect this repository"], ROOT, env);
 
@@ -155,6 +159,8 @@ describe("Pi xhigh GDM harness policy", () => {
     expect(argv).toContain("xhigh");
     expect(argv).toContain("--no-extensions");
     expect(argv).toContain(join(skills, "gdm-agents", "pi", "gdm-delegate.ts"));
+    expect(argv).toContain(join(skills, "gdm-agents", "pi", "gdm-memory", "index.ts"));
+    expect(argv).toContain(join(skills, "gdm-agents", "pi", "gdm-computer-use", "index.ts"));
     expect(readFileSync(join(skills, "gdm-agents", "pi", "ax.mjs"), "utf8")).toBe(
       readFileSync(join(ROOT, "agents", "pi", "ax.mjs"), "utf8"),
     );
@@ -165,7 +171,7 @@ describe("Pi xhigh GDM harness policy", () => {
     ]) {
       expect(argv).toContain(join(skills, `gdm-${name}`));
     }
-    expect(argv).toContain("read,bash,edit,write,grep,find,ls,gdm_delegate");
+    expect(argv).toContain("read,bash,edit,write,grep,find,ls,gdm_delegate,gdm_memory,gdm_computer_use");
     expect(argv).toContain("Inspect this repository");
     expect(readFileSync(fake.profile, "utf8").trim()).toBe(
       "auto|openai-codex/gpt-5.6-sol:xhigh|openai-codex/gpt-5.6-terra:xhigh",
@@ -224,8 +230,17 @@ describe("Pi xhigh GDM harness policy", () => {
     expect(overriddenArgv).toContain("openai-codex/gpt-5.6-terra");
     expect(overriddenArgv).toContain("max");
 
-    rmSync(join(skills, "gdm-agents", "pi", "ax.mjs"));
+    const installedMemory = join(skills, "gdm-agents", "pi", "gdm-memory", "index.ts");
+    const memoryBytes = readFileSync(installedMemory);
+    rmSync(installedMemory);
     rmSync(fake.argv);
+    const missingMemory = run("bash", [LAUNCHER, "--print", "Inspect without memory"], ROOT, env);
+    expect(missingMemory.exitCode).toBe(69);
+    expect(missingMemory.stderr).toContain("installed harness asset missing or unsafe");
+    expect(existsSync(fake.argv)).toBe(false);
+
+    writeFileSync(installedMemory, memoryBytes);
+    rmSync(join(skills, "gdm-agents", "pi", "ax.mjs"));
     const missingAx = run("bash", [LAUNCHER, "--print", "Inspect without AX"], ROOT, env);
     expect(missingAx.exitCode).toBe(69);
     expect(missingAx.stderr).toContain("installed harness asset missing or unsafe");

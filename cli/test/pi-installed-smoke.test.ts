@@ -110,6 +110,8 @@ process.exit(result.exitCode);
     expect(root).toContain("xhigh");
     const installedPiAssets = join(home, ".pi", "agent", "skills", "gdm-agents", "pi");
     expect(root).toContain(join(installedPiAssets, "gdm-delegate.ts"));
+    expect(root).toContain(join(installedPiAssets, "gdm-memory", "index.ts"));
+    expect(root).toContain(join(installedPiAssets, "gdm-computer-use", "index.ts"));
     expect(readFileSync(join(installedPiAssets, "presentation.mjs"), "utf8")).toBe(
       readFileSync(join(ROOT, "agents", "pi", "presentation.mjs"), "utf8"),
     );
@@ -122,7 +124,7 @@ process.exit(result.exitCode);
     ]) {
       expect(root).toContain(join(home, ".pi", "agent", "skills", `gdm-${name}`));
     }
-    expect(root).toContain("read,bash,edit,write,grep,find,ls,gdm_delegate");
+    expect(root).toContain("read,bash,edit,write,grep,find,ls,gdm_delegate,gdm_memory,gdm_computer_use");
     expect(child).toEqual([
       "--mode", "text", "--print", "--no-session", "--no-extensions", "--no-skills",
       "--no-prompt-templates", "--no-themes", "--no-context-files", "--no-approve",

@@ -124,11 +124,13 @@ esac
 skill_root="$pi_agent_dir/skills"
 asset_root="$skill_root/gdm-agents/pi"
 extension="$asset_root/gdm-delegate.ts"
+memory_extension="$asset_root/gdm-memory/index.ts"
+computer_use_extension="$asset_root/gdm-computer-use/index.ts"
 presentation="$asset_root/presentation.mjs"
 ax="$asset_root/ax.mjs"
 coordinator_prompt="$asset_root/coordinator.md"
 skill_arguments=(--no-skills)
-required_assets=("$extension" "$presentation" "$ax" "$coordinator_prompt")
+required_assets=("$extension" "$memory_extension" "$computer_use_extension" "$presentation" "$ax" "$coordinator_prompt")
 
 if [ "$profile" = "auto" ]; then
   gdm_skill_names=(analyze db design document email full go plan pr reflect research review ui)
@@ -151,6 +153,7 @@ for required in "${required_assets[@]}"; do
 done
 
 export GDM_PI_EXECUTABLE="$pi_executable"
+export GDM_PI_AGENT_DIR="$pi_agent_dir"
 export GDM_EXECUTABLE="$gdm_executable"
 export GDM_PI_PROFILE="$profile"
 export GDM_PI_CHILD_MODEL="$model"
@@ -164,9 +167,11 @@ exec "$pi_executable" \
   --thinking "$thinking" \
   --no-extensions \
   --extension "$extension" \
+  --extension "$memory_extension" \
+  --extension "$computer_use_extension" \
   "${skill_arguments[@]}" \
   --no-prompt-templates \
   --append-system-prompt "$coordinator_prompt" \
   --append-system-prompt "GDM Pi active profile: $profile. Implementation model metadata: $model:$thinking. Full audit model when required: $audit_model." \
-  --tools read,bash,edit,write,grep,find,ls,gdm_delegate \
+  --tools read,bash,edit,write,grep,find,ls,gdm_delegate,gdm_memory,gdm_computer_use \
   "$@"

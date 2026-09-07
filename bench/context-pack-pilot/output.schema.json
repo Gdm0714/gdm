@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["task", "paths", "facts", "limitations"],
+  "properties": {
+    "task": { "enum": ["ownership", "budget"] },
+    "paths": {
+      "type": "array",
+      "maxItems": 7,
+      "items": { "type": "string", "maxLength": 160, "pattern": "^[A-Za-z0-9._/-]+$" }
+    },
+    "facts": {
+      "type": "array",
+      "maxItems": 9,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "value"],
+        "properties": {
+          "id": { "enum": ["implementation", "dependency", "test", "package", "owner", "work", "check", "evidence", "maxBytes"] },
+          "value": { "type": "string", "maxLength": 256 }
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "maxItems": 8,
+      "items": { "type": "string", "maxLength": 256 }
+    }
+  }
+}
