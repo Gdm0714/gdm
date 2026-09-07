@@ -460,6 +460,16 @@ hook은 사용자가 Codex `/hooks` 화면에서 신뢰 상태를 확인해야 �
 
 ## 11. 결정 로그
 
+- 2026-09-03: **Context Pack one-shot provider를 token-first navigation 실험으로 유지.**
+  도입 이유는 실제 receipt-bound E2E smoke에서 Context arm의 fresh input token이 더 적은
+  방향을 보였기 때문이다. arm별 6회 raw 중앙값은 Control 36,771, Graph 27,910, Context
+  22,441로 명목상 각각 39.0%, 19.6% 감소했고, 세 arm 모두 valid인 동일 조건 3쌍의 중앙값은
+  26,148, 27,961, 22,499로 각각 14.0%, 19.5% 감소했다. 이 수치는 향후 ranking·seed·budget
+  개선에서 “같은 품질로 fresh input token을 줄이는가”를 판단할 기준이다. 다만 전체 13/18만
+  valid였고 ownership 두 쌍에서는 Context가 Control보다 더 사용했으므로 절감 효과가 확정된
+  것은 아니다. 확대 benchmark 전에는 `invalid-not-evidence`와 no-promotion을 유지하고 P2,
+  SQLite, Pi 자동 주입과 기본 활성화를 차단한다. 상세 수치와 재검증 조건은
+  `bench/context-pack-evaluation-2026-09-03.md`에 둔다.
 - 2026-08-12: **code graph의 요청 깊이 경계와 실제 불완전 결과를 v2 응답에서
   분리.** 요청은 `gdm-graph-query/v1`을 유지하되, 응답은 `gdm-graph-result/v2`, provider는
   version 2로 올리고 `nodes`를 `{path,depth}`로 반환한다. `coverage`는 요청한 깊이까지의

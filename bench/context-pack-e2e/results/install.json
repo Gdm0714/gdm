@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "gdm-context-pack-e2e-install/v1",
+  "target": "user-local-gdm",
+  "sourceSha256": "5a1b3aca35ccd4f0dc492f1b904239a896bf007502a8deed4422e91095f1e6d5",
+  "oldSha256": "edd16d1817c824d1432495472102664ea4311823f4c58011d97f115efa3b5a91",
+  "installedSha256": "5a1b3aca35ccd4f0dc492f1b904239a896bf007502a8deed4422e91095f1e6d5",
+  "launcherSha256": "61038e014d3a67971a38f45ae7cf600618683eae366710c47c0116974cef02d3",
+  "backupName": "gdm.bak.2026-09-03T08-11-38-636Z.b604ee3b",
+  "backupSha256": "edd16d1817c824d1432495472102664ea4311823f4c58011d97f115efa3b5a91",
+  "oldVersion": "0.9.1",
+  "oldContextSupported": false,
+  "installedVersion": "0.9.1",
+  "installedContextSupported": true,
+  "querySha256": "ae228ef5b2539de4ada6a2340f58fc5cd13bd48f01f2ca8230341ead5445019f",
+  "queryBytes": 830,
+  "installedAt": "2026-09-03T08:11:39.622Z"
+}

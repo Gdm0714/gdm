@@ -1,0 +1,587 @@
+{
+  "schemaVersion": "gdm-context-pack-e2e/v1",
+  "protocol": "allowlisted-io-receipts/v2",
+  "scale": "smoke",
+  "runId": "0a5d55558621dcdd3a4ddc898f34c21f",
+  "source": {
+    "runnerSha256": "ac85be1974258ffdf25eca2f2b7cd0ee28a55e4a1b565b0a11c3d9b25d9fa981",
+    "protocolSha256": "7b1cda80e197453137a3438e9c12d09d46a3f2454e1d3c3f160eae76f5698f80",
+    "benchIoSha256": "669492db8bb65d982dbe6b40e887fc2828dcb16aae8bc34ffa3b7b650c6be020",
+    "verifierSha256": "42df52efa504106abf88d8694245e18af4ea4337914f8529c170c9e526a3e421",
+    "assessorSha256": "257d62b80dc8eb9352fb7d2305894bcb88b5995fb916a9104ee49ef7342be49c",
+    "staticCheckSha256": "6af15c5efda131cf83bc211bac9485c6fe4b554e261ebacf8936903cd60406c6",
+    "outputSchemaSha256": "370634bc3b54e68ac0328b666073e7bb873fbb97461403f7baeb4b761690b673",
+    "fixtureSourceSha256": "987b2313cd79f0f816cd777fdf13c39a7b54e5fd6c3dfed3ad4724f9d9b9af69"
+  },
+  "sourceSha256": "4775db26efb0a7e43d8af9db9c50bb225c6f989fc28ca89a4d02b8e19e3be1eb",
+  "runtime": {
+    "codex": {
+      "path": "/opt/homebrew/Caskroom/codex/0.152.1/bin/codex",
+      "sha256": "8194ea3181f330e63023b234b0b231855e5874e0331c5ef7cbc490591497a7bf",
+      "version": "codex-cli 0.152.1"
+    },
+    "gdm": {
+      "path": "/Users/godongmin/.local/bin/gdm",
+      "sha256": "5a1b3aca35ccd4f0dc492f1b904239a896bf007502a8deed4422e91095f1e6d5",
+      "version": "0.9.1"
+    },
+    "graph": {
+      "path": "cli/src/graph-nav-provider.ts",
+      "sha256": "e288f611f1f579fd3219c71b51ab95cb47485207d5c87b61af7a7556d5e40775",
+      "version": "gdm-graph-result-v2-source"
+    },
+    "benchIo": {
+      "path": "bench/context-pack-e2e/bench-io.ts",
+      "sha256": "669492db8bb65d982dbe6b40e887fc2828dcb16aae8bc34ffa3b7b650c6be020",
+      "version": "allowlisted-benchmark-io-v1"
+    },
+    "bun": {
+      "path": "/Users/godongmin/.bun/bin/bun",
+      "sha256": "e0c90ec15d33363e6b70713d56bc3b2c7585c17f40a0fe0f8fd9305901d4e233",
+      "version": "Bun 1.3.14"
+    },
+    "model": "gpt-5.6-sol",
+    "reasoning": "xhigh",
+    "sandbox": "read-only",
+    "ephemeral": true,
+    "userConfig": "ignored",
+    "rules": "ignored"
+  },
+  "runtimeSha256": "9b437991a1939f4b3d18a6ed849e074adaf6b9b5591563667fd955aed3b37001",
+  "fixtureManifestSha256": "b67cac7e743545e9ce9a51db448e63154b0a2d4e135473cfee991ec8096343e0",
+  "fixtureFileCount": 216,
+  "fixtureExpectedSha256": "211a06dccc2acb7c3afa8cc1563c3ec7ce32987c55b5cbc0dec7a2992e063c7e",
+  "pilotBaselineSha256": "4262984314f392dd186b9baf2468c54964544dc9757fda93eb64b2c029b6491d",
+  "generatedAt": "2026-09-03T09:02:58.303Z",
+  "trialsPerTaskArm": 3,
+  "navigationStartPolicy": "allowlisted-anchor-first",
+  "commandPolicy": "allowlisted-io-only",
+  "retention": "hashes-metrics-structured-score-no-raw-body",
+  "priorP1Conclusion": "invalid-not-evidence-no-promotion",
+  "promotionEligible": false,
+  "defaultActivation": "blocked",
+  "runs": [
+    {
+      "task": "budget",
+      "arm": "context",
+      "trial": 1,
+      "exitCode": 0,
+      "elapsedMs": 51287,
+      "inputTokens": 171134,
+      "cachedInputTokens": 121984,
+      "freshInputTokens": 49150,
+      "outputTokens": 1582,
+      "commandCount": 5,
+      "providerCalls": {
+        "graph": 0,
+        "context": 1
+      },
+      "contextPackBytes": 1082,
+      "providerContractValid": true,
+      "directReadsValid": true,
+      "anchorFirstValid": true,
+      "commandPolicyValid": true,
+      "usageValid": true,
+      "qualityValid": true,
+      "measurementValid": true,
+      "recall": 1,
+      "receipt": {
+        "path": "receipts/budget-context-t1.json",
+        "sha256": "efb39c3fbbfcdfcce4666d1a2e4abee454924435b6481d890e7f5f93e135c7d4"
+      }
+    },
+    {
+      "task": "budget",
+      "arm": "control",
+      "trial": 1,
+      "exitCode": 0,
+      "elapsedMs": 37198,
+      "inputTokens": 143107,
+      "cachedInputTokens": 106368,
+      "freshInputTokens": 36739,
+      "outputTokens": 915,
+      "commandCount": 4,
+      "providerCalls": {
+        "graph": 0,
+        "context": 0
+      },
+      "contextPackBytes": null,
+      "providerContractValid": true,
+      "directReadsValid": true,
+      "anchorFirstValid": true,
+      "commandPolicyValid": true,
+      "usageValid": true,
+      "qualityValid": false,
+      "measurementValid": false,
+      "recall": 0.9375,
+      "receipt": {
+        "path": "receipts/budget-control-t1.json",
+        "sha256": "578551da2359b37dd88a03eb50f42fe4fd5e3747315361bcdbae34cf9e38b3ba"
+      }
+    },
+    {
+      "task": "budget",
+      "arm": "graph",
+      "trial": 1,
+      "exitCode": 0,
+      "elapsedMs": 58330,
+      "inputTokens": 169660,
+      "cachedInputTokens": 130688,
+      "freshInputTokens": 38972,
+      "outputTokens": 1727,
+      "commandCount": 5,
+      "providerCalls": {
+        "graph": 1,
+        "context": 0
+      },
+      "contextPackBytes": null,
+      "providerContractValid": true,
+      "directReadsValid": true,
+      "anchorFirstValid": true,
+      "commandPolicyValid": true,
+      "usageValid": true,
+      "qualityValid": false,
+      "measurementValid": false,
+      "recall": 0.9375,
+      "receipt": {
+        "path": "receipts/budget-graph-t1.json",
+        "sha256": "d559f1ee34f87e4a26bff5790fcb950314a7cd9b80fe609fecf77a9c7d439080"
+      }
+    },
+    {
+      "task": "ownership",
+      "arm": "context",
+      "trial": 1,
+      "exitCode": 0,
+      "elapsedMs": 40191,
+      "inputTokens": 133276,
+      "cachedInputTokens": 106240,
+      "freshInputTokens": 27036,
+      "outputTokens": 1189,
+      "commandCount": 4,
+      "providerCalls": {
+        "graph": 0,
+        "context": 1
+      },
+      "contextPackBytes": 830,
+      "providerContractValid": true,
+      "directReadsValid": true,
+      "anchorFirstValid": true,
+      "commandPolicyValid": true,
+      "usageValid": true,
+      "qualityValid": true,
+      "measurementValid": true,
+      "recall": 1,
+      "receipt": {
+        "path": "receipts/ownership-context-t1.json",
+        "sha256": "b5b42ef1350b7517bcc0cd2b6ba18fc11a8c17d5c76d74e61d4b0f26e40ba137"
+      }
+    },
+    {
+      "task": "ownership",
+      "arm": "control",
+      "trial": 1,
+      "exitCode": 0,
+      "elapsedMs": 42107,
+      "inputTokens": 145572,
+      "cachedInputTokens": 119424,
+      "freshInputTokens": 26148,
+      "outputTokens": 1275,
+      "commandCount": 4,
+      "providerCalls": {
+        "graph": 0,
+        "context": 0
+      },
+      "contextPackBytes": null,
+      "providerContractValid": true,
+      "directReadsValid": true,
+      "anchorFirstValid": true,
+      "commandPolicyValid": true,
+      "usageValid": true,
+      "qualityValid": true,
+      "measurementValid": true,
+      "recall": 1,
+      "receipt": {
+        "path": "receipts/ownership-control-t1.json",
+        "sha256": "6a4f2ce38c35101ec9b762b94c805db2fe6ed3ad1ad2909df834c6a703b70ea1"
+      }
+    },
+    {
+      "task": "ownership",
+      "arm": "graph",
+      "trial": 1,
+      "exitCode": 0,
+      "elapsedMs": 52305,
+      "inputTokens": 169151,
+      "cachedInputTokens": 130560,
+      "freshInputTokens": 38591,
+      "outputTokens": 1380,
+      "commandCount": 5,
+      "providerCalls": {
+        "graph": 1,
+        "context": 0
+      },
+      "contextPackBytes": null,
+      "providerContractValid": true,
+      "directReadsValid": true,
+      "anchorFirstValid": true,
+      "commandPolicyValid": true,
+      "usageValid": true,
+      "qualityValid": true,
+      "measurementValid": true,
+      "recall": 1,
+      "receipt": {
+        "path": "receipts/ownership-graph-t1.json",
+        "sha256": "5081c0078f8376a69300bfe78a5c463e6c4b500566d6576e81d62eb112812565"
+      }
+    },
+    {
+      "task": "budget",
+      "arm": "context",
+      "trial": 2,
+      "exitCode": 0,
+      "elapsedMs": 39843,
+      "inputTokens": 132069,
+      "cachedInputTokens": 110336,
+      "freshInputTokens": 21733,
+      "outputTokens": 980,
+      "commandCount": 4,
+      "providerCalls": {
+        "graph": 0,
+        "context": 1
+      },
+      "contextPackBytes": 1082,
+      "providerContractValid": true,
+      "directReadsValid": true,
+      "anchorFirstValid": true,
+      "commandPolicyValid": true,
+      "usageValid": true,
+      "qualityValid": true,
+      "measurementValid": true,
+      "recall": 1,
+      "receipt": {
+        "path": "receipts/budget-context-t2.json",
+        "sha256": "7a0526e5056017947bbf3b703ec9d7161eafebfa62352f3b6329f6a58ee734b0"
+      }
+    },
+    {
+      "task": "budget",
+      "arm": "control",
+      "trial": 2,
+      "exitCode": 0,
+      "elapsedMs": 35995,
+      "inputTokens": 145297,
+      "cachedInputTokens": 99328,
+      "freshInputTokens": 45969,
+      "outputTokens": 964,
+      "commandCount": 4,
+      "providerCalls": {
+        "graph": 0,
+        "context": 0
+      },
+      "contextPackBytes": null,
+      "providerContractValid": true,
+      "directReadsValid": true,
+      "anchorFirstValid": true,
+      "commandPolicyValid": true,
+      "usageValid": true,
+      "qualityValid": false,
+      "measurementValid": false,
+      "recall": 0.9375,
+      "receipt": {
+        "path": "receipts/budget-control-t2.json",
+        "sha256": "9268822972c5d5b0ab92af2475b3cc8f6269a92665043fc2c39456d4c8c1c706"
+      }
+    },
+    {
+      "task": "budget",
+      "arm": "graph",
+      "trial": 2,
+      "exitCode": 0,
+      "elapsedMs": 42579,
+      "inputTokens": 169263,
+      "cachedInputTokens": 143232,
+      "freshInputTokens": 26031,
+      "outputTokens": 1097,
+      "commandCount": 5,
+      "providerCalls": {
+        "graph": 1,
+        "context": 0
+      },
+      "contextPackBytes": null,
+      "providerContractValid": true,
+      "directReadsValid": true,
+      "anchorFirstValid": true,
+      "commandPolicyValid": true,
+      "usageValid": true,
+      "qualityValid": false,
+      "measurementValid": false,
+      "recall": 0.9375,
+      "receipt": {
+        "path": "receipts/budget-graph-t2.json",
+        "sha256": "25a64a0473de406d78e88d55d2b57413712e673f05bc2a04585979b6720b860b"
+      }
+    },
+    {
+      "task": "ownership",
+      "arm": "context",
+      "trial": 2,
+      "exitCode": 0,
+      "elapsedMs": 44084,
+      "inputTokens": 132463,
+      "cachedInputTokens": 110080,
+      "freshInputTokens": 22383,
+      "outputTokens": 1271,
+      "commandCount": 4,
+      "providerCalls": {
+        "graph": 0,
+        "context": 1
+      },
+      "contextPackBytes": 830,
+      "providerContractValid": true,
+      "directReadsValid": true,
+      "anchorFirstValid": true,
+      "commandPolicyValid": true,
+      "usageValid": true,
+      "qualityValid": true,
+      "measurementValid": true,
+      "recall": 1,
+      "receipt": {
+        "path": "receipts/ownership-context-t2.json",
+        "sha256": "d5f08df1ae19197256fe588fbad5cbd002517709d56741170b4febcfc8ffed90"
+      }
+    },
+    {
+      "task": "ownership",
+      "arm": "control",
+      "trial": 2,
+      "exitCode": 0,
+      "elapsedMs": 37710,
+      "inputTokens": 143171,
+      "cachedInputTokens": 106368,
+      "freshInputTokens": 36803,
+      "outputTokens": 1047,
+      "commandCount": 4,
+      "providerCalls": {
+        "graph": 0,
+        "context": 0
+      },
+      "contextPackBytes": null,
+      "providerContractValid": true,
+      "directReadsValid": true,
+      "anchorFirstValid": true,
+      "commandPolicyValid": true,
+      "usageValid": true,
+      "qualityValid": true,
+      "measurementValid": true,
+      "recall": 1,
+      "receipt": {
+        "path": "receipts/ownership-control-t2.json",
+        "sha256": "3d9a506cd8d8cf27af23cf9f1a6d1e0d0d8db9fa294f814c5f0cb3a0b70f5972"
+      }
+    },
+    {
+      "task": "ownership",
+      "arm": "graph",
+      "trial": 2,
+      "exitCode": 0,
+      "elapsedMs": 48867,
+      "inputTokens": 170067,
+      "cachedInputTokens": 142208,
+      "freshInputTokens": 27859,
+      "outputTokens": 1448,
+      "commandCount": 5,
+      "providerCalls": {
+        "graph": 0,
+        "context": 0
+      },
+      "contextPackBytes": null,
+      "providerContractValid": false,
+      "directReadsValid": true,
+      "anchorFirstValid": false,
+      "commandPolicyValid": false,
+      "usageValid": true,
+      "qualityValid": true,
+      "measurementValid": false,
+      "recall": 1,
+      "receipt": {
+        "path": "receipts/ownership-graph-t2.json",
+        "sha256": "f064b2fb75eb0bc412899ca1f8d3e672e86a690f8d8ce8251c2757a5b2207bb6"
+      }
+    },
+    {
+      "task": "budget",
+      "arm": "context",
+      "trial": 3,
+      "exitCode": 0,
+      "elapsedMs": 36331,
+      "inputTokens": 132270,
+      "cachedInputTokens": 112512,
+      "freshInputTokens": 19758,
+      "outputTokens": 969,
+      "commandCount": 4,
+      "providerCalls": {
+        "graph": 0,
+        "context": 1
+      },
+      "contextPackBytes": 1082,
+      "providerContractValid": true,
+      "directReadsValid": true,
+      "anchorFirstValid": true,
+      "commandPolicyValid": true,
+      "usageValid": true,
+      "qualityValid": true,
+      "measurementValid": true,
+      "recall": 1,
+      "receipt": {
+        "path": "receipts/budget-context-t3.json",
+        "sha256": "7084fa26302f093956516d38f44df8962481b459534abbd89b3c6623eafb17ef"
+      }
+    },
+    {
+      "task": "budget",
+      "arm": "control",
+      "trial": 3,
+      "exitCode": 0,
+      "elapsedMs": 41733,
+      "inputTokens": 145510,
+      "cachedInputTokens": 107904,
+      "freshInputTokens": 37606,
+      "outputTokens": 1177,
+      "commandCount": 4,
+      "providerCalls": {
+        "graph": 0,
+        "context": 0
+      },
+      "contextPackBytes": null,
+      "providerContractValid": true,
+      "directReadsValid": true,
+      "anchorFirstValid": true,
+      "commandPolicyValid": true,
+      "usageValid": true,
+      "qualityValid": true,
+      "measurementValid": true,
+      "recall": 1,
+      "receipt": {
+        "path": "receipts/budget-control-t3.json",
+        "sha256": "0af8fa65a40b010a126292fffe51712f80494cd5a39132bf8f5adbdccf6ddead"
+      }
+    },
+    {
+      "task": "budget",
+      "arm": "graph",
+      "trial": 3,
+      "exitCode": 0,
+      "elapsedMs": 59982,
+      "inputTokens": 171060,
+      "cachedInputTokens": 147968,
+      "freshInputTokens": 23092,
+      "outputTokens": 1803,
+      "commandCount": 5,
+      "providerCalls": {
+        "graph": 1,
+        "context": 0
+      },
+      "contextPackBytes": null,
+      "providerContractValid": true,
+      "directReadsValid": true,
+      "anchorFirstValid": true,
+      "commandPolicyValid": true,
+      "usageValid": true,
+      "qualityValid": true,
+      "measurementValid": true,
+      "recall": 1,
+      "receipt": {
+        "path": "receipts/budget-graph-t3.json",
+        "sha256": "1c9cf206b905f91923cb56808fda4332ea41c63d8ab3ed59a2480542f523d86d"
+      }
+    },
+    {
+      "task": "ownership",
+      "arm": "context",
+      "trial": 3,
+      "exitCode": 0,
+      "elapsedMs": 43343,
+      "inputTokens": 132579,
+      "cachedInputTokens": 110080,
+      "freshInputTokens": 22499,
+      "outputTokens": 1298,
+      "commandCount": 4,
+      "providerCalls": {
+        "graph": 0,
+        "context": 1
+      },
+      "contextPackBytes": 830,
+      "providerContractValid": true,
+      "directReadsValid": true,
+      "anchorFirstValid": true,
+      "commandPolicyValid": true,
+      "usageValid": true,
+      "qualityValid": true,
+      "measurementValid": true,
+      "recall": 1,
+      "receipt": {
+        "path": "receipts/ownership-context-t3.json",
+        "sha256": "e5fef96b5e48138dc16d672ae24ff3215e968df365ffd753116ebf99e423392b"
+      }
+    },
+    {
+      "task": "ownership",
+      "arm": "control",
+      "trial": 3,
+      "exitCode": 0,
+      "elapsedMs": 37924,
+      "inputTokens": 144008,
+      "cachedInputTokens": 125056,
+      "freshInputTokens": 18952,
+      "outputTokens": 1085,
+      "commandCount": 4,
+      "providerCalls": {
+        "graph": 0,
+        "context": 0
+      },
+      "contextPackBytes": null,
+      "providerContractValid": true,
+      "directReadsValid": true,
+      "anchorFirstValid": true,
+      "commandPolicyValid": true,
+      "usageValid": true,
+      "qualityValid": true,
+      "measurementValid": true,
+      "recall": 1,
+      "receipt": {
+        "path": "receipts/ownership-control-t3.json",
+        "sha256": "e53ade9efe7a23313b0c4d9385834b708c891336fb0a2c58dc5e269abab58360"
+      }
+    },
+    {
+      "task": "ownership",
+      "arm": "graph",
+      "trial": 3,
+      "exitCode": 0,
+      "elapsedMs": 46330,
+      "inputTokens": 171065,
+      "cachedInputTokens": 143104,
+      "freshInputTokens": 27961,
+      "outputTokens": 1129,
+      "commandCount": 5,
+      "providerCalls": {
+        "graph": 1,
+        "context": 0
+      },
+      "contextPackBytes": null,
+      "providerContractValid": true,
+      "directReadsValid": true,
+      "anchorFirstValid": true,
+      "commandPolicyValid": true,
+      "usageValid": true,
+      "qualityValid": true,
+      "measurementValid": true,
+      "recall": 1,
+      "receipt": {
+        "path": "receipts/ownership-graph-t3.json",
+        "sha256": "a1d5d799f4f37e6e31f6e03603c7e47e5a3af528f80a4c8b355af76793e53634"
+      }
+    }
+  ]
+}

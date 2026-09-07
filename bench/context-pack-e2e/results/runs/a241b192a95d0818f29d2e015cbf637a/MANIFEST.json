@@ -1,0 +1,105 @@
+{
+  "schemaVersion": "gdm-context-pack-e2e-manifest/v1",
+  "runId": "a241b192a95d0818f29d2e015cbf637a",
+  "protocol": "allowlisted-io-receipts/v1",
+  "sourceSha256": "6c95244717a75dc1db8da1cd6787cc993553cb0fccf17ee10952e44550947aa9",
+  "runtimeSha256": "27da9bbb176ca13d0a9dd4c49279c467aae32ce95f85487e9fbac720e5617f28",
+  "fixtureManifestSha256": "b67cac7e743545e9ce9a51db448e63154b0a2d4e135473cfee991ec8096343e0",
+  "artifacts": [
+    {
+      "path": "receipts/budget-context-t1.json",
+      "sha256": "8cc0bc7cf143b1d21ea46ed3fe5b1d4b6ad516e241e716e8ab704f6ab0c5d8a1",
+      "bytes": 33419
+    },
+    {
+      "path": "receipts/budget-context-t2.json",
+      "sha256": "156d5945664537593b2d05cf73fc184d996a03dc84657a88c4fc9c9f2d49ad4d",
+      "bytes": 31710
+    },
+    {
+      "path": "receipts/budget-context-t3.json",
+      "sha256": "db07992bc0874791dccc8328070dacb7ab4b499826fc963616c4a95c155ce062",
+      "bytes": 31966
+    },
+    {
+      "path": "receipts/budget-control-t1.json",
+      "sha256": "9e8c90a80c80b1854bfc3d8f83b2962b30424e41f08447fb63f38c8c5f0308de",
+      "bytes": 31270
+    },
+    {
+      "path": "receipts/budget-control-t2.json",
+      "sha256": "189fa6b0b04547a9dc213ab498d9868047aea27e8d91d82a55dfc12df0030f74",
+      "bytes": 31271
+    },
+    {
+      "path": "receipts/budget-control-t3.json",
+      "sha256": "ad6a7e27964fc07d2bccb410f93d29b484e8449e98cf3900f11e82108a6cd8c4",
+      "bytes": 31226
+    },
+    {
+      "path": "receipts/budget-graph-t1.json",
+      "sha256": "68b283b070379e8384ab2a737526476314dda0ed5ac9c9afe42a0e7f75e16fac",
+      "bytes": 33400
+    },
+    {
+      "path": "receipts/budget-graph-t2.json",
+      "sha256": "24f90fccb122935945e4b9209e6652a73c80d5f2ad1f01d3c52024160df4c9dd",
+      "bytes": 33051
+    },
+    {
+      "path": "receipts/budget-graph-t3.json",
+      "sha256": "8ee20bd89d357a4258639de330281a6f1ddbf46d134f20c89752ba3b9ec29eac",
+      "bytes": 33094
+    },
+    {
+      "path": "receipts/ownership-context-t1.json",
+      "sha256": "5c9aecff135caecdaaeaee58fe833e494bcb21111e8bcd05c85984c485d05ab0",
+      "bytes": 31589
+    },
+    {
+      "path": "receipts/ownership-context-t2.json",
+      "sha256": "f23de17069678ebc87f9aa07f0035b86d3cf43ed87aafa15148044965a11307d",
+      "bytes": 31589
+    },
+    {
+      "path": "receipts/ownership-context-t3.json",
+      "sha256": "ea04bb70fb6557c48b6422be16f5c320ea35cb41f1bb2ffdcbf6bfee5f8a860a",
+      "bytes": 31589
+    },
+    {
+      "path": "receipts/ownership-control-t1.json",
+      "sha256": "1c89d650f38a128e059e028299902f13a591450b6e77fbc7b060ddc6c56706da",
+      "bytes": 31459
+    },
+    {
+      "path": "receipts/ownership-control-t2.json",
+      "sha256": "7b5a97f85af72f490295a785a0576d737065f1363dc5a8cbea2b4f4d23a291f9",
+      "bytes": 31153
+    },
+    {
+      "path": "receipts/ownership-control-t3.json",
+      "sha256": "3b9c9ddc712cc0723fa98676873fdc7665ea8cd62a40e5962317eab7a3dec7fe",
+      "bytes": 26505
+    },
+    {
+      "path": "receipts/ownership-graph-t1.json",
+      "sha256": "1e57ec5f71d73b003522f748c5f1df2f8d8a6c0690c8dd8ae8508a81f3d5271e",
+      "bytes": 33286
+    },
+    {
+      "path": "receipts/ownership-graph-t2.json",
+      "sha256": "fe4f40de0fddd858210eac45103cb30966de7fa886e79607edb22df04abeb6f6",
+      "bytes": 33286
+    },
+    {
+      "path": "receipts/ownership-graph-t3.json",
+      "sha256": "dac643db252eb39bbecf8ad8b9a0db2012b27dd36bb8c586cb17b9e2dac4b611",
+      "bytes": 32981
+    },
+    {
+      "path": "summary.json",
+      "sha256": "19ae8b0270901e71b206831f1bf72cec00ba6dcfb269d8d1706f34b849bf727f",
+      "bytes": 17097
+    }
+  ]
+}

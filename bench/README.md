@@ -22,6 +22,16 @@
 | `judge.sh <task> <arm>` | 히든 테스트 실행, 가시 테스트 회귀, diff 추출, 완료 마커·토큰·시간 수집 → `results.csv` |
 | `quality-judge.sh <task>` | 태스크의 전 arm diff를 익명 셔플해 눈가림 심판(claude -p) 비교 평가 → JSON |
 | `graph-quality-judge.sh <task>` | `gdm`과 `gdm-graph` 두 diff만 익명 셔플해 같은 관점으로 쌍대 비교 → JSON |
+| `context-pack-evaluation-2026-09-03.md` | Context Pack 도입 근거, 실제 token 수치, 유효성 한계와 재검증 기준 |
+
+## Context Pack 비교 기록
+
+2026-09-03 receipt-bound E2E smoke의 raw 6회 중앙값 fresh input은 Control 36,771,
+Graph 27,910, Context 22,441이었다. 세 arm 모두 valid인 동일 조건 3쌍의 중앙값은 각각
+26,148, 27,961, 22,499였다. Context Pack을 개선하는 이유는 이 감소 방향을 같은 품질의
+확대 benchmark에서 재현하기 위해서다. 전체는 13/18 valid였으므로 확정 효과나 기본 활성화
+근거로 쓰지 않는다. 원시 경로와 task별 편차는
+`bench/context-pack-evaluation-2026-09-03.md`에 기록했다.
 
 ## 경로 계약
 
