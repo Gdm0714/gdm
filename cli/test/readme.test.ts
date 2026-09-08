@@ -30,13 +30,12 @@ function proseParagraphs(markdown: string): readonly string[] {
 }
 
 describe("public README", () => {
-  test("opens with the product, then gives a bounded reader journey", () => {
+  test("opens with the harness, then gives a bounded reader journey", () => {
     const headings = [...README.matchAll(/^## (.+)$/gmu)].map((match) => match[1]);
     expect(headings).toEqual([
       "무엇을 해결하나",
-      "제품 구성",
+      "하네스 구성",
       "빠른 시작",
-      "Gidem Native",
       "최근 추가된 Pi 기능",
       "검증 모델",
       "선택형 도구와 디자인",
@@ -46,14 +45,20 @@ describe("public README", () => {
       "문서",
       "라이선스",
     ]);
-    expect(README).toContain("**Gidem 앱**");
-    expect(README).toContain("**gdm 하네스**");
+    expect(README.startsWith("# gdm\n")).toBe(true);
+    for (const path of ["cli", "skills", "agents/pi/gdm-memory", "agents/pi/gdm-computer-use"]) {
+      expect(existsSync(join(ROOT, path)), path).toBe(true);
+    }
+    for (const path of ["native", "website", "assets", "design-system.md"]) {
+      expect(existsSync(join(ROOT, path)), path).toBe(false);
+    }
+    expect(README).toContain("별도 `gidem-native` 저장소");
     expect(README).toContain("작업 증거가 다음 습관을 바꾸는 개인 AI 워크플로우");
     expect(Math.max(...proseParagraphs(README).map((paragraph) => paragraph.length))).toBeLessThanOrEqual(420);
     expect(Math.max(...README.split("\n").map((line) => line.length))).toBeLessThanOrEqual(140);
     expect(README.match(/<details>/gu)).toHaveLength(1);
     expect(README.match(/<\/details>/gu)).toHaveLength(1);
-    expect(README.match(/^```/gmu)?.length ?? 0).toBe(18);
+    expect(README.match(/^```/gmu)?.length ?? 0).toBe(16);
   });
 
   test("describes current features and honest release boundaries", () => {
@@ -68,8 +73,6 @@ describe("public README", () => {
       "13회만 measurement-valid",
       "Pi 자동 주입이나 기본 활성화에 연결되지 않은 실험 기능",
       "원격 release asset은 아직 게시되지 않았다",
-      "Developer ID 서명과",
-      "notarization을 포함한 공개 배포는 아직 준비 중",
     ]) {
       expect(README).toContain(value);
     }
@@ -89,7 +92,7 @@ describe("public README", () => {
       .map((match) => match[1]!.split("#", 1)[0]!);
     const htmlAssets = [...README.matchAll(/(?:src|srcset)="([^"]+)"/gu)].map((match) => match[1]!);
     const paths = [...new Set([...markdownLinks, ...htmlAssets])];
-    expect(paths.length).toBeGreaterThanOrEqual(10);
+    expect(paths.length).toBeGreaterThanOrEqual(5);
     for (const path of paths) {
       expect(existsSync(resolve(ROOT, path)), path).toBe(true);
     }

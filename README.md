@@ -1,38 +1,29 @@
-# Gidem
+# gdm
 
-<p align="center">
-  <picture>
-    <source media="(max-width: 480px)" srcset="assets/readme-hero-compact.svg">
-    <img src="assets/readme-hero.svg" width="920" alt="Gidem — Agents run. Evidence decides.">
-  </picture>
-</p>
+**Agents run. Evidence decides.**
 
-<p align="center"><strong>Agents run. Evidence decides.</strong></p>
-
-Gidem은 여러 코딩 에이전트의 작업 공간과 검증 상태를 한곳에서 다루는 macOS Native
-워크스페이스다. 터미널·파일·diff·journal·evidence를 함께 보여주고, 에이전트의 완료 주장이
-아니라 재현 가능한 증거로 작업 종료를 판정한다.
-
-`gdm`은 Gidem 아래에서 동작하는 결정적 검증 엔진과 CLI다. 이 저장소에는 **Gidem 앱**과
-**gdm 하네스**가 함께 들어 있다. 기반 원칙은
-**작업 증거가 다음 습관을 바꾸는 개인 AI 워크플로우**다.
+`gdm`은 코딩 에이전트의 작업을 계약·검증 명령·증거로 관리하는 하네스다.
+**작업 증거가 다음 습관을 바꾸는 개인 AI 워크플로우**를 만든다.
+이 저장소는 검증 CLI, 스킬, 실행 어댑터와 하네스 확장을 담는다.
+`gdm-memory`와 `gdm-computer-use`도 하네스 구성에 포함된다.
 
 ## 무엇을 해결하나
 
 - 작업 시작 전에 필수 조건·금지 조건·검증 명령을 고정한다.
-- 작업별 branch와 worktree로 변경을 격리한다.
+- 실행 스킬이 작업별 branch와 worktree로 변경을 격리한다.
 - 검증 명령의 출력·종료 코드·SHA-256을 증거로 남긴다.
 - 완료, 독립 검수, commit, PR, merge 권한을 서로 분리한다.
 - 실패와 놓친 결함을 다음 작업의 검증 습관으로 환류한다.
 
-## 제품 구성
+## 하네스 구성
 
 | 구성 | 역할 | 현재 상태 |
 |---|---|---|
-| **Gidem Native** | Ghostty 터미널, 파일·편집기, diff, Proof Rail, 멀티 에이전트 lane | macOS 소스 빌드 가능 |
 | **gdm CLI** | 작업 계약, check 실행, evidence, audit·delivery 게이트 | macOS·Linux 지원 |
 | **스킬팩** | 구현·검수·분석·UI·DB·문서·PR 등 작업별 실행 프로토콜 | Codex·Claude·Pi 대상 생성 |
 | **gdm-pi** | 요청에 맞는 스킬을 선택하고 구현 모델과 독립 검수 모델을 고정 | Pi 0.84.1 기준 검증 |
+| **gdm-memory** | 세션 간 선호·결정 회상과 로컬 메모리 저장 | Pi 하네스 확장 |
+| **gdm-computer-use** | 격리 VM에서 화면 확인과 입력 자동화 | Pi 하네스 확장 |
 | **Context Pack** | 코드·문서·작업 관계를 제한된 크기의 탐색 힌트로 반환 | one-shot 실험 단계 |
 
 > 현재 원격 release asset은 아직 게시되지 않았다. 아래 **소스 설치**가 현재 코드를 사용하는
@@ -92,29 +83,6 @@ gdm done --slug fix-login
 게이트가 필요하다.
 
 </details>
-
-## Gidem Native
-
-Gidem Native는 별도 터미널 앱을 열지 않고도 작업을 끝낼 수 있는 terminal-first workbench다.
-
-- 선택한 저장소에서 task별 branch와 worktree 생성
-- 사용자가 승인한 verification plan만 실행
-- Shell·Codex·Claude·Gemini용 독립 PTY lane
-- Files, Editor, Terminal, Diff, Logs, Evidence, Proof pane
-- `Needs You`, 검증, handoff와 advisory `PRIMARY` 상태 표시
-- source·Git index가 바뀐 stale plan의 실행 차단
-
-macOS 14 이상 Apple Silicon과 Xcode Command Line Tools가 필요하다.
-
-```bash
-cd native
-./scripts/build-app.sh
-open .build/app/Gidem.app
-```
-
-앱은 pinned GhosttyKit과 runtime resources를 자체 bundle에 포함한다. Developer ID 서명과
-notarization을 포함한 공개 배포는 아직 준비 중이다. 자세한 기능과 제한은
-[`native/README.md`](./native/README.md)에서 확인할 수 있다.
 
 ## 최근 추가된 Pi 기능
 
@@ -199,20 +167,23 @@ headless 테스트나 텍스트 리뷰로 폴백한다.
 | 소스 설치·개발 | Bun |
 | gdm-pi | Pi 0.84.1, `openai-codex` 로그인 |
 | 기술 설계·독립 검수 | Claude Code CLI 로그인 |
-| Gidem Native | macOS 14+, Apple Silicon, Xcode Command Line Tools |
 | 0→1 화면 디자인 | claude.ai/design 접근 권한과 최초 1회 `/design-login` |
 
 ## 저장소 구조
 
 ```text
-native/   Gidem macOS SwiftUI 워크스페이스
 cli/      결정적 상태·증거 게이트와 gdm 바이너리
 skills/   target 중립 GDM 스킬 source
-agents/   역할 실행기, provider adapter, Pi 확장
+agents/   역할 실행기, provider adapter, Pi 확장 (memory·computer-use 포함)
 install/  스킬 renderer와 transactional 설치기
 bench/    동일 조건 benchmark와 측정 결과
-website/  Gidem 소개 웹사이트
+fixtures/ 검증 프로토콜의 공통 테스트 데이터
+script/   하네스 릴리스 패키징·검증
 ```
+
+Gidem Native 앱과 디자인 자산은 별도 `gidem-native` 저장소에서 관리한다.
+소개 사이트는 [gidem-website](https://github.com/Gdm0714/gidem-website)에 있다.
+로컬에서는 `../gidem-native`, `../gidem-website`를 사용한다. `gid`와 `gdmux`도 각각 별도 저장소다.
 
 ## 개발과 검증
 
@@ -224,14 +195,10 @@ bun run build
 bun run verify
 ```
 
-Gidem Native의 Swift test, Ghostty compatibility, 접근성·렌더 검증 명령은
-[`native/README.md`](./native/README.md#검증)에 정리되어 있다.
-
 ## 문서
 
 - [`DESIGN.md`](./DESIGN.md) — gdm 상태 머신, Work Protocol, trust boundary
 - [`INVARIANTS.md`](./INVARIANTS.md) — 바뀌지 않아야 하는 안전·검증 불변식
-- [`native/REQUIREMENTS.md`](./native/REQUIREMENTS.md) — Gidem Native 제품 계약
 - [`GITFLOW.md`](./GITFLOW.md) — 이슈·branch·PR·squash merge 규칙
 - [`bench/README.md`](./bench/README.md) — benchmark 방법과 해석 경계
 
