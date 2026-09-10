@@ -1,6 +1,19 @@
 ## 설치 대상 어댑터
 
+아래 tool-0 제한은 `run-role.sh`로 호출한 전문 역할에 적용한다. 현재 대화 진행자의
+도구 권한은 세션 설정과 사용자 요청이 정하며 이 블록으로 축소하지 않는다.
+
 - target ID: `claude`
+- 일반 Claude Code 세션은 계획·구현·통합·검증·완료를 수행하는 진행자다. 사용자가 선택한
+  Claude 모델과 세션 도구 권한을 그대로 사용하며 Codex·Pi 로그인이나 실행 파일을 요구하지 않는다.
+  스킬 설명을 읽고 요청에 맞는 `gdm-plan`, `gdm-go`, `gdm-full` 등 전체 작업 절차를 실행한다.
+- 아래 capability profile과 model 기본값은 `run-role.sh`의 전문 역할에만 적용한다.
+  진행자의 파일 편집·명령 실행을 막거나 현재 Claude 모델을 바꾸는 설정이 아니다.
+- Claude만 사용하는 작업의 외부 전문 역할은 `--provider claude`로 호출한다. 필요한 모델은
+  `--model <사용 가능한 Claude 모델 ID>`로 명시할 수 있으며 다른 공급자로 자동 전환하지 않는다.
+- `gdm-full`은 같은 Claude 공급자의 서로 다른 실제 모델로 구현·검수할 수 있다. 모델 별칭이나
+  역할 이름만 다르게 적어 독립성을 만들지 않는다. 다른 검수 모델을 사용할 수 없으면
+  `INDEPENDENCE_BLOCKED`로 full을 차단하며, 일상 `gdm-go`는 검수 모델 없이 사용할 수 있다.
 - provider adapter: `gdm-provider-adapter-v2`, argv policy: `gdm-claude-read-only-v3`
 - model 미지정 dispatch는 `claude-fable-5`로 고정한다 — 로컬 Claude 기본 모델 설정에
   상속되지 않는다. 재정의는 `--model` 인자 또는 `GDM_CLAUDE_MODEL` 환경변수로만 한다.

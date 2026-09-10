@@ -124,10 +124,6 @@ function targetFragment(sourceRoot: string, target: Target, name: string): strin
 }
 
 function renderCore(sourceRoot: string, target: Target, skillName: string, body: string): string {
-  if (target === "claude" && !READ_ONLY_SKILLS.has(skillName)) {
-    return targetFragment(sourceRoot, target, "unsupported");
-  }
-  if (target === "claude") return targetFragment(sourceRoot, target, skillName);
   let markerCount = 0;
   const rendered = body.replace(TARGET_FRAGMENT_RE, (_marker, name: string) => {
     markerCount += 1;
@@ -137,17 +133,6 @@ function renderCore(sourceRoot: string, target: Target, skillName: string, body:
     fail(`read-only skill requires exactly one target delegation fragment: ${skillName}`);
   }
   return rendered.trimEnd();
-}
-
-function renderFrontmatter(sourceRoot: string, target: Target, skillName: string, source: string): string {
-  if (target !== "claude") return source;
-  const descriptionName = READ_ONLY_SKILLS.has(skillName)
-    ? "claude-read-only-description.txt"
-    : "claude-unsupported-description.txt";
-  const descriptionPath = join(sourceRoot, "_shared", "targets", "fragments", descriptionName);
-  regularFile(descriptionPath);
-  const description = readFileSync(descriptionPath, "utf8").trim();
-  return `---\nname: gdm-${skillName}\ndescription: ${description}\n---\n`;
 }
 
 function copyTree(source: string, destination: string): void {
@@ -218,7 +203,7 @@ function main(): void {
     regularFile(skillPath);
     const canonicalSource = readFileSync(skillPath, "utf8");
     const { frontmatter: sourceFrontmatter, body } = splitFrontmatter(canonicalSource, skillPath);
-    const frontmatter = renderFrontmatter(args.sourceRoot, args.target, directoryName, sourceFrontmatter);
+    const frontmatter = sourceFrontmatter;
     const skillSourceSha256 = sha256(canonicalSource);
     const renderedBody = renderCore(args.sourceRoot, args.target, directoryName, body);
     const rendered = `${frontmatter}\n${ADAPTER_BEGIN}\n${adapter}\n${ADAPTER_END}\n\n${BODY_BEGIN}\n${renderedBody}\n${BODY_END}\n`;

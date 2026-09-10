@@ -146,15 +146,15 @@ gdm-go의 도구 전부 + 검수:
 
 ## 프로세스
 
-1. 새 기술 설계 판단이 있으면 `gdm-plan`으로 Claude CLI 설계안을 먼저 받고 Codex가 실제
+1. 새 기술 설계 판단이 있으면 `gdm-plan`으로 Claude CLI 설계안을 먼저 받고 진행자가 실제
    코드 근거를 검증한 최종 계획을 brief로 쓴다. 0→1·전면 리디자인·개방형 시각 변경은
    `gdm-design`으로 Claude Design용 프롬프트를 사용자에게 전달하고, 사용자가
    claude.ai/design에서 생성 완료를 확인한 뒤 DesignSync로 pull한다. Chrome 제어로 생성을
    대신하지 않는다. 국소 버그·기계적 리팩터·구체적 UI 결함은 호출을 생략한다.
    `HTTP 429`, `rate_limit`, `quota exceeded`, 사용량 한도일 때만
-   `codex-fallback`을 기록하고 Codex가 대신하며, 인증·권한·도구·프로젝트 문제나 timeout은
+   `coordinator-fallback`을 기록하고 진행자가 대신하며, 인증·권한·도구·프로젝트 문제나 timeout은
    대체하지 않는다. Claude의 설계·시각 산출물은 구현 모델이 아니며 로컬 제품 코드는 기록된
-   Codex 구현 모델만 작성한다.
+   실제 구현 모델만 작성한다.
 2. 구현 전 가정·불확실성·허용/금지 경로·중단 조건·risk·verification을 분류하고
    `gdm plan init --slug <슬러그> --brief "<요약>" --audit --require "<보존 조건>"
    --forbid "자동 커밋" ...`에 모두 기록한다. 소스·설정 동작 변경은 `--simplify`를 붙인다.
@@ -250,11 +250,11 @@ Good:
 어시스턴트:
 1. plan init --audit --require "기존 심의 전이 보존" --forbid "자동 커밋",
    check 4개(happy/edge/regression/adversarial) 등록·공유
-2. 구현은 같은 Codex 모델의 두 워커가 겹치지 않는 상태 전이·테스트 모듈을 맡음
+2. 구현은 현재 진행자 모델의 두 워커가 겹치지 않는 상태 전이·테스트 모듈을 맡음
    → 조율자가 변경 통합·pass ×4 → recheck 통과
 3. audit brief + 실제 diff/source excerpt + evidence exact content/hash/command output을 묶어
-   단일 검수자 실행 — 구현이 Codex였으므로 검수는
-   `gdm-agents/run-role.sh --mode work --provider claude --role audit --slug ... --handoff-event-id ... --claim-id ... --receiver-role audit`
+   단일 검수자 실행 — 실제 구현 모델과 다른 사용 가능한 Claude 모델을 지정한다
+   `gdm-agents/run-role.sh --mode work --provider claude --model <다른 실제 모델 ID> --role audit --slug ... --handoff-event-id ... --claim-id ... --receiver-role audit`
    → 검수자가 반려 ("전문간사 배정 전 통보 시도 케이스 미검증")
 4. verdict --fail 기록 → 해당 케이스를 c5로 추가, 구현·pass → 재검수 → 통과
 5. verdict --pass → done → habit feedback 1회 → commit gate가 닫혀 있어 전달 없이 정지

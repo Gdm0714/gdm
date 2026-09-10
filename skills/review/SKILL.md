@@ -34,7 +34,7 @@ description: |
   에이전트가 대신 만들거나 자기 리뷰 결과로 바꾸지 않는다.
 - 에이전트 주도 리뷰: tuicr가 있으면 shared diff surface로 열거나 기존 활성 세션에 attach할
   수 있지만, 아래의 읽기 전용 runtime·edge·반증 pass가 판정 정본이다. 발견을 tuicr에 쓰는
-  것은 사용자가 명시적으로 요청했을 때만 허용하며 `tuicr review add --username "Codex"`로
+  것은 사용자가 명시적으로 요청했을 때만 허용하며 `tuicr review add --username "<실제 검토자>"`로
   작성자를 구분한다. 승인 없이 사용자 코멘트인 것처럼 기록하지 않는다.
 - tuicr나 multiplexer가 없거나 비대화형 환경이면 기존 텍스트 리뷰로 폴백하고 알린다.
   gdm이 자동 설치하지 않으며, tuicr는 gdm-full의 독립 auditor를 대신하지 않는다.

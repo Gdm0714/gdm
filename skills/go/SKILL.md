@@ -151,7 +151,7 @@ v1 snapshot과 handoff는 계속 읽을 수 있다. 자동 실행이 필요한 `
 순서는 계약(init → add → pass → done)이고, 그 안의 진행 방식은 판단에 맡긴다.
 
 구현 전에 설계 필요성을 분류한다. 새 아키텍처·API·데이터 모델·상태 흐름·컴포넌트 경계·
-마이그레이션 선택이 있으면 `gdm-plan`으로 Claude CLI 설계안을 먼저 받고 Codex가 근거를
+마이그레이션 선택이 있으면 `gdm-plan`으로 Claude CLI 설계안을 먼저 받고 진행자가 근거를
 검증한 계획만 구현한다. 0→1·전면 리디자인·개방형 시각 변경은 `gdm-design`으로 Claude
 Design용 프롬프트를 사용자에게 전달하고, 사용자가 claude.ai/design에서 생성 완료를
 확인한 뒤에만 DesignSync로 pull한다. Chrome 제어로 생성을 대신하지 않는다. 국소 버그·
@@ -159,7 +159,7 @@ Design용 프롬프트를 사용자에게 전달하고, 사용자가 claude.ai/d
 Claude를 호출하지 않는다.
 
 Claude 또는 Claude Design 실패가 `HTTP 429`, `rate_limit`, `quota exceeded`, 사용량 한도
-중 하나로 명확할 때만 gdm 계약에 원문 오류와 `codex-fallback`을 기록하고 Codex가 대신한다.
+중 하나로 명확할 때만 gdm 계약에 원문 오류와 `coordinator-fallback`을 기록하고 진행자가 대신한다.
 인증·권한·도구 부재·프로젝트 불명확·일반 오류·timeout은 대체하지 않고 차단 상태를 보고한다.
 
 구현 워커의 실행 방식은 설치 대상 어댑터가 정한다. 루트 조율자는 변경 통합·충돌 해결·
