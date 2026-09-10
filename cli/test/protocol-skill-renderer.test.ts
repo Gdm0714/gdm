@@ -223,17 +223,12 @@ describe("deterministic provider target skill renderer", () => {
         expect(block(piSkill, BODY_BEGIN, BODY_END)).toContain("Pi bounded delegation contract");
         expect(block(piSkill, BODY_BEGIN, BODY_END)).toContain("`gdm_delegate`");
         expect(block(claudeSkill, BODY_BEGIN, BODY_END)).toContain(`gdm:${name.slice(4)}`);
-        expect(block(claudeSkill, BODY_BEGIN, BODY_END)).toContain("외부 도구는 0개");
-        expect(block(claudeSkill, BODY_BEGIN, BODY_END)).toContain("`gdm-dispatch-model-view/v1`");
-        expect(block(claudeSkill, BODY_BEGIN, BODY_END)).toContain("artifact `{path,sha256,text}`");
-        expect(block(claudeSkill, BODY_BEGIN, BODY_END)).toContain("`bytesBase64` identity/transport view도 보존하지만 model-view에는 넣지 않는다");
-        expect(block(claudeSkill, BODY_BEGIN, BODY_END)).toContain("full canonical bundle의 digest");
-        expect(block(claudeSkill, BODY_BEGIN, BODY_END)).toContain("GDM_RECEIVER_ACK_V1=");
-      } else {
-        expect(block(claudeSkill, BODY_BEGIN, BODY_END)).toContain(
-          "이 target에서 지원하지 않는 coordinator skill",
-        );
+        expect(block(claudeSkill, BODY_BEGIN, BODY_END)).toContain("Claude Code coordinator contract");
+        expect(block(claudeSkill, BODY_BEGIN, BODY_END)).toContain("--provider claude");
       }
+      expect(claudeSkill.split("\n---\n")[0]).toBe(codexSkill.split("\n---\n")[0]);
+      expect(block(claudeSkill, BODY_BEGIN, BODY_END)).not.toContain("비실행 stub");
+      expect(block(claudeSkill, BODY_BEGIN, BODY_END)).not.toContain("bundle-only");
     }
 
     for (const output of [codex, claude, pi]) {
@@ -274,17 +269,16 @@ describe("deterministic provider target skill renderer", () => {
     const piDesign = readFileSync(join(pi, "gdm-design", "SKILL.md"), "utf8");
     expect(generatedDesign).toContain("Claude Design용 프롬프트");
     expect(generatedDesign).toContain("claude.ai/design");
-    expect(claudeDesign).toContain("이 target에서 지원하지 않는 coordinator skill");
+    expect(claudeDesign).toContain("Claude Design용 프롬프트");
     expect(piDesign).toContain("Claude Design용 프롬프트");
 
     const generatedPlan = readFileSync(join(claude, "gdm-plan", "SKILL.md"), "utf8");
     const planBody = block(generatedPlan, BODY_BEGIN, BODY_END);
-    for (const forbidden of [
-      "Codex 진행자", ".gdm/plans", "관련 코드를 읽", "Claude 설계안", "gdm plan init",
-      "run-role.sh", "Read", "Glob", "Grep", "terminal", "delegation",
-    ]) {
-      expect(planBody).not.toContain(forbidden);
+    for (const required of [".gdm/plans", "관련 코드를 읽", "gdm plan init", "run-role.sh", "Claude Code coordinator contract"]) {
+      expect(planBody).toContain(required);
     }
+    expect(planBody).toContain("coordinator가 현재 fingerprint와");
+    expect(planBody).toContain("gdm protocol adopt");
     expect(generatedPlan).not.toMatch(NATIVE_DELEGATION_LEAKAGE);
 
     const generatedCodexPlan = readFileSync(join(codex, "gdm-plan", "SKILL.md"), "utf8");
@@ -298,12 +292,10 @@ describe("deterministic provider target skill renderer", () => {
 
     for (const name of ["gdm-analyze", "gdm-review"]) {
       const body = block(readFileSync(join(claude, name, "SKILL.md"), "utf8"), BODY_BEGIN, BODY_END);
-      for (const forbidden of [
-        "Read", "Glob", "Grep", "terminal", "source open", "delegation", "run-role.sh",
-      ]) {
-        expect(body).not.toContain(forbidden);
-      }
-      expect(body).toContain("GDM_RECEIVER_ACK_V1=");
+      expect(body).toContain("Claude Code coordinator contract");
+      expect(body).toContain("run-role.sh");
+      expect(body).not.toContain("GDM_RECEIVER_ACK_V1=");
+      expect(body).toMatch(/수정하지 않는다|수정 금지/);
     }
   });
 

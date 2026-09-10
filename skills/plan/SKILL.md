@@ -1,7 +1,7 @@
 ---
 name: gdm-plan
 description: |
-  구현에 들어가기 전 Claude CLI의 기술 설계안을 받아 Codex가 검증·통합한다. 요구와
+  구현에 들어가기 전 Claude CLI의 기술 설계안을 받아 진행자가 검증·통합한다. 요구와
   검증 항목(check) 초안을 포함한 계획 문서를 .gdm/plans/에 산출하며, 이 문서가 그대로
   gdm-go/gdm-full의 brief 입력이 된다. 사용자가 "$gdm-plan", "계획부터",
   "설계하고 시작하자"라고 할 때 사용한다.
@@ -11,8 +11,8 @@ description: |
 
 ## 역할
 
-작업 요청을 받아 구현 없이 계획을 통합하는 Codex 진행자. 새 기술 선택은 Claude CLI가
-설계하고, Codex는 실제 코드 근거와 작업 계약으로 검증해 실행 스킬(gdm-go/full)이 바로
+작업 요청을 받아 구현 없이 계획을 통합하는 진행자. 새 기술 선택은 Claude CLI가
+설계하고, 진행자는 실제 코드 근거와 작업 계약으로 검증해 실행 스킬(gdm-go/full)이 바로
 받아 쓸 수 있는 최종 계획 문서를 만든다.
 
 <!-- GDM_WORK_PROTOCOL_V1_BEGIN -->
@@ -107,7 +107,7 @@ v1 snapshot과 handoff는 계속 읽을 수 있다. 자동 실행이 필요한 `
 - NEVER: 코드를 수정하지 않는다. 이 스킬의 산출물은 문서 하나뿐이다.
 - NEVER: 확인하지 않은 코드 구조를 전제로 계획하지 않는다. 계획에 등장하는
   파일·함수는 실제로 열어 확인한 것만 쓴다.
-- NEVER: 새 기술 설계 판단이 필요한데 Codex가 Claude 설계안을 조용히 생략하거나 대신
+- NEVER: 새 기술 설계 판단이 필요한데 진행자가 Claude 설계안을 조용히 생략하거나 대신
   만들지 않는다. 명확한 사용량 한도·rate limit만 예외다.
 - NEVER: Claude CLI에 쓰기 도구, 비밀·자격증명, 전체 대화, 불필요한 저장소 원문을 준다.
 - IMPORTANT: 질문은 답이 구현 방향을 실제로 가르는 경우에만, 한 번에 2~3개까지만
@@ -178,21 +178,21 @@ fresh context, 넓은 탐색이 주 컨텍스트에 만드는 노이즈를 보�
    기본값 선택 후 문서에 "가정"으로 기록.
 2. 관련 코드를 읽어 현재 구조를 파악한다 (추측 금지). 국소 버그·기계적 리팩터·
    사용자가 해법을 지정한 변경처럼 새 기술 설계 판단이 없으면 Claude 호출을 생략하고
-   `설계 출처: codex-direct / 사유: 새 설계 판단 없음`을 기록한다.
+   `설계 출처: coordinator-direct / 사유: 새 설계 판단 없음`을 기록한다.
 3. 새 아키텍처·API·데이터 모델·상태 흐름·컴포넌트 경계·마이그레이션 선택이 필요하면
    설치된 공통 runner를 preflight plan mode로 호출한다. 기본 실행 형태는
    `gdm-agents/run-role.sh --mode preflight --provider claude --role plan --prompt <prompt-file> --output <draft-file> --workspace <repo>`이며,
    provider executable과 읽기 전용 argv는 runner의 target adapter만 소유한다. prompt에는
-   요구·계약·결정 질문과 Codex가 이미 확인한 bounded code excerpt(경로·라인·내용)를
+   요구·계약·결정 질문과 진행자가 이미 확인한 bounded code excerpt(경로·라인·내용)를
    완결적으로 넣는다. 비밀·전체 대화·전체 저장소 원문은 금지한다. runner는 preflight prompt를
    credential-free valid UTF-8, 최대 1 MiB로 하드 거부한다. Claude에는 다음 형식으로 답하게 한다:
    목표, 가정, 확인한 `파일:라인`, 결정과 이유, 구현 경계, 위험, 검증 항목 초안.
-4. Codex가 Claude 설계안의 모든 `파일:라인`과 전제를 직접 확인한다. 틀린 근거·범위 밖
+4. 진행자가 Claude 설계안의 모든 `파일:라인`과 전제를 직접 확인한다. 틀린 근거·범위 밖
    제안은 반려 사유와 좁힌 입력으로 한 번만 재요청하며, 확인되지 않은 내용을 최종 계획에
    넣지 않는다.
 5. 실패를 분류한다. 인증·권한·CLI 부재·일반 네트워크 오류·timeout·잘못된 산출물은
    중단하고 보고한다. `HTTP 429`, `rate_limit`, `quota exceeded`, 사용량 한도임이 명확할
-   때만 `설계 출처: codex-fallback`과 원문 오류를 기록하고 Codex가 설계한다.
+   때만 `설계 출처: coordinator-fallback`과 원문 오류를 기록하고 진행자가 설계한다.
 6. 계획 문서를 `.gdm/plans/<슬러그>.md`로 저장한다:
 
 ```markdown
@@ -202,7 +202,7 @@ fresh context, 넓은 탐색이 주 컨텍스트에 만드는 노이즈를 보�
 사용자가 받게 될 결과 한 문단.
 
 ## 설계 출처
-- provider: claude | codex-direct | codex-fallback
+- provider: claude | coordinator-direct | coordinator-fallback
 - reason: <직접 처리 또는 fallback 근거>
 
 ## 가정 (질문 대신 택한 기본값)

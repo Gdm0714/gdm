@@ -204,18 +204,21 @@ output은 최대 2 MiB, canonical dispatch bundle은 최대
 fail-closed한다. legacy v1 handoff는 계속 읽을 수 있지만 automatic claim은 이 경계를 다시
 검사한다.
 
-`install/render-skills.ts`는 한 source tree와 두 target adapter fragment에서 self-contained
-Codex·Claude skill tree를 staging에 결정적으로 생성한다. source에는 duplicated target tree를
+`install/render-skills.ts`는 한 source tree와 target별 adapter fragment에서 self-contained
+Codex·Claude·Pi skill tree를 staging에 결정적으로 생성한다. source에는 duplicated target tree를
 체크인하지 않는다. `gdm-target-skill-manifest/v1`의 `canonicalSourceSha256`는 공통
 source-template tree의 aggregate hash다. manifest는 target, 이 source-template hash와 전체
-source hash, adapter version, capability, runner와 두 provider adapter의 byte hash, hook 상태와
+source hash, adapter version, capability, runner와 세 provider adapter의 byte hash, hook 상태와
 각 rendered skill hash를 가진다. installer는
 기존 binary·skill·hook transactional rollback 순서를 보존하면서 생성 tree를 교체한다.
 Codex hook은 `supported`로 보고한다. Claude의 `not-required`는 lifecycle을 runner와 CLI
 receipt가 강제하므로 별도 Claude hook을 사용하지 않는다는 뜻이며 누락이나 degraded 상태가 아니다.
 manifest의 `skills`는 설치 진입점 목록이다. `gdm-audit` skill은 만들지 않으며, audit는
 `gdm-full`이 copied `gdm-agents/auditor.md`를 기준으로 `run-role.sh --role audit`에서 실행하는
-tool-0 leaf role이다. 이는 Claude target에 coordinator skill을 지원한다는 선언이 아니다.
+tool-0 leaf role이다. 이 제한은 역할 실행기에만 적용한다. Claude Code의 일반 세션에는
+공통 스킬 본문과 Claude 위임 fragment를 설치해 계획·구현·검증·완료를 지원한다.
+진행자는 선택한 Claude 모델·세션 권한을 유지하며 Codex·Pi나 OpenAI 로그인을 요구하지 않는다.
+full은 같은 Claude 공급자의 서로 다른 실제 모델로 수행할 수 있고 독립성 게이트는 유지한다.
 
 ### gdm:go와 gdm:full
 

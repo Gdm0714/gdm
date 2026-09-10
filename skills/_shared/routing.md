@@ -25,8 +25,8 @@
 
 | 역할 | 스킬 | 소유자 | 필수 불변식 |
 |---|---|---|---|
-| 기술 설계 | gdm-plan | Claude CLI + Codex 진행자 | Claude가 설계안을 만들고 Codex가 근거·계약·최종 계획을 검증·통합한다 |
-| 시각 디자인 | gdm-design | Claude Design + Codex 진행자 | Codex가 프롬프트를 전달하고 사용자가 Claude Design에서 생성한 뒤 Codex가 pull·구현·검증한다 |
+| 기술 설계 | gdm-plan | Claude CLI + 진행자 | Claude가 설계안을 만들고 진행자가 근거·계약·최종 계획을 검증·통합한다 |
+| 시각 디자인 | gdm-design | Claude Design + 진행자 | 진행자가 프롬프트를 전달하고 사용자가 Claude Design에서 생성한 뒤 진행자가 pull·구현·검증한다 |
 | 경량 구현 | gdm-go | 진행자 또는 경계가 분리된 구현 워커 | 진행자가 통합하고 gdm 증거가 통과해야만 완료한다 |
 | 중량 구현 | gdm-full | 한 실제 구현 모델의 진행자·워커 | 같은 모델의 여러 워커는 허용하고 독립 검수 전 전달하지 않는다 |
 | 리뷰 | gdm-review | 진행자 + 필요한 읽기 전용 역할 | 실제 diff·증거를 읽고 후보를 반증·중복 제거한다 |
@@ -34,32 +34,34 @@
 
 ## 실행 모델 라우팅
 
-대화형 진입점은 Codex 하나다. `ENTRYPOINT_PROVIDER: Codex`,
+대화형 진입점은 Codex, Claude Code, Pi다. `ENTRYPOINT_PROVIDER: current session`,
 `TECHNICAL_DESIGN_PROVIDER: Claude CLI`, `VISUAL_DESIGN_PROVIDER: Claude Design`으로
-고정한다. Codex가 사용자 문답, 로컬 조사, 작업 계약, 구현, 변경 통합, gdm 게이트와 최종
-보고를 소유한다.
+고정한다. 진행자가 사용자 문답, 로컬 조사, 작업 계약, 구현, 변경 통합, gdm 게이트와 최종
+보고를 소유한다. Claude Code만 사용하는 진행자는 선택한 Claude 모델로 구현하고,
+외부 전문 역할도 `--provider claude`로 실행한다. Pi의 모델 배분은 Pi 실행 프로필에만
+적용한다. full은 같은 Claude 공급자의 서로 다른 실제 모델로 구현·검수할 수 있다.
 
 - 새 아키텍처·API·데이터 모델·상태 흐름·컴포넌트 경계·마이그레이션처럼 구현 전에 기술
   선택이 필요한 작업은 코드 작성 전에 Claude CLI에 읽기 전용 설계안을 요청한다.
   국소 버그 수정, 사용자가 해법을 지정한 변경, 기계적 리팩터, 테스트·문서 보강처럼 새
   설계 판단이 없는 작업은 Claude 호출을 생략한다.
-- 0→1 화면, 전면 리디자인, "이쁘게" 같은 개방형 시각 변경은 Codex가 저장소 맥락을
+- 0→1 화면, 전면 리디자인, "이쁘게" 같은 개방형 시각 변경은 진행자가 저장소 맥락을
   정리한 Claude Design용 프롬프트를 사용자에게 전달한다. 사용자가 claude.ai/design에서
   프롬프트를 실행하고 프로젝트 준비를 확인할 때까지 멈춘 뒤 `/design-sync`로 결과를
-  pull한다. Codex가 Chrome 제어 스킬이나 다른 브라우저 자동화를 호출해 대신 생성하지 않는다.
-  기존 디자인 시스템 안의 잘림·간격·오타처럼 목표가 구체적인 결함 수정은 Codex가 gdm-ui로
+  pull한다. 진행자가 Chrome 제어 스킬이나 다른 브라우저 자동화를 호출해 대신 생성하지 않는다.
+  기존 디자인 시스템 안의 잘림·간격·오타처럼 목표가 구체적인 결함 수정은 진행자가 gdm-ui로
   바로 처리한다.
-- Claude 설계안은 코드 수정 권한이 없는 제안이다. Codex가 인용한 파일·함수를 다시 열고
+- Claude 설계안은 코드 수정 권한이 없는 제안이다. 진행자가 인용한 파일·함수를 다시 열고
   요구·기존 변경·검증 가능성과 대조한 뒤 최종 계획에 통합한다. 근거가 틀리면 조용히
   재작성하지 말고 반려 사유와 좁힌 입력으로 한 번만 재요청한다.
 - Claude Design은 claude.ai/design 안에서만 새 화면·레이아웃·프로토타입을 만든다.
   DesignSync는 프로젝트·컴포넌트 파일의 읽기·쓰기·동기화 다리이지 디자인 생성기가 아니다.
-  Codex는 사용자 확인 뒤 동기화된 산출물을 기준으로 로컬 제품 코드를 작성·통합하고
+  진행자는 사용자 확인 뒤 동기화된 산출물을 기준으로 로컬 제품 코드를 작성·통합하고
   렌더·테스트·gdm 증거를 소유한다.
 - 인증 실패, 권한 부족, Claude CLI나 DesignSync 부재, 프로젝트 불명확, 일반 네트워크
-  오류·timeout은 Codex 대체 사유가 아니다. 원인을 보고하고 사용자 조치가 필요한 상태로
+  오류·timeout은 진행자 대체 사유가 아니다. 원인을 보고하고 사용자 조치가 필요한 상태로
   멈춘다. `HTTP 429`, `rate_limit`, `quota exceeded`, 사용량 한도처럼 리밋임이 명확할
-  때만 원인을 계약·결과에 기록하고 Codex가 설계 또는 디자인을 대신할 수 있다.
+  때만 원인을 계약·결과에 기록하고 진행자가 설계 또는 디자인을 대신할 수 있다.
 - 외부 모델에는 비밀·토큰·자격증명, 전체 대화, 전체 저장소 원문을 보내지 않는다. tool-0
   전문 역할에는 plan/analyze용 bounded code excerpt(경로·라인·내용)·계약·결정 질문 또는
   review/audit용 실제 diff·관련 source excerpt·evidence를 자동 v2의 credential-free valid
@@ -102,7 +104,7 @@ terminal-browser는 단위·통합 테스트, 프로젝트의 Playwright 같은 
 `tuicr-wrapper.sh`, `tuicr-wrapper-zellij.sh`, `tuicr-wrapper-herdr.sh` 중 환경에 맞는 wrapper로
 연다. 사용자 주도 리뷰에서는 `tuicr review comments`로 사용자 코멘트만 회수하며 리뷰어를
 사칭하지 않는다. 에이전트 주도 `gdm-review`에서는 기존 읽기 전용 diff 분석을 유지하고,
-사용자가 명시적으로 요청한 경우에만 `tuicr review add --username "Codex"`로 발견을 공유한다.
+사용자가 명시적으로 요청한 경우에만 `tuicr review add --username "<실제 검토자>"`로 발견을 공유한다.
 
 tuicr나 multiplexer가 없거나 비대화형 리뷰이면 기존 텍스트 `gdm-review`로 폴백하고 그 사실을
 알린다. gdm 설치기는 두 companion tool을 자동 설치하지 않는다. tuicr 세션이나 사용자 코멘트는

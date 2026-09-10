@@ -56,7 +56,7 @@ function delegationContract(): string {
 }
 
 describe("workflow policy", () => {
-  test("Codex routes technical and visual design to Claude with limit-only fallback", () => {
+  test("all coordinators route technical and visual design with existing fallback policy", () => {
     const routing = readFileSync(join(ROOT, "skills", "_shared", "routing.md"), "utf8");
     const plan = skill("plan");
     const go = skill("go");
@@ -65,18 +65,18 @@ describe("workflow policy", () => {
     const ui = skill("ui");
     const readme = readFileSync(join(ROOT, "README.md"), "utf8");
 
-    expect(routing).toContain("대화형 진입점은 Codex 하나");
+    expect(routing).toContain("대화형 진입점은 Codex, Claude Code, Pi");
     expect(routing).toContain("`TECHNICAL_DESIGN_PROVIDER: Claude CLI`");
     expect(routing).toContain("`VISUAL_DESIGN_PROVIDER: Claude Design`");
     expect(routing).toContain("`HTTP 429`, `rate_limit`, `quota exceeded`, 사용량 한도");
-    expect(routing).toContain("때만 원인을 계약·결과에 기록하고 Codex가 설계 또는 디자인을 대신");
+    expect(routing).toContain("때만 원인을 계약·결과에 기록하고 진행자가 설계 또는 디자인을 대신");
 
     expect(plan).toContain(
       "gdm-agents/run-role.sh --mode preflight --provider claude --role plan",
     );
     expect(plan).toContain("provider executable과 읽기 전용 argv는 runner의 target adapter만 소유");
-    expect(plan).toContain("설계 출처: codex-direct");
-    expect(plan).toContain("설계 출처: codex-fallback");
+    expect(plan).toContain("설계 출처: coordinator-direct");
+    expect(plan).toContain("설계 출처: coordinator-fallback");
     expect(plan).toContain("인증·권한·CLI 부재·일반 네트워크 오류·timeout·잘못된 산출물");
 
     for (const workflow of [go, full]) {
@@ -100,13 +100,13 @@ describe("workflow policy", () => {
     expect(normalized(design)).toContain(
       "기본 디자인 생성·pull 흐름에서는 원격 쓰기를 하지 않는다",
     );
-    expect(design).toContain("Codex는 로컬 제품 코드를");
-    expect(design).toContain("`designProvider: codex-fallback`");
+    expect(design).toContain("진행자는 로컬 제품 코드를");
+    expect(design).toContain("`designProvider: coordinator-fallback`");
 
     expect(ui).toContain("구체적 시각 결함");
     expect(ui).toContain("개방형 시각 변경이면 gdm-design으로 전환");
     expect(ui).toContain("Claude Design용 프롬프트를 사용자에게 전달");
-    expect(readme).toContain("Claude Code 쪽 스킬은\n  비대화형 설계·검수 역할에 쓰인다");
+    expect(readme).toContain("Claude Code 쪽 스킬은 대화형 진행자의 전체 작업 절차를 제공한다");
     expect(readme).toContain("새 화면·레이아웃·프로토타입 생성은 claude.ai/design에서");
     expect(readme).toContain("Chrome이나 브라우저를 자동 조작하지 않는다");
   });

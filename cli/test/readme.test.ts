@@ -58,7 +58,9 @@ describe("public README", () => {
     expect(Math.max(...README.split("\n").map((line) => line.length))).toBeLessThanOrEqual(140);
     expect(README.match(/<details>/gu)).toHaveLength(1);
     expect(README.match(/<\/details>/gu)).toHaveLength(1);
-    expect(README.match(/^```/gmu)?.length ?? 0).toBe(16);
+    expect(README.match(/^```/gmu)?.length ?? 0).toBe(18);
+    expect(README).toContain("### 2. Claude Code에서 실행");
+    expect(README).toContain("/gdm-go 로그인 오류를 수정하고 검증까지 완료해줘");
   });
 
   test("describes current features and honest release boundaries", () => {

@@ -27,7 +27,7 @@ description: |
   gdm-design으로 전환해 Claude Design용 프롬프트를 사용자에게 전달한다. 사용자가
   claude.ai/design에서 생성 완료를 확인한 뒤에만 DesignSync로 pull하며 Chrome 제어로
   대신 실행하지 않는다. `HTTP 429`, `rate_limit`, `quota exceeded`, 사용량 한도가
-  명확할 때만 Codex fallback을 허용한다.
+  명확할 때만 진행자 fallback을 허용한다.
 - IMPORTANT: 구체적 웹 UI 수정의 런타임 확인은 실행 URL과 지원 터미널이 있고
   실행 중인 `terminal-browser`가 있으면 gdm-go 스킬의
   `terminal-browser-background-tab.sh open <url>`로 비활성 AI 탭을 만들고 반환된 browser와
