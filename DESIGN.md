@@ -204,18 +204,21 @@ output은 최대 2 MiB, canonical dispatch bundle은 최대
 fail-closed한다. legacy v1 handoff는 계속 읽을 수 있지만 automatic claim은 이 경계를 다시
 검사한다.
 
-`install/render-skills.ts`는 한 source tree와 두 target adapter fragment에서 self-contained
-Codex·Claude skill tree를 staging에 결정적으로 생성한다. source에는 duplicated target tree를
+`install/render-skills.ts`는 한 source tree와 target별 adapter fragment에서 self-contained
+Codex·Claude·Pi skill tree를 staging에 결정적으로 생성한다. source에는 duplicated target tree를
 체크인하지 않는다. `gdm-target-skill-manifest/v1`의 `canonicalSourceSha256`는 공통
 source-template tree의 aggregate hash다. manifest는 target, 이 source-template hash와 전체
-source hash, adapter version, capability, runner와 두 provider adapter의 byte hash, hook 상태와
+source hash, adapter version, capability, runner와 세 provider adapter의 byte hash, hook 상태와
 각 rendered skill hash를 가진다. installer는
 기존 binary·skill·hook transactional rollback 순서를 보존하면서 생성 tree를 교체한다.
 Codex hook은 `supported`로 보고한다. Claude의 `not-required`는 lifecycle을 runner와 CLI
 receipt가 강제하므로 별도 Claude hook을 사용하지 않는다는 뜻이며 누락이나 degraded 상태가 아니다.
 manifest의 `skills`는 설치 진입점 목록이다. `gdm-audit` skill은 만들지 않으며, audit는
 `gdm-full`이 copied `gdm-agents/auditor.md`를 기준으로 `run-role.sh --role audit`에서 실행하는
-tool-0 leaf role이다. 이는 Claude target에 coordinator skill을 지원한다는 선언이 아니다.
+tool-0 leaf role이다. 이 제한은 역할 실행기에만 적용한다. Claude Code의 일반 세션에는
+공통 스킬 본문과 Claude 위임 fragment를 설치해 계획·구현·검증·완료를 지원한다.
+진행자는 선택한 Claude 모델·세션 권한을 유지하며 Codex·Pi나 OpenAI 로그인을 요구하지 않는다.
+full은 같은 Claude 공급자의 서로 다른 실제 모델로 수행할 수 있고 독립성 게이트는 유지한다.
 
 ### gdm:go와 gdm:full
 
@@ -459,6 +462,61 @@ hook은 사용자가 Codex `/hooks` 화면에서 신뢰 상태를 확인해야 �
 - [ ] Telegram 연동 방식 (P5)
 
 ## 11. 결정 로그
+
+- 2026-09-09: **v0.12.0 — Pi 전문 역할의 실제 참여와 품질 비교.** 동작을 바꾸는 구현은
+  완료 전 reviewer를, 구조·모듈 간 상태·권한·트랜잭션·동시성 변경은 구현 전 design도
+  호출한다. 문서·서식은 제외하고 scout는 선택한다. Terra high 메인, Luna medium 조사,
+  Astra medium 설계·검토를 유지하며 명시적인 역할 요청은 실제 성공한 호출로 이행한다.
+  공개 스키마와 달리 scout의 medium/high를 거부하던 검증기를 수정했다. 거부·실패·빈 응답을
+  역할 완료로 세지 않고 Pi 바깥 tool event에도 오류를 전달한다. 자문 지적은 반영하거나
+  기각 이유를 남기며 이후 동작 변경으로 검토가 낡아지면 다시 검토한다. 이는 프롬프트 정책이며
+  코드가 모든 작업의 역할 수행을 강제하는 일반 완료 게이트는 아니다.
+  이전 64회 비교에는 scout 시도 1회가 있었지만 거부돼 실제 자식은 0회였다.
+  작은 과제의 도구 노출 실험으로 협업 품질을 주장하지 않는다. 새 비교는 주 작업자를 고정하고
+  Terra 단독·Terra 전문 역할·Astra 전문 역할을 다중 모듈 과제 4종에서 구분한다.
+  [품질 실험 계약](bench/astra-quality/README.md)에 동결 입력, 실제 역할·검토 전후 소스,
+  숨긴 요구사항 채점, 실패 보존과 해석 한계를 기록했다.
+- 2026-09-09: **v0.12.1 — 자식 시작 집계 보정.** 실행 파일을 시작하지 못한 결과도
+  `results.length`에 포함돼 launched로 집계되던 문제를 실제 spawn 사건으로 구분했다.
+  v0.12.0으로 동결한 품질 실험은 그대로 보존하며 이 후속 변경은 실행 실패 계측에 한정한다.
+  모델 배분·역할 지침·정상 실행의 모델 입력과 수용 조건은 바꾸지 않는다.
+- 2026-09-08: **v0.11.0 — Pi 역할별 모델과 측정.** 메인 고정값을 자식 모델에서 분리했다.
+  일상 메인은 Terra high, 조사 scout는 Luna medium, design과 reviewer 및 full 검수는
+  Astra medium을 기본으로 둔다. 역할별 환경변수는 호환용 CHILD 설정보다 우선한다.
+  design/reviewer는 필요할 때 high를 지정할 수 있으며, 작은 작업의 의무 위임은 만들지 않는다.
+  실제 구현을 Astra에 맡길 때도 다른 모델의 full 검수 조건은 유지한다.
+  자식 JSON의 완료된 assistant 메시지만 합산해 모델·강도·시간·토큰을 결과에 보존한다.
+  스트림 중복과 재시도 이벤트를 구분하고, 실패의 부분 사용량을 완전한 측정으로 표시하지 않는다.
+  Pi 모델 비교는 동일한 새 실행기와 gdm-go 지침에서 이전 모델 구성, Terra 단독,
+  역할 분담, Astra low 단독을 구분한다. 공식 권고·경험담·초기 판단은
+  [모델 운영 결정](bench/model-routing/decision-2026-09-08.md)에 기록했다.
+  [64회 실측](bench/model-routing/outcome-2026-09-08.md)에서 적용 구성은 기존 Sol 설정보다
+  같은 과제의 시간 비율 중앙값이 0.520, API 추정 비용 비율이 0.363이었다.
+  캐시 채점 오류 한 곳을 동일하게 보정한 뒤 네 구성 모두 16/16 통과했다.
+  scout 도구 시도 1회가 거부돼 실행된 자식은 없었고 Terra 단독보다 역할 도구 제공 구성의 추가 이득은 없었다.
+  따라서 Terra를 일상 메인으로 유지하며, 작은 작업에 위임을 강제하지 않는다.
+  별도 실제 호출로 Luna 조사와 Astra 설계·검토의 모델 배분만 확인했다.
+- 2026-09-08: **Astra 지침 감사와 조건부 실행 정책.**
+  [OpenAI Astra 공식 가이드](https://developers.openai.com/api/docs/guides/latest-model#prompting-best-practices)는
+  스킬의 충돌·불필요한 승인 대기와 작은 작업의 과도한 검증을 점검하도록 권고한다.
+  [GPT-5.5 가이드](https://developers.openai.com/api/docs/guides/latest-model?model=gpt-5.5)는
+  이전 프롬프트를 그대로 누적하지 않고 결과·성공 조건을 중심으로 시작하라고 설명한다.
+  두 모델의 권고를 구분하며 Astra가 모든 지침 삭제를 요구했다고 해석하지 않는다.
+  go의 고정 3~7 checks, 모든 소스 수정의 `--simplify`, 사건 없는 작업의 harvest,
+  full의 재승인·횟수 기준 중단·무조건 전체 recheck를 제거했다. 사용자 목표와 기존 승인,
+  의미 있는 검증, 새 변경·실패·미해결 위험에 따른 재검증을 기준으로 삼는다.
+  기술 설계의 Claude CLI는 선택형으로 바꾸고 실패 시 직접 진행하되, 사용자가 해당
+  산출물을 요구하거나 근거가 부족하면 그 의존 작업은 보류한다. 이는 불필요한 도구 의존을
+  줄이기 위한 설계 판단이며 속도 개선이 측정된 항목은 아니다. Claude Design 산출물 계약과
+  full의 다른 모델·fresh-context 검수, CLI의 범위·해시·완료·전달 게이트는 유지한다.
+  target adapter의 tool-0 제한도 전문 역할에만 적용함을 명시했다.
+  디자인의 첫 채점 통과 후 의무 재수정도 제거했고 UI·DB 작업의 기존 승인 재확인을
+  없앴다. 승인 없는 파괴적 DB 작업은 계속 확인이 필요하다. 시각 검수의 오래된 벤더
+  표현은 같은 규칙이라고 참조하던 full의 실제 모델 독립성 기준으로 통일했다.
+  [Astra A/B 기록](bench/astra-ablation/analysis-2026-09-08.md)의 18회 중 완전한 비교군 3쌍에서
+  조건부 검증 묶음은 현재 지침보다 4.4~10.6% 빨랐으나, 기능 추가의 fresh tokens는
+  43.4% 늘었다. 단순 축약만 한 안은 3쌍 중 2쌍에서 느렸으므로 프로토콜·예시·자원 한도를
+  일괄 삭제하지 않았다. 표본과 변경 묶음의 한계 때문에 개별 규칙의 성능 효과로 일반화하지 않는다.
 
 - 2026-09-03: **Context Pack one-shot provider를 token-first navigation 실험으로 유지.**
   도입 이유는 실제 receipt-bound E2E smoke에서 Context arm의 fresh input token이 더 적은

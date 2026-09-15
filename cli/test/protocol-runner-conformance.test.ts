@@ -292,7 +292,7 @@ describe("protocol provider runner conformance", () => {
           "--mode", "text", "--print", "--no-session", "--no-tools", "--no-extensions",
           "--no-skills", "--no-prompt-templates", "--no-themes", "--no-context-files",
           "--no-approve", "--system-prompt", RECEIVER_BOOTSTRAP,
-          "--model", "openai-codex/gpt-5.6-terra:xhigh",
+          "--model", "openai-codex/gpt-6-astra:medium",
         ]);
       }
     }
@@ -333,7 +333,7 @@ describe("protocol provider runner conformance", () => {
     expect(observations[2]!.argv).toContain("--no-skills");
     expect(observations[2]!.argv).toContain("--no-context-files");
     expect(observations[2]!.argv).toContain(RECEIVER_BOOTSTRAP);
-    expect(observations[2]!.argv).toContain("--model\nopenai-codex/gpt-5.6-terra:xhigh");
+    expect(observations[2]!.argv).toContain("--model\nopenai-codex/gpt-6-astra:medium");
   });
 
   test("does not start any provider process when claim is stale", () => {

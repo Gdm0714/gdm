@@ -14,6 +14,17 @@ description: |
 작업을 받아 검증 가능한 확인 항목(check)으로 계획하고, 구현→검증→통과를 반복해서
 모든 항목이 증거로 통과된 상태로만 작업을 끝내는 실행자.
 
+## 판단 기준
+
+- 사용자의 명시적 지시와 기존 승인은 스킬의 기본 절차보다 우선한다. 요청한 구현·수정은
+  실행 요청으로 받아들이고, 승인된 범위의 작업은 계획 제시나 재확인에서 멈추지 않는다.
+- 목표·성공 조건·허용 범위를 기준으로 방법을 선택한다. 일반적인 구현 선택은 직접 해결하고,
+  답이 결과를 바꾸는 미해결 사항만 질문한다. 기다리는 동안 독립적으로 할 수 있는 일은 진행한다.
+- 추가 승인이 실제로 필요하면 승인 가능한 결과와 검증을 먼저 준비한다. 스킬 때문에
+  중단한다면 읽은 SKILL.md 경로·해당 문구·적용 이유와 이미 받은 승인으로 해결되지 않는 이유를 밝힌다.
+- check 통과뿐 아니라 사용자 목표가 충족됐는지 확인한다. 빠진 요구를 발견하면 계약과
+  check를 보완하고 계속한다. 필수 검사 이후 추가 검증은 새 변경·실패·미해결 위험이 있을 때만 한다.
+
 <!-- GDM_WORK_PROTOCOL_V1_BEGIN -->
 ## 공급자 중립 작업 프로토콜 v1
 
@@ -114,16 +125,16 @@ v1 snapshot과 handoff는 계속 읽을 수 있다. 자동 실행이 필요한 `
   exit code로 하므로, 그냥 실행되는 명령이 아니라 검증하는 명령이어야 한다.
   (예: `./gradlew test --tests '*Excel*'`, `grep -q "limit=500000" src/config.ts`,
   `curl -sf localhost:8080/health | grep -q '"status":"UP"'`)
-- IMPORTANT: check는 3~7개로 유지한다. 그보다 많으면 작업을 쪼개는 신호다.
+- IMPORTANT: check 개수는 독립적인 성공 조건과 위험에 맞춘다. 작은 변경은 1개로도 충분하며,
+  개수를 채우기 위한 항목은 만들지 않는다. 작업 분리는 개수보다 독립된 범위와 검증 비용으로 판단한다.
 - IMPORTANT: init 전에 가정·불확실성·허용/금지 경로·중단 조건·위험도·검증 가능성을
-  분류한다. 소스·설정 동작 변경은 `--simplify`를 사용하고 proven `static` check로
-  불필요한 추상화·dead code·중복이 없음을 프로젝트에 맞는 정적 명령으로 증명한다.
+  분류한다. 구조 변경으로 추상화·dead code·중복 위험을 검증해야 할 때 `--simplify`를
+  사용하고 해당 위험을 잡는 proven `static` check를 둔다. 단순 소스·설정 수정에는 강제하지 않는다.
   라인 수나 diff 크기만으로 간소화를 판정하지 않는다.
 - IMPORTANT: `risk=high`는 gdm-full의 독립 검수로 올린다. `high+opaque`는 실제 도메인
   reviewer가 필요한 작업이며 AI가 reviewer를 자칭하거나 근거를 대신 쓰지 않는다.
-- IMPORTANT: 구현은 check가 요구하는 만큼만 한다. check에 없는 방어 코드·명세 밖
-  처리·동반 리팩토링은 개선이 아니라 범위 밖 변경이다 — 검수 반려 1순위 유형이고,
-  동일 조건 벤치에서 품질 감점의 주원인이었다.
+- IMPORTANT: 구현 범위는 사용자 목표와 보존 조건으로 정한다. 처음 만든 check에 빠졌더라도
+  목표 달성에 필요한 처리는 포함하고 check를 보완한다. 관련 없는 기능·동반 리팩토링은 추가하지 않는다.
 
 ## 도구
 
@@ -144,23 +155,23 @@ v1 snapshot과 handoff는 계속 읽을 수 있다. 자동 실행이 필요한 `
 | `gdm resume` | 중단된 작업 상태 복원 |
 | `gdm attempt fail ...` | 실패 서명·가설과 한 번의 확인 재시도 기록 |
 | `gdm attempt retry ...` | 바뀐 전제와 새 증거가 있을 때만 다음 재시도 허용 |
-| `gdm habit harvest --json` | 종료 시 실제 journal 사건을 정규화된 관찰로 수확 |
+| `gdm habit harvest --json` | 반복 실패·miss 또는 적용한 habit이 있을 때 journal 관찰 수확 |
 
 ## 프로세스
 
 순서는 계약(init → add → pass → done)이고, 그 안의 진행 방식은 판단에 맡긴다.
 
-구현 전에 설계 필요성을 분류한다. 새 아키텍처·API·데이터 모델·상태 흐름·컴포넌트 경계·
-마이그레이션 선택이 있으면 `gdm-plan`으로 Claude CLI 설계안을 먼저 받고 Codex가 근거를
-검증한 계획만 구현한다. 0→1·전면 리디자인·개방형 시각 변경은 `gdm-design`으로 Claude
+새 기술 설계 판단은 코드 근거와 성공 조건으로 해결한다. 별도 계획 문서가 필요하면
+`gdm-plan`을 사용한다. Claude CLI 설계안은 사용자가 요청하거나, 로컬 조사 후에도 남은
+독립적인 설계 쟁점에 도움이 될 때 선택한다. 매 기술 선택마다 외부 모델을 호출하지 않는다.
+0→1·전면 리디자인·개방형 시각 변경은 `gdm-design`으로 Claude
 Design용 프롬프트를 사용자에게 전달하고, 사용자가 claude.ai/design에서 생성 완료를
-확인한 뒤에만 DesignSync로 pull한다. Chrome 제어로 생성을 대신하지 않는다. 국소 버그·
-기계적 리팩터·사용자가 해법을 지정한 변경·구체적 UI 결함은 새 기술 설계 판단이 없으므로
-Claude를 호출하지 않는다.
+확인한 뒤에만 DesignSync로 pull한다. Chrome 제어로 생성을 대신하지 않는다.
+기존 화면의 구체적인 결함은 `gdm-ui`로 바로 수정한다.
 
-Claude 또는 Claude Design 실패가 `HTTP 429`, `rate_limit`, `quota exceeded`, 사용량 한도
-중 하나로 명확할 때만 gdm 계약에 원문 오류와 `codex-fallback`을 기록하고 Codex가 대신한다.
-인증·권한·도구 부재·프로젝트 불명확·일반 오류·timeout은 대체하지 않고 차단 상태를 보고한다.
+선택형 Claude CLI가 실패하면 원인과 `coordinator-fallback`을 기록하고 확인한 근거로 진행한다.
+사용자가 Claude 결과 자체를 요구했거나 필수 근거가 없을 때만 해당 의존 작업을 보류한다.
+Claude Design의 생성·동기화와 실패 처리는 `gdm-design`의 계약을 따른다.
 
 구현 워커의 실행 방식은 설치 대상 어댑터가 정한다. 루트 조율자는 변경 통합·충돌 해결·
 gdm pass 판정을 소유한다.
@@ -168,9 +179,9 @@ gdm pass 판정을 소유한다.
 <!-- GDM_TARGET_FRAGMENT_V1:delegation -->
 
 1. 지속 계획의 작업 계약 초안에서 가정·불확실성·허용/금지 경로·중단 조건·risk·verification을
-   꺼내 `gdm plan init`에 명시한다. 소스·설정 동작을 바꾸면 `--simplify`를 붙인다.
+   꺼내 `gdm plan init`에 명시한다. 위의 구조 위험이 있으면 `--simplify`를 붙인다.
    init 기준선은 이미 존재하던 로컬 변경을 보존하고 이후 delta만 범위 판정한다.
-   작업을 3~7개의 `regression|behavior|edge|static|manual` 항목으로 분해해 `gdm plan add`.
+   필요한 `regression|behavior|edge|static|manual` 항목을 `gdm plan add`로 등록한다.
    기존 결함을 고치는 regression은 **구현 전에** `gdm pass <id> --red`로 동일 명령의
    non-zero 실패를 기록한다. red가 성공(exit 0)하면 결함을 드러내는 항목이 아니므로 고친다.
    좋은 check의
@@ -195,11 +206,12 @@ gdm pass 판정을 소유한다.
 3. `gdm done` 전에 diff를 열어 요청 범위 밖 변경이 섞이지 않았는지 최종 대조한다.
    `gdm done`이 자동 항목을 다시 실행하므로 직전에 `gdm recheck`를 중복 실행하지 않는다.
    `recheck`는 구현 도중 이미 통과한 항목의 중간 회귀를 확인해야 할 때만 사용한다.
-4. `gdm done` 성공 뒤 `gdm habit harvest --json`을 정확히 한 번 실행해 이번 작업의
-   반복 사건을 수확하고, 적용한 habit이 있으면 `ineligible|skipped|clean|recurred` 중
+4. `gdm done` 성공 뒤 반복 실패·miss 또는 적용한 habit이 있을 때만
+   `gdm habit harvest --json`으로 관찰을 수확한다. 적용한 habit이 있으면 `ineligible|skipped|clean|recurred` 중
    실제 결과를 `gdm habit evaluate`로 기록한다. 새 후보 검토가 필요하면
    `gdm-reflect`를 안내하되 자동 채택하지 않는다.
-5. 이 피드백 checkpoint까지 끝난 뒤에만 완료를 보고한다. 재개는 `gdm resume`. 완료 이후
+5. 사용자 목표와 필수 게이트가 충족되면 완료를 보고한다. 회고할 사건이 없는 작업에는 별도
+   피드백 checkpoint를 만들지 않는다. 재개는 `gdm resume`. 완료 이후
    이 작업에서 결함이 발견되면 `gdm miss --desc ... --type ...`으로 기록한다
    — 게이트 개선(retro --all)의 입력이 된다.
 
@@ -251,10 +263,10 @@ terminal-browser-background-tab.sh close <key> <id>
 - **반복 명령**: 프로젝트 표준 명령(빌드/테스트/실행)은 `gdm preset set`으로
   등록하고 check에서 `@이름`으로 참조한다. 같은 명령을 두 번 타이핑하고 있다면
   프리셋 등록 신호다. lint·typecheck 표준 명령이 있는 프로젝트면 회귀 check
-  하나로 포함한다 — 사람 눈보다 싼 결정적 게이트부터 쓴다.
-- **검증 코드 추가**: 새 테스트는 기존 테스트 파일과 관례를 확장하는 것이
-  기본이다. 새 파일·새 스타일은 프로젝트에 관례가 없을 때만 만든다
-  (실측: 새 파일 생성이 반복된 품질 감점 사유였다).
+  하나가 필요하면 기존 항목과 합치거나 추가한다. 같은 검사를 중복 등록하지 않는다.
+- **검증 코드 추가**: 동작 회귀·경계 조건을 검증할 때 추가하고 기존 관례를 따른다.
+  되돌리기 쉬운 작은 변경이나 구현 문구를 그대로 반복하는 테스트를 의례적으로 만들지 않는다.
+  기존 테스트·실행 검사로 충분하면 이를 사용한다. 새 파일은 독립된 검증 책임이 있을 때 만든다.
 
 ## 엣지 케이스
 
@@ -266,9 +278,9 @@ terminal-browser-background-tab.sh close <key> <id>
 
 ## 출력 형식
 
-- 진행 중에는 항목 통과 시마다 한 줄(`c2 통과 (2/5)`)만 보고한다.
-- 완료 보고는 결론 먼저: 무엇이 어떻게 됐는지 한두 문장 → 항목 표(gdm plan list)
-  → 증거 파일 경로. 요약 문서는 `.gdm/<슬러그>/work.md`에 이미 있다.
+- 진행 중에는 의미 있는 결과·막힌 원인·다음 검증을 간결하게 알린다.
+- 완료 보고는 바뀐 결과, 검증과 남은 한계, 증거 경로를 짧게 제시한다. 항목 표는 비교가
+  필요할 때만 쓴다. 요약 문서는 `.gdm/<슬러그>/work.md`에 이미 있다.
 
 ## 예시
 
@@ -294,12 +306,12 @@ Good:
    c2 "단위 테스트 통과" (cmd: ./gradlew test --tests '*Excel*')
    c3 "50만 초과 요청 시 안내 응답" (cmd: curl -sf .../download?rows=600000 | grep -q "제한")
 3. 구현 → `gdm pass c1` → `gdm pass c2` → `gdm pass c3` → `gdm done`
-4. `gdm habit harvest --json` → 적용한 habit이 있으면 결과 평가
+4. 반복 실패·miss 또는 적용한 habit이 있을 때만 관찰 수확 → 적용한 habit 결과 평가
 5. "완료: 기본 제한이 50만 건으로 변경됐고 3개 항목이 전부 실행 증거로 통과했습니다.
    요약: .gdm/excel-limit/work.md"
 </example>
 
 <commentary>
 완료 선언이 gdm done 성공 뒤에만 나오고, 증거는 gdm이 직접 실행해 만들었으므로
-지어낼 수 없다. 모델의 역할은 cmd가 성공하도록 구현을 고치는 것뿐이다.
+지어낼 수 없다. 모델은 사용자 목표를 구현하고 cmd가 그 목표를 실제로 검증하는지도 판단한다.
 </commentary>

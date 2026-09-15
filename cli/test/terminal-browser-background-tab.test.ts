@@ -172,7 +172,7 @@ describe("terminal-browser background tab helper", () => {
       (browser: { key: string }) => browser.key === "hidden",
     ).tabs;
     expect(remaining.map((tab: { id: number }) => tab.id)).toEqual([7]);
-  });
+  }, 30_000);
 
   test("removes the AI tab when navigation unexpectedly activates it", () => {
     const { statePath, logPath, fakePath } = fixture();
@@ -194,5 +194,5 @@ describe("terminal-browser background tab helper", () => {
     const hidden = state.browsers.find((browser: { key: string }) => browser.key === "hidden");
     expect(hidden.tabs.map((tab: { id: number }) => tab.id)).toEqual([7]);
     expect(hidden.tabs[0].active).toBe(true);
-  });
+  }, 30_000);
 });

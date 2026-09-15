@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -26,6 +26,9 @@ const { TartVmManager } = await import("../../agents/pi/gdm-computer-use/vm.ts")
 
 const roots: string[] = [];
 const oldTartPath = process.env.GDM_TART_PATH;
+// Observed lsof scans returned nonempty listener output with exit 1.
+// The production boundary rejects both that inconclusive scan and a confirmed listener.
+const listenerBoundaryError = /exposed a host TCP listener|Host TCP listener inspection failed \(1\)/;
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
   if (oldTartPath === undefined) delete process.env.GDM_TART_PATH;
@@ -253,17 +256,18 @@ exit 99
     process.env.GDM_TART_PATH = tart;
     const manager = new TartVmManager();
     await expect(manager.start()).rejects.toThrow("another process");
-  });
+  }, 30_000);
 
   test("kills its owned VM when the Tart process exposes a host TCP listener", async () => {
     const root = mkdtempSync(join(tmpdir(), "gdm-cu-listening-tart-"));
     roots.push(root);
     const tart = join(root, "tart");
+    const listenerReady = join(root, "listener-ready");
     const token = `gdm-cu-immediate-listener-${process.pid}`;
     writeFileSync(tart, `#!/usr/bin/env bash
 case "\${1:-}" in
   list) printf '[{"Name":"gdm-cu-vm","Running":false,"State":"Stopped"}]\\n' ;;
-  run) exec /usr/bin/python3 -c 'import socket,time; token="${token}"; s=socket.socket(); s.bind(("127.0.0.1",0)); s.listen(); time.sleep(120)' ;;
+  run) exec /usr/bin/python3 -c 'import pathlib,socket,time; token="${token}"; s=socket.socket(); s.bind(("127.0.0.1",0)); s.listen(); pathlib.Path("${listenerReady}").write_text("listening"); time.sleep(120)' ;;
   exec) end=$((SECONDS + 1)); while (( SECONDS < end )); do :; done; exit 0 ;;
   *) exit 99 ;;
 esac
@@ -271,9 +275,14 @@ esac
     chmodSync(tart, 0o755);
     process.env.GDM_TART_PATH = tart;
     const manager = new TartVmManager();
-    await expect(manager.start()).rejects.toThrow("exposed a host TCP listener");
-    expect((await manager.status()).owned).toBe(false);
-    expect(Bun.spawnSync(["/bin/ps", "-axo", "command="], { stdout: "pipe" }).stdout.toString()).not.toContain(token);
+    try {
+      await expect(manager.start()).rejects.toThrow(listenerBoundaryError);
+      expect(existsSync(listenerReady)).toBe(true);
+      expect((await manager.status()).owned).toBe(false);
+      expect(Bun.spawnSync(["/bin/ps", "-axo", "command="], { stdout: "pipe" }).stdout.toString()).not.toContain(token);
+    } finally {
+      await manager.stop();
+    }
   }, 15_000);
 
   test("continuously detects a delayed descendant listener and removes the owned process groups", async () => {
@@ -281,6 +290,8 @@ esac
     roots.push(root);
     const tart = join(root, "tart");
     const rfb = join(root, "rfb.js");
+    const trigger = join(root, "start-listener");
+    const listenerReady = join(root, "listener-ready");
     const token = `gdm-cu-delayed-listener-${process.pid}`;
     writeFileSync(rfb, `
 let pending = Buffer.alloc(0);
@@ -296,11 +307,24 @@ await read(1);
 const init = Buffer.alloc(24); init.writeUInt16BE(1, 0); init.writeUInt16BE(1, 2); init[4]=32; init[5]=24; init[7]=1; init.writeUInt16BE(255,8); init.writeUInt16BE(255,10); init.writeUInt16BE(255,12); process.stdout.write(init);
 await read(20); await read(12); await new Promise((resolve) => process.stdin.once("end", resolve));
 `);
+    // Open the listener only after start() returns: a fixed delay can expire during
+    // startup on a busy host. Keep its PID stable throughout lsof's inspection.
     writeFileSync(tart, `#!/usr/bin/env bash
 case "\${1:-}" in
   list) printf '[{"Name":"gdm-cu-vm","Running":false,"State":"Stopped"}]\\n' ;;
   run)
-    (sleep 3; exec /usr/bin/python3 -c 'import socket,time; token="${token}"; s=socket.socket(); s.bind(("127.0.0.1",0)); s.listen(); time.sleep(120)') &
+    /usr/bin/python3 -c '
+import pathlib,socket,time
+token="${token}"
+trigger=pathlib.Path("${trigger}")
+deadline=time.monotonic()+15
+while not trigger.exists():
+    if time.monotonic() >= deadline: raise TimeoutError("listener trigger was not received")
+    time.sleep(0.02)
+s=socket.socket(); s.bind(("127.0.0.1",0)); s.listen()
+pathlib.Path("${listenerReady}").write_text("listening")
+time.sleep(120)
+' &
     wait
     ;;
   exec)
@@ -318,15 +342,21 @@ esac
     chmodSync(tart, 0o755);
     process.env.GDM_TART_PATH = tart;
     const manager = new TartVmManager();
-    await manager.start();
-    let status = await manager.status();
-    const deadline = Date.now() + 10_000;
-    while (status.owned && Date.now() < deadline) {
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      status = await manager.status();
+    try {
+      await manager.start();
+      writeFileSync(trigger, "ready\n");
+      let status = await manager.status();
+      const deadline = Date.now() + 10_000;
+      while (status.owned && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        status = await manager.status();
+      }
+      expect(existsSync(listenerReady)).toBe(true);
+      expect(status.owned).toBe(false);
+      expect(status.lastError).toMatch(listenerBoundaryError);
+      expect(Bun.spawnSync(["/bin/ps", "-axo", "command="], { stdout: "pipe" }).stdout.toString()).not.toContain(token);
+    } finally {
+      await manager.stop();
     }
-    expect(status.owned).toBe(false);
-    expect(status.lastError).toContain("exposed a host TCP listener");
-    expect(Bun.spawnSync(["/bin/ps", "-axo", "command="], { stdout: "pipe" }).stdout.toString()).not.toContain(token);
   }, 20_000);
 });

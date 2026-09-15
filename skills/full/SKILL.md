@@ -146,38 +146,41 @@ gdm-go의 도구 전부 + 검수:
 
 ## 프로세스
 
-1. 새 기술 설계 판단이 있으면 `gdm-plan`으로 Claude CLI 설계안을 먼저 받고 Codex가 실제
-   코드 근거를 검증한 최종 계획을 brief로 쓴다. 0→1·전면 리디자인·개방형 시각 변경은
+1. 새 기술 설계 판단과 승인 여부는 gdm-go의 판단 기준을 따른다. 계획 문서가 필요하면
+   `gdm-plan`을 사용하고, Claude CLI는 사용자 요청 또는 남은 독립 설계 쟁점에 유용할 때
+   선택한다. 0→1·전면 리디자인·개방형 시각 변경은
    `gdm-design`으로 Claude Design용 프롬프트를 사용자에게 전달하고, 사용자가
    claude.ai/design에서 생성 완료를 확인한 뒤 DesignSync로 pull한다. Chrome 제어로 생성을
    대신하지 않는다. 국소 버그·기계적 리팩터·구체적 UI 결함은 호출을 생략한다.
-   `HTTP 429`, `rate_limit`, `quota exceeded`, 사용량 한도일 때만
-   `codex-fallback`을 기록하고 Codex가 대신하며, 인증·권한·도구·프로젝트 문제나 timeout은
-   대체하지 않는다. Claude의 설계·시각 산출물은 구현 모델이 아니며 로컬 제품 코드는 기록된
-   Codex 구현 모델만 작성한다.
+   선택형 기술 설계 호출 실패는 원인과 `coordinator-fallback`을 기록하고 진행한다. 사용자가
+   Claude 결과 자체를 요구했거나 필수 근거가 없으면 해당 의존 작업만 보류한다.
+   Claude Design의 실패 처리는 `gdm-design`을 따른다. 설계·시각 산출물은 구현 모델이 아니며 로컬 제품 코드는 기록된
+   실제 구현 모델만 작성한다.
 2. 구현 전 가정·불확실성·허용/금지 경로·중단 조건·risk·verification을 분류하고
    `gdm plan init --slug <슬러그> --brief "<요약>" --audit --require "<보존 조건>"
-   --forbid "자동 커밋" ...`에 모두 기록한다. 소스·설정 동작 변경은 `--simplify`를 붙인다.
+   --forbid "자동 커밋" ...`에 모두 기록한다. 구조 변경의 간소화 검증이 필요할 때 `--simplify`를 붙인다.
    high risk는 `--audit`을 생략해도 CLI가 독립 검수를 요구하지만 full은 의도를 드러내기 위해
    명시한다. init 기준선 전에 있던 로컬 변경은 보존 대상이며 이후 delta만 범위 판정한다.
 3. check 설계: gdm-go의 `regression|behavior|edge|static|manual` 분류에
-   **adversarial 항목을 추가**한다 — 악의적/경계 입력에서 무너지지 않는지 검증하는 check 1개 이상.
+   악의적·경계 입력 위험이 있는 변경에는 그 실패를 잡는 adversarial 검증을 포함한다.
+   기존 항목에서 충분히 검증하면 별도 개수를 채우기 위해 항목을 추가하지 않는다.
    regression은 구현 전에 `gdm pass <id> --red`로 동일 명령의 non-zero 실패를 기록한다.
    `--simplify` 작업에는 라인 수가 아니라 dead code·중복·불필요한 추상화를 겨냥한 proven
    static check가 필요하다. high+opaque이면 실제 도메인 reviewer가 확인할
    `--manual --expert` check를 추가하고 pass에 `--reviewer`와 `--note`를 기록한다.
    실행 모델은 reviewer를 자칭하거나 전문가 판단 근거를 대신 작성하지 않는다.
-   인터랙티브 표면(HTTP·CLI·화면)이 있는 작업이면 그 표면을 **실제로 구동한
+   인터랙티브 표면(HTTP·CLI·화면)의 동작을 바꾸는 작업이면 그 표면을 **실제로 구동한
    증거** check도 1개 이상 둔다 (curl 응답, 실행 기록, 스크린샷) — 코드 검증은
    표면 구동을 대신하지 못한다.
-   등록 후 목록을 사용자에게 보여주고, 중량 작업이므로 이견 없는지 확인한다.
+   등록 후 필요한 검증을 알리고 승인된 범위의 구현을 계속한다. full이라는 이유만으로
+   이미 받은 승인을 다시 묻지 않는다.
 4. 구현 시작 전에 실제 구현 모델 하나를 지정한다. 검수 입력의 첫 필드에
    `implementationModel: <실제 모델>`을 기록하고 작업 기록에도 남긴다. 구현은 독립 경계와
    컨텍스트 이득에 따라 조율자가 맡거나, 같은 실제 구현 모델의 여러 워커에게 겹치지 않는
    파일·모듈을 배정한다. 루트 조율자는 산출물을 통합하고, 제품 파일 충돌을 직접 고치면
    기록된 실제 구현 모델과 동일해야 한다. 조율자는 gdm-go와 동일한 pass 게이트를 소유하고
-   (위임 산출물도 문장이 아니라 증거로만 판정한다), 전 항목 통과 후 `gdm recheck`로 회귀를
-   확인한다.
+   (위임 산출물도 문장이 아니라 증거로만 판정한다). 검수 전 마지막 변경 이후의 검증이
+   빠졌을 때만 해당 항목을 `gdm recheck --check <id>`로 재실행한다.
 5. 검수:
    a. `gdm audit brief` 출력, 검수자 프롬프트 전문, 실제 `git diff`와 관련 source excerpt,
       evidence 파일의 exact content·hash·command output을 하나의 contained regular audit
@@ -209,7 +212,7 @@ gdm-go의 도구 전부 + 검수:
       Git 지문이 유효한 경우 `done`은 같은 검증 명령을 다시 실행하지 않는다.
 6. 반려면: 반려 사유를 check로 반영(`gdm plan add`/`edit --reason`)하고 4로.
    (check가 바뀌면 기존 검수는 자동 무효 — 재검수가 필요해진다. 정상 동작이다.)
-7. 통과면 `gdm done` 뒤 gdm-go의 단일 habit feedback checkpoint를 수행한다.
+7. 통과면 `gdm done` 뒤 gdm-go의 조건부 habit 관찰·평가를 적용하고 사용자 목표 충족을 확인한다.
 8. 전달은 별도 gate다. `gdm plan contract --check-commit --slug <슬러그>`를 실행한다.
    - exit 4(기본값 커밋 금지)이고 사용자가 전달을 **명시적으로 승인하지 않았으면**:
      검증 결과만 보고하고 멈춘다. `done`이나 이 스킬 호출은 승인이 아니다.
@@ -223,7 +226,9 @@ gdm-go의 도구 전부 + 검수:
 - 실제 구현 모델과 다른 검수자를 실행할 수 없으면 `INDEPENDENCE_BLOCKED`를 보고하고
   full의 검수 통과·done·전달을 중단한다. 같은 모델 검수나 사용자 동의로 full 게이트를
   낮추지 않는다. 사용자가 경량 루프로 범위를 다시 정하면 별도 gdm-go 작업으로 시작한다.
-- 재검수가 2회 이상 반복되면: 반려 사유들을 정리해 사용자에게 방향을 확인받는다.
+- 반려 횟수만으로 멈추지 않는다. 사유와 새 근거를 반영해 승인된 범위의 수정·재검수를
+  계속한다. 같은 실패를 근거 없이 반복하지 않으며, 사용자의 선택이나 외부 조치가 꼭
+  필요한 경우에만 해당 의존 작업의 차단 사유를 보고한다.
 
 ## 출력 형식
 
@@ -250,11 +255,11 @@ Good:
 어시스턴트:
 1. plan init --audit --require "기존 심의 전이 보존" --forbid "자동 커밋",
    check 4개(happy/edge/regression/adversarial) 등록·공유
-2. 구현은 같은 Codex 모델의 두 워커가 겹치지 않는 상태 전이·테스트 모듈을 맡음
+2. 구현은 현재 진행자 모델의 두 워커가 겹치지 않는 상태 전이·테스트 모듈을 맡음
    → 조율자가 변경 통합·pass ×4 → recheck 통과
 3. audit brief + 실제 diff/source excerpt + evidence exact content/hash/command output을 묶어
-   단일 검수자 실행 — 구현이 Codex였으므로 검수는
-   `gdm-agents/run-role.sh --mode work --provider claude --role audit --slug ... --handoff-event-id ... --claim-id ... --receiver-role audit`
+   단일 검수자 실행 — 실제 구현 모델과 다른 사용 가능한 Claude 모델을 지정한다
+   `gdm-agents/run-role.sh --mode work --provider claude --model <다른 실제 모델 ID> --role audit --slug ... --handoff-event-id ... --claim-id ... --receiver-role audit`
    → 검수자가 반려 ("전문간사 배정 전 통보 시도 케이스 미검증")
 4. verdict --fail 기록 → 해당 케이스를 c5로 추가, 구현·pass → 재검수 → 통과
 5. verdict --pass → done → habit feedback 1회 → commit gate가 닫혀 있어 전달 없이 정지

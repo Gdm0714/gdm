@@ -34,7 +34,7 @@ describe("interactive companion tool routing", () => {
     expect(review).toContain("에이전트 주도 리뷰");
     expect(review).toContain("`tuicr-wrapper.sh`");
     expect(review).toContain("`tuicr review comments`");
-    expect(review).toContain('`tuicr review add --username "Codex"`');
+    expect(review).toContain('`tuicr review add --username "<실제 검토자>"`');
     expect(review).toContain("읽기 전용 runtime·edge·반증 pass가 판정 정본");
   });
 

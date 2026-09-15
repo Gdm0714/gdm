@@ -104,10 +104,10 @@ describe("vendor-neutral work protocol routing", () => {
       /모델 backend에 연결하는 transport 자체를 차단하거나 attest하는 경계는 아니다/u,
     );
     expect(design).toMatch(
-      /canonical `gdm-dispatch-bundle\/v1`[\s\S]*gdm-dispatch-model-view\/v1[\s\S]*model-view에는 `bytesBase64`가 없/u,
+      /canonical `gdm-dispatch-bundle\/v1`[\s\S]*?gdm-dispatch-model-view\/v1[\s\S]*?model-view에는 `bytesBase64`가 없/u,
     );
     expect(design).toMatch(
-      /gdm-provider-adapter-v2[\s\S]*--append-system-prompt[\s\S]*artifact text[\s\S]*untrusted data/u,
+      /gdm-provider-adapter-v2[\s\S]*?--append-system-prompt[\s\S]*?artifact text[\s\S]*?untrusted data/u,
     );
     for (const claim of ["audit-claude-4", "audit-claude-5", "audit-claude-6"]) {
       expect(evaluation).toContain(claim);

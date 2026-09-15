@@ -1,7 +1,7 @@
 ---
 name: gdm-plan
 description: |
-  구현에 들어가기 전 Claude CLI의 기술 설계안을 받아 Codex가 검증·통합한다. 요구와
+  구현에 들어가기 전 요구와 코드 근거로 계획한다. 필요하면 Claude CLI의 설계안을 검증·통합한다. 요구와
   검증 항목(check) 초안을 포함한 계획 문서를 .gdm/plans/에 산출하며, 이 문서가 그대로
   gdm-go/gdm-full의 brief 입력이 된다. 사용자가 "$gdm-plan", "계획부터",
   "설계하고 시작하자"라고 할 때 사용한다.
@@ -11,9 +11,15 @@ description: |
 
 ## 역할
 
-작업 요청을 받아 구현 없이 계획을 통합하는 Codex 진행자. 새 기술 선택은 Claude CLI가
-설계하고, Codex는 실제 코드 근거와 작업 계약으로 검증해 실행 스킬(gdm-go/full)이 바로
+작업 요청을 받아 구현 없이 계획을 통합하는 진행자. 실제 코드 근거와 작업 계약으로
+설계를 판단하고 필요한 경우에만 외부 설계안을 비교해 실행 스킬(gdm-go/full)이 바로
 받아 쓸 수 있는 최종 계획 문서를 만든다.
+
+사용자의 명시적 지시와 기존 승인은 스킬의 기본 절차보다 우선한다. 계획만 요청받으면
+계획 문서를 전달하고, 구현까지 요청받았으면 계획 뒤 승인된 실행을 계속한다.
+일반적인 선택은 근거와 가정으로 해결하고 결과를 바꾸는 미해결 사항만 질문한다.
+스킬 때문에 중단한다면 읽은 SKILL.md 경로·해당 문구·적용 이유와 기존 승인으로
+해결되지 않는 이유를 밝힌다.
 
 <!-- GDM_WORK_PROTOCOL_V1_BEGIN -->
 ## 공급자 중립 작업 프로토콜 v1
@@ -104,11 +110,12 @@ v1 snapshot과 handoff는 계속 읽을 수 있다. 자동 실행이 필요한 `
 
 ## 제약
 
-- NEVER: 코드를 수정하지 않는다. 이 스킬의 산출물은 문서 하나뿐이다.
+- NEVER: 계획 단계에서 제품 코드를 수정하지 않는다. 구현도 요청받았다면 계획을 만든 뒤
+  gdm-go/full로 이어서 수행한다. 계획만 요청받은 작업에는 구현을 추가하지 않는다.
 - NEVER: 확인하지 않은 코드 구조를 전제로 계획하지 않는다. 계획에 등장하는
   파일·함수는 실제로 열어 확인한 것만 쓴다.
-- NEVER: 새 기술 설계 판단이 필요한데 Codex가 Claude 설계안을 조용히 생략하거나 대신
-  만들지 않는다. 명확한 사용량 한도·rate limit만 예외다.
+- IMPORTANT: 기술 설계의 기본 소유자는 진행자다. Claude CLI는 사용자가 요청하거나,
+  로컬 조사 후에도 남은 독립적인 설계 쟁점에 도움이 될 때 선택한다.
 - NEVER: Claude CLI에 쓰기 도구, 비밀·자격증명, 전체 대화, 불필요한 저장소 원문을 준다.
 - IMPORTANT: 질문은 답이 구현 방향을 실제로 가르는 경우에만, 한 번에 2~3개까지만
   한다. 관례적 기본값이 있는 것은 기본값을 택하고 계획에 명시한다.
@@ -167,7 +174,7 @@ crash·timeout인 경우, 출력이 malformed JSON·schema mismatch인 경우, �
 
 워커 배정: 계획의 **소유자는 루트 진행자**다 — 사용자 문답, 작업 계약, 근거 판정, 최종 문서
 검토·저장은 진행자가 소유한다 (라우팅 계약: `skills/_shared/routing.md`의 역할 배정 표와 동일).
-그 안의 기술 설계 초안은 Claude CLI에 맡긴다. 추가 조사는 독립 코드 경계, 필요한 전문성·
+기술 설계 초안은 직접 작성하거나 선택형 Claude CLI에 맡긴다. 추가 조사는 독립 코드 경계, 필요한 전문성·
 fresh context, 넓은 탐색이 주 컨텍스트에 만드는 노이즈를 보고 직접 수행하거나 위임한다.
 여러 조사 역할에는 겹치지 않는 영역과 종료 조건을 주며, 진행자가 인용할 실제 파일을 다시
 확인하고 최종 문서를 저장한다.
@@ -176,23 +183,23 @@ fresh context, 넓은 탐색이 주 컨텍스트에 만드는 노이즈를 보�
 
 1. 요청을 읽고 모호한 지점을 가른다: 방향을 가르는 모호함이면 질문, 아니면
    기본값 선택 후 문서에 "가정"으로 기록.
-2. 관련 코드를 읽어 현재 구조를 파악한다 (추측 금지). 국소 버그·기계적 리팩터·
-   사용자가 해법을 지정한 변경처럼 새 기술 설계 판단이 없으면 Claude 호출을 생략하고
-   `설계 출처: codex-direct / 사유: 새 설계 판단 없음`을 기록한다.
-3. 새 아키텍처·API·데이터 모델·상태 흐름·컴포넌트 경계·마이그레이션 선택이 필요하면
-   설치된 공통 runner를 preflight plan mode로 호출한다. 기본 실행 형태는
+2. 관련 코드를 읽어 현재 구조와 설계 선택지를 파악한다 (추측 금지). 직접 설계하면
+   `설계 출처: coordinator-direct`와 판단 근거를 기록한다. 새 기술 선택 자체는 외부 호출의 조건이 아니다.
+3. 사용자 요청 또는 남은 독립 설계 쟁점 때문에 Claude 설계안을 선택하면 설치된 공통
+   runner를 preflight plan mode로 호출한다. 기본 실행 형태는
    `gdm-agents/run-role.sh --mode preflight --provider claude --role plan --prompt <prompt-file> --output <draft-file> --workspace <repo>`이며,
    provider executable과 읽기 전용 argv는 runner의 target adapter만 소유한다. prompt에는
-   요구·계약·결정 질문과 Codex가 이미 확인한 bounded code excerpt(경로·라인·내용)를
+   요구·계약·결정 질문과 진행자가 이미 확인한 bounded code excerpt(경로·라인·내용)를
    완결적으로 넣는다. 비밀·전체 대화·전체 저장소 원문은 금지한다. runner는 preflight prompt를
    credential-free valid UTF-8, 최대 1 MiB로 하드 거부한다. Claude에는 다음 형식으로 답하게 한다:
    목표, 가정, 확인한 `파일:라인`, 결정과 이유, 구현 경계, 위험, 검증 항목 초안.
-4. Codex가 Claude 설계안의 모든 `파일:라인`과 전제를 직접 확인한다. 틀린 근거·범위 밖
+4. 외부 설계안을 받았으면 모든 `파일:라인`과 전제를 직접 확인한다. 틀린 근거·범위 밖
    제안은 반려 사유와 좁힌 입력으로 한 번만 재요청하며, 확인되지 않은 내용을 최종 계획에
    넣지 않는다.
-5. 실패를 분류한다. 인증·권한·CLI 부재·일반 네트워크 오류·timeout·잘못된 산출물은
-   중단하고 보고한다. `HTTP 429`, `rate_limit`, `quota exceeded`, 사용량 한도임이 명확할
-   때만 `설계 출처: codex-fallback`과 원문 오류를 기록하고 Codex가 설계한다.
+5. 선택형 호출의 인증·권한·CLI 부재·일반 네트워크 오류·timeout·잘못된 산출물은
+   `설계 출처: coordinator-fallback`과 실패 이유를 기록하고 확인한 근거로 직접 설계한다.
+   사용자가 Claude 결과 자체를 요구했거나 필수 근거가 없을 때만 해당 의존 작업을 보류한다.
+   실패한 호출을 성공했다고 쓰거나 확인되지 않은 제안을 채택하지 않는다.
 6. 계획 문서를 `.gdm/plans/<슬러그>.md`로 저장한다:
 
 ```markdown
@@ -202,7 +209,7 @@ fresh context, 넓은 탐색이 주 컨텍스트에 만드는 노이즈를 보�
 사용자가 받게 될 결과 한 문단.
 
 ## 설계 출처
-- provider: claude | codex-direct | codex-fallback
+- provider: claude | coordinator-direct | coordinator-fallback
 - reason: <직접 처리 또는 fallback 근거>
 
 ## 가정 (질문 대신 택한 기본값)
@@ -229,7 +236,7 @@ gdm plan add에 그대로 쓸 수 있는 형태:
 - stop-if: <발견하면 구현을 멈추고 사용자에게 돌아갈 조건>
 - risk: low | medium | high
 - verification: deterministic | inspectable | opaque
-- simplify: yes | no (소스·설정 동작 변경은 기본 yes)
+- simplify: yes | no (구조 변경의 추상화·dead code·중복 위험을 별도로 검증할 때 yes)
 
 ## 구현 단계
 1. <파일:위치> 무엇을 어떻게
@@ -244,7 +251,8 @@ gdm plan add에 그대로 쓸 수 있는 형태:
    명령이 실패해야 하고, high risk는 audit, high+opaque는 실제 reviewer의 expert manual
    증거가 필요하다고 계획에 적는다. 라인 수 감소를 간소화 증거로 쓰지 않는다.
    채팅 요약만 다음 실행에 넘기지 않는다.
-8. 문서 경로를 알려주고, 계약을 포함한 실행 연결을 안내한다:
+8. 계획만 요청받았으면 문서 경로와 실행 연결을 안내한다. 구현까지 요청받았으면
+   기존 승인 범위에서 gdm-go/full로 이어서 실행한다:
    `gdm plan init --slug <슬러그> --brief-file .gdm/plans/<슬러그>.md --require '<보존 조건>'
    --forbid '<금지 조건>' --assume '<가정>' --uncertain '<불확실성>' --allow-path <경로>
    --forbid-path <경로> --stop-if '<중단 조건>' --risk <등급> --verification <방식> [--simplify]`

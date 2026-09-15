@@ -56,7 +56,7 @@ function delegationContract(): string {
 }
 
 describe("workflow policy", () => {
-  test("Codex routes technical and visual design to Claude with limit-only fallback", () => {
+  test("technical design is optional while explicit visual design keeps its artifact contract", () => {
     const routing = readFileSync(join(ROOT, "skills", "_shared", "routing.md"), "utf8");
     const plan = skill("plan");
     const go = skill("go");
@@ -65,25 +65,27 @@ describe("workflow policy", () => {
     const ui = skill("ui");
     const readme = readFileSync(join(ROOT, "README.md"), "utf8");
 
-    expect(routing).toContain("대화형 진입점은 Codex 하나");
-    expect(routing).toContain("`TECHNICAL_DESIGN_PROVIDER: Claude CLI`");
+    expect(routing).toContain("대화형 진입점은 Codex, Claude Code, Pi");
+    expect(routing).toContain("`TECHNICAL_DESIGN_PROVIDER: coordinator`");
+    expect(routing).toContain("`TECHNICAL_DESIGN_ASSIST: optional Claude CLI`");
     expect(routing).toContain("`VISUAL_DESIGN_PROVIDER: Claude Design`");
-    expect(routing).toContain("`HTTP 429`, `rate_limit`, `quota exceeded`, 사용량 한도");
-    expect(routing).toContain("때만 원인을 계약·결과에 기록하고 Codex가 설계 또는 디자인을 대신");
+    expect(normalized(routing)).toContain("`HTTP 429`, `rate_limit`, `quota exceeded`, 사용량 한도");
+    expect(routing).toContain("해당 의존 작업만 보류하고 나머지 승인된 작업은 진행한다");
 
     expect(plan).toContain(
       "gdm-agents/run-role.sh --mode preflight --provider claude --role plan",
     );
     expect(plan).toContain("provider executable과 읽기 전용 argv는 runner의 target adapter만 소유");
-    expect(plan).toContain("설계 출처: codex-direct");
-    expect(plan).toContain("설계 출처: codex-fallback");
+    expect(plan).toContain("설계 출처: coordinator-direct");
+    expect(plan).toContain("설계 출처: coordinator-fallback");
     expect(plan).toContain("인증·권한·CLI 부재·일반 네트워크 오류·timeout·잘못된 산출물");
 
     for (const workflow of [go, full]) {
       expect(workflow).toContain("새 기술 설계 판단");
       expect(workflow).toContain("`gdm-plan`");
-      expect(workflow).toContain("`HTTP 429`, `rate_limit`, `quota exceeded`, 사용량 한도");
-      expect(workflow).toMatch(/인증·권한[\s\S]*timeout[\s\S]*대체하지/u);
+      expect(workflow).toContain("`coordinator-fallback`");
+      expect(workflow).toContain("Claude 결과 자체를 요구했거나 필수 근거가 없");
+      expect(workflow).not.toContain("Claude CLI 설계안을 먼저 받고");
     }
 
     expect(design).toContain("Claude Design용 프롬프트를 코드 블록으로");
@@ -100,13 +102,13 @@ describe("workflow policy", () => {
     expect(normalized(design)).toContain(
       "기본 디자인 생성·pull 흐름에서는 원격 쓰기를 하지 않는다",
     );
-    expect(design).toContain("Codex는 로컬 제품 코드를");
-    expect(design).toContain("`designProvider: codex-fallback`");
+    expect(design).toContain("진행자는 로컬 제품 코드를");
+    expect(design).toContain("`designProvider: coordinator-fallback`");
 
     expect(ui).toContain("구체적 시각 결함");
     expect(ui).toContain("개방형 시각 변경이면 gdm-design으로 전환");
     expect(ui).toContain("Claude Design용 프롬프트를 사용자에게 전달");
-    expect(readme).toContain("Claude Code 쪽 스킬은\n  비대화형 설계·검수 역할에 쓰인다");
+    expect(readme).toContain("Claude Code 쪽 스킬은 대화형 진행자의 전체 작업 절차를 제공한다");
     expect(readme).toContain("새 화면·레이아웃·프로토타입 생성은 claude.ai/design에서");
     expect(readme).toContain("Chrome이나 브라우저를 자동 조작하지 않는다");
   });
@@ -115,6 +117,41 @@ describe("workflow policy", () => {
     const go = skill("go");
     expect(go).toContain("직전에 `gdm recheck`를 중복 실행하지 않는다");
     expect(go).toContain("`recheck`는 구현 도중");
+    expect(skill("full")).toContain("빠졌을 때만 해당 항목을 `gdm recheck --check <id>`로 재실행");
+  });
+
+  test("workflow defaults preserve authorization and calibrate verification to the goal", () => {
+    const go = normalized(skill("go"));
+    const full = normalized(skill("full"));
+    const plan = normalized(skill("plan"));
+    const pi = normalized(agent("pi/coordinator.md"));
+
+    for (const text of [go, plan]) {
+      expect(text).toContain("사용자의 명시적 지시와 기존 승인은 스킬의 기본 절차보다 우선한다");
+      expect(text).toContain("SKILL.md 경로·해당 문구·적용 이유");
+    }
+    expect(go).toContain("작은 변경은 1개로도 충분");
+    expect(go).not.toContain("3~7");
+    expect(go).toContain("단순 소스·설정 수정에는 강제하지 않는다");
+    expect(go).toContain("빠진 요구를 발견하면 계약과 check를 보완하고 계속한다");
+    expect(go).toContain("새 변경·실패·미해결 위험이 있을 때만");
+    expect(go).toContain("반복 실패·miss 또는 적용한 habit이 있을 때만");
+    expect(go).not.toContain("피드백 checkpoint까지 끝난 뒤에만");
+    expect(full).toContain("이미 받은 승인을 다시 묻지 않는다");
+    expect(full).toContain("반려 횟수만으로 멈추지 않는다");
+    expect(full).not.toContain("이견 없는지 확인한다");
+    expect(plan).toContain("구현까지 요청받았으면 기존 승인 범위에서 gdm-go/full로 이어서 실행한다");
+    expect(pi).toContain("prior authorization take precedence over skill defaults");
+    expect(pi).not.toContain("done and feedback gates");
+    expect(skill("design")).not.toContain("최소 한 번은 개선한다");
+    expect(skill("design")).toContain("**다른 모델**의 fresh-context leaf 워커");
+    expect(skill("ui")).toContain("기존 승인을 다시 묻지 않는다");
+    expect(normalized(skill("db"))).toContain("승인이 없으면 실행 전에 확인받는다");
+    // Autonomy changes must not turn validation, explicit model requests, or delivery into optional gates.
+    expect(go).toContain('`gdm done`이 성공(exit 0)하기 전에 "완료했다"고 보고하지 않는다');
+    expect(full).toContain("실제 구현 모델과 다른 모델의 검수자 정확히 1명");
+    expect(full).toContain("전달을 **명시적으로 승인하지 않았으면**");
+    expect(plan).toContain("사용자가 Claude 결과 자체를 요구했거나 필수 근거가 없을 때만 해당 의존 작업을 보류한다");
   });
 
   test("execution workflows carry preflight, red-green, scope, simplification, and risk gates", () => {
@@ -517,6 +554,8 @@ sleep 60 & echo $! >>"$GDM_FAKE_PID_FILE"
 wait
 `);
     chmodSync(fakeCodex, 0o755);
+    // Cold script startup must not consume the runner's resource-check deadline.
+    expect(Bun.spawnSync([fakeCodex, "--version"], { timeout: 20_000 }).exitCode).toBe(0);
     const sentinel = Bun.spawn(["sleep", "30"]);
     try {
       const result = Bun.spawnSync(["bash", join(ROOT, "agents", "run-auditor.sh"), "codex", prompt, report, directory], {
@@ -544,5 +583,5 @@ wait
     } finally {
       sentinel.kill();
     }
-  });
+  }, 30_000);
 });

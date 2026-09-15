@@ -33,7 +33,7 @@
 
 ### 1. 소스에서 설치
 
-요구사항: [Bun](https://bun.sh), Git, 대화형 실행 주체인 Codex 또는 Pi.
+요구사항: [Bun](https://bun.sh), Git, 대화형 실행 주체인 Claude Code, Codex 또는 Pi.
 
 ```bash
 git clone https://github.com/Gdm0714/gdm.git
@@ -44,7 +44,27 @@ cd gdm
 설치기는 `gdm`, `gdm-pi`, target별 스킬과 역할 실행기를 설치한다. 기존 Codex hook과 설정은
 보존하고, 변경 전 hook 파일은 별도 backup으로 남긴다.
 
-### 2. Pi에서 실행
+### 2. Claude Code에서 실행
+
+Claude Code만으로 계획·구현·테스트·완료까지 사용할 수 있다. 소스 설치 후 작업할 프로젝트에서
+`claude`를 시작하고 다음처럼 요청한다. 이미 실행 중인 세션은 새 세션으로 시작해 설치된
+스킬을 다시 읽는다. GDM을 위해 Codex·Pi 설치나 OpenAI 로그인을 추가할 필요는 없다.
+
+```text
+/gdm-go 로그인 오류를 수정하고 검증까지 완료해줘
+/gdm-plan 데이터 가져오기 기능을 설계해줘
+/gdm-full 구현과 독립 검수까지 해줘
+```
+
+일상 작업은 현재 Claude Code에서 선택한 모델로 수행한다. 일반 세션은 파일 편집과 검증
+명령을 실행하며, 별도로 호출하는 전문 역할에만 tool-0 읽기 전용 제한을 적용한다.
+`gdm-full`은 구현과 다른 실제 모델의 검수를 요구한다. 같은 Claude 공급자의 다른 모델을
+`run-role.sh ... --provider claude --model <모델 ID>`로 선택할 수 있다. 사용할 수 있는 다른
+모델이 없으면 full은 차단되며, 일상 `gdm-go`에는 두 번째 모델이 필요하지 않다.
+`GDM_CLAUDE_MODEL`은 전문 역할 기본 모델만 바꾸며 현재 진행자의 모델은 바꾸지 않는다.
+모델 별칭만 다르게 쓰거나 새 대화를 여는 것으로 서로 다른 모델 검수를 대신하지 않는다.
+
+### 3. Pi에서 실행
 
 ```bash
 gdm-pi                              # 요청별 자동 라우팅
@@ -53,9 +73,34 @@ gdm-pi full "검수까지 완료해줘"     # 다른 모델의 독립 검수 포
 gdm-pi --raw                        # GDM 없이 원본 Pi 실행
 ```
 
-기본 구현 모델은 `openai-codex/gpt-5.6-sol:xhigh`, 독립 검수 모델은
-`openai-codex/gpt-5.6-terra:xhigh`다. 실행 중 모델을 바꾸는 대신 새 `gdm-pi` 프로세스의
-환경변수로 설정해야 실행 metadata와 실제 모델이 일치한다.
+Pi 프로필의 기본 구현 모델은 `openai-codex/gpt-5.6-terra:high`다. 읽기 전용 조사는
+`gpt-5.6-luna:medium`, 설계·중요 코드 검토와 독립 검수는 `gpt-6-astra:medium`을 쓴다.
+동작 변경은 완료 전 검토를 받고, 구조·상태 계약·권한·동시성 변경은 구현 전 설계 자문도 받는다.
+문서·서식만 바꾸는 작업은 제외한다. 모든 역할에 `medium`·`high`를 지정할 수 있다.
+reviewer 결과는 자문이며 `gdm-full`의 독립 검수를 대신하지 않는다.
+
+메인은 `GDM_PI_MODEL`, `GDM_PI_THINKING`으로 설정하고 역할별 작업자는
+`GDM_PI_SCOUT_MODEL`, `GDM_PI_DESIGN_MODEL`, `GDM_PI_REVIEW_MODEL` 및 각각의
+`_THINKING` 변수로 설정한다. 역할별 설정이 없으면 기존 `GDM_PI_CHILD_MODEL`,
+`GDM_PI_CHILD_THINKING`을 호환용 공통 자식 설정으로 사용한다. 둘 다 없으면 역할 기본값을 쓴다.
+full 검수는 `GDM_PI_AUDIT_MODEL=provider/model:thinking`으로 지정한다.
+
+메인 모델은 세션 동안 고정된다. 복잡한 직접 구현에 Astra를 쓰려면
+`GDM_PI_MODEL=openai-codex/gpt-6-astra`, `GDM_PI_THINKING=medium`으로 새 프로세스를
+시작한다. full 검수는 다른 모델인 `GDM_PI_AUDIT_MODEL=openai-codex/gpt-5.6-terra:high`로
+지정할 수 있다.
+
+위임 결과에는 요청 모델·추론 강도·소요 시간·Pi가 보고한 토큰 사용량이 기록된다.
+이는 원격 모델 신원 증명이나 구독 청구액이 아니다. 실패한 호출의 부분 사용량은 남기되
+완전한 측정으로 표시하지 않는다. 거부된 요청·실패한 실행·빈 응답은 역할 완료로 세지 않는다.
+
+자동 대화 요약이 보고한 사용량도 합산하며, 요약 후 재실행된 정상 응답을 이어서 처리한다.
+출력 길이 제한으로 실패해도 이미 수신한 사용량은 보존하고, 요약 사용량이 없으면 불완전으로 표시한다.
+
+도구 결과의 `delegation`은 `attempted` 요청 수, `launched` 프로세스 시작 수,
+`succeeded` 정상 응답 수와 `rejected` 입력·설정 거부 수를 구분한다. 프로세스가 시작됐다는
+사실만으로 지정 모델이 작업을 마쳤다고 판단하지 않는다.
+[실제 협업 품질 비교](bench/astra-quality/results-2026-09-09.md)는 기능 검사와 역할 참여를 따로 보고한다.
 
 <details>
 <summary><strong>gdm CLI로 evidence loop 직접 실행하기</strong></summary>
@@ -150,8 +195,14 @@ handoff는 컨텍스트와 stale 상태만 전달하며 check나 delivery 권한
 - [terminal-browser](https://github.com/zenbu-labs/terminal-browser)는 웹 UI 검증을 실제
   브라우저 동작으로 재현한다.
 - [tuicr](https://tuicr.dev/)는 사람이 diff와 코멘트를 함께 검토하는 화면을 제공한다.
-- Claude Code 쪽 스킬은
-  비대화형 설계·검수 역할에 쓰인다.
+- Claude Code 쪽 스킬은 대화형 진행자의 전체 작업 절차를 제공한다. 별도 설계·검수
+  프로세스에는 기존 읽기 전용 역할 실행기를 사용한다.
+
+기술 설계는 진행자가 코드 근거로 판단한다. Claude 설계안은 사용자 요청이나 남은 독립
+쟁점에 도움이 될 때 선택하며, 모든 새 기술 선택에 외부 호출을 요구하지 않는다.
+check 수와 간소화 검사·회고는 작업 위험과 실제 사건에 맞춘다. 이미 받은 승인은 유지하고,
+필수 검증 후에는 새 변경·실패·미해결 위험이 있을 때만 추가 검증한다. full의 독립 검수와
+CLI의 증거·범위·완료 게이트는 그대로 적용한다.
 
 두 companion tool은 선택형이며 gdm 설치기가 자동으로 설치하지 않는다. 사용할 수 없으면 기존
 headless 테스트나 텍스트 리뷰로 폴백한다.
@@ -166,7 +217,8 @@ headless 테스트나 텍스트 리뷰로 폴백한다.
 | gdm CLI | macOS 또는 Linux, arm64 또는 x64 |
 | 소스 설치·개발 | Bun |
 | gdm-pi | Pi 0.84.1, `openai-codex` 로그인 |
-| 기술 설계·독립 검수 | Claude Code CLI 로그인 |
+| 선택형 Claude 기술 설계 | Claude Code CLI 로그인 |
+| full 독립 검수 | 구현 모델과 다른 검수 모델을 실행할 수 있는 provider 로그인 |
 | 0→1 화면 디자인 | claude.ai/design 접근 권한과 최초 1회 `/design-login` |
 
 ## 저장소 구조

@@ -2,13 +2,21 @@ export const MAX_CONCURRENT_CHILDREN = 3;
 export const MAX_TOTAL_CHILDREN = 8;
 export const MAX_TASK_BYTES = 16 * 1024;
 export const MAX_OUTPUT_BYTES = 128 * 1024;
+export const MAX_EVENT_STREAM_BYTES = 8 * 1024 * 1024;
+export const MAX_EVENT_LINE_BYTES = 2 * 1024 * 1024;
 export const MAX_STDERR_BYTES = 64 * 1024;
 export const DEFAULT_CHILD_TIMEOUT_MS = 10 * 60 * 1000;
-export const DEFAULT_MODEL = "openai-codex/gpt-5.6-sol";
-export const DEFAULT_THINKING = "xhigh";
+export const DEFAULT_MODEL = "openai-codex/gpt-5.6-terra";
+export const DEFAULT_THINKING = "high";
+
+const ROLE_MODELS = {
+  scout: { prefix: "SCOUT", model: "openai-codex/gpt-5.6-luna" },
+  design: { prefix: "DESIGN", model: "openai-codex/gpt-6-astra" },
+  reviewer: { prefix: "REVIEW", model: "openai-codex/gpt-6-astra" },
+};
 
 const THINKING_LEVELS = new Set(["off", "minimal", "low", "medium", "high", "xhigh", "max"]);
-const ROLE_NAMES = new Set(["scout", "reviewer"]);
+const ROLE_NAMES = new Set(Object.keys(ROLE_MODELS));
 const CREDENTIAL_PATTERNS = [
   /(^|[^A-Za-z0-9])sk-[A-Za-z0-9_-]{8,}/iu,
   /\bghp_[A-Za-z0-9]{8,}\b/iu,
@@ -37,6 +45,20 @@ export function validThinking(value) {
   return typeof value === "string" && THINKING_LEVELS.has(value);
 }
 
+export function resolveChildConfiguration(role, env = process.env, thinkingOverride) {
+  const defaults = ROLE_MODELS[role];
+  if (!defaults) throw new Error("unsupported read-only role");
+  const model = env[`GDM_PI_${defaults.prefix}_MODEL`] ?? env.GDM_PI_CHILD_MODEL ?? defaults.model;
+  const configuredThinking = env[`GDM_PI_${defaults.prefix}_THINKING`] ?? env.GDM_PI_CHILD_THINKING ?? "medium";
+  if (!validModel(model) || !validThinking(configuredThinking)) {
+    throw new Error(`invalid ${role} model or thinking configuration`);
+  }
+  if (thinkingOverride !== undefined && !["medium", "high"].includes(thinkingOverride)) {
+    throw new Error("task thinking override must be medium|high");
+  }
+  return { model, thinking: thinkingOverride ?? configuredThinking };
+}
+
 export function childTimeout(value) {
   if (value === undefined || value === "") return DEFAULT_CHILD_TIMEOUT_MS;
   if (!/^[0-9]+$/u.test(value)) return DEFAULT_CHILD_TIMEOUT_MS;
@@ -62,10 +84,14 @@ export function validateDelegationRequest(params) {
   }
   for (const [index, task] of params.tasks.entries()) {
     if (typeof task !== "object" || task === null ||
-      !exactKeys(task, ["deliverable", "role", "scope", "task", "verify"])) {
-      return `task ${index + 1} must contain exactly role, scope, task, deliverable, verify`;
+      (!exactKeys(task, ["deliverable", "role", "scope", "task", "verify"]) &&
+       !exactKeys(task, ["deliverable", "role", "scope", "task", "thinking", "verify"]))) {
+      return `task ${index + 1} must contain exactly role, scope, task, deliverable, verify and optional thinking`;
     }
     if (!ROLE_NAMES.has(task.role)) return `task ${index + 1} has an unsupported read-only role`;
+    if (Object.hasOwn(task, "thinking") && !["medium", "high"].includes(task.thinking)) {
+      return `task ${index + 1} thinking must be medium|high`;
+    }
     for (const field of ["scope", "task", "deliverable", "verify"]) {
       if (typeof task[field] !== "string" || task[field].trim().length === 0) {
         return `task ${index + 1} field ${field} must be nonempty text`;
@@ -114,7 +140,7 @@ export function buildChildArguments({ model, thinking, systemPrompt, task }) {
   if (!validModel(model)) throw new Error("invalid child model");
   if (!validThinking(thinking)) throw new Error("invalid child thinking level");
   return [
-    "--mode", "text",
+    "--mode", "json",
     "--print",
     "--no-session",
     "--no-extensions",

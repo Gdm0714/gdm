@@ -1278,7 +1278,7 @@ function cmdRetroAll(cwd: string, json: boolean): void {
     suggestions.push(`check 기준 수정 ${editReasons.length}건 — plan 단계에서 기준을 더 구체화하면 재작업이 줄어듭니다`);
   }
   if (recheckFails > 0) {
-    suggestions.push(`recheck가 회귀 ${recheckFails}건을 잡음 — done 전 recheck를 기본 습관으로`);
+    suggestions.push(`recheck가 회귀 ${recheckFails}건을 잡음 — 후속 변경의 영향 항목만 중간 재검증하고 done 직전 중복 실행은 생략`);
   }
   if (json) {
     console.log(
