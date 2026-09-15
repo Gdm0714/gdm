@@ -18,9 +18,7 @@ import { pathToFileURL } from "node:url";
 import {
   AGENT_ENVELOPE_PREFIX,
   AGENT_RESERVATION_TTL_MS,
-  AGENT_SESSION_ATTEMPT_EXTENSION_SIZE,
-  AGENT_SESSION_HARD_ATTEMPT_LIMIT,
-  AGENT_SESSION_INITIAL_ATTEMPT_LIMIT,
+  AGENT_SESSION_ACTIVE_EXECUTION_LIMIT,
   agentLedgerPath,
   readAgentHookLedgerSummary,
   runCodexAgentHook,
@@ -142,6 +140,107 @@ function hookHandlers(config: JsonObject, event: string): JsonObject[] {
 }
 
 describe("Codex delegated-agent hook runtime", () => {
+  test("finished history does not consume execution capacity across 96 sequential spawns", () => {
+    const cwd = tempDirectory("gdm-agent-history-cwd-");
+    const env = environment(tempDirectory("gdm-agent-history-home-"));
+    const session = "history-session";
+    const startedAt = Date.now();
+    let now = startedAt;
+    for (let index = 0; index < 96; index += 1) {
+      const task = envelope(`history-${index}`);
+      const use = `history-use-${index}`;
+      const agent = `history-agent-${index}`;
+      expect(preDecision(invoke(cwd, env,
+        hookInput("PreToolUse", session, use, task), now++))).toBe("allow");
+      if (index % 3 === 0) {
+        invoke(cwd, env, hookInput("PostToolUse", session, use, task,
+          { agent_id: agent }), now++);
+        invoke(cwd, env, lifecycleInput("SubagentStart", session, agent), now++);
+        invoke(cwd, env, lifecycleInput("SubagentStop", session, agent), now++);
+      } else if (index % 3 === 1) {
+        invoke(cwd, env, hookInput("PostToolUse", session, use, task,
+          { success: false, error: "cancelled before execution" }), now++);
+      } else {
+        now += 60_001;
+      }
+    }
+    const state = ledger(cwd, env, session);
+    expect(state.totalAcceptedAttempts).toBe(96);
+    expect(Object.keys(state.reservations)).toHaveLength(96);
+    expect(preDecision(invoke(cwd, env,
+      hookInput("PreToolUse", session, "next-use", envelope("next")), now++))).toBe("allow");
+    const summary = readAgentHookLedgerSummary(cwd, env, now);
+    expect(summary.stopped).toBe(32);
+    expect(summary.failed).toBe(32);
+    expect(summary.expired).toBe(32);
+    expect(summary.pending).toBe(1);
+    expect(summary.running).toBe(0);
+    // History remains available for replay prevention and inspection.
+    expect(preDecision(invoke(cwd, env,
+      hookInput("PreToolUse", session, "history-use-0", envelope("history-0")), now))).toBe("deny");
+  });
+
+  test("unlinked observations consume capacity until Stop or lease expiry", () => {
+    const cwd = tempDirectory("gdm-agent-unlinked-capacity-cwd-");
+    const env = environment(tempDirectory("gdm-agent-unlinked-capacity-home-"));
+    const session = "unlinked-capacity";
+    const now = Date.now();
+    for (let i = 0; i < 32; i++) {
+      invoke(cwd, env, lifecycleInput("SubagentStart", session, `orphan-${i}`), now);
+    }
+    const next = hookInput("PreToolUse", session, "next", envelope("next"));
+    expect(preDecision(invoke(cwd, env, next, now + 1))).toBe("deny");
+    expect(readAgentHookLedgerSummary(cwd, env, now + 1).activeExecutions).toBe(32);
+    invoke(cwd, env, lifecycleInput("SubagentStop", session, "orphan-0"), now + 2);
+    expect(preDecision(invoke(cwd, env, next, now + 3))).toBe("allow");
+    // Read-only status must apply the same TTL as admission.
+    expect(readAgentHookLedgerSummary(cwd, env, now + AGENT_RESERVATION_TTL_MS + 1).activeExecutions).toBe(0);
+    expect(preDecision(invoke(cwd, env,
+      hookInput("PreToolUse", session, "later", envelope("later")),
+      now + AGENT_RESERVATION_TTL_MS + 1))).toBe("allow");
+  });
+
+  test("linked running observations are counted once and a Stop releases capacity", () => {
+    const cwd = tempDirectory("gdm-agent-linked-capacity-cwd-");
+    const env = environment(tempDirectory("gdm-agent-linked-capacity-home-"));
+    const session = "linked-capacity";
+    const now = Date.now();
+    for (let i = 0; i < 32; i++) {
+      const task = envelope(`linked-${i}`);
+      expect(preDecision(invoke(cwd, env, hookInput("PreToolUse", session, `use-${i}`, task), now))).toBe("allow");
+      invoke(cwd, env, hookInput("PostToolUse", session, `use-${i}`, task, { agent_id: `agent-${i}` }), now);
+      invoke(cwd, env, lifecycleInput("SubagentStart", session, `agent-${i}`), now);
+    }
+    expect(readAgentHookLedgerSummary(cwd, env, now).activeExecutions).toBe(32);
+    const next = hookInput("PreToolUse", session, "next", envelope("next"));
+    expect(preDecision(invoke(cwd, env, next, now))).toBe("deny");
+    invoke(cwd, env, lifecycleInput("SubagentStop", session, "agent-0"), now);
+    expect(preDecision(invoke(cwd, env, next, now))).toBe("allow");
+    // Expired reservations must not be counted again through their linked agents.
+    expect(readAgentHookLedgerSummary(cwd, env, now + AGENT_RESERVATION_TTL_MS + 1).activeExecutions).toBe(0);
+  });
+
+  test("caller binding frees a duplicate observation before checking admission capacity", () => {
+    const cwd = tempDirectory("gdm-agent-caller-capacity-cwd-");
+    const env = environment(tempDirectory("gdm-agent-caller-capacity-home-"));
+    const session = "caller-capacity";
+    const now = Date.now();
+    invoke(cwd, env, lifecycleInput("SubagentStart", session, "caller"), now);
+    for (let i = 0; i < 31; i++) {
+      expect(preDecision(invoke(cwd, env, hookInput("PreToolUse", session, `parent-use-${i}`,
+        envelope(`parent-${i}`, { canDelegate: true, childQuota: 2 })), now + 1))).toBe("allow");
+    }
+    expect(readAgentHookLedgerSummary(cwd, env, now + 2).activeExecutions).toBe(32);
+    const child = hookInput("PreToolUse", session, "child-use",
+      envelope("child", { parentId: "parent-0", depth: 2 }));
+    child.agent_id = "caller";
+    expect(preDecision(invoke(cwd, env, child, now + 2))).toBe("allow");
+    expect(readAgentHookLedgerSummary(cwd, env, now + 3).activeExecutions).toBe(32);
+    const state = ledger(cwd, env, session);
+    expect(state.agents.caller?.reservationToolUseId).toBe("parent-use-0");
+    expect(state.totalAcceptedAttempts).toBe(32);
+  });
+
   test("invalid envelopes deny before creating or changing state", () => {
     const cwd = tempDirectory("gdm-agent-invalid-cwd-");
     const codexHome = tempDirectory("gdm-agent-invalid-home-");
@@ -227,96 +326,42 @@ describe("Codex delegated-agent hook runtime", () => {
     expect(statSync(join(codexHome, "gdm", "agent-ledgers")).mode & 0o777).toBe(0o700);
   });
 
-  test("ordinary unmarked spawns extend only after active work settles and stop at the hard limit", () => {
+  test("unmarked spawns share active capacity and failed work releases one slot immediately", () => {
     const cwd = tempDirectory("gdm-agent-unmarked-cwd-");
-    const codexHome = tempDirectory("gdm-agent-unmarked-home-");
-    const env = environment(codexHome);
+    const env = environment(tempDirectory("gdm-agent-unmarked-home-"));
     const session = "unmarked-session";
     const input = (index: number, event: "PreToolUse" | "PostToolUse"): JsonObject => ({
-      session_id: session,
-      hook_event_name: event,
-      tool_name: "spawn_agent",
+      session_id: session, hook_event_name: event, tool_name: "spawn_agent",
       tool_use_id: `unmarked-use-${index}`,
-      tool_input: { message: `Handle ordinary delegated task ${index}` },
-      ...(event === "PostToolUse"
-        ? { tool_response: { success: false, error: "synthetic failure" } }
-        : {}),
+      tool_input: { message: `Handle task ${index}` },
+      ...(event === "PostToolUse" ? { tool_response: { success: false, error: "cancelled" } } : {}),
     });
-
-    for (let index = 0; index < AGENT_SESSION_INITIAL_ATTEMPT_LIMIT; index += 1) {
-      expect(preDecision(invoke(cwd, env, input(index, "PreToolUse")))).toBe("allow");
+    for (let i = 0; i < AGENT_SESSION_ACTIVE_EXECUTION_LIMIT; i++) {
+      expect(preDecision(invoke(cwd, env, input(i, "PreToolUse")))).toBe("allow");
     }
-    expect(preDecision(invoke(
-      cwd,
-      env,
-      input(AGENT_SESSION_INITIAL_ATTEMPT_LIMIT, "PreToolUse"),
-    ))).toBe("deny");
-    for (let index = 0; index < AGENT_SESSION_INITIAL_ATTEMPT_LIMIT; index += 1) {
-      expect(invoke(cwd, env, input(index, "PostToolUse")).decision).toBeUndefined();
-    }
-
-    for (
-      let waveStart = AGENT_SESSION_INITIAL_ATTEMPT_LIMIT;
-      waveStart < AGENT_SESSION_HARD_ATTEMPT_LIMIT;
-      waveStart += AGENT_SESSION_ATTEMPT_EXTENSION_SIZE
-    ) {
-      for (
-        let index = waveStart;
-        index < waveStart + AGENT_SESSION_ATTEMPT_EXTENSION_SIZE;
-        index += 1
-      ) {
-        expect(preDecision(invoke(cwd, env, input(index, "PreToolUse")))).toBe("allow");
-      }
-      const waveEnd = waveStart + AGENT_SESSION_ATTEMPT_EXTENSION_SIZE;
-      if (waveEnd < AGENT_SESSION_HARD_ATTEMPT_LIMIT) {
-        expect(preDecision(invoke(cwd, env, input(waveEnd, "PreToolUse")))).toBe("deny");
-      }
-      for (
-        let index = waveStart;
-        index < waveStart + AGENT_SESSION_ATTEMPT_EXTENSION_SIZE;
-        index += 1
-      ) {
-        expect(invoke(cwd, env, input(index, "PostToolUse")).decision).toBeUndefined();
-      }
-    }
-    expect(preDecision(invoke(
-      cwd,
-      env,
-      {
-        session_id: "unmarked-session",
-        hook_event_name: "PreToolUse",
-        tool_name: "spawn_agent",
-        tool_use_id: "unmarked-over-hard-limit",
-        tool_input: { message: "must remain bounded" },
-      },
-    ))).toBe("deny");
-    const state = ledger(cwd, env, "unmarked-session");
-    expect(state.totalAcceptedAttempts).toBe(AGENT_SESSION_HARD_ATTEMPT_LIMIT);
-    expect(
-      Object.values(state.reservations).every(
-        (reservation) => reservation.contractMode === "unstructured",
-      ),
-    ).toBe(true);
+    const blocked = invoke(cwd, env, input(32, "PreToolUse"));
+    expect(preDecision(blocked)).toBe("deny");
+    expect(JSON.stringify(blocked)).toContain("session_active_execution_limit");
+    invoke(cwd, env, input(0, "PostToolUse"));
+    expect(preDecision(invoke(cwd, env, input(32, "PreToolUse")))).toBe("allow");
+    expect(preDecision(invoke(cwd, env, input(33, "PreToolUse")))).toBe("deny");
     const summary = readAgentHookLedgerSummary(cwd, env);
-    expect(summary.unstructuredAttempts).toBe(AGENT_SESSION_HARD_ATTEMPT_LIMIT);
+    expect(summary.unstructuredAttempts).toBe(33);
     expect(summary.structuredAttempts).toBe(0);
-    expect(summary.initialSessionAttemptLimit).toBe(
-      AGENT_SESSION_INITIAL_ATTEMPT_LIMIT,
-    );
-    expect(summary.attemptExtensionSize).toBe(
-      AGENT_SESSION_ATTEMPT_EXTENSION_SIZE,
-    );
-    expect(summary.hardSessionAttemptLimit).toBe(
-      AGENT_SESSION_HARD_ATTEMPT_LIMIT,
-    );
+    expect(summary.failed).toBe(1);
+    expect(summary.pending).toBe(32);
+    expect(summary.activeExecutions).toBe(32);
+    expect(summary.hardSessionActiveExecutionLimit).toBe(32);
+    expect(summary.executionLimitBasis).toContain("historical attempts are excluded");
+    expect(Object.keys(ledger(cwd, env, session).reservations)).toHaveLength(33);
   });
 
-  test("flat custom V2 namespaces share the configured attempt gate while unrelated suffix tools pass through", () => {
+  test("flat custom V2 namespaces exclude failed history while unrelated suffix tools pass through", () => {
     const cwd = tempDirectory("gdm-agent-custom-v2-cwd-");
     const codexHome = tempDirectory("gdm-agent-custom-v2-home-");
     const env = environment(codexHome);
     const session = "custom-v2-session";
-    for (let index = 0; index < AGENT_SESSION_HARD_ATTEMPT_LIMIT; index += 1) {
+    for (let index = 0; index < AGENT_SESSION_ACTIVE_EXECUTION_LIMIT; index += 1) {
       const base = {
         session_id: session,
         tool_name: "agentsspawn_agent",
@@ -341,15 +386,15 @@ describe("Codex delegated-agent hook runtime", () => {
         session_id: session,
         hook_event_name: "PreToolUse",
         tool_name: "agentsspawn_agent",
-        tool_use_id: `custom-v2-use-${AGENT_SESSION_HARD_ATTEMPT_LIMIT}`,
+        tool_use_id: `custom-v2-use-${AGENT_SESSION_ACTIVE_EXECUTION_LIMIT}`,
         tool_input: {
-          task_name: `custom_v2_${AGENT_SESSION_HARD_ATTEMPT_LIMIT}`,
-          message: "custom V2 task over the configured limit",
+          task_name: `custom_v2_${AGENT_SESSION_ACTIVE_EXECUTION_LIMIT}`,
+          message: "custom V2 task after finished history",
         },
       })),
-    ).toBe("deny");
+    ).toBe("allow");
     expect(ledger(cwd, env, session).totalAcceptedAttempts).toBe(
-      AGENT_SESSION_HARD_ATTEMPT_LIMIT,
+      AGENT_SESSION_ACTIVE_EXECUTION_LIMIT + 1,
     );
 
     const unrelatedSession = "custom-v2-unrelated";
@@ -402,7 +447,7 @@ describe("Codex delegated-agent hook runtime", () => {
     expect(ledger(cwd, env, "unmarked-id-session").totalAcceptedAttempts).toBe(1);
   });
 
-  test("parallel PreToolUse processes atomically enforce the initial attempt wave", async () => {
+  test("parallel PreToolUse processes atomically enforce active execution capacity", async () => {
     const cwd = tempDirectory("gdm-agent-parallel-cwd-");
     const codexHome = tempDirectory("gdm-agent-parallel-home-");
     const script = `
@@ -431,7 +476,7 @@ describe("Codex delegated-agent hook runtime", () => {
       };
       process.stdout.write(JSON.stringify(runCodexAgentHook(process.cwd(), JSON.stringify(input), process.env)));
     `;
-    const children = Array.from({ length: AGENT_SESSION_INITIAL_ATTEMPT_LIMIT + 1 }, (_, index) =>
+    const children = Array.from({ length: AGENT_SESSION_ACTIVE_EXECUTION_LIMIT + 1 }, (_, index) =>
       Bun.spawn(["bun", "-e", script, String(index)], {
         cwd,
         env: environment(codexHome),
@@ -451,12 +496,12 @@ describe("Codex delegated-agent hook runtime", () => {
     expect(results.every((result) => result.exitCode === 0), JSON.stringify(results)).toBe(true);
     const decisions = results.map((result) => preDecision(JSON.parse(result.stdout) as JsonObject));
     expect(decisions.filter((decision) => decision === "allow")).toHaveLength(
-      AGENT_SESSION_INITIAL_ATTEMPT_LIMIT,
+      AGENT_SESSION_ACTIVE_EXECUTION_LIMIT,
     );
     expect(decisions.filter((decision) => decision === "deny")).toHaveLength(1);
     expect(
       ledger(cwd, environment(codexHome), "parallel-session").totalAcceptedAttempts,
-    ).toBe(AGENT_SESSION_INITIAL_ATTEMPT_LIMIT);
+    ).toBe(AGENT_SESSION_ACTIVE_EXECUTION_LIMIT);
   });
 
   test("attempt counters and duplicate ids are isolated by session", () => {

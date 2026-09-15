@@ -8,9 +8,7 @@ import {
   type AgentHookEnvironment,
 } from "./codex-agent-hooks-config.ts";
 import {
-  AGENT_SESSION_ATTEMPT_EXTENSION_SIZE,
-  AGENT_SESSION_HARD_ATTEMPT_LIMIT,
-  AGENT_SESSION_INITIAL_ATTEMPT_LIMIT,
+  AGENT_SESSION_ACTIVE_EXECUTION_LIMIT,
   readAgentHookLedgerSummary,
   runCodexAgentHook,
 } from "./codex-agent-hook.ts";
@@ -155,12 +153,11 @@ export function cmdAgent(
         `Agent ledgers: ${status.ledgers.sessions} sessions, ` +
           `${status.ledgers.pending} pending, ${status.ledgers.running} running; ` +
           `${status.ledgers.structuredAttempts} structured / ` +
-          `${status.ledgers.unstructuredAttempts} unstructured attempts`,
+          `${status.ledgers.unstructuredAttempts} unstructured historical attempts`,
       );
       console.log(
-        `Agent attempt budget starts at ${AGENT_SESSION_INITIAL_ATTEMPT_LIMIT}, ` +
-          `opens ${AGENT_SESSION_ATTEMPT_EXTENSION_SIZE} more only after active work settles, ` +
-          `and stops at ${AGENT_SESSION_HARD_ATTEMPT_LIMIT}. ` +
+        `Agent execution admission limit: ${AGENT_SESSION_ACTIVE_EXECUTION_LIMIT} per session; ` +
+          `${status.ledgers.activeExecutions} active across all sessions. Historical attempts are excluded. ` +
           `Parent delegation enforcement: ${status.ledgers.parentDelegationEnforcement}.`,
       );
       console.log(

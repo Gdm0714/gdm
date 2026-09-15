@@ -20,9 +20,9 @@ import type { AgentHookEnvironment } from "./codex-agent-hooks-config.ts";
 
 export const AGENT_ENVELOPE_PREFIX = "GDM_AGENT_ENVELOPE_V1=";
 export const AGENT_LEDGER_SCHEMA_VERSION = 1;
-export const AGENT_SESSION_INITIAL_ATTEMPT_LIMIT = 16;
-export const AGENT_SESSION_ATTEMPT_EXTENSION_SIZE = 4;
-export const AGENT_SESSION_HARD_ATTEMPT_LIMIT = 32;
+// Admission counts current execution leases, never historical attempts.
+export const AGENT_SESSION_ACTIVE_EXECUTION_LIMIT = 32;
+export const AGENT_AUXILIARY_RECORD_LIMIT = 32;
 export const AGENT_PRE_ACK_TTL_MS = 60_000;
 export const AGENT_RESERVATION_TTL_MS = 30 * 60 * 1_000;
 
@@ -147,9 +147,9 @@ export type AgentHookLedgerSummary = {
   readonly stopped: number;
   readonly failed: number;
   readonly expired: number;
-  readonly initialSessionAttemptLimit: number;
-  readonly attemptExtensionSize: number;
-  readonly hardSessionAttemptLimit: number;
+  readonly activeExecutions: number;
+  readonly hardSessionActiveExecutionLimit: number;
+  readonly executionLimitBasis: "pending/running leases; historical attempts are excluded";
   readonly preAcknowledgementTtlMs: number;
   readonly lifecycleLeaseMs: number;
   readonly parentDelegationEnforcement:
@@ -680,10 +680,10 @@ function validateLedger(value: unknown, path: string): AgentLedgerV1 {
 
 function validateLedgerBounds(ledger: AgentLedgerV1, path: string): void {
   if (
-    Object.keys(ledger.orphanPosts).length > AGENT_SESSION_HARD_ATTEMPT_LIMIT ||
+    Object.keys(ledger.orphanPosts).length > AGENT_AUXILIARY_RECORD_LIMIT ||
     Object.values(ledger.agents).filter(
       (agent) => agent.reservationToolUseId === undefined,
-    ).length > AGENT_SESSION_HARD_ATTEMPT_LIMIT
+    ).length > AGENT_AUXILIARY_RECORD_LIMIT
   ) {
     throw new AgentHookStateError(
       `agent ledger exceeds bounded auxiliary records: ${path}`,
@@ -716,7 +716,7 @@ function migrateLedgerV1(ledger: AgentLedgerV1): boolean {
       Date.parse(right.observedAt) - Date.parse(left.observedAt) ||
       left.toolUseId.localeCompare(right.toolUseId),
   );
-  for (const orphan of orphanPosts.slice(AGENT_SESSION_HARD_ATTEMPT_LIMIT)) {
+  for (const orphan of orphanPosts.slice(AGENT_AUXILIARY_RECORD_LIMIT)) {
     delete ledger.orphanPosts[orphan.toolUseId];
     changed = true;
   }
@@ -734,7 +734,7 @@ function migrateLedgerV1(ledger: AgentLedgerV1): boolean {
       );
       return rightTime - leftTime || left.agentId.localeCompare(right.agentId);
     });
-  for (const agent of unlinkedAgents.slice(AGENT_SESSION_HARD_ATTEMPT_LIMIT)) {
+  for (const agent of unlinkedAgents.slice(AGENT_AUXILIARY_RECORD_LIMIT)) {
     delete ledger.agents[agent.agentId];
     changed = true;
   }
@@ -1502,7 +1502,7 @@ function makeRoomForUnlinkedAgentObservation(ledger: AgentLedgerV1): boolean {
   const unlinked = Object.values(ledger.agents).filter(
     (agent) => agent.reservationToolUseId === undefined,
   );
-  if (unlinked.length < AGENT_SESSION_HARD_ATTEMPT_LIMIT) return true;
+  if (unlinked.length < AGENT_AUXILIARY_RECORD_LIMIT) return true;
   const stopped = unlinked
     .filter((agent) => agent.state === "stopped")
     .sort((left, right) =>
@@ -1967,42 +1967,36 @@ function validatePrePolicy(
       };
     }
   }
-  return validateSessionAttemptLimit(ledger);
+  return undefined;
 }
 
-function validateSessionAttemptLimit(
-  ledger: AgentLedgerV1,
-): { readonly code: string; readonly detail: string } | undefined {
-  if (ledger.totalAcceptedAttempts >= AGENT_SESSION_HARD_ATTEMPT_LIMIT) {
-    return {
-      code: "session_attempt_hard_limit",
-      detail:
-        `session accepted-attempt hard limit is ` +
-        `${AGENT_SESSION_HARD_ATTEMPT_LIMIT}`,
-    };
-  }
-  const extensionCount = Math.ceil(
-    Math.max(
-      0,
-      ledger.totalAcceptedAttempts - AGENT_SESSION_INITIAL_ATTEMPT_LIMIT,
-    ) / AGENT_SESSION_ATTEMPT_EXTENSION_SIZE,
-  );
-  const currentLimit = Math.min(
-    AGENT_SESSION_HARD_ATTEMPT_LIMIT,
-    AGENT_SESSION_INITIAL_ATTEMPT_LIMIT +
-      extensionCount * AGENT_SESSION_ATTEMPT_EXTENSION_SIZE,
-  );
-  if (ledger.totalAcceptedAttempts < currentLimit) return undefined;
-  const active = Object.values(ledger.reservations).filter((reservation) =>
-    ACTIVE_RESERVATION_STATES.has(reservation.state)
+function activeExecutionCount(ledger: AgentLedgerV1, timestamp: number): number {
+  const reservations = Object.values(ledger.reservations).filter((reservation) =>
+    ACTIVE_RESERVATION_STATES.has(reservation.state) &&
+    Date.parse(reservation.expiresAt) > timestamp
   ).length;
-  return active > 0
+  const unlinked = Object.values(ledger.agents).filter((agent) =>
+    agent.reservationToolUseId === undefined &&
+    (agent.state === "pending" || agent.state === "running") &&
+    Date.parse(agent.startedAt ?? agent.firstObservedAt) + AGENT_RESERVATION_TTL_MS > timestamp
+  ).length;
+  // A linked observation is already represented by its reservation, including
+  // when that lease expires. Only a fresh lifecycle event can reactivate it.
+  return reservations + unlinked;
+}
+
+function validateSessionExecutionLimit(
+  ledger: AgentLedgerV1,
+  timestamp: number,
+): PolicyDenial | undefined {
+  const active = activeExecutionCount(ledger, timestamp);
+  return active >= AGENT_SESSION_ACTIVE_EXECUTION_LIMIT
     ? {
-        code: "session_attempt_wave_pending",
+        code: "session_active_execution_limit",
         detail:
-          `automatic attempt wave ${currentLimit} is exhausted while ` +
-          `${active} delegated task(s) remain pending or running; ` +
-          "the next wave opens only after all active delegated work settles",
+          `session has ${active} pending/running execution leases; limit is ` +
+          `${AGENT_SESSION_ACTIVE_EXECUTION_LIMIT}. ` +
+          "Finished history does not consume capacity; wait for active work to settle.",
       }
     : undefined;
 }
@@ -2036,7 +2030,7 @@ function onPreToolUse(
     startsWithEnvelopeLine(message) ? "structured" : "unstructured";
   const inputDigest = toolInputDigest(parsed.toolInput);
   // A present marker opts into the full delegation contract. Ordinary Codex
-  // spawns stay usable globally and consume only the hard session budget.
+  // spawns stay usable globally and share the active execution admission limit.
   // Invalid marked envelopes deny before any state directory or lock is created.
   const parsedEnvelope =
     contractMode === "structured"
@@ -2097,8 +2091,7 @@ function onPreToolUse(
               envelope,
               parsed.callerAgentId,
             )
-          : validateUnstructuredCaller(ledger, parsed.callerAgentId) ??
-            validateSessionAttemptLimit(ledger);
+          : validateUnstructuredCaller(ledger, parsed.callerAgentId);
       const denial =
         policy ??
         validateIdentitySerialization(
@@ -2111,6 +2104,25 @@ function onPreToolUse(
           result: policyDenial(denial.code, denial.detail),
           changed: false,
         };
+      }
+      // Caller binding can merge observations or detach a provisional link.
+      // Project it before counting, without mutating the ledger on a denial.
+      const projected = parsed.callerAgentId === undefined ? ledger : structuredClone(ledger);
+      if (parsed.callerAgentId !== undefined) {
+        if (contractMode === "structured") {
+          commitStructuredCaller(projected, envelope, parsed.callerAgentId, effectiveTimestamp);
+        } else {
+          commitUnstructuredCallerResolution(
+            projected,
+            callerResolution === undefined ? undefined : recordGet(projected.reservations, callerResolution.toolUseId),
+            parsed.callerAgentId,
+            effectiveTimestamp,
+          );
+        }
+      }
+      const capacityDenial = validateSessionExecutionLimit(projected, effectiveTimestamp);
+      if (capacityDenial !== undefined) {
+        return { result: policyDenial(capacityDenial.code, capacityDenial.detail), changed: false };
       }
       if (contractMode === "structured") {
         commitStructuredCaller(
@@ -2216,14 +2228,14 @@ function onPostToolUse(
         }
         if (
           Object.keys(ledger.orphanPosts).length >=
-            AGENT_SESSION_HARD_ATTEMPT_LIMIT
+            AGENT_AUXILIARY_RECORD_LIMIT
         ) {
           return {
             result: {
               decision: "block",
               reason:
                 "gdm agent gate: unmatched PostToolUse record limit is " +
-                AGENT_SESSION_HARD_ATTEMPT_LIMIT,
+                AGENT_AUXILIARY_RECORD_LIMIT,
             },
             changed: false,
           };
@@ -2559,7 +2571,7 @@ function onStop(
       const ids = [
         ...active.map((reservation) => reservation.envelope.taskId),
         ...unlinkedActiveAgents.map((agent) => `agent:${agent.agentId}`),
-      ].slice(0, AGENT_SESSION_HARD_ATTEMPT_LIMIT);
+      ].slice(0, AGENT_AUXILIARY_RECORD_LIMIT);
       const reason =
         `gdm agent gate: delegated work remains pending (${pending}) or running (${running})` +
         `${ids.length > 0 ? ` [${ids.join(", ")}]` : ""}. ` +
@@ -2652,9 +2664,9 @@ function emptySummary(directory: string): AgentHookLedgerSummary {
     stopped: 0,
     failed: 0,
     expired: 0,
-    initialSessionAttemptLimit: AGENT_SESSION_INITIAL_ATTEMPT_LIMIT,
-    attemptExtensionSize: AGENT_SESSION_ATTEMPT_EXTENSION_SIZE,
-    hardSessionAttemptLimit: AGENT_SESSION_HARD_ATTEMPT_LIMIT,
+    activeExecutions: 0,
+    hardSessionActiveExecutionLimit: AGENT_SESSION_ACTIVE_EXECUTION_LIMIT,
+    executionLimitBasis: "pending/running leases; historical attempts are excluded",
     preAcknowledgementTtlMs: AGENT_PRE_ACK_TTL_MS,
     lifecycleLeaseMs: AGENT_RESERVATION_TTL_MS,
     parentDelegationEnforcement:
@@ -2682,6 +2694,7 @@ export function readAgentHookLedgerSummary(
     );
   }
   const counts = {
+    activeExecutions: 0,
     sessions: 0,
     corruptLedgers: 0,
     totalAcceptedAttempts: 0,
@@ -2703,6 +2716,7 @@ export function readAgentHookLedgerSummary(
       validateLedger(ledger, path);
       validateLedgerBounds(ledger, path);
       counts.sessions += 1;
+      counts.activeExecutions += activeExecutionCount(ledger, timestamp);
       counts.totalAcceptedAttempts += ledger.totalAcceptedAttempts;
       for (const reservation of Object.values(ledger.reservations)) {
         if (reservation.contractMode === "structured") counts.structuredAttempts += 1;

@@ -211,27 +211,26 @@ session tree에서 루트 진행자를 제외한 모든 세대의 활성 spawned
 이는 선언을 검사하는 guardrail이지 symlink·대소문자까지 잠그는 운영체제 파일 lock은 아니다.
 각 메시지는 계약 다음에 실행 지시, 산출물, 검증 방법, `stopWhen`을 자체 완결적으로 적는다.
 
-`MAX_TOTAL_SPAWNS_PER_ROOT: 32`에서 ROOT는 하나의 hook-enabled native root session을 뜻한다.
-같은 세션 트리의 제한은 `INITIAL_SPAWN_ATTEMPT_BUDGET: 16`,
-`SPAWN_ATTEMPT_EXTENSION: 4`, 절대 누적 32, `DEFAULT_CHILD_QUOTA: 1`,
-`MAX_CHILD_QUOTA: 2`, `MAX_AGENT_DEPTH: 3`이다.
+`MAX_IN_FLIGHT_SPAWNS_PER_ROOT: 32`에서 ROOT는 하나의 hook-enabled native root session을 뜻한다.
+세션 실행 제한과 별개로 `DEFAULT_CHILD_QUOTA: 1`, `MAX_CHILD_QUOTA: 2`,
+`MAX_AGENT_DEPTH: 3`을 적용한다.
 새 독립 경계가 예상되는 일반 역할의 기본 `childQuota`는 1이며, 실제로 하위 분할 가능성이
-없으면 0, 서로 독립인 하위 축이 이미
-확인됐으면 최대 2를 준다. 일반 역할을 일괄 leaf로 만들지 않는다. 허용된 spawn 시도는
-같은 root session 누적 예산을 하나 소비하며 실패·취소된 spawn도 예산을 돌려주지 않는다.
-초기 16을 다 쓰면 pending/running 역할이 하나도 없을 때만 다음 spawn에서 4개 예산을 자동으로
-열며, 활성 역할이 남은 동안에는 확장하지 않는다.
+없으면 0, 서로 독립인 하위 축이 이미 확인됐으면 최대 2를 준다. 일반 역할을 일괄 leaf로 만들지 않는다.
+부모별 childQuota는 해당 부모가 만들 수 있는 누적 자식 수다.
+실행 제한은 현재 pending/running 예약과 연결되지 않은 활성 관찰만 계산한다.
+`stopped|failed|expired` 이력은 실행 제한에서 제외한다. 누적 호출 횟수와 과거 기록은
+감사와 중복 호출 방지를 위해 보존하며 누적 횟수 때문에 새 실행을 차단하지 않는다.
+초기 예산과 단계별 확장은 없다. 취소 요청만으로 자리를 반환하지 않고 관찰된 상태를 따른다.
 첫 Pre 뒤 같은 `tool_use_id`의 재전달은 실제 handler 실행 여부를 훅이 증명할 수 없으므로
 동일한 `tool_input`·protocol·caller라도 즉시 거부하고 새 attempt로 세지 않는다. 같은 id의
 입력·caller가 바뀌는 경우도 거부한다. Pre보다 먼저 온 unmatched Post는 세션당 32개까지만
-보관하고 동일 replay만 상태 변경 없이 허용한다. 예산이 없으면 새 역할 대신 기존 역할에
+보관하고 동일 replay만 상태 변경 없이 허용한다. 실행 자리가 없으면 새 역할 대신 기존 역할에
 후속 작업을 보내거나 진행자가 직접 통합한다.
-훅이 실행되는 하나의 native root session tree에서 절대 누적 32는 하드 상한이고, 동시 4는
+훅이 실행되는 하나의 native root session tree에서 활성 실행 예약 32는 새 spawn의 입장 상한이고, 동시 4는
 해당 target runtime의 유효 설정이 4일 때 native hard 상한이다. 사용자 설정 파일만으로
 유효값을 단정하지 않고 target의 debug config에서 계층을 확인한다. 비대화형 CLI와 별도
-세션을 합친 논리 작업 전체의 동시 4·초기 16·4개 자동 확장·절대 누적 32는 원장을 공유하는
-하드 경계가 아니라 진행자가
-지키는 협력적 운영 규칙이다.
+세션을 합친 논리 작업 전체의 동시 4는 진행자가 지키는 협력적 운영 규칙이다.
+늦은 lifecycle 관찰로 실행 예약이 상한을 넘더라도 이력을 버리거나 실행을 강제 종료하지 않는다.
 
 일반 역할의 위임에서 금지하는 것은 "필요한 만큼", "파일마다 하나"처럼 끝이 정해지지 않은
 폭증형 팬아웃과 같은 전체 범위를 다시 넘기는 자기복제형 재위임이다. 모든 역할에는 구체적인
@@ -275,7 +274,7 @@ Post evidence를 보존하고 일반 expiry reason만 지운다. 이미 stopped�
 Start는 stop 신호를 바꾸지 않는다. 예약과 연결하지 못한 lifecycle 관찰도 세션당 32개로
 제한하고 30분 뒤 Stop 계산에서 제거한다.
 진행자는 `deliverable`과 `verify`를 직접 확인해 결과를 통합해야 한다.
-user hook은 gdm 계약이 없는 일반 native spawn도 막지 않고 같은 세션 절대 누적 32에만 포함한다.
+user hook은 gdm 계약이 없는 일반 native spawn도 막지 않고 같은 세션 활성 실행 제한에 포함한다.
 Stop 장벽은 한 번만 continuation을 요청하고 재진입에서는 경고만 해 무한 루프를 만들지 않는다.
 
 독립 검수는 예외적으로 pass당 정확히 1명의 **leaf 실행**이다. 검수자에는
