@@ -1,0 +1,18 @@
+{
+  "manifestSha256": "8a95f4df2d1ea0ee2143d2b19f4fba3cddeac9dad0bfad4a17ba5e8bad6b7c89",
+  "blindMapSha256": "d654dab0f82c804f2443d2cb25e0276b398563b4d0724d56df4ac730875b2c7f",
+  "phase": "All 31 findings adjudicated before model labels joined",
+  "sha256": {
+    "blind-reviews.json": "478d64038e18bfe96336ad96758cd02a112a96744ab98414780ffb3a02bae938",
+    "adjudications.json": "687e1916fab29178e15bf8544c92c0374e45a33b53c8cda143ceda3c422e7886",
+    "exploratory.py": "69394643edc1f28d6ff7d856d7711d5bfe1e98b451f68a8e2b140b07ddca8913",
+    "exploratory-loader.json": "5eb7c439d43ba899cb5ad4af2cb3e3019a121a31e0277b5819e54867fe25657c",
+    "adjudication_probes.py": "386361e5a5f250380f1348b9db843ee4b25b7420bd85e430bc3783f2e66cec55",
+    "adjudication-probes.json": "e1a58597f7ee9ba46927d7dd3412fdc23c279d37d555b18e4d1528b3cb6d40bd",
+    "exploratory-logs/C07.log": "30619d5f76a2526fee191103579770a2fecef241b14be11a6ace48688b620f60",
+    "exploratory-logs/C08.log": "d873db8111db381a8bfc73b3138cc9af2af3e349e75dc232ddf99b5496d07770",
+    "adjudication-logs/C02-initial-claim-disproved.log": "b46f0ba9cd6696027bc65c2efa52f4e8ac13bafecb59155ae118276d0261c951",
+    "adjudication-logs/C02.log": "b46f0ba9cd6696027bc65c2efa52f4e8ac13bafecb59155ae118276d0261c951",
+    "adjudication-logs/C06.log": "b46f0ba9cd6696027bc65c2efa52f4e8ac13bafecb59155ae118276d0261c951"
+  }
+}

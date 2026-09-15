@@ -1,0 +1,31 @@
+{
+  "schema": "gdm-pi-grading-correction/v1",
+  "at": "2026-09-08T06:53:37Z",
+  "run": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-model-routing-20260908-7bd72wn6",
+  "task": "t4",
+  "motivatingRun": "t4-legacy-1",
+  "reason": "The brief requires correct refreshed values and preserved cache read optimization. Write-through legitimately uses 2 reads; invalidate-then-read uses 3. Requiring exactly 3 penalizes a valid optimization. All other assertions remain identical.",
+  "originalSha256": "4eb088c9ebfc124138a18d5be974e2680e97f85512cc40a7acec687d9f9a6aa9",
+  "correctedSha256": "5eee484521502078f639891ea91f96c5d44aab553894416f83c8600045e8cb80",
+  "originalAssertion": "expect(r.reads).toBe(3);",
+  "correctedAssertion": "expect([2,3]).toContain(r.reads);",
+  "applyTo": "All 8 t4 observations (4 arms, 2 trials), without model reruns. Other tasks retain original grading.",
+  "completedWhenDetected": [
+    "t1-astra-1",
+    "t1-legacy-1",
+    "t1-routed-1",
+    "t1-terra-1",
+    "t2-astra-1",
+    "t2-legacy-1",
+    "t2-routed-1",
+    "t2-terra-1",
+    "t3-astra-1",
+    "t3-legacy-1",
+    "t3-routed-1",
+    "t3-terra-1",
+    "t4-astra-1",
+    "t4-legacy-1",
+    "t4-terra-1"
+  ],
+  "preservation": "Frozen original grader, raw model events, result.json, and original primary analysis are retained. Corrected outcomes and comparisons are a separately identified post-hoc analysis."
+}

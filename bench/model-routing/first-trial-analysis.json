@@ -1,0 +1,4255 @@
+{
+  "schema": "gdm-pi-model-routing-analysis/v1",
+  "run": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-model-routing-20260908-7bd72wn6",
+  "completed": 32,
+  "planned": 64,
+  "summary": {
+    "completed": 32,
+    "planned": 64,
+    "arms": {
+      "legacy": {
+        "runs": 8,
+        "successes": 7,
+        "timeouts": 0,
+        "usageCompleteRuns": 8,
+        "medianSecondsAll": 283.202,
+        "medianSecondsSuccess": 284.429,
+        "medianTokens": 205709.5,
+        "medianApiCostEstimateUSD": 0.4426485,
+        "children": 0,
+        "childFailures": 0
+      },
+      "terra": {
+        "runs": 8,
+        "successes": 7,
+        "timeouts": 0,
+        "usageCompleteRuns": 8,
+        "medianSecondsAll": 112.9145,
+        "medianSecondsSuccess": 118.486,
+        "medianTokens": 189053.0,
+        "medianApiCostEstimateUSD": 0.1256196,
+        "children": 0,
+        "childFailures": 0
+      },
+      "routed": {
+        "runs": 8,
+        "successes": 8,
+        "timeouts": 0,
+        "usageCompleteRuns": 8,
+        "medianSecondsAll": 112.8605,
+        "medianSecondsSuccess": 112.8605,
+        "medianTokens": 185782.0,
+        "medianApiCostEstimateUSD": 0.1446558,
+        "children": 0,
+        "childFailures": 0
+      },
+      "astra": {
+        "runs": 8,
+        "successes": 8,
+        "timeouts": 0,
+        "usageCompleteRuns": 8,
+        "medianSecondsAll": 109.096,
+        "medianSecondsSuccess": 109.096,
+        "medianTokens": 149598.0,
+        "medianApiCostEstimateUSD": 0.48221800000000004,
+        "children": 0,
+        "childFailures": 0
+      }
+    }
+  },
+  "arms": {
+    "legacy": {
+      "runs": 8,
+      "successes": 7,
+      "hiddenPassed": 7,
+      "validUsageRuns": 8,
+      "totalSecondsAll": 2157.382,
+      "totalApiEstimateUSDValid": 3.4741750000000002,
+      "failedRunIds": [
+        "t4-legacy-1"
+      ],
+      "providerErrorRunIds": [
+        "t1-legacy-1"
+      ],
+      "delegations": []
+    },
+    "terra": {
+      "runs": 8,
+      "successes": 7,
+      "hiddenPassed": 7,
+      "validUsageRuns": 8,
+      "totalSecondsAll": 912.745,
+      "totalApiEstimateUSDValid": 1.0330872,
+      "failedRunIds": [
+        "t4-terra-1"
+      ],
+      "providerErrorRunIds": [],
+      "delegations": []
+    },
+    "routed": {
+      "runs": 8,
+      "successes": 8,
+      "hiddenPassed": 8,
+      "validUsageRuns": 8,
+      "totalSecondsAll": 920.134,
+      "totalApiEstimateUSDValid": 1.14358,
+      "failedRunIds": [],
+      "providerErrorRunIds": [],
+      "delegations": []
+    },
+    "astra": {
+      "runs": 8,
+      "successes": 8,
+      "hiddenPassed": 8,
+      "validUsageRuns": 8,
+      "totalSecondsAll": 892.06,
+      "totalApiEstimateUSDValid": 3.6884280000000005,
+      "failedRunIds": [],
+      "providerErrorRunIds": [],
+      "delegations": []
+    }
+  },
+  "pairedComparisons": {
+    "legacy→routed": {
+      "seconds": {
+        "pairs": 7,
+        "tasks": 7,
+        "medianRatio": 0.4240848970480746,
+        "taskClusterBootstrap95": [
+          0.3586406316204843,
+          0.5991427400441722
+        ],
+        "fasterOrCheaperPairs": 7,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 0.2537432520060522,
+            "baseline": 374.741,
+            "candidate": 95.088
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.5991427400441722,
+            "baseline": 175.676,
+            "candidate": 105.255
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.6287650729049292,
+            "baseline": 178.383,
+            "candidate": 112.161
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 0.42098412979874095,
+            "baseline": 281.975,
+            "candidate": 118.707
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.4240848970480746,
+            "baseline": 329.717,
+            "candidate": 139.828
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.3586406316204843,
+            "baseline": 309.173,
+            "candidate": 110.882
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.43825699911049865,
+            "baseline": 284.429,
+            "candidate": 124.653
+          }
+        ]
+      },
+      "totalTokens": {
+        "pairs": 7,
+        "tasks": 7,
+        "medianRatio": 0.8766395595809553,
+        "taskClusterBootstrap95": [
+          0.6346584407184437,
+          1.0066353880395824
+        ],
+        "fasterOrCheaperPairs": 5,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 0.535351465792484,
+            "baseline": 351414,
+            "candidate": 188130
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 1.204892243219632,
+            "baseline": 152241,
+            "candidate": 183434
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.7331686308550062,
+            "baseline": 149765,
+            "candidate": 109803
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 1.0066353880395824,
+            "baseline": 191398,
+            "candidate": 192668
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.6346584407184437,
+            "baseline": 381881,
+            "candidate": 242364
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.8766395595809553,
+            "baseline": 222697,
+            "candidate": 195225
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.9631332457593238,
+            "baseline": 175090,
+            "candidate": 168635
+          }
+        ]
+      },
+      "input": {
+        "pairs": 7,
+        "tasks": 7,
+        "medianRatio": 1.0360716037273172,
+        "taskClusterBootstrap95": [
+          0.9440900275594569,
+          1.1906533626472744
+        ],
+        "fasterOrCheaperPairs": 2,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 0.9363482781026641,
+            "baseline": 38475,
+            "candidate": 36026
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 1.0297896056848266,
+            "baseline": 35885,
+            "candidate": 36954
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 1.1275687638318053,
+            "baseline": 18978,
+            "candidate": 21399
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 2.234145047951562,
+            "baseline": 22627,
+            "candidate": 50552
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 1.0360716037273172,
+            "baseline": 40780,
+            "candidate": 42251
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 1.1906533626472744,
+            "baseline": 35478,
+            "candidate": 42242
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.9440900275594569,
+            "baseline": 39188,
+            "candidate": 36997
+          }
+        ]
+      },
+      "apiCostEstimateUSD": {
+        "pairs": 7,
+        "tasks": 7,
+        "medianRatio": 0.32476919489142214,
+        "taskClusterBootstrap95": [
+          0.2827707803592751,
+          0.3824585842859289
+        ],
+        "fasterOrCheaperPairs": 7,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 0.26460276653101156,
+            "baseline": 0.480385,
+            "candidate": 0.12711119999999998
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.3824585842859289,
+            "baseline": 0.366105,
+            "candidate": 0.14002
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.32476919489142214,
+            "baseline": 0.291588,
+            "candidate": 0.0946988
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 0.4117804225787377,
+            "baseline": 0.410953,
+            "candidate": 0.1692224
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.2827707803592751,
+            "baseline": 0.608002,
+            "candidate": 0.1719252
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.32708106386901076,
+            "baseline": 0.477352,
+            "candidate": 0.15613280000000002
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.31473276778034504,
+            "baseline": 0.47434400000000004,
+            "candidate": 0.1492916
+          }
+        ]
+      }
+    },
+    "legacy→terra": {
+      "seconds": {
+        "pairs": 7,
+        "tasks": 7,
+        "medianRatio": 0.44726841503471165,
+        "taskClusterBootstrap95": [
+          0.4199590520517639,
+          0.4984653463606032
+        ],
+        "fasterOrCheaperPairs": 7,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 0.2408169909350725,
+            "baseline": 374.741,
+            "candidate": 90.244
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.47691204262392134,
+            "baseline": 175.676,
+            "candidate": 83.782
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.5258348609452694,
+            "baseline": 178.383,
+            "candidate": 93.8
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 0.4202003723734373,
+            "baseline": 281.975,
+            "candidate": 118.486
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.44726841503471165,
+            "baseline": 329.717,
+            "candidate": 147.472
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.4199590520517639,
+            "baseline": 309.173,
+            "candidate": 129.84
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.4984653463606032,
+            "baseline": 284.429,
+            "candidate": 141.778
+          }
+        ]
+      },
+      "totalTokens": {
+        "pairs": 7,
+        "tasks": 7,
+        "medianRatio": 0.845709641351253,
+        "taskClusterBootstrap95": [
+          0.6559504138723843,
+          1.0907955797415951
+        ],
+        "fasterOrCheaperPairs": 4,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 0.5241879947867757,
+            "baseline": 351414,
+            "candidate": 184207
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.819457307821152,
+            "baseline": 152241,
+            "candidate": 124755
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 1.0907955797415951,
+            "baseline": 149765,
+            "candidate": 163363
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 1.0745514582179543,
+            "baseline": 191398,
+            "candidate": 205667
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.6559504138723843,
+            "baseline": 381881,
+            "candidate": 250495
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.845709641351253,
+            "baseline": 222697,
+            "candidate": 188337
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 1.4468102118910275,
+            "baseline": 175090,
+            "candidate": 253322
+          }
+        ]
+      },
+      "input": {
+        "pairs": 7,
+        "tasks": 7,
+        "medianRatio": 1.0220730835970195,
+        "taskClusterBootstrap95": [
+          0.6829866396076442,
+          1.1369160737172406
+        ],
+        "fasterOrCheaperPairs": 3,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 0.5843534762833008,
+            "baseline": 38475,
+            "candidate": 22483
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 1.0468719520691097,
+            "baseline": 35885,
+            "candidate": 37567
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 1.1519654336600273,
+            "baseline": 18978,
+            "candidate": 21862
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 1.1369160737172406,
+            "baseline": 22627,
+            "candidate": 25725
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.6867091711623344,
+            "baseline": 40780,
+            "candidate": 28004
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.6829866396076442,
+            "baseline": 35478,
+            "candidate": 24231
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 1.0220730835970195,
+            "baseline": 39188,
+            "candidate": 40053
+          }
+        ]
+      },
+      "apiCostEstimateUSD": {
+        "pairs": 7,
+        "tasks": 7,
+        "medianRatio": 0.32228405681428285,
+        "taskClusterBootstrap95": [
+          0.25029259772171797,
+          0.3582534260669163
+        ],
+        "fasterOrCheaperPairs": 7,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 0.2095710732017028,
+            "baseline": 0.480385,
+            "candidate": 0.1006748
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.3401373922781715,
+            "baseline": 0.366105,
+            "candidate": 0.124526
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.3582534260669163,
+            "baseline": 0.291588,
+            "candidate": 0.1044624
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 0.32228405681428285,
+            "baseline": 0.410953,
+            "candidate": 0.1324436
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.25029259772171797,
+            "baseline": 0.608002,
+            "candidate": 0.1521784
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.2654502337897401,
+            "baseline": 0.477352,
+            "candidate": 0.1267132
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.3675838631878973,
+            "baseline": 0.47434400000000004,
+            "candidate": 0.1743612
+          }
+        ]
+      }
+    },
+    "terra→routed": {
+      "seconds": {
+        "pairs": 7,
+        "tasks": 7,
+        "medianRatio": 1.001865199264048,
+        "taskClusterBootstrap95": [
+          0.879212571767129,
+          1.1957462686567164
+        ],
+        "fasterOrCheaperPairs": 3,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 1.0536766987278932,
+            "baseline": 90.244,
+            "candidate": 95.088
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 1.2562961017879735,
+            "baseline": 83.782,
+            "candidate": 105.255
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 1.1957462686567164,
+            "baseline": 93.8,
+            "candidate": 112.161
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 1.001865199264048,
+            "baseline": 118.486,
+            "candidate": 118.707
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.948166431593794,
+            "baseline": 147.472,
+            "candidate": 139.828
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.8539895255699322,
+            "baseline": 129.84,
+            "candidate": 110.882
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.879212571767129,
+            "baseline": 141.778,
+            "candidate": 124.653
+          }
+        ]
+      },
+      "totalTokens": {
+        "pairs": 7,
+        "tasks": 7,
+        "medianRatio": 0.9675402702648755,
+        "taskClusterBootstrap95": [
+          0.6721411825199096,
+          1.0365727392918014
+        ],
+        "fasterOrCheaperPairs": 4,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 1.021296693393845,
+            "baseline": 184207,
+            "candidate": 188130
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 1.4703538936315177,
+            "baseline": 124755,
+            "candidate": 183434
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.6721411825199096,
+            "baseline": 163363,
+            "candidate": 109803
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 0.9367958884993703,
+            "baseline": 205667,
+            "candidate": 192668
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.9675402702648755,
+            "baseline": 250495,
+            "candidate": 242364
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 1.0365727392918014,
+            "baseline": 188337,
+            "candidate": 195225
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.6656942547429754,
+            "baseline": 253322,
+            "candidate": 168635
+          }
+        ]
+      },
+      "input": {
+        "pairs": 7,
+        "tasks": 7,
+        "medianRatio": 1.508748750178546,
+        "taskClusterBootstrap95": [
+          0.978821699752996,
+          1.7433040320250919
+        ],
+        "fasterOrCheaperPairs": 3,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 1.6023662322643775,
+            "baseline": 22483,
+            "candidate": 36026
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.9836824872893764,
+            "baseline": 37567,
+            "candidate": 36954
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.978821699752996,
+            "baseline": 21862,
+            "candidate": 21399
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 1.965092322643343,
+            "baseline": 25725,
+            "candidate": 50552
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 1.508748750178546,
+            "baseline": 28004,
+            "candidate": 42251
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 1.7433040320250919,
+            "baseline": 24231,
+            "candidate": 42242
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.9237010960477368,
+            "baseline": 40053,
+            "candidate": 36997
+          }
+        ]
+      },
+      "apiCostEstimateUSD": {
+        "pairs": 7,
+        "tasks": 7,
+        "medianRatio": 1.1297608596226534,
+        "taskClusterBootstrap95": [
+          0.9065347914656374,
+          1.2625920289883863
+        ],
+        "fasterOrCheaperPairs": 2,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 1.2625920289883863,
+            "baseline": 0.1006748,
+            "candidate": 0.12711119999999998
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 1.1244238151068853,
+            "baseline": 0.124526,
+            "candidate": 0.14002
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.9065347914656374,
+            "baseline": 0.1044624,
+            "candidate": 0.0946988
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 1.2776940524117435,
+            "baseline": 0.1324436,
+            "candidate": 0.1692224
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 1.1297608596226534,
+            "baseline": 0.1521784,
+            "candidate": 0.1719252
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 1.232174706344722,
+            "baseline": 0.1267132,
+            "candidate": 0.15613280000000002
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.8562203058937424,
+            "baseline": 0.1743612,
+            "candidate": 0.1492916
+          }
+        ]
+      }
+    },
+    "routed→astra": {
+      "seconds": {
+        "pairs": 8,
+        "tasks": 8,
+        "medianRatio": 0.9463646671758753,
+        "taskClusterBootstrap95": [
+          0.7534653935680016,
+          1.2049926949369598
+        ],
+        "fasterOrCheaperPairs": 5,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 1.3552603903752314,
+            "baseline": 95.088,
+            "candidate": 128.869
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.7534653935680016,
+            "baseline": 105.255,
+            "candidate": 79.306
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.9911734025195924,
+            "baseline": 112.161,
+            "candidate": 111.171
+          },
+          {
+            "task": "t4",
+            "trial": 1,
+            "ratio": 0.8467418104966538,
+            "baseline": 113.56,
+            "candidate": 96.156
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 0.9015559318321582,
+            "baseline": 118.707,
+            "candidate": 107.021
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.7059101181451498,
+            "baseline": 139.828,
+            "candidate": 98.706
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 1.2049926949369598,
+            "baseline": 110.882,
+            "candidate": 133.612
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 1.1008078425709769,
+            "baseline": 124.653,
+            "candidate": 137.219
+          }
+        ]
+      },
+      "totalTokens": {
+        "pairs": 8,
+        "tasks": 8,
+        "medianRatio": 0.8688336094262135,
+        "taskClusterBootstrap95": [
+          0.5653892492284333,
+          1.0899750172752884
+        ],
+        "fasterOrCheaperPairs": 6,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 1.0899750172752884,
+            "baseline": 188130,
+            "candidate": 205057
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.5204160624529803,
+            "baseline": 183434,
+            "candidate": 95462
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 1.3399907106363214,
+            "baseline": 109803,
+            "candidate": 147135
+          },
+          {
+            "task": "t4",
+            "trial": 1,
+            "ratio": 0.7711252892273343,
+            "baseline": 160341,
+            "candidate": 123643
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 0.7892384827786659,
+            "baseline": 192668,
+            "candidate": 152061
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.5653892492284333,
+            "baseline": 242364,
+            "candidate": 137030
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.948428736073761,
+            "baseline": 195225,
+            "candidate": 185157
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.97204613514395,
+            "baseline": 168635,
+            "candidate": 163921
+          }
+        ]
+      },
+      "input": {
+        "pairs": 8,
+        "tasks": 8,
+        "medianRatio": 0.7539454414461415,
+        "taskClusterBootstrap95": [
+          0.37821590021537954,
+          0.8855548770332538
+        ],
+        "fasterOrCheaperPairs": 7,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 0.8855548770332538,
+            "baseline": 36026,
+            "candidate": 31903
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.3976294853060562,
+            "baseline": 36954,
+            "candidate": 14694
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 1.3759054161409412,
+            "baseline": 21399,
+            "candidate": 29443
+          },
+          {
+            "task": "t4",
+            "trial": 1,
+            "ratio": 0.8562535036733249,
+            "baseline": 33893,
+            "candidate": 29021
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 0.31945323627156197,
+            "baseline": 50552,
+            "candidate": 16149
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.37821590021537954,
+            "baseline": 42251,
+            "candidate": 15980
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.8067799820084276,
+            "baseline": 42242,
+            "candidate": 34080
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.7011109008838554,
+            "baseline": 36997,
+            "candidate": 25939
+          }
+        ]
+      },
+      "apiCostEstimateUSD": {
+        "pairs": 8,
+        "tasks": 8,
+        "medianRatio": 3.3970759448173196,
+        "taskClusterBootstrap95": [
+          2.1637766033423795,
+          4.501963634990466
+        ],
+        "fasterOrCheaperPairs": 0,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 4.501963634990466,
+            "baseline": 0.12711119999999998,
+            "candidate": 0.57225
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 2.1637766033423795,
+            "baseline": 0.14002,
+            "candidate": 0.302972
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 5.24397352447972,
+            "baseline": 0.0946988,
+            "candidate": 0.49659800000000004
+          },
+          {
+            "task": "t4",
+            "trial": 1,
+            "ratio": 3.460903401441063,
+            "baseline": 0.135178,
+            "candidate": 0.46783800000000003
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 2.3064677016754285,
+            "baseline": 0.1692224,
+            "candidate": 0.39030600000000004
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 2.1334626919148563,
+            "baseline": 0.1719252,
+            "candidate": 0.366796
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 3.804722646362584,
+            "baseline": 0.15613280000000002,
+            "candidate": 0.5940420000000001
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 3.333248488193576,
+            "baseline": 0.1492916,
+            "candidate": 0.49762600000000007
+          }
+        ]
+      }
+    }
+  },
+  "sensitivityWithoutT1": {
+    "legacy→routed": {
+      "pairs": 6,
+      "tasks": 6,
+      "medianRatio": 0.43117094807928663,
+      "taskClusterBootstrap95": [
+        0.38981238070961266,
+        0.6139539064745507
+      ],
+      "fasterOrCheaperPairs": 6,
+      "observations": [
+        {
+          "task": "t2",
+          "trial": 1,
+          "ratio": 0.5991427400441722,
+          "baseline": 175.676,
+          "candidate": 105.255
+        },
+        {
+          "task": "t3",
+          "trial": 1,
+          "ratio": 0.6287650729049292,
+          "baseline": 178.383,
+          "candidate": 112.161
+        },
+        {
+          "task": "t5",
+          "trial": 1,
+          "ratio": 0.42098412979874095,
+          "baseline": 281.975,
+          "candidate": 118.707
+        },
+        {
+          "task": "t6",
+          "trial": 1,
+          "ratio": 0.4240848970480746,
+          "baseline": 329.717,
+          "candidate": 139.828
+        },
+        {
+          "task": "t7",
+          "trial": 1,
+          "ratio": 0.3586406316204843,
+          "baseline": 309.173,
+          "candidate": 110.882
+        },
+        {
+          "task": "t8",
+          "trial": 1,
+          "ratio": 0.43825699911049865,
+          "baseline": 284.429,
+          "candidate": 124.653
+        }
+      ]
+    },
+    "legacy→terra": {
+      "pairs": 6,
+      "tasks": 6,
+      "medianRatio": 0.4620902288293165,
+      "taskClusterBootstrap95": [
+        0.42007971221260065,
+        0.5121501036529363
+      ],
+      "fasterOrCheaperPairs": 6,
+      "observations": [
+        {
+          "task": "t2",
+          "trial": 1,
+          "ratio": 0.47691204262392134,
+          "baseline": 175.676,
+          "candidate": 83.782
+        },
+        {
+          "task": "t3",
+          "trial": 1,
+          "ratio": 0.5258348609452694,
+          "baseline": 178.383,
+          "candidate": 93.8
+        },
+        {
+          "task": "t5",
+          "trial": 1,
+          "ratio": 0.4202003723734373,
+          "baseline": 281.975,
+          "candidate": 118.486
+        },
+        {
+          "task": "t6",
+          "trial": 1,
+          "ratio": 0.44726841503471165,
+          "baseline": 329.717,
+          "candidate": 147.472
+        },
+        {
+          "task": "t7",
+          "trial": 1,
+          "ratio": 0.4199590520517639,
+          "baseline": 309.173,
+          "candidate": 129.84
+        },
+        {
+          "task": "t8",
+          "trial": 1,
+          "ratio": 0.4984653463606032,
+          "baseline": 284.429,
+          "candidate": 141.778
+        }
+      ]
+    },
+    "terra→routed": {
+      "pairs": 6,
+      "tasks": 6,
+      "medianRatio": 0.975015815428921,
+      "taskClusterBootstrap95": [
+        0.8666010486685306,
+        1.2260211852223448
+      ],
+      "fasterOrCheaperPairs": 3,
+      "observations": [
+        {
+          "task": "t2",
+          "trial": 1,
+          "ratio": 1.2562961017879735,
+          "baseline": 83.782,
+          "candidate": 105.255
+        },
+        {
+          "task": "t3",
+          "trial": 1,
+          "ratio": 1.1957462686567164,
+          "baseline": 93.8,
+          "candidate": 112.161
+        },
+        {
+          "task": "t5",
+          "trial": 1,
+          "ratio": 1.001865199264048,
+          "baseline": 118.486,
+          "candidate": 118.707
+        },
+        {
+          "task": "t6",
+          "trial": 1,
+          "ratio": 0.948166431593794,
+          "baseline": 147.472,
+          "candidate": 139.828
+        },
+        {
+          "task": "t7",
+          "trial": 1,
+          "ratio": 0.8539895255699322,
+          "baseline": 129.84,
+          "candidate": 110.882
+        },
+        {
+          "task": "t8",
+          "trial": 1,
+          "ratio": 0.879212571767129,
+          "baseline": 141.778,
+          "candidate": 124.653
+        }
+      ]
+    }
+  },
+  "exploratoryWithoutProviderErrors": {
+    "legacy→routed": {
+      "pairs": 6,
+      "tasks": 6,
+      "medianRatio": 0.43117094807928663,
+      "taskClusterBootstrap95": [
+        0.38981238070961266,
+        0.6139539064745507
+      ],
+      "fasterOrCheaperPairs": 6,
+      "observations": [
+        {
+          "task": "t2",
+          "trial": 1,
+          "ratio": 0.5991427400441722,
+          "baseline": 175.676,
+          "candidate": 105.255
+        },
+        {
+          "task": "t3",
+          "trial": 1,
+          "ratio": 0.6287650729049292,
+          "baseline": 178.383,
+          "candidate": 112.161
+        },
+        {
+          "task": "t5",
+          "trial": 1,
+          "ratio": 0.42098412979874095,
+          "baseline": 281.975,
+          "candidate": 118.707
+        },
+        {
+          "task": "t6",
+          "trial": 1,
+          "ratio": 0.4240848970480746,
+          "baseline": 329.717,
+          "candidate": 139.828
+        },
+        {
+          "task": "t7",
+          "trial": 1,
+          "ratio": 0.3586406316204843,
+          "baseline": 309.173,
+          "candidate": 110.882
+        },
+        {
+          "task": "t8",
+          "trial": 1,
+          "ratio": 0.43825699911049865,
+          "baseline": 284.429,
+          "candidate": 124.653
+        }
+      ]
+    },
+    "legacy→terra": {
+      "pairs": 6,
+      "tasks": 6,
+      "medianRatio": 0.4620902288293165,
+      "taskClusterBootstrap95": [
+        0.42007971221260065,
+        0.5121501036529363
+      ],
+      "fasterOrCheaperPairs": 6,
+      "observations": [
+        {
+          "task": "t2",
+          "trial": 1,
+          "ratio": 0.47691204262392134,
+          "baseline": 175.676,
+          "candidate": 83.782
+        },
+        {
+          "task": "t3",
+          "trial": 1,
+          "ratio": 0.5258348609452694,
+          "baseline": 178.383,
+          "candidate": 93.8
+        },
+        {
+          "task": "t5",
+          "trial": 1,
+          "ratio": 0.4202003723734373,
+          "baseline": 281.975,
+          "candidate": 118.486
+        },
+        {
+          "task": "t6",
+          "trial": 1,
+          "ratio": 0.44726841503471165,
+          "baseline": 329.717,
+          "candidate": 147.472
+        },
+        {
+          "task": "t7",
+          "trial": 1,
+          "ratio": 0.4199590520517639,
+          "baseline": 309.173,
+          "candidate": 129.84
+        },
+        {
+          "task": "t8",
+          "trial": 1,
+          "ratio": 0.4984653463606032,
+          "baseline": 284.429,
+          "candidate": 141.778
+        }
+      ]
+    },
+    "terra→routed": {
+      "pairs": 7,
+      "tasks": 7,
+      "medianRatio": 1.001865199264048,
+      "taskClusterBootstrap95": [
+        0.879212571767129,
+        1.1957462686567164
+      ],
+      "fasterOrCheaperPairs": 3,
+      "observations": [
+        {
+          "task": "t1",
+          "trial": 1,
+          "ratio": 1.0536766987278932,
+          "baseline": 90.244,
+          "candidate": 95.088
+        },
+        {
+          "task": "t2",
+          "trial": 1,
+          "ratio": 1.2562961017879735,
+          "baseline": 83.782,
+          "candidate": 105.255
+        },
+        {
+          "task": "t3",
+          "trial": 1,
+          "ratio": 1.1957462686567164,
+          "baseline": 93.8,
+          "candidate": 112.161
+        },
+        {
+          "task": "t5",
+          "trial": 1,
+          "ratio": 1.001865199264048,
+          "baseline": 118.486,
+          "candidate": 118.707
+        },
+        {
+          "task": "t6",
+          "trial": 1,
+          "ratio": 0.948166431593794,
+          "baseline": 147.472,
+          "candidate": 139.828
+        },
+        {
+          "task": "t7",
+          "trial": 1,
+          "ratio": 0.8539895255699322,
+          "baseline": 129.84,
+          "candidate": 110.882
+        },
+        {
+          "task": "t8",
+          "trial": 1,
+          "ratio": 0.879212571767129,
+          "baseline": 141.778,
+          "candidate": 124.653
+        }
+      ]
+    },
+    "routed→astra": {
+      "pairs": 8,
+      "tasks": 8,
+      "medianRatio": 0.9463646671758753,
+      "taskClusterBootstrap95": [
+        0.7534653935680016,
+        1.2049926949369598
+      ],
+      "fasterOrCheaperPairs": 5,
+      "observations": [
+        {
+          "task": "t1",
+          "trial": 1,
+          "ratio": 1.3552603903752314,
+          "baseline": 95.088,
+          "candidate": 128.869
+        },
+        {
+          "task": "t2",
+          "trial": 1,
+          "ratio": 0.7534653935680016,
+          "baseline": 105.255,
+          "candidate": 79.306
+        },
+        {
+          "task": "t3",
+          "trial": 1,
+          "ratio": 0.9911734025195924,
+          "baseline": 112.161,
+          "candidate": 111.171
+        },
+        {
+          "task": "t4",
+          "trial": 1,
+          "ratio": 0.8467418104966538,
+          "baseline": 113.56,
+          "candidate": 96.156
+        },
+        {
+          "task": "t5",
+          "trial": 1,
+          "ratio": 0.9015559318321582,
+          "baseline": 118.707,
+          "candidate": 107.021
+        },
+        {
+          "task": "t6",
+          "trial": 1,
+          "ratio": 0.7059101181451498,
+          "baseline": 139.828,
+          "candidate": 98.706
+        },
+        {
+          "task": "t7",
+          "trial": 1,
+          "ratio": 1.2049926949369598,
+          "baseline": 110.882,
+          "candidate": 133.612
+        },
+        {
+          "task": "t8",
+          "trial": 1,
+          "ratio": 1.1008078425709769,
+          "baseline": 124.653,
+          "candidate": 137.219
+        }
+      ]
+    }
+  },
+  "exploratoryLeaveOneTaskOut": {
+    "t1": {
+      "legacy→routed": {
+        "pairs": 6,
+        "tasks": 6,
+        "medianRatio": 0.43117094807928663,
+        "taskClusterBootstrap95": [
+          0.38981238070961266,
+          0.6139539064745507
+        ],
+        "fasterOrCheaperPairs": 6,
+        "observations": [
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.5991427400441722,
+            "baseline": 175.676,
+            "candidate": 105.255
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.6287650729049292,
+            "baseline": 178.383,
+            "candidate": 112.161
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 0.42098412979874095,
+            "baseline": 281.975,
+            "candidate": 118.707
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.4240848970480746,
+            "baseline": 329.717,
+            "candidate": 139.828
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.3586406316204843,
+            "baseline": 309.173,
+            "candidate": 110.882
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.43825699911049865,
+            "baseline": 284.429,
+            "candidate": 124.653
+          }
+        ]
+      },
+      "legacy→terra": {
+        "pairs": 6,
+        "tasks": 6,
+        "medianRatio": 0.4620902288293165,
+        "taskClusterBootstrap95": [
+          0.42007971221260065,
+          0.5121501036529363
+        ],
+        "fasterOrCheaperPairs": 6,
+        "observations": [
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.47691204262392134,
+            "baseline": 175.676,
+            "candidate": 83.782
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.5258348609452694,
+            "baseline": 178.383,
+            "candidate": 93.8
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 0.4202003723734373,
+            "baseline": 281.975,
+            "candidate": 118.486
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.44726841503471165,
+            "baseline": 329.717,
+            "candidate": 147.472
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.4199590520517639,
+            "baseline": 309.173,
+            "candidate": 129.84
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.4984653463606032,
+            "baseline": 284.429,
+            "candidate": 141.778
+          }
+        ]
+      },
+      "terra→routed": {
+        "pairs": 6,
+        "tasks": 6,
+        "medianRatio": 0.975015815428921,
+        "taskClusterBootstrap95": [
+          0.8666010486685306,
+          1.2260211852223448
+        ],
+        "fasterOrCheaperPairs": 3,
+        "observations": [
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 1.2562961017879735,
+            "baseline": 83.782,
+            "candidate": 105.255
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 1.1957462686567164,
+            "baseline": 93.8,
+            "candidate": 112.161
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 1.001865199264048,
+            "baseline": 118.486,
+            "candidate": 118.707
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.948166431593794,
+            "baseline": 147.472,
+            "candidate": 139.828
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.8539895255699322,
+            "baseline": 129.84,
+            "candidate": 110.882
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.879212571767129,
+            "baseline": 141.778,
+            "candidate": 124.653
+          }
+        ]
+      }
+    },
+    "t2": {
+      "legacy→routed": {
+        "pairs": 6,
+        "tasks": 6,
+        "medianRatio": 0.42253451342340775,
+        "taskClusterBootstrap95": [
+          0.30619194181326825,
+          0.533511036007714
+        ],
+        "fasterOrCheaperPairs": 6,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 0.2537432520060522,
+            "baseline": 374.741,
+            "candidate": 95.088
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.6287650729049292,
+            "baseline": 178.383,
+            "candidate": 112.161
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 0.42098412979874095,
+            "baseline": 281.975,
+            "candidate": 118.707
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.4240848970480746,
+            "baseline": 329.717,
+            "candidate": 139.828
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.3586406316204843,
+            "baseline": 309.173,
+            "candidate": 110.882
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.43825699911049865,
+            "baseline": 284.429,
+            "candidate": 124.653
+          }
+        ]
+      },
+      "legacy→terra": {
+        "pairs": 6,
+        "tasks": 6,
+        "medianRatio": 0.4337343937040745,
+        "taskClusterBootstrap95": [
+          0.3303880214934182,
+          0.5121501036529363
+        ],
+        "fasterOrCheaperPairs": 6,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 0.2408169909350725,
+            "baseline": 374.741,
+            "candidate": 90.244
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.5258348609452694,
+            "baseline": 178.383,
+            "candidate": 93.8
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 0.4202003723734373,
+            "baseline": 281.975,
+            "candidate": 118.486
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.44726841503471165,
+            "baseline": 329.717,
+            "candidate": 147.472
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.4199590520517639,
+            "baseline": 309.173,
+            "candidate": 129.84
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.4984653463606032,
+            "baseline": 284.429,
+            "candidate": 141.778
+          }
+        ]
+      },
+      "terra→routed": {
+        "pairs": 6,
+        "tasks": 6,
+        "medianRatio": 0.975015815428921,
+        "taskClusterBootstrap95": [
+          0.8666010486685306,
+          1.124711483692305
+        ],
+        "fasterOrCheaperPairs": 3,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 1.0536766987278932,
+            "baseline": 90.244,
+            "candidate": 95.088
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 1.1957462686567164,
+            "baseline": 93.8,
+            "candidate": 112.161
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 1.001865199264048,
+            "baseline": 118.486,
+            "candidate": 118.707
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.948166431593794,
+            "baseline": 147.472,
+            "candidate": 139.828
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.8539895255699322,
+            "baseline": 129.84,
+            "candidate": 110.882
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.879212571767129,
+            "baseline": 141.778,
+            "candidate": 124.653
+          }
+        ]
+      }
+    },
+    "t3": {
+      "legacy→routed": {
+        "pairs": 6,
+        "tasks": 6,
+        "medianRatio": 0.42253451342340775,
+        "taskClusterBootstrap95": [
+          0.30619194181326825,
+          0.5186998695773355
+        ],
+        "fasterOrCheaperPairs": 6,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 0.2537432520060522,
+            "baseline": 374.741,
+            "candidate": 95.088
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.5991427400441722,
+            "baseline": 175.676,
+            "candidate": 105.255
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 0.42098412979874095,
+            "baseline": 281.975,
+            "candidate": 118.707
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.4240848970480746,
+            "baseline": 329.717,
+            "candidate": 139.828
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.3586406316204843,
+            "baseline": 309.173,
+            "candidate": 110.882
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.43825699911049865,
+            "baseline": 284.429,
+            "candidate": 124.653
+          }
+        ]
+      },
+      "legacy→terra": {
+        "pairs": 6,
+        "tasks": 6,
+        "medianRatio": 0.4337343937040745,
+        "taskClusterBootstrap95": [
+          0.3303880214934182,
+          0.48768869449226226
+        ],
+        "fasterOrCheaperPairs": 6,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 0.2408169909350725,
+            "baseline": 374.741,
+            "candidate": 90.244
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.47691204262392134,
+            "baseline": 175.676,
+            "candidate": 83.782
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 0.4202003723734373,
+            "baseline": 281.975,
+            "candidate": 118.486
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.44726841503471165,
+            "baseline": 329.717,
+            "candidate": 147.472
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.4199590520517639,
+            "baseline": 309.173,
+            "candidate": 129.84
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.4984653463606032,
+            "baseline": 284.429,
+            "candidate": 141.778
+          }
+        ]
+      },
+      "terra→routed": {
+        "pairs": 6,
+        "tasks": 6,
+        "medianRatio": 0.975015815428921,
+        "taskClusterBootstrap95": [
+          0.8666010486685306,
+          1.1549864002579333
+        ],
+        "fasterOrCheaperPairs": 3,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 1.0536766987278932,
+            "baseline": 90.244,
+            "candidate": 95.088
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 1.2562961017879735,
+            "baseline": 83.782,
+            "candidate": 105.255
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 1.001865199264048,
+            "baseline": 118.486,
+            "candidate": 118.707
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.948166431593794,
+            "baseline": 147.472,
+            "candidate": 139.828
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.8539895255699322,
+            "baseline": 129.84,
+            "candidate": 110.882
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.879212571767129,
+            "baseline": 141.778,
+            "candidate": 124.653
+          }
+        ]
+      }
+    },
+    "t4": {
+      "legacy→routed": {
+        "pairs": 7,
+        "tasks": 7,
+        "medianRatio": 0.4240848970480746,
+        "taskClusterBootstrap95": [
+          0.3586406316204843,
+          0.5991427400441722
+        ],
+        "fasterOrCheaperPairs": 7,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 0.2537432520060522,
+            "baseline": 374.741,
+            "candidate": 95.088
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.5991427400441722,
+            "baseline": 175.676,
+            "candidate": 105.255
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.6287650729049292,
+            "baseline": 178.383,
+            "candidate": 112.161
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 0.42098412979874095,
+            "baseline": 281.975,
+            "candidate": 118.707
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.4240848970480746,
+            "baseline": 329.717,
+            "candidate": 139.828
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.3586406316204843,
+            "baseline": 309.173,
+            "candidate": 110.882
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.43825699911049865,
+            "baseline": 284.429,
+            "candidate": 124.653
+          }
+        ]
+      },
+      "legacy→terra": {
+        "pairs": 7,
+        "tasks": 7,
+        "medianRatio": 0.44726841503471165,
+        "taskClusterBootstrap95": [
+          0.4199590520517639,
+          0.4984653463606032
+        ],
+        "fasterOrCheaperPairs": 7,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 0.2408169909350725,
+            "baseline": 374.741,
+            "candidate": 90.244
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.47691204262392134,
+            "baseline": 175.676,
+            "candidate": 83.782
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.5258348609452694,
+            "baseline": 178.383,
+            "candidate": 93.8
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 0.4202003723734373,
+            "baseline": 281.975,
+            "candidate": 118.486
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.44726841503471165,
+            "baseline": 329.717,
+            "candidate": 147.472
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.4199590520517639,
+            "baseline": 309.173,
+            "candidate": 129.84
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.4984653463606032,
+            "baseline": 284.429,
+            "candidate": 141.778
+          }
+        ]
+      },
+      "terra→routed": {
+        "pairs": 7,
+        "tasks": 7,
+        "medianRatio": 1.001865199264048,
+        "taskClusterBootstrap95": [
+          0.879212571767129,
+          1.1957462686567164
+        ],
+        "fasterOrCheaperPairs": 3,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 1.0536766987278932,
+            "baseline": 90.244,
+            "candidate": 95.088
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 1.2562961017879735,
+            "baseline": 83.782,
+            "candidate": 105.255
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 1.1957462686567164,
+            "baseline": 93.8,
+            "candidate": 112.161
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 1.001865199264048,
+            "baseline": 118.486,
+            "candidate": 118.707
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.948166431593794,
+            "baseline": 147.472,
+            "candidate": 139.828
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.8539895255699322,
+            "baseline": 129.84,
+            "candidate": 110.882
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.879212571767129,
+            "baseline": 141.778,
+            "candidate": 124.653
+          }
+        ]
+      }
+    },
+    "t5": {
+      "legacy→routed": {
+        "pairs": 6,
+        "tasks": 6,
+        "medianRatio": 0.43117094807928663,
+        "taskClusterBootstrap95": [
+          0.30619194181326825,
+          0.6139539064745507
+        ],
+        "fasterOrCheaperPairs": 6,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 0.2537432520060522,
+            "baseline": 374.741,
+            "candidate": 95.088
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.5991427400441722,
+            "baseline": 175.676,
+            "candidate": 105.255
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.6287650729049292,
+            "baseline": 178.383,
+            "candidate": 112.161
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.4240848970480746,
+            "baseline": 329.717,
+            "candidate": 139.828
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.3586406316204843,
+            "baseline": 309.173,
+            "candidate": 110.882
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.43825699911049865,
+            "baseline": 284.429,
+            "candidate": 124.653
+          }
+        ]
+      },
+      "legacy→terra": {
+        "pairs": 6,
+        "tasks": 6,
+        "medianRatio": 0.4620902288293165,
+        "taskClusterBootstrap95": [
+          0.3303880214934182,
+          0.5121501036529363
+        ],
+        "fasterOrCheaperPairs": 6,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 0.2408169909350725,
+            "baseline": 374.741,
+            "candidate": 90.244
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.47691204262392134,
+            "baseline": 175.676,
+            "candidate": 83.782
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.5258348609452694,
+            "baseline": 178.383,
+            "candidate": 93.8
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.44726841503471165,
+            "baseline": 329.717,
+            "candidate": 147.472
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.4199590520517639,
+            "baseline": 309.173,
+            "candidate": 129.84
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.4984653463606032,
+            "baseline": 284.429,
+            "candidate": 141.778
+          }
+        ]
+      },
+      "terra→routed": {
+        "pairs": 6,
+        "tasks": 6,
+        "medianRatio": 1.0009215651608436,
+        "taskClusterBootstrap95": [
+          0.8666010486685306,
+          1.2260211852223448
+        ],
+        "fasterOrCheaperPairs": 3,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 1.0536766987278932,
+            "baseline": 90.244,
+            "candidate": 95.088
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 1.2562961017879735,
+            "baseline": 83.782,
+            "candidate": 105.255
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 1.1957462686567164,
+            "baseline": 93.8,
+            "candidate": 112.161
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.948166431593794,
+            "baseline": 147.472,
+            "candidate": 139.828
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.8539895255699322,
+            "baseline": 129.84,
+            "candidate": 110.882
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.879212571767129,
+            "baseline": 141.778,
+            "candidate": 124.653
+          }
+        ]
+      }
+    },
+    "t6": {
+      "legacy→routed": {
+        "pairs": 6,
+        "tasks": 6,
+        "medianRatio": 0.4296205644546198,
+        "taskClusterBootstrap95": [
+          0.30619194181326825,
+          0.6139539064745507
+        ],
+        "fasterOrCheaperPairs": 6,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 0.2537432520060522,
+            "baseline": 374.741,
+            "candidate": 95.088
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.5991427400441722,
+            "baseline": 175.676,
+            "candidate": 105.255
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.6287650729049292,
+            "baseline": 178.383,
+            "candidate": 112.161
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 0.42098412979874095,
+            "baseline": 281.975,
+            "candidate": 118.707
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.3586406316204843,
+            "baseline": 309.173,
+            "candidate": 110.882
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.43825699911049865,
+            "baseline": 284.429,
+            "candidate": 124.653
+          }
+        ]
+      },
+      "legacy→terra": {
+        "pairs": 6,
+        "tasks": 6,
+        "medianRatio": 0.4485562074986793,
+        "taskClusterBootstrap95": [
+          0.3303880214934182,
+          0.5121501036529363
+        ],
+        "fasterOrCheaperPairs": 6,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 0.2408169909350725,
+            "baseline": 374.741,
+            "candidate": 90.244
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.47691204262392134,
+            "baseline": 175.676,
+            "candidate": 83.782
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.5258348609452694,
+            "baseline": 178.383,
+            "candidate": 93.8
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 0.4202003723734373,
+            "baseline": 281.975,
+            "candidate": 118.486
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.4199590520517639,
+            "baseline": 309.173,
+            "candidate": 129.84
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.4984653463606032,
+            "baseline": 284.429,
+            "candidate": 141.778
+          }
+        ]
+      },
+      "terra→routed": {
+        "pairs": 6,
+        "tasks": 6,
+        "medianRatio": 1.0277709489959705,
+        "taskClusterBootstrap95": [
+          0.8666010486685306,
+          1.2260211852223448
+        ],
+        "fasterOrCheaperPairs": 2,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 1.0536766987278932,
+            "baseline": 90.244,
+            "candidate": 95.088
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 1.2562961017879735,
+            "baseline": 83.782,
+            "candidate": 105.255
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 1.1957462686567164,
+            "baseline": 93.8,
+            "candidate": 112.161
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 1.001865199264048,
+            "baseline": 118.486,
+            "candidate": 118.707
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.8539895255699322,
+            "baseline": 129.84,
+            "candidate": 110.882
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.879212571767129,
+            "baseline": 141.778,
+            "candidate": 124.653
+          }
+        ]
+      }
+    },
+    "t7": {
+      "legacy→routed": {
+        "pairs": 6,
+        "tasks": 6,
+        "medianRatio": 0.43117094807928663,
+        "taskClusterBootstrap95": [
+          0.3373636909023966,
+          0.6139539064745507
+        ],
+        "fasterOrCheaperPairs": 6,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 0.2537432520060522,
+            "baseline": 374.741,
+            "candidate": 95.088
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.5991427400441722,
+            "baseline": 175.676,
+            "candidate": 105.255
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.6287650729049292,
+            "baseline": 178.383,
+            "candidate": 112.161
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 0.42098412979874095,
+            "baseline": 281.975,
+            "candidate": 118.707
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.4240848970480746,
+            "baseline": 329.717,
+            "candidate": 139.828
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.43825699911049865,
+            "baseline": 284.429,
+            "candidate": 124.653
+          }
+        ]
+      },
+      "legacy→terra": {
+        "pairs": 6,
+        "tasks": 6,
+        "medianRatio": 0.4620902288293165,
+        "taskClusterBootstrap95": [
+          0.3305086816542549,
+          0.5121501036529363
+        ],
+        "fasterOrCheaperPairs": 6,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 0.2408169909350725,
+            "baseline": 374.741,
+            "candidate": 90.244
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.47691204262392134,
+            "baseline": 175.676,
+            "candidate": 83.782
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.5258348609452694,
+            "baseline": 178.383,
+            "candidate": 93.8
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 0.4202003723734373,
+            "baseline": 281.975,
+            "candidate": 118.486
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.44726841503471165,
+            "baseline": 329.717,
+            "candidate": 147.472
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.4984653463606032,
+            "baseline": 284.429,
+            "candidate": 141.778
+          }
+        ]
+      },
+      "terra→routed": {
+        "pairs": 6,
+        "tasks": 6,
+        "medianRatio": 1.0277709489959705,
+        "taskClusterBootstrap95": [
+          0.9136895016804615,
+          1.2260211852223448
+        ],
+        "fasterOrCheaperPairs": 2,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 1.0536766987278932,
+            "baseline": 90.244,
+            "candidate": 95.088
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 1.2562961017879735,
+            "baseline": 83.782,
+            "candidate": 105.255
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 1.1957462686567164,
+            "baseline": 93.8,
+            "candidate": 112.161
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 1.001865199264048,
+            "baseline": 118.486,
+            "candidate": 118.707
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.948166431593794,
+            "baseline": 147.472,
+            "candidate": 139.828
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.879212571767129,
+            "baseline": 141.778,
+            "candidate": 124.653
+          }
+        ]
+      }
+    },
+    "t8": {
+      "legacy→routed": {
+        "pairs": 6,
+        "tasks": 6,
+        "medianRatio": 0.42253451342340775,
+        "taskClusterBootstrap95": [
+          0.30619194181326825,
+          0.6139539064745507
+        ],
+        "fasterOrCheaperPairs": 6,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 0.2537432520060522,
+            "baseline": 374.741,
+            "candidate": 95.088
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.5991427400441722,
+            "baseline": 175.676,
+            "candidate": 105.255
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.6287650729049292,
+            "baseline": 178.383,
+            "candidate": 112.161
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 0.42098412979874095,
+            "baseline": 281.975,
+            "candidate": 118.707
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.4240848970480746,
+            "baseline": 329.717,
+            "candidate": 139.828
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.3586406316204843,
+            "baseline": 309.173,
+            "candidate": 110.882
+          }
+        ]
+      },
+      "legacy→terra": {
+        "pairs": 6,
+        "tasks": 6,
+        "medianRatio": 0.4337343937040745,
+        "taskClusterBootstrap95": [
+          0.3303880214934182,
+          0.5013734517845954
+        ],
+        "fasterOrCheaperPairs": 6,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 0.2408169909350725,
+            "baseline": 374.741,
+            "candidate": 90.244
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.47691204262392134,
+            "baseline": 175.676,
+            "candidate": 83.782
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.5258348609452694,
+            "baseline": 178.383,
+            "candidate": 93.8
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 0.4202003723734373,
+            "baseline": 281.975,
+            "candidate": 118.486
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.44726841503471165,
+            "baseline": 329.717,
+            "candidate": 147.472
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.4199590520517639,
+            "baseline": 309.173,
+            "candidate": 129.84
+          }
+        ]
+      },
+      "terra→routed": {
+        "pairs": 6,
+        "tasks": 6,
+        "medianRatio": 1.0277709489959705,
+        "taskClusterBootstrap95": [
+          0.9010779785818631,
+          1.2260211852223448
+        ],
+        "fasterOrCheaperPairs": 2,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 1.0536766987278932,
+            "baseline": 90.244,
+            "candidate": 95.088
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 1.2562961017879735,
+            "baseline": 83.782,
+            "candidate": 105.255
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 1.1957462686567164,
+            "baseline": 93.8,
+            "candidate": 112.161
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 1.001865199264048,
+            "baseline": 118.486,
+            "candidate": 118.707
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.948166431593794,
+            "baseline": 147.472,
+            "candidate": 139.828
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.8539895255699322,
+            "baseline": 129.84,
+            "candidate": 110.882
+          }
+        ]
+      }
+    }
+  },
+  "notes": [
+    "Speed/cost comparisons only use matched successful runs; all failures stay in success-rate denominators",
+    "Task-cluster bootstrap is exploratory for only 8 small synthetic tasks",
+    "API catalogue estimates include child usage; they are not OAuth subscription credit charges",
+    "Failed/incomplete assistant streams are excluded from complete-usage comparisons, even if every observed message included usage",
+    "Superseded batch results are preserved separately and not pooled with this corrected, frozen experiment.",
+    "Provider-error exclusion and all-task leave-one-out diagnostics were added after observing a provider retry; primary results retain every observation."
+  ],
+  "postHocGradingCorrection": {
+    "record": "grader-correction.json",
+    "arms": {
+      "legacy": {
+        "runs": 8,
+        "successes": 8,
+        "failedRunIds": []
+      },
+      "terra": {
+        "runs": 8,
+        "successes": 8,
+        "failedRunIds": []
+      },
+      "routed": {
+        "runs": 8,
+        "successes": 8,
+        "failedRunIds": []
+      },
+      "astra": {
+        "runs": 8,
+        "successes": 8,
+        "failedRunIds": []
+      }
+    },
+    "pairedComparisons": {
+      "legacy→routed": {
+        "seconds": {
+          "pairs": 8,
+          "tasks": 8,
+          "medianRatio": 0.43117094807928663,
+          "taskClusterBootstrap95": [
+            0.3586406316204843,
+            0.5686729595831299
+          ],
+          "fasterOrCheaperPairs": 8,
+          "observations": [
+            {
+              "task": "t1",
+              "trial": 1,
+              "ratio": 0.2537432520060522,
+              "baseline": 374.741,
+              "candidate": 95.088
+            },
+            {
+              "task": "t2",
+              "trial": 1,
+              "ratio": 0.5991427400441722,
+              "baseline": 175.676,
+              "candidate": 105.255
+            },
+            {
+              "task": "t3",
+              "trial": 1,
+              "ratio": 0.6287650729049292,
+              "baseline": 178.383,
+              "candidate": 112.161
+            },
+            {
+              "task": "t4",
+              "trial": 1,
+              "ratio": 0.5085808462613306,
+              "baseline": 223.288,
+              "candidate": 113.56
+            },
+            {
+              "task": "t5",
+              "trial": 1,
+              "ratio": 0.42098412979874095,
+              "baseline": 281.975,
+              "candidate": 118.707
+            },
+            {
+              "task": "t6",
+              "trial": 1,
+              "ratio": 0.4240848970480746,
+              "baseline": 329.717,
+              "candidate": 139.828
+            },
+            {
+              "task": "t7",
+              "trial": 1,
+              "ratio": 0.3586406316204843,
+              "baseline": 309.173,
+              "candidate": 110.882
+            },
+            {
+              "task": "t8",
+              "trial": 1,
+              "ratio": 0.43825699911049865,
+              "baseline": 284.429,
+              "candidate": 124.653
+            }
+          ]
+        },
+        "totalTokens": {
+          "pairs": 8,
+          "tasks": 8,
+          "medianRatio": 0.8049040952179807,
+          "taskClusterBootstrap95": [
+            0.6346584407184437,
+            1.0066353880395824
+          ],
+          "fasterOrCheaperPairs": 6,
+          "observations": [
+            {
+              "task": "t1",
+              "trial": 1,
+              "ratio": 0.535351465792484,
+              "baseline": 351414,
+              "candidate": 188130
+            },
+            {
+              "task": "t2",
+              "trial": 1,
+              "ratio": 1.204892243219632,
+              "baseline": 152241,
+              "candidate": 183434
+            },
+            {
+              "task": "t3",
+              "trial": 1,
+              "ratio": 0.7331686308550062,
+              "baseline": 149765,
+              "candidate": 109803
+            },
+            {
+              "task": "t4",
+              "trial": 1,
+              "ratio": 0.7287531644706642,
+              "baseline": 220021,
+              "candidate": 160341
+            },
+            {
+              "task": "t5",
+              "trial": 1,
+              "ratio": 1.0066353880395824,
+              "baseline": 191398,
+              "candidate": 192668
+            },
+            {
+              "task": "t6",
+              "trial": 1,
+              "ratio": 0.6346584407184437,
+              "baseline": 381881,
+              "candidate": 242364
+            },
+            {
+              "task": "t7",
+              "trial": 1,
+              "ratio": 0.8766395595809553,
+              "baseline": 222697,
+              "candidate": 195225
+            },
+            {
+              "task": "t8",
+              "trial": 1,
+              "ratio": 0.9631332457593238,
+              "baseline": 175090,
+              "candidate": 168635
+            }
+          ]
+        },
+        "input": {
+          "pairs": 8,
+          "tasks": 8,
+          "medianRatio": 1.0818201837795614,
+          "taskClusterBootstrap95": [
+            0.9440900275594569,
+            1.5772989575577065
+          ],
+          "fasterOrCheaperPairs": 2,
+          "observations": [
+            {
+              "task": "t1",
+              "trial": 1,
+              "ratio": 0.9363482781026641,
+              "baseline": 38475,
+              "candidate": 36026
+            },
+            {
+              "task": "t2",
+              "trial": 1,
+              "ratio": 1.0297896056848266,
+              "baseline": 35885,
+              "candidate": 36954
+            },
+            {
+              "task": "t3",
+              "trial": 1,
+              "ratio": 1.1275687638318053,
+              "baseline": 18978,
+              "candidate": 21399
+            },
+            {
+              "task": "t4",
+              "trial": 1,
+              "ratio": 1.5772989575577065,
+              "baseline": 21488,
+              "candidate": 33893
+            },
+            {
+              "task": "t5",
+              "trial": 1,
+              "ratio": 2.234145047951562,
+              "baseline": 22627,
+              "candidate": 50552
+            },
+            {
+              "task": "t6",
+              "trial": 1,
+              "ratio": 1.0360716037273172,
+              "baseline": 40780,
+              "candidate": 42251
+            },
+            {
+              "task": "t7",
+              "trial": 1,
+              "ratio": 1.1906533626472744,
+              "baseline": 35478,
+              "candidate": 42242
+            },
+            {
+              "task": "t8",
+              "trial": 1,
+              "ratio": 0.9440900275594569,
+              "baseline": 39188,
+              "candidate": 36997
+            }
+          ]
+        },
+        "apiCostEstimateUSD": {
+          "pairs": 8,
+          "tasks": 8,
+          "medianRatio": 0.32592512938021645,
+          "taskClusterBootstrap95": [
+            0.2827707803592751,
+            0.3824585842859289
+          ],
+          "fasterOrCheaperPairs": 8,
+          "observations": [
+            {
+              "task": "t1",
+              "trial": 1,
+              "ratio": 0.26460276653101156,
+              "baseline": 0.480385,
+              "candidate": 0.12711119999999998
+            },
+            {
+              "task": "t2",
+              "trial": 1,
+              "ratio": 0.3824585842859289,
+              "baseline": 0.366105,
+              "candidate": 0.14002
+            },
+            {
+              "task": "t3",
+              "trial": 1,
+              "ratio": 0.32476919489142214,
+              "baseline": 0.291588,
+              "candidate": 0.0946988
+            },
+            {
+              "task": "t4",
+              "trial": 1,
+              "ratio": 0.36989869912381035,
+              "baseline": 0.365446,
+              "candidate": 0.135178
+            },
+            {
+              "task": "t5",
+              "trial": 1,
+              "ratio": 0.4117804225787377,
+              "baseline": 0.410953,
+              "candidate": 0.1692224
+            },
+            {
+              "task": "t6",
+              "trial": 1,
+              "ratio": 0.2827707803592751,
+              "baseline": 0.608002,
+              "candidate": 0.1719252
+            },
+            {
+              "task": "t7",
+              "trial": 1,
+              "ratio": 0.32708106386901076,
+              "baseline": 0.477352,
+              "candidate": 0.15613280000000002
+            },
+            {
+              "task": "t8",
+              "trial": 1,
+              "ratio": 0.31473276778034504,
+              "baseline": 0.47434400000000004,
+              "candidate": 0.1492916
+            }
+          ]
+        }
+      },
+      "legacy→terra": {
+        "seconds": {
+          "pairs": 8,
+          "tasks": 8,
+          "medianRatio": 0.4620902288293165,
+          "taskClusterBootstrap95": [
+            0.4199590520517639,
+            0.4984653463606032
+          ],
+          "fasterOrCheaperPairs": 8,
+          "observations": [
+            {
+              "task": "t1",
+              "trial": 1,
+              "ratio": 0.2408169909350725,
+              "baseline": 374.741,
+              "candidate": 90.244
+            },
+            {
+              "task": "t2",
+              "trial": 1,
+              "ratio": 0.47691204262392134,
+              "baseline": 175.676,
+              "candidate": 83.782
+            },
+            {
+              "task": "t3",
+              "trial": 1,
+              "ratio": 0.5258348609452694,
+              "baseline": 178.383,
+              "candidate": 93.8
+            },
+            {
+              "task": "t4",
+              "trial": 1,
+              "ratio": 0.4807378811221382,
+              "baseline": 223.288,
+              "candidate": 107.343
+            },
+            {
+              "task": "t5",
+              "trial": 1,
+              "ratio": 0.4202003723734373,
+              "baseline": 281.975,
+              "candidate": 118.486
+            },
+            {
+              "task": "t6",
+              "trial": 1,
+              "ratio": 0.44726841503471165,
+              "baseline": 329.717,
+              "candidate": 147.472
+            },
+            {
+              "task": "t7",
+              "trial": 1,
+              "ratio": 0.4199590520517639,
+              "baseline": 309.173,
+              "candidate": 129.84
+            },
+            {
+              "task": "t8",
+              "trial": 1,
+              "ratio": 0.4984653463606032,
+              "baseline": 284.429,
+              "candidate": 141.778
+            }
+          ]
+        },
+        "totalTokens": {
+          "pairs": 8,
+          "tasks": 8,
+          "medianRatio": 0.8541068375285633,
+          "taskClusterBootstrap95": [
+            0.6559504138723843,
+            1.0907955797415951
+          ],
+          "fasterOrCheaperPairs": 5,
+          "observations": [
+            {
+              "task": "t1",
+              "trial": 1,
+              "ratio": 0.5241879947867757,
+              "baseline": 351414,
+              "candidate": 184207
+            },
+            {
+              "task": "t2",
+              "trial": 1,
+              "ratio": 0.819457307821152,
+              "baseline": 152241,
+              "candidate": 124755
+            },
+            {
+              "task": "t3",
+              "trial": 1,
+              "ratio": 1.0907955797415951,
+              "baseline": 149765,
+              "candidate": 163363
+            },
+            {
+              "task": "t4",
+              "trial": 1,
+              "ratio": 0.8625040337058736,
+              "baseline": 220021,
+              "candidate": 189769
+            },
+            {
+              "task": "t5",
+              "trial": 1,
+              "ratio": 1.0745514582179543,
+              "baseline": 191398,
+              "candidate": 205667
+            },
+            {
+              "task": "t6",
+              "trial": 1,
+              "ratio": 0.6559504138723843,
+              "baseline": 381881,
+              "candidate": 250495
+            },
+            {
+              "task": "t7",
+              "trial": 1,
+              "ratio": 0.845709641351253,
+              "baseline": 222697,
+              "candidate": 188337
+            },
+            {
+              "task": "t8",
+              "trial": 1,
+              "ratio": 1.4468102118910275,
+              "baseline": 175090,
+              "candidate": 253322
+            }
+          ]
+        },
+        "input": {
+          "pairs": 8,
+          "tasks": 8,
+          "medianRatio": 1.0344725178330645,
+          "taskClusterBootstrap95": [
+            0.6829866396076442,
+            1.1369160737172406
+          ],
+          "fasterOrCheaperPairs": 3,
+          "observations": [
+            {
+              "task": "t1",
+              "trial": 1,
+              "ratio": 0.5843534762833008,
+              "baseline": 38475,
+              "candidate": 22483
+            },
+            {
+              "task": "t2",
+              "trial": 1,
+              "ratio": 1.0468719520691097,
+              "baseline": 35885,
+              "candidate": 37567
+            },
+            {
+              "task": "t3",
+              "trial": 1,
+              "ratio": 1.1519654336600273,
+              "baseline": 18978,
+              "candidate": 21862
+            },
+            {
+              "task": "t4",
+              "trial": 1,
+              "ratio": 1.0807427401340284,
+              "baseline": 21488,
+              "candidate": 23223
+            },
+            {
+              "task": "t5",
+              "trial": 1,
+              "ratio": 1.1369160737172406,
+              "baseline": 22627,
+              "candidate": 25725
+            },
+            {
+              "task": "t6",
+              "trial": 1,
+              "ratio": 0.6867091711623344,
+              "baseline": 40780,
+              "candidate": 28004
+            },
+            {
+              "task": "t7",
+              "trial": 1,
+              "ratio": 0.6829866396076442,
+              "baseline": 35478,
+              "candidate": 24231
+            },
+            {
+              "task": "t8",
+              "trial": 1,
+              "ratio": 1.0220730835970195,
+              "baseline": 39188,
+              "candidate": 40053
+            }
+          ]
+        },
+        "apiCostEstimateUSD": {
+          "pairs": 8,
+          "tasks": 8,
+          "medianRatio": 0.32221589431345865,
+          "taskClusterBootstrap95": [
+            0.25029259772171797,
+            0.3582534260669163
+          ],
+          "fasterOrCheaperPairs": 8,
+          "observations": [
+            {
+              "task": "t1",
+              "trial": 1,
+              "ratio": 0.2095710732017028,
+              "baseline": 0.480385,
+              "candidate": 0.1006748
+            },
+            {
+              "task": "t2",
+              "trial": 1,
+              "ratio": 0.3401373922781715,
+              "baseline": 0.366105,
+              "candidate": 0.124526
+            },
+            {
+              "task": "t3",
+              "trial": 1,
+              "ratio": 0.3582534260669163,
+              "baseline": 0.291588,
+              "candidate": 0.1044624
+            },
+            {
+              "task": "t4",
+              "trial": 1,
+              "ratio": 0.32214773181263445,
+              "baseline": 0.365446,
+              "candidate": 0.1177276
+            },
+            {
+              "task": "t5",
+              "trial": 1,
+              "ratio": 0.32228405681428285,
+              "baseline": 0.410953,
+              "candidate": 0.1324436
+            },
+            {
+              "task": "t6",
+              "trial": 1,
+              "ratio": 0.25029259772171797,
+              "baseline": 0.608002,
+              "candidate": 0.1521784
+            },
+            {
+              "task": "t7",
+              "trial": 1,
+              "ratio": 0.2654502337897401,
+              "baseline": 0.477352,
+              "candidate": 0.1267132
+            },
+            {
+              "task": "t8",
+              "trial": 1,
+              "ratio": 0.3675838631878973,
+              "baseline": 0.47434400000000004,
+              "candidate": 0.1743612
+            }
+          ]
+        }
+      },
+      "terra→routed": {
+        "seconds": {
+          "pairs": 8,
+          "tasks": 8,
+          "medianRatio": 1.0277709489959705,
+          "taskClusterBootstrap95": [
+            0.879212571767129,
+            1.1571066229480564
+          ],
+          "fasterOrCheaperPairs": 3,
+          "observations": [
+            {
+              "task": "t1",
+              "trial": 1,
+              "ratio": 1.0536766987278932,
+              "baseline": 90.244,
+              "candidate": 95.088
+            },
+            {
+              "task": "t2",
+              "trial": 1,
+              "ratio": 1.2562961017879735,
+              "baseline": 83.782,
+              "candidate": 105.255
+            },
+            {
+              "task": "t3",
+              "trial": 1,
+              "ratio": 1.1957462686567164,
+              "baseline": 93.8,
+              "candidate": 112.161
+            },
+            {
+              "task": "t4",
+              "trial": 1,
+              "ratio": 1.0579171441081394,
+              "baseline": 107.343,
+              "candidate": 113.56
+            },
+            {
+              "task": "t5",
+              "trial": 1,
+              "ratio": 1.001865199264048,
+              "baseline": 118.486,
+              "candidate": 118.707
+            },
+            {
+              "task": "t6",
+              "trial": 1,
+              "ratio": 0.948166431593794,
+              "baseline": 147.472,
+              "candidate": 139.828
+            },
+            {
+              "task": "t7",
+              "trial": 1,
+              "ratio": 0.8539895255699322,
+              "baseline": 129.84,
+              "candidate": 110.882
+            },
+            {
+              "task": "t8",
+              "trial": 1,
+              "ratio": 0.879212571767129,
+              "baseline": 141.778,
+              "candidate": 124.653
+            }
+          ]
+        },
+        "totalTokens": {
+          "pairs": 8,
+          "tasks": 8,
+          "medianRatio": 0.952168079382123,
+          "taskClusterBootstrap95": [
+            0.6721411825199096,
+            1.0365727392918014
+          ],
+          "fasterOrCheaperPairs": 5,
+          "observations": [
+            {
+              "task": "t1",
+              "trial": 1,
+              "ratio": 1.021296693393845,
+              "baseline": 184207,
+              "candidate": 188130
+            },
+            {
+              "task": "t2",
+              "trial": 1,
+              "ratio": 1.4703538936315177,
+              "baseline": 124755,
+              "candidate": 183434
+            },
+            {
+              "task": "t3",
+              "trial": 1,
+              "ratio": 0.6721411825199096,
+              "baseline": 163363,
+              "candidate": 109803
+            },
+            {
+              "task": "t4",
+              "trial": 1,
+              "ratio": 0.8449272536610299,
+              "baseline": 189769,
+              "candidate": 160341
+            },
+            {
+              "task": "t5",
+              "trial": 1,
+              "ratio": 0.9367958884993703,
+              "baseline": 205667,
+              "candidate": 192668
+            },
+            {
+              "task": "t6",
+              "trial": 1,
+              "ratio": 0.9675402702648755,
+              "baseline": 250495,
+              "candidate": 242364
+            },
+            {
+              "task": "t7",
+              "trial": 1,
+              "ratio": 1.0365727392918014,
+              "baseline": 188337,
+              "candidate": 195225
+            },
+            {
+              "task": "t8",
+              "trial": 1,
+              "ratio": 0.6656942547429754,
+              "baseline": 253322,
+              "candidate": 168635
+            }
+          ]
+        },
+        "input": {
+          "pairs": 8,
+          "tasks": 8,
+          "medianRatio": 1.4841035229168575,
+          "taskClusterBootstrap95": [
+            0.978821699752996,
+            1.7433040320250919
+          ],
+          "fasterOrCheaperPairs": 3,
+          "observations": [
+            {
+              "task": "t1",
+              "trial": 1,
+              "ratio": 1.6023662322643775,
+              "baseline": 22483,
+              "candidate": 36026
+            },
+            {
+              "task": "t2",
+              "trial": 1,
+              "ratio": 0.9836824872893764,
+              "baseline": 37567,
+              "candidate": 36954
+            },
+            {
+              "task": "t3",
+              "trial": 1,
+              "ratio": 0.978821699752996,
+              "baseline": 21862,
+              "candidate": 21399
+            },
+            {
+              "task": "t4",
+              "trial": 1,
+              "ratio": 1.4594582956551694,
+              "baseline": 23223,
+              "candidate": 33893
+            },
+            {
+              "task": "t5",
+              "trial": 1,
+              "ratio": 1.965092322643343,
+              "baseline": 25725,
+              "candidate": 50552
+            },
+            {
+              "task": "t6",
+              "trial": 1,
+              "ratio": 1.508748750178546,
+              "baseline": 28004,
+              "candidate": 42251
+            },
+            {
+              "task": "t7",
+              "trial": 1,
+              "ratio": 1.7433040320250919,
+              "baseline": 24231,
+              "candidate": 42242
+            },
+            {
+              "task": "t8",
+              "trial": 1,
+              "ratio": 0.9237010960477368,
+              "baseline": 40053,
+              "candidate": 36997
+            }
+          ]
+        },
+        "apiCostEstimateUSD": {
+          "pairs": 8,
+          "tasks": 8,
+          "medianRatio": 1.1389938917352935,
+          "taskClusterBootstrap95": [
+            0.9065347914656374,
+            1.2625920289883863
+          ],
+          "fasterOrCheaperPairs": 2,
+          "observations": [
+            {
+              "task": "t1",
+              "trial": 1,
+              "ratio": 1.2625920289883863,
+              "baseline": 0.1006748,
+              "candidate": 0.12711119999999998
+            },
+            {
+              "task": "t2",
+              "trial": 1,
+              "ratio": 1.1244238151068853,
+              "baseline": 0.124526,
+              "candidate": 0.14002
+            },
+            {
+              "task": "t3",
+              "trial": 1,
+              "ratio": 0.9065347914656374,
+              "baseline": 0.1044624,
+              "candidate": 0.0946988
+            },
+            {
+              "task": "t4",
+              "trial": 1,
+              "ratio": 1.1482269238479337,
+              "baseline": 0.1177276,
+              "candidate": 0.135178
+            },
+            {
+              "task": "t5",
+              "trial": 1,
+              "ratio": 1.2776940524117435,
+              "baseline": 0.1324436,
+              "candidate": 0.1692224
+            },
+            {
+              "task": "t6",
+              "trial": 1,
+              "ratio": 1.1297608596226534,
+              "baseline": 0.1521784,
+              "candidate": 0.1719252
+            },
+            {
+              "task": "t7",
+              "trial": 1,
+              "ratio": 1.232174706344722,
+              "baseline": 0.1267132,
+              "candidate": 0.15613280000000002
+            },
+            {
+              "task": "t8",
+              "trial": 1,
+              "ratio": 0.8562203058937424,
+              "baseline": 0.1743612,
+              "candidate": 0.1492916
+            }
+          ]
+        }
+      },
+      "routed→astra": {
+        "seconds": {
+          "pairs": 8,
+          "tasks": 8,
+          "medianRatio": 0.9463646671758753,
+          "taskClusterBootstrap95": [
+            0.7534653935680016,
+            1.2049926949369598
+          ],
+          "fasterOrCheaperPairs": 5,
+          "observations": [
+            {
+              "task": "t1",
+              "trial": 1,
+              "ratio": 1.3552603903752314,
+              "baseline": 95.088,
+              "candidate": 128.869
+            },
+            {
+              "task": "t2",
+              "trial": 1,
+              "ratio": 0.7534653935680016,
+              "baseline": 105.255,
+              "candidate": 79.306
+            },
+            {
+              "task": "t3",
+              "trial": 1,
+              "ratio": 0.9911734025195924,
+              "baseline": 112.161,
+              "candidate": 111.171
+            },
+            {
+              "task": "t4",
+              "trial": 1,
+              "ratio": 0.8467418104966538,
+              "baseline": 113.56,
+              "candidate": 96.156
+            },
+            {
+              "task": "t5",
+              "trial": 1,
+              "ratio": 0.9015559318321582,
+              "baseline": 118.707,
+              "candidate": 107.021
+            },
+            {
+              "task": "t6",
+              "trial": 1,
+              "ratio": 0.7059101181451498,
+              "baseline": 139.828,
+              "candidate": 98.706
+            },
+            {
+              "task": "t7",
+              "trial": 1,
+              "ratio": 1.2049926949369598,
+              "baseline": 110.882,
+              "candidate": 133.612
+            },
+            {
+              "task": "t8",
+              "trial": 1,
+              "ratio": 1.1008078425709769,
+              "baseline": 124.653,
+              "candidate": 137.219
+            }
+          ]
+        },
+        "totalTokens": {
+          "pairs": 8,
+          "tasks": 8,
+          "medianRatio": 0.8688336094262135,
+          "taskClusterBootstrap95": [
+            0.5653892492284333,
+            1.0899750172752884
+          ],
+          "fasterOrCheaperPairs": 6,
+          "observations": [
+            {
+              "task": "t1",
+              "trial": 1,
+              "ratio": 1.0899750172752884,
+              "baseline": 188130,
+              "candidate": 205057
+            },
+            {
+              "task": "t2",
+              "trial": 1,
+              "ratio": 0.5204160624529803,
+              "baseline": 183434,
+              "candidate": 95462
+            },
+            {
+              "task": "t3",
+              "trial": 1,
+              "ratio": 1.3399907106363214,
+              "baseline": 109803,
+              "candidate": 147135
+            },
+            {
+              "task": "t4",
+              "trial": 1,
+              "ratio": 0.7711252892273343,
+              "baseline": 160341,
+              "candidate": 123643
+            },
+            {
+              "task": "t5",
+              "trial": 1,
+              "ratio": 0.7892384827786659,
+              "baseline": 192668,
+              "candidate": 152061
+            },
+            {
+              "task": "t6",
+              "trial": 1,
+              "ratio": 0.5653892492284333,
+              "baseline": 242364,
+              "candidate": 137030
+            },
+            {
+              "task": "t7",
+              "trial": 1,
+              "ratio": 0.948428736073761,
+              "baseline": 195225,
+              "candidate": 185157
+            },
+            {
+              "task": "t8",
+              "trial": 1,
+              "ratio": 0.97204613514395,
+              "baseline": 168635,
+              "candidate": 163921
+            }
+          ]
+        },
+        "input": {
+          "pairs": 8,
+          "tasks": 8,
+          "medianRatio": 0.7539454414461415,
+          "taskClusterBootstrap95": [
+            0.37821590021537954,
+            0.8855548770332538
+          ],
+          "fasterOrCheaperPairs": 7,
+          "observations": [
+            {
+              "task": "t1",
+              "trial": 1,
+              "ratio": 0.8855548770332538,
+              "baseline": 36026,
+              "candidate": 31903
+            },
+            {
+              "task": "t2",
+              "trial": 1,
+              "ratio": 0.3976294853060562,
+              "baseline": 36954,
+              "candidate": 14694
+            },
+            {
+              "task": "t3",
+              "trial": 1,
+              "ratio": 1.3759054161409412,
+              "baseline": 21399,
+              "candidate": 29443
+            },
+            {
+              "task": "t4",
+              "trial": 1,
+              "ratio": 0.8562535036733249,
+              "baseline": 33893,
+              "candidate": 29021
+            },
+            {
+              "task": "t5",
+              "trial": 1,
+              "ratio": 0.31945323627156197,
+              "baseline": 50552,
+              "candidate": 16149
+            },
+            {
+              "task": "t6",
+              "trial": 1,
+              "ratio": 0.37821590021537954,
+              "baseline": 42251,
+              "candidate": 15980
+            },
+            {
+              "task": "t7",
+              "trial": 1,
+              "ratio": 0.8067799820084276,
+              "baseline": 42242,
+              "candidate": 34080
+            },
+            {
+              "task": "t8",
+              "trial": 1,
+              "ratio": 0.7011109008838554,
+              "baseline": 36997,
+              "candidate": 25939
+            }
+          ]
+        },
+        "apiCostEstimateUSD": {
+          "pairs": 8,
+          "tasks": 8,
+          "medianRatio": 3.3970759448173196,
+          "taskClusterBootstrap95": [
+            2.1637766033423795,
+            4.501963634990466
+          ],
+          "fasterOrCheaperPairs": 0,
+          "observations": [
+            {
+              "task": "t1",
+              "trial": 1,
+              "ratio": 4.501963634990466,
+              "baseline": 0.12711119999999998,
+              "candidate": 0.57225
+            },
+            {
+              "task": "t2",
+              "trial": 1,
+              "ratio": 2.1637766033423795,
+              "baseline": 0.14002,
+              "candidate": 0.302972
+            },
+            {
+              "task": "t3",
+              "trial": 1,
+              "ratio": 5.24397352447972,
+              "baseline": 0.0946988,
+              "candidate": 0.49659800000000004
+            },
+            {
+              "task": "t4",
+              "trial": 1,
+              "ratio": 3.460903401441063,
+              "baseline": 0.135178,
+              "candidate": 0.46783800000000003
+            },
+            {
+              "task": "t5",
+              "trial": 1,
+              "ratio": 2.3064677016754285,
+              "baseline": 0.1692224,
+              "candidate": 0.39030600000000004
+            },
+            {
+              "task": "t6",
+              "trial": 1,
+              "ratio": 2.1334626919148563,
+              "baseline": 0.1719252,
+              "candidate": 0.366796
+            },
+            {
+              "task": "t7",
+              "trial": 1,
+              "ratio": 3.804722646362584,
+              "baseline": 0.15613280000000002,
+              "candidate": 0.5940420000000001
+            },
+            {
+              "task": "t8",
+              "trial": 1,
+              "ratio": 3.333248488193576,
+              "baseline": 0.1492916,
+              "candidate": 0.49762600000000007
+            }
+          ]
+        }
+      }
+    },
+    "withoutProviderErrors": {
+      "legacy→routed": {
+        "pairs": 7,
+        "tasks": 7,
+        "medianRatio": 0.43825699911049865,
+        "taskClusterBootstrap95": [
+          0.42098412979874095,
+          0.5991427400441722
+        ],
+        "fasterOrCheaperPairs": 7,
+        "observations": [
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.5991427400441722,
+            "baseline": 175.676,
+            "candidate": 105.255
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.6287650729049292,
+            "baseline": 178.383,
+            "candidate": 112.161
+          },
+          {
+            "task": "t4",
+            "trial": 1,
+            "ratio": 0.5085808462613306,
+            "baseline": 223.288,
+            "candidate": 113.56
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 0.42098412979874095,
+            "baseline": 281.975,
+            "candidate": 118.707
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.4240848970480746,
+            "baseline": 329.717,
+            "candidate": 139.828
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.3586406316204843,
+            "baseline": 309.173,
+            "candidate": 110.882
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.43825699911049865,
+            "baseline": 284.429,
+            "candidate": 124.653
+          }
+        ]
+      },
+      "legacy→terra": {
+        "pairs": 7,
+        "tasks": 7,
+        "medianRatio": 0.47691204262392134,
+        "taskClusterBootstrap95": [
+          0.4202003723734373,
+          0.4984653463606032
+        ],
+        "fasterOrCheaperPairs": 7,
+        "observations": [
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.47691204262392134,
+            "baseline": 175.676,
+            "candidate": 83.782
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.5258348609452694,
+            "baseline": 178.383,
+            "candidate": 93.8
+          },
+          {
+            "task": "t4",
+            "trial": 1,
+            "ratio": 0.4807378811221382,
+            "baseline": 223.288,
+            "candidate": 107.343
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 0.4202003723734373,
+            "baseline": 281.975,
+            "candidate": 118.486
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.44726841503471165,
+            "baseline": 329.717,
+            "candidate": 147.472
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.4199590520517639,
+            "baseline": 309.173,
+            "candidate": 129.84
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.4984653463606032,
+            "baseline": 284.429,
+            "candidate": 141.778
+          }
+        ]
+      },
+      "terra→routed": {
+        "pairs": 8,
+        "tasks": 8,
+        "medianRatio": 1.0277709489959705,
+        "taskClusterBootstrap95": [
+          0.879212571767129,
+          1.1571066229480564
+        ],
+        "fasterOrCheaperPairs": 3,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 1.0536766987278932,
+            "baseline": 90.244,
+            "candidate": 95.088
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 1.2562961017879735,
+            "baseline": 83.782,
+            "candidate": 105.255
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 1.1957462686567164,
+            "baseline": 93.8,
+            "candidate": 112.161
+          },
+          {
+            "task": "t4",
+            "trial": 1,
+            "ratio": 1.0579171441081394,
+            "baseline": 107.343,
+            "candidate": 113.56
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 1.001865199264048,
+            "baseline": 118.486,
+            "candidate": 118.707
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.948166431593794,
+            "baseline": 147.472,
+            "candidate": 139.828
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 0.8539895255699322,
+            "baseline": 129.84,
+            "candidate": 110.882
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 0.879212571767129,
+            "baseline": 141.778,
+            "candidate": 124.653
+          }
+        ]
+      },
+      "routed→astra": {
+        "pairs": 8,
+        "tasks": 8,
+        "medianRatio": 0.9463646671758753,
+        "taskClusterBootstrap95": [
+          0.7534653935680016,
+          1.2049926949369598
+        ],
+        "fasterOrCheaperPairs": 5,
+        "observations": [
+          {
+            "task": "t1",
+            "trial": 1,
+            "ratio": 1.3552603903752314,
+            "baseline": 95.088,
+            "candidate": 128.869
+          },
+          {
+            "task": "t2",
+            "trial": 1,
+            "ratio": 0.7534653935680016,
+            "baseline": 105.255,
+            "candidate": 79.306
+          },
+          {
+            "task": "t3",
+            "trial": 1,
+            "ratio": 0.9911734025195924,
+            "baseline": 112.161,
+            "candidate": 111.171
+          },
+          {
+            "task": "t4",
+            "trial": 1,
+            "ratio": 0.8467418104966538,
+            "baseline": 113.56,
+            "candidate": 96.156
+          },
+          {
+            "task": "t5",
+            "trial": 1,
+            "ratio": 0.9015559318321582,
+            "baseline": 118.707,
+            "candidate": 107.021
+          },
+          {
+            "task": "t6",
+            "trial": 1,
+            "ratio": 0.7059101181451498,
+            "baseline": 139.828,
+            "candidate": 98.706
+          },
+          {
+            "task": "t7",
+            "trial": 1,
+            "ratio": 1.2049926949369598,
+            "baseline": 110.882,
+            "candidate": 133.612
+          },
+          {
+            "task": "t8",
+            "trial": 1,
+            "ratio": 1.1008078425709769,
+            "baseline": 124.653,
+            "candidate": 137.219
+          }
+        ]
+      }
+    }
+  }
+}

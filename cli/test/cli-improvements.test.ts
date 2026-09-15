@@ -64,6 +64,8 @@ function testGdmLauncher(directory: string): string {
     `#!/bin/sh\nexec ${shellQuote(process.execPath)} ${shellQuote(CLI)} "$@"\n`,
   );
   chmodSync(launcher, 0o755);
+  // Separate cold executable startup from the production 3-second hook probe.
+  expect(Bun.spawnSync([launcher, "--version"], { timeout: 20_000 }).exitCode).toBe(0);
   return launcher;
 }
 
@@ -622,7 +624,7 @@ describe("Codex TOML 및 hook 설치 정밀 진단", () => {
     });
     expect(doctor.stdout).toContain("실행 파일 드리프트");
     expect(doctor.stdout).toContain(`handler: ${otherGdm}`);
-  });
+  }, 30_000);
 
   test("유효한 gdm launcher를 가리키는 symlink candidate를 허용한다", () => {
     const cwd = tempRepo();
@@ -630,6 +632,7 @@ describe("Codex TOML 및 hook 설치 정밀 진단", () => {
     const launcher = testGdmLauncher(home);
     const binaryLink = join(home, "gdm-link");
     symlinkSync(launcher, binaryLink);
+    expect(Bun.spawnSync([binaryLink, "--version"], { timeout: 20_000 }).exitCode).toBe(0);
 
     const install = runCli(
       cwd,
@@ -661,5 +664,5 @@ describe("Codex TOML 및 hook 설치 정밀 진단", () => {
       "lifecycle-only association is provisional",
     );
     expect(human.stdout).not.toContain("declaration-based guardrails");
-  });
+  }, 30_000);
 });

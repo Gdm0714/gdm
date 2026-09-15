@@ -1,0 +1,56 @@
+--- measured/delegate-runner.mjs
++++ installed/delegate-runner.mjs
+@@ -167,6 +167,7 @@
+   let stdoutBytes = 0;
+   let stderrBytes = 0;
+   let failure = "";
++  let spawned = false;
+   let forceKillTimer;
+ 
+   return await new Promise((resolve) => {
+@@ -177,6 +178,7 @@
+       shell: false,
+       stdio: ["ignore", "pipe", "pipe"],
+     });
++    child.once("spawn", () => { spawned = true; });
+     const requestStop = (reason) => {
+       if (failure.length > 0) return;
+       failure = reason;
+@@ -223,6 +225,7 @@
+         ...observed,
+         model,
+         thinking,
++        spawned,
+         elapsedMs: Math.round(performance.now() - startedAt),
+         usageComplete: exitCode === 0 && error.length === 0 && observed.usageComplete,
+         ok: exitCode === 0 && error.length === 0,
+--- measured/delegate-runner.d.mts
++++ installed/delegate-runner.d.mts
+@@ -1,6 +1,7 @@
+ export type BoundedChildResult<Metadata extends Record<string, unknown>> = Metadata & {
+   readonly model: string;
+   readonly thinking: string;
++  readonly spawned: boolean;
+   readonly elapsedMs: number;
+   readonly assistantTurns: number;
+   readonly reportedModels: readonly string[];
+--- measured/gdm-delegate.ts
++++ installed/gdm-delegate.ts
+@@ -33,6 +33,7 @@
+   readonly scope: string;
+   readonly ok: boolean;
+   readonly transportOk: boolean;
++  readonly spawned: boolean;
+   readonly exitCode: number | null;
+   readonly output: string;
+   readonly error: string;
+@@ -218,7 +219,8 @@
+           content: [{ type: "text", text: `GDM Pi delegates: ${succeeded}/${results.length} succeeded\n\n${text}` }],
+           details: { results, budget: budget.snapshot(), delegation: {
+             status: succeeded === results.length ? "completed" : "failed", stage: "children",
+-            attempted: tasks.length, launched: results.length, succeeded, failed: results.length - succeeded, rejected: 0,
++            attempted: tasks.length, launched: results.filter((result) => result.spawned).length,
++            succeeded, failed: results.length - succeeded, rejected: 0,
+           } },
+           ...(succeeded === results.length ? {} : { isError: true }),
+         };

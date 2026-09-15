@@ -1,0 +1,627 @@
+{
+  "manifestSha256": "8a95f4df2d1ea0ee2143d2b19f4fba3cddeac9dad0bfad4a17ba5e8bad6b7c89",
+  "reviews": [
+    {
+      "blindId": "B01",
+      "case": "C04",
+      "usable": true,
+      "response": {
+        "summary": "Completion incorrectly refreshes evidence instead of validating commands against preserved approved evidence.",
+        "findings": [
+          {
+            "id": "R1",
+            "file": "candidate/completion.ts",
+            "line": 122,
+            "severity": "high",
+            "issue": "cmdDone omits the validate mode, so runRecheck defaults to refresh. It overwrites approved evidence files and replaces evidence metadata before verification. This can conceal preexisting evidence tampering and makes an approved audit stale when timestamps or passing command logs change, blocking completion. Even rejected completion attempts leave approved evidence files overwritten.",
+            "trigger": "Create an audit-required work with a proven automatic check and a passing audit, then invoke done at a later timestamp while the command still exits zero. Evidence is rewritten and closeWork rejects the changed checks hash. A command emitting different logs also destroys the original audited bytes.",
+            "fix": "Pass \"validate\" explicitly to runRecheck from cmdDone so successful reruns leave evidence bytes and metadata unchanged, then verify the saved evidence and close against the original approved checks state."
+          }
+        ]
+      },
+      "final": null
+    },
+    {
+      "blindId": "B02",
+      "case": "C02",
+      "usable": true,
+      "response": {
+        "summary": "The validator satisfies the stated contract; no actionable correctness defects found.",
+        "findings": []
+      },
+      "final": null
+    },
+    {
+      "blindId": "B03",
+      "case": "C04",
+      "usable": true,
+      "response": {
+        "summary": "Completion mistakenly refreshes evidence instead of validating it, destroying approved evidence and invalidating audits.",
+        "findings": [
+          {
+            "id": "R1",
+            "file": "candidate/completion.ts",
+            "line": 122,
+            "severity": "high",
+            "issue": "cmdDone omits the mode argument, so runRecheck defaults to refresh: it overwrites saved evidence and replaces its metadata before verification. This destroys the evidence underlying approval, masks previously modified or missing automatic evidence, and makes closeWork reject an approved audit when the checks hash changes (including from the refreshed timestamp).",
+            "trigger": "Create an audit-required work with a proven automatic check and a passing audit, then invoke done at a later timestamp while the command still succeeds. Evidence is overwritten and completion fails with audit_stale. A command emitting different logs also destroys the original approved output.",
+            "fix": "Pass \"validate\" explicitly to runRecheck from cmdDone so successful reruns leave saved evidence and metadata unchanged, then verify that original evidence and enforce its audit."
+          }
+        ]
+      },
+      "final": null
+    },
+    {
+      "blindId": "B04",
+      "case": "C03",
+      "usable": true,
+      "response": {
+        "summary": "The summarizer meets the stated contract: it separately counts attempts, actual launches, substantive successes, and failures, and reflects failures in structured status and isError.",
+        "findings": []
+      },
+      "final": null
+    },
+    {
+      "blindId": "B05",
+      "case": "C08",
+      "usable": true,
+      "response": {
+        "summary": "The implementation does not compile as shown, and preset saving/loading violates required concurrent-write and validation behavior.",
+        "findings": [
+          {
+            "id": "R1",
+            "file": "candidate/presets.ts",
+            "line": 1,
+            "severity": "high",
+            "issue": "The file references fs/path/crypto functions, ROOT, and GdmError without importing or defining them. As this is a new file, these unresolved identifiers prevent the persistence subsystem from compiling.",
+            "trigger": "Build or type-check the project with this file included.",
+            "fix": "Import the required Node APIs, randomUUID, ROOT, and GdmError from their defined modules."
+          },
+          {
+            "id": "R2",
+            "file": "candidate/presets.ts",
+            "line": 12,
+            "severity": "high",
+            "issue": "savePresets uses a shared fixed `${path}.tmp` temporary file instead of the unique temporary path created by atomicWriteFile. Concurrent writers can overwrite, rename, or remove each other's temporary content, causing an ordinary overlapping save to fail or publish the other writer's data.",
+            "trigger": "Two processes call savePresets for the same cwd concurrently: both write presets.json.tmp; one renames it first and the other then fails with ENOENT, or the first rename publishes content written by the second process.",
+            "fix": "Use atomicWriteFile(path, JSON.stringify(presets, null, 2) + \"\\n\") so every writer has a UUID-qualified temporary file."
+          },
+          {
+            "id": "R3",
+            "file": "candidate/presets.ts",
+            "line": 21,
+            "severity": "medium",
+            "issue": "loadPresets only parses JSON and type-casts it; it does not reject JSON objects with non-string values (or non-object JSON). This violates the required corrupt/non-string-valued preset rejection behavior.",
+            "trigger": "Create .gdm/presets.json containing `{\"preset\":123}` or `null`; loadPresets returns it instead of throwing GdmError with state_corrupt.",
+            "fix": "After parsing, validate that the result is a non-array object and that every value is a string; throw the existing GdmError when validation fails."
+          }
+        ]
+      },
+      "final": null
+    },
+    {
+      "blindId": "B06",
+      "case": "C02",
+      "usable": true,
+      "response": {
+        "summary": "Validator largely implements the stated shape and limits, but its AWS credential signature is too short and misses standard access key IDs.",
+        "findings": [
+          {
+            "id": "R1",
+            "file": "candidate/policy.mjs",
+            "line": 9,
+            "severity": "high",
+            "issue": "The AKIA credential pattern expects only 12 characters after `AKIA`, while standard AWS access key IDs have 16 characters after that prefix. Consequently, full AWS keys are not detected and requests containing them are accepted.",
+            "trigger": "Submit a valid task whose text contains `AKIA1234567890ABCDEF` (16 characters after `AKIA`); validation returns null unless another pattern happens to match.",
+            "fix": "Change the suffix quantifier in the AKIA pattern from `{12}` to `{16}`."
+          }
+        ]
+      },
+      "final": null
+    },
+    {
+      "blindId": "B07",
+      "case": "C08",
+      "usable": true,
+      "response": {
+        "summary": "The save path bypasses the concurrency-safe helper, and the loader does not validate stored value types.",
+        "findings": [
+          {
+            "id": "R1",
+            "file": "candidate/presets.ts",
+            "line": 14,
+            "severity": "high",
+            "issue": "savePresets uses a shared presets.json.tmp instead of atomicWriteFile. Concurrent writers can overwrite each other's temporary data, and one writer's rename can leave another writer failing with ENOENT.",
+            "trigger": "Two processes write the same temporary path before either renames it. The first rename publishes the other process's data; the second rename fails because the temporary path is gone.",
+            "fix": "Replace the shared temporary-file write and rename with a call to atomicWriteFile using the serialized presets."
+          },
+          {
+            "id": "R2",
+            "file": "candidate/presets.ts",
+            "line": 23,
+            "severity": "medium",
+            "issue": "The type assertion does not validate parsed JSON, so the loader accepts non-string-valued records and non-record JSON instead of reporting state_corrupt.",
+            "trigger": "Store {\"example\":42} in .gdm/presets.json and call loadPresets; it returns the invalid record without throwing.",
+            "fix": "Validate that the parsed value is a non-null, non-array object whose own values are all strings; reject invalid values with GdmError and code state_corrupt."
+          }
+        ]
+      },
+      "final": null
+    },
+    {
+      "blindId": "B08",
+      "case": "C03",
+      "usable": true,
+      "response": {
+        "summary": "Implementation satisfies the stated summarization contract.",
+        "findings": []
+      },
+      "final": null
+    },
+    {
+      "blindId": "B09",
+      "case": "C05",
+      "usable": true,
+      "response": {
+        "summary": "Completion revalidates proven automatic checks without replacing approved evidence, verifies saved evidence hashes, and relies on checksHash to enforce audit freshness. No actionable defects found.",
+        "findings": []
+      },
+      "final": null
+    },
+    {
+      "blindId": "B10",
+      "case": "C06",
+      "usable": true,
+      "response": {
+        "summary": "Validator incorrectly restricts the public optional thinking field for scout tasks.",
+        "findings": [
+          {
+            "id": "R1",
+            "file": "candidate/policy.mjs",
+            "line": 43,
+            "severity": "medium",
+            "issue": "The contract permits all three roles to set the optional thinking field to medium or high, but the validator rejects thinking whenever role is scout.",
+            "trigger": "Call validateDelegationRequest({tasks:[{role:\"scout\",scope:\"s\",task:\"t\",deliverable:\"d\",verify:\"v\",thinking:\"medium\"}]}). It returns an error instead of null.",
+            "fix": "Remove the task.role === \"scout\" rejection and validate only that thinking is \"medium\" or \"high\" when present."
+          }
+        ]
+      },
+      "final": null
+    },
+    {
+      "blindId": "B11",
+      "case": "C04",
+      "usable": true,
+      "response": {
+        "summary": "Completion incorrectly refreshes approved automatic evidence, invalidating audits and blocking audited completion.",
+        "findings": [
+          {
+            "id": "R1",
+            "file": "candidate/completion.ts",
+            "line": 122,
+            "severity": "high",
+            "issue": "cmdDone calls runRecheck in its default \"refresh\" mode. Successful completion validation replaces evidence and its `at` metadata via `refreshEvidence`, changing the full checks hash. This violates the requirement to retain the approved evidence on which the audit was based, and makes a previously passing required audit stale before `closeWork` evaluates it.",
+            "trigger": "Create an audit-required work item with a proven automatic check, record a passing audit, then run `done`. The successful recheck updates that check's evidence timestamp, so `work.audit.stateHash !== checksHash(work)` and completion fails with `audit_stale`.",
+            "fix": "Invoke runRecheck from cmdDone with mode `\"validate\"` so it reruns commands without replacing evidence; reserve refresh mode for the explicit recheck command."
+          }
+        ]
+      },
+      "final": null
+    },
+    {
+      "blindId": "B12",
+      "case": "C01",
+      "usable": true,
+      "response": {
+        "summary": "The summarizer handles task success and failure consistently, but overcounts processes actually started.",
+        "findings": [
+          {
+            "id": "R1",
+            "file": "candidate/summary.mjs",
+            "line": 11,
+            "severity": "medium",
+            "issue": "`launched` counts settled results rather than results whose `spawned` field is true. A result exists even when process creation fails, so launch accounting is incorrect.",
+            "trigger": "One task runs with a nonexistent executable. The runner settles with `spawned: false` and `ok: false`, but the summary reports `attempted: 1, launched: 1` instead of `launched: 0`.",
+            "fix": "Count results with `spawned === true` for `launched`, independently of `ok`, so processes that start and later fail remain counted."
+          }
+        ]
+      },
+      "final": null
+    },
+    {
+      "blindId": "B13",
+      "case": "C07",
+      "usable": true,
+      "response": {
+        "summary": "Atomic writes isolate concurrent writers correctly, but the loader does not enforce the required stored-value validation.",
+        "findings": [
+          {
+            "id": "R1",
+            "file": "candidate/presets.ts",
+            "line": 21,
+            "severity": "medium",
+            "issue": "The TypeScript cast performs no runtime validation. Valid JSON with non-string values or a non-object root is returned instead of being rejected with a state_corrupt GdmError.",
+            "trigger": "Set .gdm/presets.json to {\"example\":123} and call loadPresets(cwd); it returns the numeric value despite the Record<string,string> contract. null and arrays are also accepted.",
+            "fix": "Validate the parsed value is a non-null, non-array object whose own values are all strings; throw within the existing try block if validation fails."
+          }
+        ]
+      },
+      "final": null
+    },
+    {
+      "blindId": "B14",
+      "case": "C03",
+      "usable": true,
+      "response": {
+        "summary": "The summarizer correctly separates attempts, started processes, substantive successes, and failures, and reflects failures in structured status and isError. No actionable correctness defects found.",
+        "findings": []
+      },
+      "final": null
+    },
+    {
+      "blindId": "B15",
+      "case": "C07",
+      "usable": true,
+      "response": {
+        "summary": "The module does not compile/run as provided, and its loader fails the required preset value validation.",
+        "findings": [
+          {
+            "id": "R1",
+            "file": "candidate/presets.ts",
+            "line": 1,
+            "severity": "high",
+            "issue": "The new standalone module references fs, path, crypto, ROOT, and GdmError symbols without importing or defining them. Calls such as writeFileSync, join, and randomUUID will be unresolved (and ROOT/GdmError are also undefined), blocking the persistence subsystem.",
+            "trigger": "Compile or load candidate/presets.ts in a normal Node/TypeScript project without ambient declarations for these symbols.",
+            "fix": "Import the required Node APIs from fs/path/crypto and import or define ROOT and GdmError from their project modules."
+          },
+          {
+            "id": "R2",
+            "file": "candidate/presets.ts",
+            "line": 20,
+            "severity": "medium",
+            "issue": "loadPresets trusts a TypeScript cast after JSON.parse and does not verify that the parsed value is a non-null record whose values are strings. Valid JSON with invalid preset values is returned instead of rejected as state_corrupt.",
+            "trigger": "Create .gdm/presets.json containing {\"name\":123} (or null), then call loadPresets(cwd); it returns the invalid value rather than throwing GdmError.",
+            "fix": "After parsing, validate that the result is a non-array object and every property value is a string; throw the existing GdmError when validation fails."
+          }
+        ]
+      },
+      "final": null
+    },
+    {
+      "blindId": "B16",
+      "case": "C05",
+      "usable": true,
+      "response": {
+        "summary": "Completion revalidates proven automatic checks without replacing approved evidence, verifies saved evidence hashes, and delegates audit state enforcement to closeWork as required.",
+        "findings": []
+      },
+      "final": null
+    },
+    {
+      "blindId": "B17",
+      "case": "C01",
+      "usable": true,
+      "response": {
+        "summary": "Launch accounting does not distinguish settled results from processes actually started.",
+        "findings": [
+          {
+            "id": "R1",
+            "file": "candidate/summary.mjs",
+            "line": 10,
+            "severity": "medium",
+            "issue": "`delegation.launched` is derived from `results.length`, which counts attempts/results rather than child processes that emitted a spawn event. Failed spawn attempts have `spawned: false` and must not be counted as launched.",
+            "trigger": "With one task whose executable cannot be spawned, its settled result has `spawned: false`; the summary reports `attempted: 1, launched: 1` instead of `launched: 0`.",
+            "fix": "Set `launched` to the count of results with `result.spawned === true`."
+          }
+        ]
+      },
+      "final": null
+    },
+    {
+      "blindId": "B18",
+      "case": "C01",
+      "usable": true,
+      "response": {
+        "summary": "Launch accounting does not distinguish processes that were attempted from those actually started.",
+        "findings": [
+          {
+            "id": "R1",
+            "file": "candidate/summary.mjs",
+            "line": 10,
+            "severity": "medium",
+            "issue": "`delegation.launched` is derived from `results.length`, which counts every settled task result, including spawn failures. The runner exposes `result.spawned` specifically to identify processes that actually started.",
+            "trigger": "A task's executable cannot be spawned (for example, an invalid executable path). Its settled result has `spawned: false`, but the summary reports `launched: 1`.",
+            "fix": "Set `launched` to the count of results whose `spawned` field is true."
+          }
+        ]
+      },
+      "final": null
+    },
+    {
+      "blindId": "B19",
+      "case": "C06",
+      "usable": true,
+      "response": {
+        "summary": "The validator incorrectly rejects the public thinking field for scout tasks.",
+        "findings": [
+          {
+            "id": "R1",
+            "file": "candidate/policy.mjs",
+            "line": 45,
+            "severity": "medium",
+            "issue": "The thinking check unconditionally rejects scout tasks with this field, although all three roles support medium and high. Valid requests therefore return an error instead of null.",
+            "trigger": "Submit {\"tasks\":[{\"role\":\"scout\",\"scope\":\"repo\",\"task\":\"inspect\",\"deliverable\":\"report\",\"verify\":\"review\",\"thinking\":\"medium\"}]}. The same failure occurs with thinking set to high.",
+            "fix": "Remove the scout-role restriction and update the error message to allow medium or high for every supported role."
+          }
+        ]
+      },
+      "final": null
+    },
+    {
+      "blindId": "B20",
+      "case": "C06",
+      "usable": true,
+      "response": {
+        "summary": "Validator mostly matches the contract, but incorrectly restricts the shared thinking field by role.",
+        "findings": [
+          {
+            "id": "R1",
+            "file": "candidate/policy.mjs",
+            "line": 42,
+            "severity": "medium",
+            "issue": "The validator rejects `thinking` on scout tasks, although the contract states that all three roles share the public optional effort field.",
+            "trigger": "Validate `{ \"tasks\": [{ \"role\":\"scout\", \"scope\":\"s\", \"task\":\"t\", \"deliverable\":\"d\", \"verify\":\"v\", \"thinking\":\"medium\" }] }`; it returns an error instead of null.",
+            "fix": "Remove the `task.role === \"scout\"` condition and validate only that present thinking values are `medium` or `high`."
+          }
+        ]
+      },
+      "final": null
+    },
+    {
+      "blindId": "B21",
+      "case": "C08",
+      "usable": true,
+      "response": {
+        "summary": "The implementation does not compile as supplied, and its save path violates concurrent-writer isolation and loader validation requirements.",
+        "findings": [
+          {
+            "id": "R1",
+            "file": "candidate/presets.ts",
+            "line": 1,
+            "severity": "high",
+            "issue": "The new module has no imports or local declarations for fs/path/crypto APIs, ROOT, or GdmError. It cannot be compiled or executed.",
+            "trigger": "Compile presets.ts; identifiers such as writeFileSync, randomUUID, join, ROOT, and GdmError are unresolved.",
+            "fix": "Add the required Node fs, path, and crypto imports plus imports/declarations for ROOT and GdmError."
+          },
+          {
+            "id": "R2",
+            "file": "candidate/presets.ts",
+            "line": 14,
+            "severity": "high",
+            "issue": "savePresets uses a fixed shared temporary filename instead of the unique temporary filename generated by atomicWriteFile. Concurrent writers can overwrite each other's temporary content or cause one rename to fail.",
+            "trigger": "Two processes call savePresets for the same cwd: both write .gdm/presets.json.tmp; one process renames it, and the other subsequently gets ENOENT on rename or publishes the other writer's contents.",
+            "fix": "Replace the direct writeFileSync/renameSync sequence with atomicWriteFile(path, JSON.stringify(presets, null, 2) + \"\\n\")."
+          },
+          {
+            "id": "R3",
+            "file": "candidate/presets.ts",
+            "line": 22,
+            "severity": "medium",
+            "issue": "loadPresets only casts parsed JSON and does not validate that it is a record whose values are strings, so corrupt non-string-valued JSON is accepted.",
+            "trigger": "With .gdm/presets.json containing {\"name\":1}, loadPresets returns the numeric value rather than throwing GdmError with state_corrupt.",
+            "fix": "After parsing, verify the value is a non-array object and every property value is a string; throw GdmError when validation fails."
+          }
+        ]
+      },
+      "final": null
+    },
+    {
+      "blindId": "B22",
+      "case": "C05",
+      "usable": true,
+      "response": {
+        "summary": "Completion reruns proven automatic checks without replacing approved evidence, rejects command failures, verifies saved evidence, and delegates audit-state enforcement to closeWork. No actionable correctness defects found.",
+        "findings": []
+      },
+      "final": null
+    },
+    {
+      "blindId": "B23",
+      "case": "C07",
+      "usable": true,
+      "response": {
+        "summary": "Concurrent saves use unique temporary files and atomic renames, but the loader does not enforce the required value validation.",
+        "findings": [
+          {
+            "id": "R1",
+            "file": "candidate/presets.ts",
+            "line": 21,
+            "severity": "medium",
+            "issue": "The TypeScript assertion does not validate parsed JSON at runtime. Valid JSON that is not a Record<string,string> is returned instead of being rejected as corrupt.",
+            "trigger": "Set .gdm/presets.json to {\"example\":42} (or null), then call loadPresets(cwd). It returns the invalid value instead of throwing GdmError with code state_corrupt.",
+            "fix": "Validate that the parsed value is a non-null, non-array object whose values are all strings; throw the existing corruption error if validation fails."
+          }
+        ]
+      },
+      "final": null
+    },
+    {
+      "blindId": "B24",
+      "case": "C05",
+      "usable": true,
+      "response": {
+        "summary": "No actionable correctness defects found. Completion reruns proven automatic checks without overwriting approved evidence, rejects failures, verifies saved evidence, and applies the existing audit-state checks.",
+        "findings": []
+      },
+      "final": null
+    },
+    {
+      "blindId": "B25",
+      "case": "C07",
+      "usable": true,
+      "response": {
+        "summary": "The implementation does not compile as supplied and the loader does not enforce the required value types.",
+        "findings": [
+          {
+            "id": "R1",
+            "file": "candidate/presets.ts",
+            "line": 1,
+            "severity": "high",
+            "issue": "The new file references writeFileSync, renameSync, rmSync, mkdirSync, existsSync, readFileSync, join, randomUUID, ROOT, and GdmError without importing or declaring them. This prevents the persistence subsystem from compiling/running.",
+            "trigger": "Compile this file as supplied; TypeScript reports unresolved identifiers such as writeFileSync and ROOT.",
+            "fix": "Add the required fs/path/crypto imports and import ROOT and GdmError from their project modules."
+          },
+          {
+            "id": "R2",
+            "file": "candidate/presets.ts",
+            "line": 20,
+            "severity": "medium",
+            "issue": "loadPresets only casts parsed JSON to Record<string,string>; it does not reject JSON objects containing non-string values, violating the loader contract.",
+            "trigger": "Create .gdm/presets.json containing {\"preset\":123}; loadPresets returns that object instead of throwing GdmError with state_corrupt.",
+            "fix": "After parsing, validate that the result is a non-null, non-array object and that every value is a string; otherwise throw the existing GdmError."
+          }
+        ]
+      },
+      "final": null
+    },
+    {
+      "blindId": "B26",
+      "case": "C02",
+      "usable": true,
+      "response": {
+        "summary": "Validator largely matches the stated structure and limits, but rejects a class of valid nonempty string fields.",
+        "findings": [
+          {
+            "id": "R1",
+            "file": "candidate/policy.mjs",
+            "line": 43,
+            "severity": "medium",
+            "issue": "Field validation treats whitespace-only strings as empty via trim(), while the contract requires nonempty strings, not non-blank strings. This rejects supported requests.",
+            "trigger": "A request with a valid role and all required fields present where, for example, scope is \" \" and task, deliverable, and verify are otherwise nonempty is rejected with a nonempty-text error.",
+            "fix": "Test string length directly (`task[field].length === 0`) rather than its trimmed length."
+          }
+        ]
+      },
+      "final": null
+    },
+    {
+      "blindId": "B27",
+      "case": "C04",
+      "usable": true,
+      "response": {
+        "summary": "Completion incorrectly refreshes approved automatic evidence instead of validating without mutation.",
+        "findings": [
+          {
+            "id": "R1",
+            "file": "candidate/completion.ts",
+            "line": 128,
+            "severity": "high",
+            "issue": "cmdDone calls runRecheck in its default \"refresh\" mode, which overwrites each approved evidence file and replaces its metadata before completion. This violates preservation of the evidence on which an audit was based; because checksHash includes evidence metadata, it also makes any existing approved audit stale and blocks completion.",
+            "trigger": "Create an audit-required work with a proven automatic check, record a passing audit, then run done. The check is rerun, buildAutoEvidence overwrites out/<id>.txt and refreshEvidence changes evidence.at/hash; closeWork rejects with audit_stale. If the command emits different logs, the previously audited file bytes are already lost despite done failing.",
+            "fix": "Have cmdDone invoke runRecheck with mode \"validate\" so it reruns commands without writing or refreshing evidence; reserve refresh mode for the explicit recheck command."
+          }
+        ]
+      },
+      "final": null
+    },
+    {
+      "blindId": "B28",
+      "case": "C06",
+      "usable": true,
+      "response": {
+        "summary": "The validator incorrectly rejects the optional thinking field for scout tasks.",
+        "findings": [
+          {
+            "id": "R1",
+            "file": "candidate/policy.mjs",
+            "line": 45,
+            "severity": "medium",
+            "issue": "The thinking check rejects every scout task with an explicit thinking value, although the contract allows medium or high for all three roles.",
+            "trigger": "Submit {\"tasks\":[{\"role\":\"scout\",\"scope\":\"repo\",\"task\":\"inspect\",\"deliverable\":\"report\",\"verify\":\"review\",\"thinking\":\"medium\"}]}. The validator returns an error instead of null; high is also rejected.",
+            "fix": "Remove the scout-role restriction from the thinking check and update the error message to describe the shared medium|high option."
+          }
+        ]
+      },
+      "final": null
+    },
+    {
+      "blindId": "B29",
+      "case": "C03",
+      "usable": true,
+      "response": {
+        "summary": "Implementation matches the stated summarization contract.",
+        "findings": []
+      },
+      "final": null
+    },
+    {
+      "blindId": "B30",
+      "case": "C08",
+      "usable": true,
+      "response": {
+        "summary": "Concurrent saves share a temporary file, and loading does not validate preset value types.",
+        "findings": [
+          {
+            "id": "R1",
+            "file": "candidate/presets.ts",
+            "line": 14,
+            "severity": "high",
+            "issue": "savePresets bypasses atomicWriteFile and uses a shared presets.json.tmp. Overlapping writers can overwrite each other's temporary content, fail renames, or modify an already published file through an open descriptor.",
+            "trigger": "Writer A writes the shared temporary file; writer B overwrites it; A renames it successfully; B then attempts to rename the now-missing temporary file and fails with ENOENT.",
+            "fix": "Use atomicWriteFile(path, serializedPresets) instead of the shared temporary-file write and rename."
+          },
+          {
+            "id": "R2",
+            "file": "candidate/presets.ts",
+            "line": 23,
+            "severity": "medium",
+            "issue": "The type assertion does not validate parsed JSON. Valid JSON with non-string values or a non-object root is returned instead of being rejected as state_corrupt.",
+            "trigger": "Set .gdm/presets.json to {\"example\":42} and call loadPresets; it returns a numeric value despite the required string-valued record contract.",
+            "fix": "Validate that the parsed value is a non-null, non-array object whose values are all strings; throw GdmError with state_corrupt otherwise."
+          }
+        ]
+      },
+      "final": null
+    },
+    {
+      "blindId": "B31",
+      "case": "C02",
+      "usable": true,
+      "response": {
+        "summary": "The schema and size checks match the contract, but credential detection can miss signatures because it scans JSON-escaped text.",
+        "findings": [
+          {
+            "id": "R1",
+            "file": "candidate/policy.mjs",
+            "line": 56,
+            "severity": "medium",
+            "issue": "Scanning the serialized task changes field contents before applying the credential heuristic. JSON escapes whitespace such as tabs, so values matched by the supplied Bearer pattern can pass validation.",
+            "trigger": "Validate {\"tasks\":[{\"role\":\"scout\",\"scope\":\"x\",\"task\":\"Bearer\\tabcdefgh\",\"deliverable\":\"x\",\"verify\":\"x\"}]}, where the decoded task string contains a tab. The supplied /\\bBearer\\s+\\S+/iu pattern matches that string, but the validator returns null because serialization replaces the tab with a literal backslash-t sequence.",
+            "fix": "Apply credentialSignature to the original task string values; retain JSON serialization for the byte-limit check."
+          }
+        ]
+      },
+      "final": null
+    },
+    {
+      "blindId": "B32",
+      "case": "C01",
+      "usable": true,
+      "response": {
+        "summary": "The summarizer correctly reflects task failures, but overcounts processes actually started.",
+        "findings": [
+          {
+            "id": "R1",
+            "file": "candidate/summary.mjs",
+            "line": 11,
+            "severity": "medium",
+            "issue": "launched uses results.length, which counts settled attempts even when no process started. The runner preserves spawned specifically to distinguish startup failures from processes that started and later failed.",
+            "trigger": "Run one validated task with a nonexistent executable. The runner settles with spawned=false and ok=false, but the summary reports attempted=1 and launched=1 instead of launched=0.",
+            "fix": "Set launched to the number of results with spawned=true, independently of ok."
+          }
+        ]
+      },
+      "final": null
+    }
+  ]
+}

@@ -14,7 +14,7 @@ import {
   AGENT_ENVELOPE_PREFIX,
   AGENT_PRE_ACK_TTL_MS,
   AGENT_RESERVATION_TTL_MS,
-  AGENT_SESSION_HARD_ATTEMPT_LIMIT,
+  AGENT_AUXILIARY_RECORD_LIMIT,
   agentLedgerPath,
   readAgentHookLedgerSummary,
   runCodexAgentHook,
@@ -1458,7 +1458,7 @@ describe("Codex agent runtime precision", () => {
     const env = environment(temporaryDirectory("gdm-runtime-retention-home-"));
     const originalSession = "long-lived-root-session";
     const startedAt = Date.now();
-    for (let index = 0; index < AGENT_SESSION_HARD_ATTEMPT_LIMIT; index += 1) {
+    for (let index = 0; index < AGENT_AUXILIARY_RECORD_LIMIT; index += 1) {
       const input = {
         session_id: originalSession,
         tool_name: "spawn_agent",
@@ -1512,13 +1512,13 @@ describe("Codex agent runtime precision", () => {
           hook_event_name: "PreToolUse",
           tool_name: "spawn_agent",
           tool_use_id: "over-limit-use",
-          tool_input: { message: "must remain over the cumulative limit" },
+          tool_input: { message: "historical calls must not block execution" },
         },
         afterThirtyOneDays + 1,
       )),
-    ).toBe("deny");
+    ).toBe("allow");
     expect(ledger(cwd, env, originalSession).totalAcceptedAttempts).toBe(
-      AGENT_SESSION_HARD_ATTEMPT_LIMIT,
+      AGENT_AUXILIARY_RECORD_LIMIT + 1,
     );
   });
 
@@ -2061,7 +2061,7 @@ describe("Codex agent runtime precision", () => {
     const env = environment(temporaryDirectory("gdm-runtime-unlinked-lease-home-"));
     const session = "unlinked-lifecycle-lease";
     const startedAt = Date.now();
-    for (let index = 0; index < AGENT_SESSION_HARD_ATTEMPT_LIMIT; index += 1) {
+    for (let index = 0; index < AGENT_AUXILIARY_RECORD_LIMIT; index += 1) {
       expect(
         invoke(
           cwd,
@@ -2075,20 +2075,20 @@ describe("Codex agent runtime precision", () => {
       cwd,
       env,
       lifecycleInput("SubagentStart", session, "rogue-agent-overflow"),
-      startedAt + AGENT_SESSION_HARD_ATTEMPT_LIMIT,
+      startedAt + AGENT_AUXILIARY_RECORD_LIMIT,
     );
     expect(String(overflow.systemMessage)).toContain(
       "unlinked lifecycle observation limit",
     );
     expect(Object.keys(ledger(cwd, env, session).agents)).toHaveLength(
-      AGENT_SESSION_HARD_ATTEMPT_LIMIT,
+      AGENT_AUXILIARY_RECORD_LIMIT,
     );
     expect(
       invoke(
         cwd,
         env,
         { session_id: session, hook_event_name: "Stop" },
-        startedAt + AGENT_SESSION_HARD_ATTEMPT_LIMIT + 1,
+        startedAt + AGENT_AUXILIARY_RECORD_LIMIT + 1,
       ).decision,
     ).toBe("block");
 
@@ -2097,7 +2097,7 @@ describe("Codex agent runtime precision", () => {
         cwd,
         env,
         { session_id: session, hook_event_name: "Stop" },
-        startedAt + AGENT_RESERVATION_TTL_MS + AGENT_SESSION_HARD_ATTEMPT_LIMIT + 1,
+        startedAt + AGENT_RESERVATION_TTL_MS + AGENT_AUXILIARY_RECORD_LIMIT + 1,
       ).decision,
     ).toBeUndefined();
     expect(Object.keys(ledger(cwd, env, session).agents)).toEqual([]);
@@ -2109,7 +2109,7 @@ describe("Codex agent runtime precision", () => {
     const startedAt = Date.now();
 
     const startSession = "correlation-cap-start";
-    for (let index = 0; index < AGENT_SESSION_HARD_ATTEMPT_LIMIT; index += 1) {
+    for (let index = 0; index < AGENT_AUXILIARY_RECORD_LIMIT; index += 1) {
       invoke(
         cwd,
         env,
@@ -2117,6 +2117,11 @@ describe("Codex agent runtime precision", () => {
         startedAt + index,
       );
     }
+    // The auxiliary record store remains full, but one settled observation
+    // no longer consumes execution capacity for the following reservation.
+    invoke(cwd, env,
+      lifecycleInput("SubagentStop", startSession, "start-rogue-31"),
+      startedAt + AGENT_AUXILIARY_RECORD_LIMIT);
     const v1 = envelope("cap-v1", {
       ownership: { mode: "read", resources: ["docs/cap-v1.md"] },
     });
@@ -2124,14 +2129,14 @@ describe("Codex agent runtime precision", () => {
       cwd,
       env,
       spawnInput("PreToolUse", startSession, "v1-use", v1),
-      startedAt + AGENT_SESSION_HARD_ATTEMPT_LIMIT + 1,
+      startedAt + AGENT_AUXILIARY_RECORD_LIMIT + 1,
     );
     expect(
       invoke(
         cwd,
         env,
         lifecycleInput("SubagentStart", startSession, "correlated-v1-agent"),
-        startedAt + AGENT_SESSION_HARD_ATTEMPT_LIMIT + 2,
+        startedAt + AGENT_AUXILIARY_RECORD_LIMIT + 2,
       ).systemMessage,
     ).toBeUndefined();
     let state = ledger(cwd, env, startSession);
@@ -2140,10 +2145,10 @@ describe("Codex agent runtime precision", () => {
       Object.values(state.agents).filter(
         (agent) => agent.reservationToolUseId === undefined,
       ),
-    ).toHaveLength(AGENT_SESSION_HARD_ATTEMPT_LIMIT);
+    ).toHaveLength(AGENT_AUXILIARY_RECORD_LIMIT);
 
     const stopSession = "correlation-cap-stop";
-    for (let index = 0; index < AGENT_SESSION_HARD_ATTEMPT_LIMIT; index += 1) {
+    for (let index = 0; index < AGENT_AUXILIARY_RECORD_LIMIT; index += 1) {
       invoke(
         cwd,
         env,
@@ -2151,6 +2156,11 @@ describe("Codex agent runtime precision", () => {
         startedAt + index,
       );
     }
+    // The auxiliary record store remains full, but one settled observation
+    // no longer consumes execution capacity for the following reservation.
+    invoke(cwd, env,
+      lifecycleInput("SubagentStop", stopSession, "stop-rogue-31"),
+      startedAt + AGENT_AUXILIARY_RECORD_LIMIT);
     const v2 = envelope("cap-v2", {
       ownership: { mode: "read", resources: ["docs/cap-v2.md"] },
     });
@@ -2160,14 +2170,14 @@ describe("Codex agent runtime precision", () => {
       spawnInput("PreToolUse", stopSession, "v2-use", v2, {
         taskName: "cap_v2",
       }),
-      startedAt + AGENT_SESSION_HARD_ATTEMPT_LIMIT + 1,
+      startedAt + AGENT_AUXILIARY_RECORD_LIMIT + 1,
     );
     expect(
       invoke(
         cwd,
         env,
         lifecycleInput("SubagentStop", stopSession, "correlated-v2-agent"),
-        startedAt + AGENT_SESSION_HARD_ATTEMPT_LIMIT + 2,
+        startedAt + AGENT_AUXILIARY_RECORD_LIMIT + 2,
       ).systemMessage,
     ).toBeUndefined();
     state = ledger(cwd, env, stopSession);
@@ -2177,7 +2187,7 @@ describe("Codex agent runtime precision", () => {
       Object.values(state.agents).filter(
         (agent) => agent.reservationToolUseId === undefined,
       ),
-    ).toHaveLength(AGENT_SESSION_HARD_ATTEMPT_LIMIT);
+    ).toHaveLength(AGENT_AUXILIARY_RECORD_LIMIT);
   });
 
   test("schema-v1 auxiliary records above the new cap migrate without corruption", () => {
@@ -2199,14 +2209,14 @@ describe("Codex agent runtime precision", () => {
     const orphanPosts = raw.orphanPosts as JsonObject;
     const original = orphanPosts["legacy-orphan-0"] as JsonObject;
     const observedAt = new Date().toISOString();
-    for (let index = 1; index < AGENT_SESSION_HARD_ATTEMPT_LIMIT + 2; index += 1) {
+    for (let index = 1; index < AGENT_AUXILIARY_RECORD_LIMIT + 2; index += 1) {
       const orphan = structuredClone(original);
       orphan.toolUseId = `legacy-orphan-${index}`;
       orphan.observedAt = observedAt;
       orphanPosts[`legacy-orphan-${index}`] = orphan;
     }
     const agents = raw.agents as JsonObject;
-    for (let index = 0; index < AGENT_SESSION_HARD_ATTEMPT_LIMIT + 2; index += 1) {
+    for (let index = 0; index < AGENT_AUXILIARY_RECORD_LIMIT + 2; index += 1) {
       agents[`legacy-agent-${index}`] = {
         agentId: `legacy-agent-${index}`,
         agentType: "worker",
@@ -2225,13 +2235,13 @@ describe("Codex agent runtime precision", () => {
     ).toBeUndefined();
     const migrated = ledger(cwd, env, session);
     expect(Object.keys(migrated.orphanPosts)).toHaveLength(
-      AGENT_SESSION_HARD_ATTEMPT_LIMIT,
+      AGENT_AUXILIARY_RECORD_LIMIT,
     );
     expect(
       Object.values(migrated.agents).filter(
         (agent) => agent.reservationToolUseId === undefined,
       ),
-    ).toHaveLength(AGENT_SESSION_HARD_ATTEMPT_LIMIT);
+    ).toHaveLength(AGENT_AUXILIARY_RECORD_LIMIT);
     expect(readAgentHookLedgerSummary(cwd, env).corruptLedgers).toBe(0);
   });
 
@@ -2290,7 +2300,7 @@ describe("Codex agent runtime precision", () => {
     const session = "orphan-bound";
     const posts: JsonObject[] = [];
     const tasks: AgentEnvelope[] = [];
-    for (let index = 0; index < AGENT_SESSION_HARD_ATTEMPT_LIMIT; index += 1) {
+    for (let index = 0; index < AGENT_AUXILIARY_RECORD_LIMIT; index += 1) {
       const task = envelope(`orphan-${index}`, {
         ownership: { mode: "read", resources: [`docs/orphan-${index}.md`] },
       });
@@ -2307,7 +2317,7 @@ describe("Codex agent runtime precision", () => {
     }
     let state = ledger(cwd, env, session);
     expect(Object.keys(state.orphanPosts)).toHaveLength(
-      AGENT_SESSION_HARD_ATTEMPT_LIMIT,
+      AGENT_AUXILIARY_RECORD_LIMIT,
     );
     expect(state.totalAcceptedAttempts).toBe(0);
     const stable = readFileSync(agentLedgerPath(cwd, env, session));
@@ -2336,7 +2346,7 @@ describe("Codex agent runtime precision", () => {
     state = ledger(cwd, env, session);
     expect(state.totalAcceptedAttempts).toBe(1);
     expect(Object.keys(state.orphanPosts)).toHaveLength(
-      AGENT_SESSION_HARD_ATTEMPT_LIMIT - 1,
+      AGENT_AUXILIARY_RECORD_LIMIT - 1,
     );
     expect(state.reservations["orphan-use-0"]?.postOutcome).toBe("succeeded");
     expect(

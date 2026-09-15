@@ -1,0 +1,23 @@
+{
+  "timing": "Post-freeze source inspection, before reading anonymous review contents",
+  "primaryScoreChanged": false,
+  "scopeAmbiguity": "Loader is in candidate addition and has an explicit validation contract, but is described as unchanged.",
+  "scriptSha256": "69394643edc1f28d6ff7d856d7711d5bfe1e98b451f68a8e2b140b07ddca8913",
+  "probeSha256": "4334bfd6e1b2d4138cd134b98fd3833f18d3bd6a11f01301a893023a03ed5afb",
+  "results": [
+    {
+      "case": "C07",
+      "exitCode": 1,
+      "log": "exploratory-logs/C07.log",
+      "logSha256": "30619d5f76a2526fee191103579770a2fecef241b14be11a6ace48688b620f60",
+      "sourceSha256": "a1e2499a9f25e4893869fff94b7743791a5b19c3bb8c555b66dd5acb3455b5b1"
+    },
+    {
+      "case": "C08",
+      "exitCode": 1,
+      "log": "exploratory-logs/C08.log",
+      "logSha256": "d873db8111db381a8bfc73b3138cc9af2af3e349e75dc232ddf99b5496d07770",
+      "sourceSha256": "6e7740e5005513eb20760d38e69ad007ed2eb8b96ca043af317300dab6d2846a"
+    }
+  ]
+}

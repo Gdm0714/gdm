@@ -1,0 +1,10 @@
+bun test v1.3.14 (0d9b296a)
+
+test/pi-computer-use-extension.test.ts:
+(pass) gdm-pi isolated Computer Use extension > continuously detects a delayed descendant listener and removes the owned process groups [2048.33ms]
+
+ 1 pass
+ 6 filtered out
+ 0 fail
+ 3 expect() calls
+Ran 1 test across 1 file. [2.26s]

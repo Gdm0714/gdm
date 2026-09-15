@@ -1,0 +1,15 @@
+# Astra specialist quality pilot
+
+Main model is Terra high in every arm. Four multi-module tasks cover authorization, transactional outbox, snapshot pagination and reservation state transitions. One observation per task per arm (12 total); rotated arm order; sequential execution. Arms: standalone Terra; Terra medium design and reviewer; Astra medium design and reviewer. Team arms require design before source mutation and review of final source content, with explicit finding dispositions. Scout is excluded to isolate specialist model choice.
+
+Before model calls, freeze all prompts, task definitions, private grading tests, reference-validation receipt, runtime assets and this protocol. Baselines must pass original visible tests and fail hidden requirement groups; reference fixes pass all; targeted defects must be detected by named hidden groups. No hidden feedback is supplied before a run exits. Preserve failed/rejected calls, timeouts and interrupted observations; never rerun an observation until it passes.
+
+Primary outcome: passed final requirement groups and original visible compatibility. Also report whole-task functional pass, actual role participation, phase ordering, successful read calls covering every required source path (not proof of full-file reading or reasoning), final-source review, finding dispositions, gdm completion, time, tokens and API list cost estimates. Pi model/usage fields are reported metadata, not provider attestation or OAuth charges. Workflow failures remain visible even if code passes.
+
+Snapshot source before every observed tool execution and after its result, plus settled and independent final snapshots. Grade the snapshot before the first review and the final snapshot only after the parent exits. That difference measures post-review repair, not the causal effect of each review finding. Snapshots cannot detect a transient write/revert wholly inside one shell call. Workspace separation is contractual, not an OS sandbox.
+
+Terra-team versus Astra-team changes specialist model; standalone versus teams changes both workflow and compute. Four synthetic tasks with one repetition cannot establish a stable ranking or statistical significance. Do not pool these runs with the earlier 64-run small-task benchmark. Do not treat assertions inside a requirement group as independent samples.
+
+Commands: `python3 bench/astra-quality/validate_fixtures.py`; build CLI; `python3 bench/astra-quality/run.py --prepare`; `python3 bench/astra-quality/run.py --execute`. `active-run.json` binds the immutable manifest. The verifier re-parses raw calls, checks source and artifact hashes, regrades saved snapshots and validates installed runtime parity.
+
+The measured runtime is frozen at 0.12.0. A scoped follow-up 0.12.1 patch records the process `spawn` event and counts failed executable creation as attempted but not launched. It changes no role routing, prompt or acceptance criterion. Preserve both installations/probes; the verifier records the exact measured/installed file hashes and requires every other rendered runtime byte to match.

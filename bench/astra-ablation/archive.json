@@ -1,0 +1,8 @@
+{
+  "originalRunDirectory": "/var/folders/kk/7q8dj3h10mz6yckfddjcqjh40000gn/T/gdm-astra-ablation-20260908-hx34av9u",
+  "archivedRunDirectory": "/Users/godongmin/projects/harness-bench-runs/gdm-astra-ablation-20260908-hx34av9u",
+  "method": "same-filesystem rename preserves bytes and file timestamps",
+  "verifiedFiles": 530,
+  "allFileDigestsUnchanged": true,
+  "note": "Raw invocations, model messages and git workspace metadata retain original execution paths. Read archived copies here; reproduce with fresh fixtures using run.py rather than resuming archived workspaces."
+}

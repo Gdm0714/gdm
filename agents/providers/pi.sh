@@ -41,7 +41,7 @@ case "$workspace" in /*) ;; *) usage ;; esac
   exit 66
 }
 
-[ -n "$model" ] || model="openai-codex/gpt-5.6-terra:xhigh"
+[ -n "$model" ] || model="openai-codex/gpt-6-astra:medium"
 case "$model" in
   -*|*/*/*|*[!A-Za-z0-9._:/+-]*)
     echo "PROVIDER_MODEL_INVALID: pi" >&2

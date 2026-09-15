@@ -80,9 +80,10 @@ const extensionIndex = argv.indexOf("--extension");
 if (extensionIndex < 0 || argv[extensionIndex + 1] === undefined) process.exit(91);
 const policyPath = join(dirname(argv[extensionIndex + 1]!), "delegate-policy.mjs");
 const policy = await import(pathToFileURL(policyPath).href);
+const config = policy.resolveChildConfiguration("scout", process.env);
 const child = policy.buildChildArguments({
-  model: process.env.GDM_PI_CHILD_MODEL,
-  thinking: process.env.GDM_PI_CHILD_THINKING,
+  model: config.model,
+  thinking: config.thinking,
   systemPrompt: "Installed smoke read-only child",
   task: "Inspect installed harness boundaries",
 });
@@ -106,8 +107,8 @@ process.exit(result.exitCode);
 
     const root = JSON.parse(readFileSync(rootArgv, "utf8")) as string[];
     const child = JSON.parse(readFileSync(childArgv, "utf8")) as string[];
-    expect(root).toContain("openai-codex/gpt-5.6-sol");
-    expect(root).toContain("xhigh");
+    expect(root).toContain("openai-codex/gpt-5.6-terra");
+    expect(root).toContain("high");
     const installedPiAssets = join(home, ".pi", "agent", "skills", "gdm-agents", "pi");
     expect(root).toContain(join(installedPiAssets, "gdm-delegate.ts"));
     expect(root).toContain(join(installedPiAssets, "gdm-memory", "index.ts"));
@@ -126,10 +127,10 @@ process.exit(result.exitCode);
     }
     expect(root).toContain("read,bash,edit,write,grep,find,ls,gdm_delegate,gdm_memory,gdm_computer_use");
     expect(child).toEqual([
-      "--mode", "text", "--print", "--no-session", "--no-extensions", "--no-skills",
+      "--mode", "json", "--print", "--no-session", "--no-extensions", "--no-skills",
       "--no-prompt-templates", "--no-themes", "--no-context-files", "--no-approve",
       "--tools", "read,grep,find,ls", "--system-prompt", "Installed smoke read-only child",
-      "--model", "openai-codex/gpt-5.6-sol", "--thinking", "xhigh",
+      "--model", "openai-codex/gpt-5.6-luna", "--thinking", "medium",
       "Task:\nInspect installed harness boundaries",
     ]);
 

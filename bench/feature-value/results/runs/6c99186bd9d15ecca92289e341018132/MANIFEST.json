@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "gdm-feature-value-stage0-manifest/v1",
+  "protocol": "gdm-feature-value-stage0/v1",
+  "runId": "6c99186bd9d15ecca92289e341018132",
+  "summarySha256": "4bf65d836de5430c228174a44570f1c8443def3aa588d4941721824239323a33",
+  "artifacts": [
+    {
+      "id": "summary",
+      "sha256": "4bf65d836de5430c228174a44570f1c8443def3aa588d4941721824239323a33",
+      "bytes": 18048
+    }
+  ]
+}

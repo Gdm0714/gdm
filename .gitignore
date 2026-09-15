@@ -5,3 +5,7 @@ cli/dist/
 .DS_Store
 .omc/
 .omo/
+__pycache__/
+*.py[cod]
+/bench/context-pack-e2e/audit-input.md
+/bench/context-pack-pilot/audit-input.md

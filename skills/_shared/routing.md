@@ -10,6 +10,10 @@
 변경 통합, gdm 게이트, 최종 보고를 소유한다. 역할 실행을 다른 프로세스에 맡기더라도 이
 책임은 넘기지 않는다.
 
+사용자의 명시적 지시와 기존 승인은 아래 기본 절차보다 우선한다. 승인된 구현은 계획이나
+도구 선택 때문에 다시 승인을 기다리지 않는다. 필요한 결정만 질문하고, 별도 승인이 필요한
+행위는 먼저 검토 가능한 결과를 준비한다. 중단할 때는 적용한 파일·문구와 실제 차단 원인을 밝힌다.
+
 역할은 계획·구현·리뷰·검수로 나누고 다음 기준으로 배정한다.
 
 - 사용자와의 문답·최종 판단처럼 맥락을 공유해야 하는 일은 진행자가 맡는다.
@@ -25,7 +29,7 @@
 
 | 역할 | 스킬 | 소유자 | 필수 불변식 |
 |---|---|---|---|
-| 기술 설계 | gdm-plan | Claude CLI + 진행자 | Claude가 설계안을 만들고 진행자가 근거·계약·최종 계획을 검증·통합한다 |
+| 기술 설계 | gdm-plan | 진행자 + 선택형 Claude CLI | 진행자가 코드 근거·계약으로 계획하고 필요할 때 외부 설계안을 검증·통합한다 |
 | 시각 디자인 | gdm-design | Claude Design + 진행자 | 진행자가 프롬프트를 전달하고 사용자가 Claude Design에서 생성한 뒤 진행자가 pull·구현·검증한다 |
 | 경량 구현 | gdm-go | 진행자 또는 경계가 분리된 구현 워커 | 진행자가 통합하고 gdm 증거가 통과해야만 완료한다 |
 | 중량 구현 | gdm-full | 한 실제 구현 모델의 진행자·워커 | 같은 모델의 여러 워커는 허용하고 독립 검수 전 전달하지 않는다 |
@@ -35,16 +39,19 @@
 ## 실행 모델 라우팅
 
 대화형 진입점은 Codex, Claude Code, Pi다. `ENTRYPOINT_PROVIDER: current session`,
-`TECHNICAL_DESIGN_PROVIDER: Claude CLI`, `VISUAL_DESIGN_PROVIDER: Claude Design`으로
-고정한다. 진행자가 사용자 문답, 로컬 조사, 작업 계약, 구현, 변경 통합, gdm 게이트와 최종
+`TECHNICAL_DESIGN_PROVIDER: coordinator`, `TECHNICAL_DESIGN_ASSIST: optional Claude CLI`,
+`VISUAL_DESIGN_PROVIDER: Claude Design`을 기본값으로 쓴다.
+진행자가 사용자 문답, 로컬 조사, 작업 계약, 구현, 변경 통합, gdm 게이트와 최종
 보고를 소유한다. Claude Code만 사용하는 진행자는 선택한 Claude 모델로 구현하고,
-외부 전문 역할도 `--provider claude`로 실행한다. Pi의 모델 배분은 Pi 실행 프로필에만
-적용한다. full은 같은 Claude 공급자의 서로 다른 실제 모델로 구현·검수할 수 있다.
+외부 전문 역할도 `--provider claude`로 실행한다. Pi의 Terra·Astra 기본 배분은 Pi 실행
+프로필에만 적용하며 Claude 사용자에게 OpenAI 계정을 요구하지 않는다. full의 독립성은
+공급자 이름이 아닌 실제 모델 차이로 판단하므로 같은 Claude 공급자에서도 다른 모델로
+검수할 수 있다. 사용 가능한 다른 모델이 없으면 full을 차단하고 일상 go와 구분한다.
 
 - 새 아키텍처·API·데이터 모델·상태 흐름·컴포넌트 경계·마이그레이션처럼 구현 전에 기술
-  선택이 필요한 작업은 코드 작성 전에 Claude CLI에 읽기 전용 설계안을 요청한다.
-  국소 버그 수정, 사용자가 해법을 지정한 변경, 기계적 리팩터, 테스트·문서 보강처럼 새
-  설계 판단이 없는 작업은 Claude 호출을 생략한다.
+  선택은 진행자가 로컬 코드 근거로 판단한다. Claude CLI는 사용자가 요청하거나 로컬 조사
+  후에도 남은 독립적인 설계 쟁점에 도움이 될 때 선택한다. 새 기술 선택이라는 이유만으로
+  외부 호출을 강제하지 않는다. 직접 설계와 외부 설계 모두 근거·성공 조건을 확인한다.
 - 0→1 화면, 전면 리디자인, "이쁘게" 같은 개방형 시각 변경은 진행자가 저장소 맥락을
   정리한 Claude Design용 프롬프트를 사용자에게 전달한다. 사용자가 claude.ai/design에서
   프롬프트를 실행하고 프로젝트 준비를 확인할 때까지 멈춘 뒤 `/design-sync`로 결과를
@@ -58,10 +65,12 @@
   DesignSync는 프로젝트·컴포넌트 파일의 읽기·쓰기·동기화 다리이지 디자인 생성기가 아니다.
   진행자는 사용자 확인 뒤 동기화된 산출물을 기준으로 로컬 제품 코드를 작성·통합하고
   렌더·테스트·gdm 증거를 소유한다.
-- 인증 실패, 권한 부족, Claude CLI나 DesignSync 부재, 프로젝트 불명확, 일반 네트워크
-  오류·timeout은 진행자 대체 사유가 아니다. 원인을 보고하고 사용자 조치가 필요한 상태로
-  멈춘다. `HTTP 429`, `rate_limit`, `quota exceeded`, 사용량 한도처럼 리밋임이 명확할
-  때만 원인을 계약·결과에 기록하고 진행자가 설계 또는 디자인을 대신할 수 있다.
+- 선택형 Claude CLI의 인증·권한·도구 부재·일반 오류·timeout은 실패 원인과
+  `coordinator-fallback`을 기록하고 확인한 근거로 직접 설계한다. 사용자가 Claude 결과 자체를
+  요구했거나 필수 근거가 없으면 해당 의존 작업만 보류하고 나머지 승인된 작업은 진행한다.
+- Claude Design의 인증·권한·DesignSync 부재·프로젝트 불명확·일반 오류·timeout은
+  gdm-design 계약상 필요한 산출물을 얻을 수 없는 상태다. `HTTP 429`, `rate_limit`,
+  `quota exceeded`, 사용량 한도일 때의 대체는 gdm-design 계약을 따른다.
 - 외부 모델에는 비밀·토큰·자격증명, 전체 대화, 전체 저장소 원문을 보내지 않는다. tool-0
   전문 역할에는 plan/analyze용 bounded code excerpt(경로·라인·내용)·계약·결정 질문 또는
   review/audit용 실제 diff·관련 source excerpt·evidence를 자동 v2의 credential-free valid
@@ -202,27 +211,26 @@ session tree에서 루트 진행자를 제외한 모든 세대의 활성 spawned
 이는 선언을 검사하는 guardrail이지 symlink·대소문자까지 잠그는 운영체제 파일 lock은 아니다.
 각 메시지는 계약 다음에 실행 지시, 산출물, 검증 방법, `stopWhen`을 자체 완결적으로 적는다.
 
-`MAX_TOTAL_SPAWNS_PER_ROOT: 32`에서 ROOT는 하나의 hook-enabled native root session을 뜻한다.
-같은 세션 트리의 제한은 `INITIAL_SPAWN_ATTEMPT_BUDGET: 16`,
-`SPAWN_ATTEMPT_EXTENSION: 4`, 절대 누적 32, `DEFAULT_CHILD_QUOTA: 1`,
-`MAX_CHILD_QUOTA: 2`, `MAX_AGENT_DEPTH: 3`이다.
+`MAX_IN_FLIGHT_SPAWNS_PER_ROOT: 32`에서 ROOT는 하나의 hook-enabled native root session을 뜻한다.
+세션 실행 제한과 별개로 `DEFAULT_CHILD_QUOTA: 1`, `MAX_CHILD_QUOTA: 2`,
+`MAX_AGENT_DEPTH: 3`을 적용한다.
 새 독립 경계가 예상되는 일반 역할의 기본 `childQuota`는 1이며, 실제로 하위 분할 가능성이
-없으면 0, 서로 독립인 하위 축이 이미
-확인됐으면 최대 2를 준다. 일반 역할을 일괄 leaf로 만들지 않는다. 허용된 spawn 시도는
-같은 root session 누적 예산을 하나 소비하며 실패·취소된 spawn도 예산을 돌려주지 않는다.
-초기 16을 다 쓰면 pending/running 역할이 하나도 없을 때만 다음 spawn에서 4개 예산을 자동으로
-열며, 활성 역할이 남은 동안에는 확장하지 않는다.
+없으면 0, 서로 독립인 하위 축이 이미 확인됐으면 최대 2를 준다. 일반 역할을 일괄 leaf로 만들지 않는다.
+부모별 childQuota는 해당 부모가 만들 수 있는 누적 자식 수다.
+실행 제한은 현재 pending/running 예약과 연결되지 않은 활성 관찰만 계산한다.
+`stopped|failed|expired` 이력은 실행 제한에서 제외한다. 누적 호출 횟수와 과거 기록은
+감사와 중복 호출 방지를 위해 보존하며 누적 횟수 때문에 새 실행을 차단하지 않는다.
+초기 예산과 단계별 확장은 없다. 취소 요청만으로 자리를 반환하지 않고 관찰된 상태를 따른다.
 첫 Pre 뒤 같은 `tool_use_id`의 재전달은 실제 handler 실행 여부를 훅이 증명할 수 없으므로
 동일한 `tool_input`·protocol·caller라도 즉시 거부하고 새 attempt로 세지 않는다. 같은 id의
 입력·caller가 바뀌는 경우도 거부한다. Pre보다 먼저 온 unmatched Post는 세션당 32개까지만
-보관하고 동일 replay만 상태 변경 없이 허용한다. 예산이 없으면 새 역할 대신 기존 역할에
+보관하고 동일 replay만 상태 변경 없이 허용한다. 실행 자리가 없으면 새 역할 대신 기존 역할에
 후속 작업을 보내거나 진행자가 직접 통합한다.
-훅이 실행되는 하나의 native root session tree에서 절대 누적 32는 하드 상한이고, 동시 4는
+훅이 실행되는 하나의 native root session tree에서 활성 실행 예약 32는 새 spawn의 입장 상한이고, 동시 4는
 해당 target runtime의 유효 설정이 4일 때 native hard 상한이다. 사용자 설정 파일만으로
 유효값을 단정하지 않고 target의 debug config에서 계층을 확인한다. 비대화형 CLI와 별도
-세션을 합친 논리 작업 전체의 동시 4·초기 16·4개 자동 확장·절대 누적 32는 원장을 공유하는
-하드 경계가 아니라 진행자가
-지키는 협력적 운영 규칙이다.
+세션을 합친 논리 작업 전체의 동시 4는 진행자가 지키는 협력적 운영 규칙이다.
+늦은 lifecycle 관찰로 실행 예약이 상한을 넘더라도 이력을 버리거나 실행을 강제 종료하지 않는다.
 
 일반 역할의 위임에서 금지하는 것은 "필요한 만큼", "파일마다 하나"처럼 끝이 정해지지 않은
 폭증형 팬아웃과 같은 전체 범위를 다시 넘기는 자기복제형 재위임이다. 모든 역할에는 구체적인
@@ -266,7 +274,7 @@ Post evidence를 보존하고 일반 expiry reason만 지운다. 이미 stopped�
 Start는 stop 신호를 바꾸지 않는다. 예약과 연결하지 못한 lifecycle 관찰도 세션당 32개로
 제한하고 30분 뒤 Stop 계산에서 제거한다.
 진행자는 `deliverable`과 `verify`를 직접 확인해 결과를 통합해야 한다.
-user hook은 gdm 계약이 없는 일반 native spawn도 막지 않고 같은 세션 절대 누적 32에만 포함한다.
+user hook은 gdm 계약이 없는 일반 native spawn도 막지 않고 같은 세션 활성 실행 제한에 포함한다.
 Stop 장벽은 한 번만 continuation을 요청하고 재진입에서는 경고만 해 무한 루프를 만들지 않는다.
 
 독립 검수는 예외적으로 pass당 정확히 1명의 **leaf 실행**이다. 검수자에는

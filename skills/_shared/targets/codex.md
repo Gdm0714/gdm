@@ -1,5 +1,8 @@
 ## 설치 대상 어댑터
 
+아래 tool-0 제한은 `run-role.sh`로 호출한 전문 역할에 적용한다. 현재 대화 진행자의
+도구 권한은 세션 설정과 사용자 요청이 정하며 이 블록으로 축소하지 않는다.
+
 - target ID: `codex`
 - provider adapter: `gdm-provider-adapter-v1`, argv policy: `gdm-codex-read-only-v1`
 - Work 역할 실행 계약: `gdm-agents/run-role.sh --mode work --provider codex --role <role> --slug <slug> --handoff-event-id <event-id> --claim-id <claim-id> --receiver-role <receiver-role>`

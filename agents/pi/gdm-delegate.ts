@@ -3,9 +3,10 @@ import { Type } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import {
   DelegateBudget,
+  DEFAULT_MODEL,
+  DEFAULT_THINKING,
   childTimeout,
-  validModel,
-  validThinking,
+  resolveChildConfiguration,
   validateDelegationRequest,
 } from "./delegate-policy.mjs";
 import { runBoundedChild } from "./delegate-runner.mjs";
@@ -19,7 +20,8 @@ concise result with paths and line numbers, distinguish evidence from inference,
 coordinator must verify independently.`;
 
 type DelegatedTask = {
-  readonly role: "scout" | "reviewer";
+  readonly role: "scout" | "design" | "reviewer";
+  readonly thinking?: "medium" | "high";
   readonly scope: string;
   readonly task: string;
   readonly deliverable: string;
@@ -30,6 +32,8 @@ type ChildResult = {
   readonly role: string;
   readonly scope: string;
   readonly ok: boolean;
+  readonly transportOk: boolean;
+  readonly spawned: boolean;
   readonly exitCode: number | null;
   readonly output: string;
   readonly error: string;
@@ -53,7 +57,7 @@ async function runChild(
     `Deliverable: ${task.deliverable}`,
     `Verification requested from coordinator: ${task.verify}`,
   ].join("\n");
-  return await runBoundedChild({
+  const result = await runBoundedChild({
     executable,
     cwd,
     model,
@@ -64,12 +68,18 @@ async function runChild(
     ...(signal === undefined ? {} : { signal }),
     metadata: { role: task.role, scope: task.scope },
   });
+  return {
+    ...result,
+    transportOk: result.ok,
+    ok: result.ok && result.output.trim().length > 0,
+    error: result.error || (result.output.trim().length === 0 ? "Specialist returned no substantive output" : ""),
+  };
 }
 
-function failure(text: string, details: unknown = {}): Record<string, unknown> {
+function rejection(text: string, attempted: number | null, stage: string, budget?: unknown): Record<string, unknown> {
   return {
     content: [{ type: "text", text }],
-    details,
+    details: { delegation: { status: "rejected", stage, attempted, launched: 0, succeeded: 0, failed: 0, rejected: attempted }, ...(budget ? { budget } : {}) },
     isError: true,
   };
 }
@@ -80,8 +90,17 @@ export default function gdmDelegateExtension(pi: ExtensionAPI): void {
   const globals = globalThis as typeof globalThis & { __gdmPiDelegateBudgetV1?: DelegateBudget };
   const budget = globals.__gdmPiDelegateBudgetV1 ?? new DelegateBudget();
   globals.__gdmPiDelegateBudgetV1 = budget;
-  const pinnedModel = process.env.GDM_PI_CHILD_MODEL ?? "openai-codex/gpt-5.6-sol";
-  const pinnedThinking = (process.env.GDM_PI_CHILD_THINKING ?? "xhigh") as ThinkingLevel;
+  // Pi's custom execute result can retain nested isError without setting the outer
+  // event flag. Patch the documented tool_result event so rejection is observable.
+  pi.on("tool_result", async (event) => {
+    if (event.toolName !== "gdm_delegate") return;
+    const details = event.details as { delegation?: { status?: string } } | undefined;
+    if (details?.delegation?.status === "rejected" || details?.delegation?.status === "failed") {
+      return { isError: true };
+    }
+  });
+  const pinnedModel = process.env.GDM_PI_MODEL ?? DEFAULT_MODEL;
+  const pinnedThinking = (process.env.GDM_PI_THINKING ?? DEFAULT_THINKING) as ThinkingLevel;
   let restoringModel = false;
   let restoringThinking = false;
 
@@ -142,15 +161,18 @@ export default function gdmDelegateExtension(pi: ExtensionAPI): void {
   pi.registerTool({
     name: "gdm_delegate",
     label: "GDM Delegate",
-    description: "Run 1-3 bounded read-only Pi specialists in parallel. The coordinator must verify every result.",
-    promptSnippet: "Delegate bounded read-only repository investigation to up to three isolated Pi children",
+    description: "Run 1-3 bounded read-only specialists: scout for investigation, design for architecture, reviewer for advisory code review. The coordinator must verify every result.",
+    promptSnippet: "Obtain independent design and code review, or bounded investigation, from isolated specialists",
     promptGuidelines: [
-      "Use gdm_delegate only for independent read-only investigation that materially reduces coordinator context.",
+      "For runtime behavior changes, obtain reviewer feedback before completion; for architecture, cross-module state, authorization, transactions or concurrency, also obtain design advice before implementation.",
+      "Pure documentation and formatting do not require specialist phases. Scout investigation remains optional. Explicit user requests for a specialist require successful participation.",
+      "All roles accept optional thinking medium or high. Omission uses the configured role default. A rejected request, failed child or empty result does not complete a phase.",
       "Never treat gdm_delegate output as GDM evidence or let a delegated child modify files.",
     ],
     parameters: Type.Object({
       tasks: Type.Array(Type.Object({
-        role: Type.Union([Type.Literal("scout"), Type.Literal("reviewer")]),
+        role: Type.Union([Type.Literal("scout"), Type.Literal("design"), Type.Literal("reviewer")]),
+        thinking: Type.Optional(Type.Union([Type.Literal("medium"), Type.Literal("high")])),
         scope: Type.String(),
         task: Type.String(),
         deliverable: Type.String(),
@@ -159,22 +181,24 @@ export default function gdmDelegateExtension(pi: ExtensionAPI): void {
     }, { additionalProperties: false }),
     async execute(_toolCallId, params, signal, onUpdate, ctx) {
       const validation = validateDelegationRequest(params);
-      if (validation !== null) return failure(`GDM_PI_DELEGATION_REJECTED: ${validation}`);
+      const attempted = Array.isArray(params?.tasks) ? params.tasks.length : null;
+      if (validation !== null) return rejection(`GDM_PI_DELEGATION_REJECTED: ${validation}`, attempted, "validation");
 
       const tasks = params.tasks as DelegatedTask[];
       const reservation = budget.reserve(tasks.length);
-      if (reservation !== null) return failure(`GDM_PI_DELEGATION_REJECTED: ${reservation}`, budget.snapshot());
+      if (reservation !== null) return rejection(`GDM_PI_DELEGATION_REJECTED: ${reservation}`, tasks.length, "budget", budget.snapshot());
 
       const executable = process.env.GDM_PI_EXECUTABLE ?? "";
-      const model = process.env.GDM_PI_CHILD_MODEL ?? "openai-codex/gpt-5.6-sol";
-      const thinking = process.env.GDM_PI_CHILD_THINKING ?? "xhigh";
       if (!isAbsolute(executable)) {
         budget.release(tasks.length);
-        return failure("GDM_PI_DELEGATION_REJECTED: launch through gdm-pi so the Pi executable is identity-bound");
+        return rejection("GDM_PI_DELEGATION_REJECTED: launch through gdm-pi so the Pi executable is identity-bound", tasks.length, "configuration");
       }
-      if (!validModel(model) || !validThinking(thinking)) {
+      let configurations: ReturnType<typeof resolveChildConfiguration>[];
+      try {
+        configurations = tasks.map((task) => resolveChildConfiguration(task.role, process.env, task.thinking));
+      } catch (error) {
         budget.release(tasks.length);
-        return failure("GDM_PI_DELEGATION_REJECTED: invalid child model or thinking configuration");
+        return rejection(`GDM_PI_DELEGATION_REJECTED: ${error instanceof Error ? error.message : "invalid child configuration"}`, tasks.length, "configuration");
       }
 
       onUpdate?.({
@@ -183,8 +207,8 @@ export default function gdmDelegateExtension(pi: ExtensionAPI): void {
       });
       try {
         const timeoutMs = childTimeout(process.env.GDM_PI_CHILD_TIMEOUT_MS);
-        const results = await Promise.all(tasks.map((task) =>
-          runChild(executable, ctx.cwd, model, thinking, timeoutMs, task, signal)
+        const results = await Promise.all(tasks.map((task, index) =>
+          runChild(executable, ctx.cwd, configurations[index]!.model, configurations[index]!.thinking, timeoutMs, task, signal)
         ));
         const succeeded = results.filter((result) => result.ok).length;
         const text = results.map((result, index) => {
@@ -193,7 +217,11 @@ export default function gdmDelegateExtension(pi: ExtensionAPI): void {
         }).join("\n\n---\n\n");
         return {
           content: [{ type: "text", text: `GDM Pi delegates: ${succeeded}/${results.length} succeeded\n\n${text}` }],
-          details: { results, budget: budget.snapshot() },
+          details: { results, budget: budget.snapshot(), delegation: {
+            status: succeeded === results.length ? "completed" : "failed", stage: "children",
+            attempted: tasks.length, launched: results.filter((result) => result.spawned).length,
+            succeeded, failed: results.length - succeeded, rejected: 0,
+          } },
           ...(succeeded === results.length ? {} : { isError: true }),
         };
       } finally {

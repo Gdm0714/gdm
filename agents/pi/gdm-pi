@@ -14,9 +14,15 @@ Profiles:
   --raw                   run the real Pi CLI without the GDM harness
 
 Environment:
-  GDM_PI_MODEL          coordinator and child model (default: openai-codex/gpt-5.6-sol)
-  GDM_PI_THINKING       off|minimal|low|medium|high|xhigh|max (default: xhigh)
-  GDM_PI_AUDIT_MODEL    different-model full audit (default: openai-codex/gpt-5.6-terra:xhigh)
+  GDM_PI_MODEL          coordinator model (default: openai-codex/gpt-5.6-terra)
+  GDM_PI_THINKING       off|minimal|low|medium|high|xhigh|max (default: high)
+  GDM_PI_SCOUT_MODEL    read-only investigation (default: openai-codex/gpt-5.6-luna)
+  GDM_PI_DESIGN_MODEL   read-only design (default: openai-codex/gpt-6-astra)
+  GDM_PI_REVIEW_MODEL   advisory review (default: openai-codex/gpt-6-astra)
+  GDM_PI_{SCOUT,DESIGN,REVIEW}_THINKING  role effort (default: medium)
+  GDM_PI_CHILD_MODEL / GDM_PI_CHILD_THINKING  legacy fallback for all child roles
+                       precedence: role override > legacy child override > role default
+  GDM_PI_AUDIT_MODEL    different-model full audit (default: openai-codex/gpt-6-astra:medium)
   GDM_PI_EXECUTABLE     absolute Pi executable override
 EOF
   exit "$status"
@@ -93,22 +99,41 @@ gdm_executable="$(realpath "$gdm_executable" 2>/dev/null || true)"
   exit 69
 }
 
-model="${GDM_PI_MODEL:-openai-codex/gpt-5.6-sol}"
+model="${GDM_PI_MODEL-openai-codex/gpt-5.6-terra}"
 if [[ ! "$model" =~ ^[A-Za-z0-9._+-]+/[A-Za-z0-9._+-]+$ ]] || [ "${#model}" -gt 160 ]; then
   echo "gdm-pi: invalid GDM_PI_MODEL; expected provider/model" >&2
   exit 64
 fi
-thinking="${GDM_PI_THINKING:-xhigh}"
+thinking="${GDM_PI_THINKING-high}"
 case "$thinking" in off|minimal|low|medium|high|xhigh|max) ;; *)
   echo "gdm-pi: invalid GDM_PI_THINKING" >&2
   exit 64
 ;; esac
-audit_model="${GDM_PI_AUDIT_MODEL:-openai-codex/gpt-5.6-terra:xhigh}"
+audit_model="${GDM_PI_AUDIT_MODEL-openai-codex/gpt-6-astra:medium}"
 if [[ ! "$audit_model" =~ ^[A-Za-z0-9._+-]+/[A-Za-z0-9._+-]+:(off|minimal|low|medium|high|xhigh|max)$ ]] ||
   [ "${#audit_model}" -gt 176 ]; then
   echo "gdm-pi: invalid GDM_PI_AUDIT_MODEL; expected provider/model:thinking" >&2
   exit 64
 fi
+
+# Validate every supplied override even when a more specific role takes precedence.
+for key in GDM_PI_CHILD_MODEL GDM_PI_SCOUT_MODEL GDM_PI_DESIGN_MODEL GDM_PI_REVIEW_MODEL; do
+  if [ "${!key+x}" = "x" ]; then
+    value="${!key}"
+    if [[ ! "$value" =~ ^[A-Za-z0-9._+-]+/[A-Za-z0-9._+-]+$ ]] || [ "${#value}" -gt 160 ]; then
+      echo "gdm-pi: invalid $key; expected provider/model" >&2
+      exit 64
+    fi
+  fi
+done
+for key in GDM_PI_CHILD_THINKING GDM_PI_SCOUT_THINKING GDM_PI_DESIGN_THINKING GDM_PI_REVIEW_THINKING; do
+  if [ "${!key+x}" = "x" ]; then
+    case "${!key}" in off|minimal|low|medium|high|xhigh|max) ;; *)
+      echo "gdm-pi: invalid $key" >&2
+      exit 64
+    ;; esac
+  fi
+done
 audit_model_identity="${audit_model%:*}"
 if [ "$profile" != "go" ] && [ "$audit_model_identity" = "$model" ]; then
   echo "gdm-pi: full audit model identity must differ from the implementation model" >&2
@@ -156,8 +181,14 @@ export GDM_PI_EXECUTABLE="$pi_executable"
 export GDM_PI_AGENT_DIR="$pi_agent_dir"
 export GDM_EXECUTABLE="$gdm_executable"
 export GDM_PI_PROFILE="$profile"
-export GDM_PI_CHILD_MODEL="$model"
-export GDM_PI_CHILD_THINKING="$thinking"
+export GDM_PI_MODEL="$model"
+export GDM_PI_THINKING="$thinking"
+export GDM_PI_SCOUT_MODEL="${GDM_PI_SCOUT_MODEL-${GDM_PI_CHILD_MODEL-openai-codex/gpt-5.6-luna}}"
+export GDM_PI_DESIGN_MODEL="${GDM_PI_DESIGN_MODEL-${GDM_PI_CHILD_MODEL-openai-codex/gpt-6-astra}}"
+export GDM_PI_REVIEW_MODEL="${GDM_PI_REVIEW_MODEL-${GDM_PI_CHILD_MODEL-openai-codex/gpt-6-astra}}"
+export GDM_PI_SCOUT_THINKING="${GDM_PI_SCOUT_THINKING-${GDM_PI_CHILD_THINKING-medium}}"
+export GDM_PI_DESIGN_THINKING="${GDM_PI_DESIGN_THINKING-${GDM_PI_CHILD_THINKING-medium}}"
+export GDM_PI_REVIEW_THINKING="${GDM_PI_REVIEW_THINKING-${GDM_PI_CHILD_THINKING-medium}}"
 export GDM_PI_IMPLEMENTATION_MODEL="$model:$thinking"
 export GDM_PI_AUDIT_MODEL="$audit_model"
 
@@ -173,5 +204,6 @@ exec "$pi_executable" \
   --no-prompt-templates \
   --append-system-prompt "$coordinator_prompt" \
   --append-system-prompt "GDM Pi active profile: $profile. Implementation model metadata: $model:$thinking. Full audit model when required: $audit_model." \
+  --append-system-prompt "GDM delegate routing: scout=$GDM_PI_SCOUT_MODEL:$GDM_PI_SCOUT_THINKING; design=$GDM_PI_DESIGN_MODEL:$GDM_PI_DESIGN_THINKING; reviewer=$GDM_PI_REVIEW_MODEL:$GDM_PI_REVIEW_THINKING. Delegation is optional; reviewer output is advisory and does not satisfy full audit." \
   --tools read,bash,edit,write,grep,find,ls,gdm_delegate,gdm_memory,gdm_computer_use \
   "$@"

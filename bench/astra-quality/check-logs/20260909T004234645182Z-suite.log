@@ -1,0 +1,626 @@
+bun test v1.3.14 (0d9b296a)
+
+test/proof-gates.test.ts:
+(pass) proof gates > regression check records a failing red run before the green pass [208.71ms]
+(pass) proof gates > editing a regression definition invalidates both red and green proof [0.52ms]
+(pass) proof gates > high and opaque work requires attributed expert evidence and an independent audit [0.53ms]
+
+test/protocol.test.ts:
+(pass) protocol work snapshot > state fingerprint is canonical, delivery-neutral, and runtime-sensitive [1.53ms]
+(pass) protocol work snapshot > projects full actionable state without note bodies and never predicts done validation [1.75ms]
+(pass) protocol work snapshot > completion blockers preserve closeWork order, codes, and messages [0.20ms]
+(pass) protocol work snapshot > keeps ordinary actionable command punctuation and canonicalizes exact source shape [0.42ms]
+(pass) protocol work snapshot > blocks credential signatures across projected fields without blocking shell syntax [0.55ms]
+(pass) protocol work snapshot > normalizes a legacy Work before projecting the v1 wire contract [0.41ms]
+(pass) protocol work snapshot > projects a declared outcome and binds all six fields to plan and state fingerprints [0.65ms]
+(pass) protocol work snapshot > validateWork rejects malformed slugs and incomplete check or evidence records [0.28ms]
+(pass) protocol work snapshot > validateWork rejects malformed evidence hashes, timestamps, and exit codes [0.46ms]
+(pass) protocol handoff journal > records deterministic idempotent handoffs and chains new revisions [2.52ms]
+(pass) protocol handoff journal > binds expected fingerprints and reports latest handoff staleness [0.35ms]
+(pass) protocol handoff journal > rejects only new handoffs before the causal time boundary [0.42ms]
+(pass) protocol handoff journal > rejects a persisted first handoff before Work creation [0.52ms]
+(pass) protocol handoff journal > fails closed on malformed events, invalid causality, or cross-work events [0.52ms]
+(pass) protocol dispatch bundle > is byte-identical across providers for a provider-neutral handoff [1.63ms]
+(pass) protocol dispatch bundle > model view rejects a forged canonical bundle instead of projecting caller authority [1.12ms]
+(pass) protocol dispatch bundle > rejects a canonical dispatch bundle above the production byte cap [685.39ms]
+
+test/habit-cli.test.ts:
+(pass) habit CLI > human adoption activates before work and counts one clean result [437.93ms]
+(pass) habit CLI > invalid import and retroactive activation are atomic [1055.08ms]
+(pass) habit CLI > privacy scanning covers duplicate inputs before state access [524.72ms]
+(pass) habit CLI > a proposed candidate can be rejected, then not adopted [178.32ms]
+(pass) habit CLI > stale ledger lock left by a crash is reclaimed [40.25ms]
+
+test/terminal-browser-background-tab.test.ts:
+(pass) terminal-browser background tab helper > opens and targets an inactive tab without changing the user's active tab [650.09ms]
+(pass) terminal-browser background tab helper > removes the AI tab when navigation unexpectedly activates it [413.47ms]
+
+test/protocol-integrity-v2.test.ts:
+(pass) protocol v2 persisted-state integrity > journal symlink cannot append outside the repository [131.21ms]
+(pass) protocol v2 persisted-state integrity > forged completed Work with an open check is state_corrupt [123.35ms]
+(pass) protocol v2 persisted-state integrity > a damaged handoff event discriminator is state_corrupt [223.31ms]
+(pass) protocol v2 persisted-state integrity > changed handoff artifact is reported as artifact_changed [223.64ms]
+(pass) protocol v2 persisted-state integrity > truncated malformed journal is normalized to state_corrupt [158.25ms]
+
+test/protocol-doctor.test.ts:
+(pass) protocol target manifest doctor > detects runner and provider adapter byte drift while preserving source parity semantics [224.55ms]
+
+test/work-store-lock.test.ts:
+(pass) work repository lock > parallel plan updates preserve state and journal entries [334.04ms]
+(pass) work repository lock > dead owner lock is reclaimed but a symlink is rejected [106.60ms]
+
+test/preflight-gates.test.ts:
+(pass) preflight gates > legacy work receives safe defaults without changing its done policy [0.15ms]
+(pass) preflight gates > legacy audit hashes stay valid when default check classification is inferred [0.12ms]
+(pass) preflight gates > plan init persists the preflight contract and a file-level baseline [95.33ms]
+(pass) preflight gates > plan init persists and renders a complete declared outcome without claiming measurement [77.92ms]
+(pass) preflight gates > outcome flags are all-or-none and unsafe input is rejected before Work persistence [133.83ms]
+(pass) preflight gates > an unborn Git repository still gets a usable scope baseline [58.48ms]
+(pass) preflight gates > unsafe scope paths are rejected atomically with a recovery hint [177.43ms]
+
+test/ci-release.test.ts:
+(pass) release packaging policy > remote installer verifies both artifacts before installing the binary [0.59ms]
+
+test/interactive-tool-routing.test.ts:
+(pass) interactive companion tool routing > routes web UI verification through terminal-browser [0.17ms]
+(pass) interactive companion tool routing > routes interactive reviews through tuicr [0.09ms]
+(pass) interactive companion tool routing > keeps automated browser tabs out of the visible terminal [0.17ms]
+(pass) interactive companion tool routing > documents explicit interactive viewing and invisible fallback [0.11ms]
+(pass) interactive companion tool routing > keeps companion tools optional with safe fallbacks [0.33ms]
+
+test/codex-agent-runtime-precision.test.ts:
+(pass) Codex agent runtime precision > production JSON-text PostToolUse links only an unambiguous top-level agent_id [24.37ms]
+(pass) Codex agent runtime precision > reserved Responses and MCP namespaces pass through without agent ledger state [2.40ms]
+(pass) Codex agent runtime precision > exact Pre replay is denied even before Post or lifecycle evidence [42.10ms]
+(pass) Codex agent runtime precision > ledger event timestamps stay monotonic when lock acquisition reverses capture order [26.84ms]
+(pass) Codex agent runtime precision > unstructured child reservations retain and enforce caller identity [12.74ms]
+(pass) Codex agent runtime precision > V2 lifecycle correlation converges for every Start/Post/Stop order [40.17ms]
+(pass) Codex agent runtime precision > V2 serializes identity-ambiguous windows but linked work stays parallel [15.21ms]
+(pass) Codex agent runtime precision > V2 canonical response paths are digest data while caller binding resolves identity [9.84ms]
+(pass) Codex agent runtime precision > structured nested spawns are bound to their actual caller and cumulative quota [16.96ms]
+(pass) Codex agent runtime precision > a structured V2 child atomically resolves its unresolved V1 parent caller [6.92ms]
+(pass) Codex agent runtime precision > denied V1 parent resolution is transactional and unresolved V1 roots stay parallel [6.99ms]
+(pass) Codex agent runtime precision > caller-bound checks enforce canDelegate and exact depth [10.62ms]
+(pass) Codex agent runtime precision > whitespace markers and identifiers fail closed while path aliases collide [12.63ms]
+(pass) Codex agent runtime precision > short Pre acknowledgement expiry and provisional lifecycle links are conservative [29.00ms]
+(pass) Codex agent runtime precision > session attempt history is never reset by the age of another ledger [126.37ms]
+(pass) Codex agent runtime precision > PostToolUse digest checks are idempotent and never remap on conflict [17.83ms]
+(pass) Codex agent runtime precision > prototype-shaped ids are ordinary keys and corrupt ledger invariants fail closed [23.03ms]
+(pass) Codex agent runtime precision > schema-v1 links without authority migrate to provisional and cannot satisfy blockedBy [15.98ms]
+(pass) Codex agent runtime precision > a reordered Post with different tool input cannot attach to a later Pre [4.61ms]
+(pass) Codex agent runtime precision > mixed unresolved V1 and V2 recovery state never guesses a lifecycle link [6.95ms]
+(pass) Codex agent runtime precision > a failed Post cannot hide an agent that was actually observed running [20.52ms]
+(pass) Codex agent runtime precision > a later Start reactivates failed or expired linked reservations without erasing failure evidence [22.45ms]
+(pass) Codex agent runtime precision > unlinked lifecycle observations are bounded and expire out of Stop [60.41ms]
+(pass) Codex agent runtime precision > a full unlinked-observation cap never rejects a uniquely correlatable lifecycle event [114.44ms]
+(pass) Codex agent runtime precision > schema-v1 auxiliary records above the new cap migrate without corruption [7.69ms]
+(pass) Codex agent runtime precision > summary reports expired leases without waiting for a mutating hook [5.50ms]
+(pass) Codex agent runtime precision > unmatched Post records are bounded, replayable, and reconcile once [59.90ms]
+(pass) Codex agent runtime precision > stale ledger locks recover from PID reuse, unavailable identity, and legacy tokens [16.05ms]
+(pass) Codex agent runtime precision > a stale lock is preserved only for the exact live process incarnation [5005.66ms]
+
+test/context-nav-static.test.ts:
+(pass) P1 context navigation scope and simplicity > keeps the provider read-only, local, one-shot, and schema-free in Pi [2.52ms]
+(pass) P1 context navigation scope and simplicity > has one shared module parser instead of a duplicated scanner [4.59ms]
+
+test/install.test.ts:
+(pass) gdm installation and workflow skills > remote installer verifies complete artifacts before changing the target [3941.32ms]
+(pass) gdm installation and workflow skills > source installer preserves user hooks and config while updating only its handlers [3803.40ms]
+(pass) gdm installation and workflow skills > source installer preflight preserves old binary and skills for malformed hooks, hostile backup, and malformed TOML [2863.68ms]
+(pass) gdm installation and workflow skills > source installer rolls both launchers and all skill roots back when the real hook commit fails [6387.73ms]
+(pass) gdm installation and workflow skills > source installer preflights a regular-file skill root before changing binary or hooks [1057.01ms]
+(pass) gdm installation and workflow skills > source installer replaces legacy skill directories with generated targets and preserves unrelated skills [1756.77ms]
+(pass) gdm installation and workflow skills > source and remote installers never delete a non-regular existing binary target [1426.91ms]
+(pass) gdm installation and workflow skills > hook installer rejects malformed config without changing bytes or creating a backup [419.99ms]
+(pass) gdm installation and workflow skills > hook installer rejects a symlink without changing the link or its target [217.94ms]
+(pass) gdm installation and workflow skills > hook installer rejects a non-regular config path without mutation [270.11ms]
+(pass) gdm installation and workflow skills > hook installer is idempotent in an empty home [267.71ms]
+(pass) gdm installation and workflow skills > hook installer prefers CODEX_HOME over HOME [290.40ms]
+(pass) gdm installation and workflow skills > remote installer fails closed when checksums are unavailable [419.01ms]
+(pass) gdm installation and workflow skills > remote installer preflight preserves old binary and skills for malformed, symlink, hostile backup, and malformed TOML state [3537.99ms]
+(pass) gdm installation and workflow skills > remote installer rolls both launchers and all skill roots back when the real hook commit fails [7842.84ms]
+(pass) gdm installation and workflow skills > remote installer rejects signed but inconsistent target identity and adapter bytes before swap [3069.52ms]
+(pass) gdm installation and workflow skills > remote installer preflights a regular-file skill root before changing binary or hooks [846.87ms]
+(pass) gdm installation and workflow skills > remote installer resolves relative GDM_BIN_DIR from its starting cwd [2665.11ms]
+(pass) gdm installation and workflow skills > remote installer reports PATH rc failures as post-commit warnings [2706.49ms]
+(pass) gdm installation and workflow skills > every skill has discoverable metadata and reflect installs for all targets [1944.11ms]
+(pass) gdm installation and workflow skills > installed gdm skills close a proposed but unadopted reflection loop [1865.71ms]
+(pass) gdm installation and workflow skills > forbidden delivery and raw source input stop without mutation [1995.13ms]
+(pass) gdm installation and workflow skills > workflow skills preserve contract retry review and delivery gates [84.96ms]
+
+test/protocol-runner-conformance.test.ts:
+(pass) protocol provider runner conformance > injects byte-identical provider-neutral bundles and maps only vendor argv [3363.86ms]
+(pass) protocol provider runner conformance > does not start any provider process when claim is stale [611.91ms]
+(pass) protocol provider runner conformance > keeps adversarial artifact instructions in data while external adapters receive only the static outer trust bootstrap [2143.43ms]
+(pass) protocol provider runner conformance > rejects an oversized handoff artifact at claim before any provider process [488.96ms]
+(pass) protocol provider runner conformance > does not start any provider process when a competing claim already owns the handoff [1267.07ms]
+(pass) protocol provider runner conformance > records blocked, invalid ACK, empty output, and nonzero provider results as non-pass [4242.86ms]
+(pass) protocol provider runner conformance > rejects output file and parent symlink attacks before provider invocation [689.85ms]
+(pass) protocol provider runner conformance > fails closed for unsupported modes, roles, prompt injection, and overlong claim IDs [213.88ms]
+(pass) protocol provider runner conformance > preflight compatibility uses the same adapters without a Work receipt [669.10ms]
+(pass) protocol provider runner conformance > Pi preflight forwards an explicit different-model audit request inside the tool-zero adapter [592.99ms]
+(pass) protocol provider runner conformance > rejects oversized and credential-bearing preflight prompts before any provider process [41.69ms]
+(pass) protocol provider runner conformance > bounds provider output and records a failed Work receipt [1871.22ms]
+(pass) protocol provider runner conformance > fails preflight when provider output exceeds the configured bound [1528.76ms]
+(pass) protocol provider runner conformance > records executable mutation after provider launch as a failed receipt [954.51ms]
+
+test/protocol-journal-integrity.test.ts:
+(pass) committed-prefix journal integrity > anchor binds schema, committed byte length, line count, and SHA-256 [2.12ms]
+(pass) committed-prefix journal integrity > once migrated, deleting only the anchor cannot downgrade to legacy parsing [1.27ms]
+(pass) committed-prefix journal integrity > a corrupt or symlinked format marker fails closed without touching its target [2.32ms]
+(pass) committed-prefix journal integrity > flip, truncate, delete, and reorder of the committed prefix fail closed [4.03ms]
+(pass) committed-prefix journal integrity > an orphan suffix is invisible and the next writer truncates it before committing [1.75ms]
+(pass) committed-prefix journal integrity > a strict legacy journal remains byte-compatible and gains an anchor on first mutation [1.26ms]
+(pass) committed-prefix journal integrity > malformed legacy JSON is normalized to state_corrupt [0.42ms]
+(pass) committed-prefix journal integrity > journal and work-directory symlinks never touch an outside target [0.84ms]
+(pass) committed-prefix journal integrity > a non-regular journal is rejected before open [0.36ms]
+(pass) committed-prefix journal integrity > oversized sparse anchor, marker, and committed prefix fail before allocation [2.61ms]
+
+test/protocol-receipt.test.ts:
+(pass) protocol receipt lifecycle > offer claim finish adopt is idempotent and never mutates Work authority [1063.68ms]
+(pass) protocol receipt lifecycle > receiver mismatch stale artifact forged observation and terminal transitions fail closed [836.55ms]
+(pass) protocol receipt lifecycle > runner version observation rejects multiline or credential-like text [719.41ms]
+(pass) protocol receipt lifecycle > automatic artifacts require bounded credential-free UTF-8 at offer and claim [1028.97ms]
+(pass) protocol receipt lifecycle > automatic artifact and output byte caps fail before lifecycle authority changes [1587.03ms]
+(pass) protocol receipt lifecycle > provider executable change is a failed observed exit and exact replay is idempotent [760.69ms]
+(pass) protocol receipt lifecycle > receiver ACK is mandatory and blocked is persisted without becoming a successful runner result [1652.35ms]
+(pass) protocol receipt lifecycle > recover abandons only claimed work and permits a new claim [412.74ms]
+(pass) protocol receipt lifecycle > recover can abandon a stale orphaned claim [316.85ms]
+(pass) protocol receipt lifecycle > persisted receipts must bind an existing same-work handoff receiver and time [1264.22ms]
+
+test/source-fingerprint.test.ts:
+(pass) source fingerprint > CLI returns only the bounded v1 JSON and never executes PATH git [162.90ms]
+(pass) source fingerprint > staged-only content and index-only mode changes alter the digest [241.00ms]
+(pass) source fingerprint > working mode, delete, rename, symlink, and untracked paths alter the digest [318.06ms]
+(pass) source fingerprint > tracked, staged, and untracked .gdm changes are completely excluded [131.31ms]
+
+test/verification-plan-fingerprint.test.ts:
+(pass) verification plan fingerprint v1 > matches the shared Korean, slash, null, and legacy-default fixture [1.13ms]
+(pass) verification plan fingerprint v1 > omitted fields and their documented defaults have the same identity [0.11ms]
+(pass) verification plan fingerprint v1 > runtime proof state is excluded while plan order and nullable commands are bound [0.12ms]
+(pass) verification plan fingerprint v1 > a present outcome and every one of its six fields are bound to plan identity [0.13ms]
+
+test/protocol-skill-renderer.test.ts:
+(pass) deterministic provider target skill renderer > binds all targets to byte-identical canonical source-template hashes [100.19ms]
+(pass) deterministic provider target skill renderer > keeps one canonical source hash while rendering honest target execution semantics [87.31ms]
+(pass) deterministic provider target skill renderer > is deterministic and copies referenced files plus the shared role runner tree [59.48ms]
+
+test/codex-agent-limit.test.ts:
+(pass) Codex agent concurrency limit > missing and unset configs remain distinct [0.88ms]
+(pass) Codex agent concurrency limit > official limits classify the recommended, high, and risky boundaries [0.74ms]
+(pass) Codex agent concurrency limit > invalid paths, TOML, tables, and scalar limits report precise invalid kinds [1.41ms]
+(pass) Codex agent concurrency limit > legacy agents.max_threads remains readable but emits migration guidance [0.18ms]
+(pass) Codex agent concurrency limit > deprecated multi_agent_v2 remains readable but emits migration guidance [0.16ms]
+(pass) Codex agent concurrency limit > official value wins conflicts while every legacy value is exposed [0.18ms]
+
+test/pi-computer-use-live.test.ts:
+(skip) keeps host focus unchanged while real Tart VNC types only inside the guest
+
+test/habit.test.ts:
+(pass) habit domain > incident plus principle closes one versioned metric loop [2.39ms]
+(pass) habit domain > lifecycle transitions are replay-safe and versioned after retirement [0.88ms]
+(pass) habit domain > ledger round trip is atomic and corruption reports only a line number [2.52ms]
+(pass) habit domain > privacy v1 rejects without reflection or mutation [3.92ms]
+(pass) habit domain > ledger containment and validators reject hidden boundary escapes [0.40ms]
+(pass) habit domain > concurrent appends preserve every successful observation [330.13ms]
+
+test/contract-validation.test.ts:
+(pass) contract validation boundaries > persisted outcome is optional, but when present all six safe fields are preserved [0.20ms]
+(pass) contract validation boundaries > partial, extra, unbounded, or unsafe persisted outcome fails closed [0.20ms]
+(pass) contract validation boundaries > OpenAI key prefix does not match inside an ordinary hyphenated word [0.56ms]
+(pass) contract validation boundaries > punctuation cannot hide a URI scheme [0.07ms]
+(pass) contract validation boundaries > canonical timestamps are not mistaken for URI schemes [0.01ms]
+(pass) contract validation boundaries > habit event timestamps require a real canonical instant [0.03ms]
+(pass) contract validation boundaries > valid persisted active habits are preserved [0.08ms]
+(pass) contract validation boundaries > malformed persisted active habits fail with one static error [0.13ms]
+
+test/context-nav-provider.test.ts:
+(pass) one-shot context navigation provider > connects source, docs, package, ownership, and GDM metadata [67.48ms]
+(pass) one-shot context navigation provider > indexes Work brief terms without returning the original brief [25.61ms]
+(pass) one-shot context navigation provider > caps the combined lexical terms of each node at 96 [41.97ms]
+(pass) one-shot context navigation provider > returns a smaller route response when no seed is known [25.96ms]
+
+test/pi-memory-live.test.ts:
+(skip) gdm-pi memory live session > recalls a global memory in a fresh real Pi session
+
+test/readme.test.ts:
+(pass) public README > opens with the harness, then gives a bounded reader journey [0.36ms]
+(pass) public README > describes current features and honest release boundaries [0.07ms]
+(pass) public README > keeps every repository link resolvable [0.10ms]
+
+test/codex-agent-hook.test.ts:
+(pass) Codex delegated-agent hook runtime > invalid envelopes deny before creating or changing state [0.45ms]
+(pass) Codex delegated-agent hook runtime > an envelope example below the first line stays an ordinary unmarked spawn [2.97ms]
+(pass) Codex delegated-agent hook runtime > a valid first-line envelope may discuss the marker in its task body [2.43ms]
+(pass) Codex delegated-agent hook runtime > a repeated tool_use_id is denied without consuming another attempt [5.68ms]
+(pass) Codex delegated-agent hook runtime > ordinary unmarked spawns extend only after active work settles and stop at the hard limit [130.56ms]
+(pass) Codex delegated-agent hook runtime > flat custom V2 namespaces share the configured attempt gate while unrelated suffix tools pass through [137.91ms]
+(pass) Codex delegated-agent hook runtime > unmarked tool_use_id retries are denied even with canonical-equivalent input [4.65ms]
+(pass) Codex delegated-agent hook runtime > parallel PreToolUse processes atomically enforce the initial attempt wave [180.89ms]
+(pass) Codex delegated-agent hook runtime > attempt counters and duplicate ids are isolated by session [4.68ms]
+(pass) Codex delegated-agent hook runtime > PostToolUse failure releases active ownership but keeps the attempt consumed [6.28ms]
+(pass) Codex delegated-agent hook runtime > PostToolUse observed before PreToolUse is reconciled without refunding the attempt [4.17ms]
+(pass) Codex delegated-agent hook runtime > duplicate task, same-scope child, overlapping writes, and unmet blockedBy deny [19.85ms]
+(pass) Codex delegated-agent hook runtime > lifecycle reorder and duplicates converge on stopped, not verified success [12.04ms]
+(pass) Codex delegated-agent hook runtime > reversed concurrent lifecycle order never swaps task ownership [16.63ms]
+(pass) Codex delegated-agent hook runtime > authoritative PostToolUse agent ids repair provisional one-candidate links [10.53ms]
+(pass) Codex delegated-agent hook runtime > Stop continues within pending/running leases and releases them after expiry [23.59ms]
+(pass) Codex delegated-agent hook runtime > released reservations and corrupt-ledger reentry cannot trap Stop forever [16.17ms]
+(pass) Codex delegated-agent hook installation > merge preserves unrelated handlers, creates one exact backup, and is byte-idempotent [2.48ms]
+(pass) Codex delegated-agent hook installation > spawn matcher covers official flat namespaces and status rejects the legacy narrow matcher [0.72ms]
+(pass) Codex delegated-agent hook installation > malformed, symlink, and non-regular hooks.json paths fail closed [1.14ms]
+(pass) Codex delegated-agent hook installation > custom absolute binary is shell-quoted into all five identified handlers [0.67ms]
+(pass) Codex delegated-agent hook installation > doctor separates installed files, disabled feature, and unverified hook trust [0.95ms]
+(pass) Codex delegated-agent hook installation > an existing hostile backup path is never overwritten [0.64ms]
+(pass) Codex delegated-agent hook installation > dry-run validates the complete merge without creating config or backup files [0.21ms]
+(pass) Codex delegated-agent hook installation > an external byte change is detected before backup or config replacement [0.41ms]
+(pass) Codex delegated-agent hook installation > a backup is published only after its complete private inode is ready [0.52ms]
+(pass) Codex delegated-agent hook installation > a byte change after temp fsync is revalidated immediately before rename [0.94ms]
+(pass) Codex delegated-agent hook installation > a non-regular backup path is rejected during dry-run without mutation [0.30ms]
+(pass) Codex delegated-agent hook installation > dry-run rejects malformed config.toml before creating hooks state [0.19ms]
+(pass) Codex delegated-agent hook installation > status requires an exact generated command, exact 10-second timeout, and executable binary [1.05ms]
+(pass) Codex delegated-agent hook installation > status treats a configured symlink and its current realpath as the same executable [0.58ms]
+(pass) Codex delegated-agent hook installation > status and doctor never execute an untrusted configured command [0.63ms]
+(pass) Codex delegated-agent hook installation > a lock older than 30 seconds is not stolen while its owner pid is alive [5000.32ms]
+(pass) Codex delegated-agent hook installation > stale empty and malformed lock publications are reclaimed [5.85ms]
+(pass) Codex delegated-agent hook installation > a fresh empty lock publication is not mistaken for stale ownership [5014.76ms]
+
+test/evidence-boundary.test.ts:
+(pass) evidence filesystem boundary > pass rejects a symlinked evidence output parent without changing outside bytes [153.04ms]
+(pass) evidence filesystem boundary > pass rejects a symlinked final evidence file without changing outside bytes [110.51ms]
+(pass) evidence filesystem boundary > done rejects manual evidence replaced by a symlink after pass [147.93ms]
+(pass) evidence filesystem boundary > normal automatic and manual evidence files remain accepted [229.72ms]
+
+test/graph-nav-routing.test.ts:
+(pass) optional code graph navigation routing > routes the provider to exactly plan, analyze, and review [2.22ms]
+(pass) optional code graph navigation routing > requires a quoted direct executable invocation with the v1 JSON request [0.44ms]
+(pass) optional code graph navigation routing > discards invalid or stale v2 results and complements partial results [252.97ms]
+(pass) optional code graph navigation routing > uses complete bounded coverage without treating its frontier as partial [0.55ms]
+(pass) optional code graph navigation routing > keeps graph output outside evidence, scope, and completion gates [0.43ms]
+(pass) optional code graph navigation routing > keeps core, go, full, Native, and installation paths unconnected [2.38ms]
+(pass) optional code graph navigation routing > exposes the provider only in the gdm-graph benchmark arm [0.85ms]
+
+test/installed-audit-done.test.ts:
+(skip) installed audit-done capability > installed binary preserves audit-bound hashes across done
+
+test/context-pack-install.test.ts:
+(pass) narrow gdm binary installation > atomically installs source bytes and preserves the launcher [1.44ms]
+(pass) narrow gdm binary installation > restores the old bytes when post-install validation fails [1.38ms]
+(pass) narrow gdm binary installation > rejects symlink and non-regular targets before creating a backup [0.55ms]
+
+test/pi-delegation-extension.test.ts:
+(pass) delegate rejection records an attempted task and propagates the outer tool error [0.61ms]
+(pass) explicit scout medium executes while empty specialist output is a failed participation [378.35ms]
+
+test/pi-computer-use-extension.test.ts:
+(pass) gdm-pi isolated Computer Use extension > dispatches the single tool and returns guest screenshots as images [1813.44ms]
+(pass) gdm-pi isolated Computer Use extension > rejects concurrent, cancelled, and malformed actions before backend mutation [2.34ms]
+(pass) gdm-pi isolated Computer Use extension > fails closed on unauthenticated, oversized, out-of-bounds, and stalled RFB peers [48.14ms]
+(pass) gdm-pi isolated Computer Use extension > blocks an immediate short Tart fork before setsid escape can occur [483.23ms]
+(pass) gdm-pi isolated Computer Use extension > refuses to attach to a VM owned by another process [414.91ms]
+(pass) gdm-pi isolated Computer Use extension > kills its owned VM when the Tart process exposes a host TCP listener [626.59ms]
+(pass) gdm-pi isolated Computer Use extension > continuously detects a delayed descendant listener and removes the owned process groups [1368.31ms]
+
+test/cli-improvements.test.ts:
+(pass) plan add --from-brief > dry-run은 등록 없이 미리 보여주고, 본 실행은 일괄 등록한다 [166.01ms]
+(pass) plan add --from-brief > 형식 오류면 어떤 항목도 등록하지 않는다 [100.07ms]
+(pass) plan add --from-brief > --from-brief와 --desc는 함께 쓸 수 없다 [68.27ms]
+(pass) privacy 거부 상세 안내 > 문자셋 위반은 위반 문자·허용 목록·플래그 반복 힌트를 알려준다 [34.66ms]
+(pass) privacy 거부 상세 안내 > 민감정보 검출 거부는 기존처럼 원인을 밝히지 않는다 [31.19ms]
+(pass) status --checks > JSON에 brief 없이 check 상세가 포함된다 [136.15ms]
+(pass) status --checks > retro --all --json은 Work가 없어도 동일한 zero schema를 반환한다 [30.09ms]
+(pass) doctor 버전 드리프트 > 스킬 심링크가 가리키는 저장소와 바이너리 버전이 다르면 경고한다 [28.58ms]
+(pass) doctor 버전 드리프트 > 스킬 심링크가 없으면 버전 줄 없이 조용히 넘어간다 [27.44ms]
+(pass) doctor Codex 서브에이전트 상한 > 공식 agents 설정의 4개 상한을 권장 범위로 보고한다 [27.40ms]
+(pass) doctor Codex 서브에이전트 상한 > 구형 multi_agent_v2의 1000개 상한을 위험으로 경고한다 [27.53ms]
+(pass) doctor Codex 서브에이전트 상한 > 명시 상한이 없으면 안전한 설정 예시를 안내한다 [27.55ms]
+(pass) doctor Codex 에이전트 게이트 > 5개 handler와 hooks=true면 설치됨으로 보고하되 enforcement 신뢰는 단정하지 않는다 [28.07ms]
+(pass) doctor Codex 에이전트 게이트 > handler가 없으면 미설치와 재설치 명령을 안내한다 [27.10ms]
+(pass) doctor Codex 에이전트 게이트 > handler가 있어도 hooks=false면 비활성화 상태를 경고한다 [28.20ms]
+(pass) doctor Codex 에이전트 게이트 > 잘못된 handler type, matcher, command 불일치는 설치로 인정하지 않는다 [174.76ms]
+(pass) doctor custom CODEX_HOME > 상대 CODEX_HOME의 config, hooks, skills를 사용하고 HOME/.codex는 보지 않는다 [28.31ms]
+(pass) Codex TOML 및 hook 설치 정밀 진단 > inline table의 동시성 상한과 hooks feature를 정식 TOML 값으로 읽는다 [27.50ms]
+(pass) Codex TOML 및 hook 설치 정밀 진단 > malformed TOML과 canonical/deprecated feature 충돌을 각각 invalid로 보고한다 [58.47ms]
+(pass) Codex TOML 및 hook 설치 정밀 진단 > hooks.json과 inline hooks가 함께 있으면 multiple-source 경고를 낸다 [58.72ms]
+(pass) Codex TOML 및 hook 설치 정밀 진단 > hook-install은 missing, directory, non-executable, non-gdm binary를 domain error로 거부한다 [123.12ms]
+(pass) Codex TOML 및 hook 설치 정밀 진단 > hook-status는 다른 실행 가능한 gdm 경로를 installed로 과장하지 않는다 [377.00ms]
+(pass) Codex TOML 및 hook 설치 정밀 진단 > 유효한 gdm launcher를 가리키는 symlink candidate를 허용한다 [350.36ms]
+
+test/feature-value-benchmark.test.ts:
+(pass) recent feature value Stage 0 benchmark > computes bounded distributions deterministically [0.15ms]
+(pass) recent feature value Stage 0 benchmark > accepts only exact body-free child probe records [0.46ms]
+(pass) recent feature value Stage 0 benchmark > selects bounded zero-overlap memories and ranks a lexical match first [2.30ms]
+(pass) recent feature value Stage 0 benchmark > rejects unexpected body keys, secret-shaped values, and inconsistent validity [1.23ms]
+(pass) recent feature value Stage 0 benchmark > publishes create-only immutable runs and rejects symlink pointers [1.97ms]
+(pass) recent feature value Stage 0 benchmark > exclusive writes never replace an existing artifact [0.22ms]
+(pass) recent feature value Stage 0 benchmark > keeps manifest and pointer protocol identifiers distinct
+
+test/pi-memory-store.test.ts:
+(pass) gdm-pi memory event store > preserves all unique events from eight concurrent processes [29.23ms]
+(pass) gdm-pi memory event store > folds concurrent duplicate events to one active memory [1.31ms]
+(pass) gdm-pi memory event store > leaves malformed, unknown-version, and project-mismatch stores byte-identical [1.08ms]
+(pass) gdm-pi memory event store > rejects symlinked memory directories without touching their target [0.33ms]
+(pass) gdm-pi memory event store > enforces entry and secret boundaries before append [1.59ms]
+
+test/scope-gates.test.ts:
+(pass) scope and simplification gates > scope delta ignores unchanged dirty files and gives forbidden paths priority [0.20ms]
+(pass) scope and simplification gates > repository paths reject traversal, absolute paths, and gdm state [0.10ms]
+(pass) scope and simplification gates > scope amendments require a reason and lock after audit [0.24ms]
+(pass) scope and simplification gates > simplification contract requires a proven static check [0.07ms]
+(pass) scope and simplification gates > done blocks an out-of-scope change until a reasoned expansion [308.11ms]
+(pass) scope and simplification gates > done checks scope again after automatic verification commands run [217.41ms]
+
+test/contained-file.test.ts:
+(pass) contained file boundary > reads and hashes a regular file inside the repository [0.32ms]
+(pass) contained file boundary > rejects absolute, traversal, symlink, missing, and directory inputs [0.42ms]
+(pass) contained file boundary > enforces an optional byte cap before returning file content [0.25ms]
+
+test/pi-presentation.test.ts:
+(pass) GDM Pi presentation > uses one uncolored stable working icon and a static OSC 777 completion message [0.02ms]
+(pass) GDM Pi presentation > notifies only for interactive TTY runs lasting at least fifteen seconds [0.03ms]
+(pass) GDM Pi presentation > installs once, shows stable status, and suppresses short-run notifications [0.19ms]
+(pass) GDM Pi presentation > degrades without UI methods and resets timing on shutdown [0.07ms]
+
+test/habit-harvest.test.ts:
+(pass) habit harvest > harvest is idempotent and metrics use only latest evaluations [133.04ms]
+(pass) habit harvest > unsafe journal content is skipped without reflection [65.63ms]
+(pass) habit harvest > corrupt journal fails closed before habit ledger mutation [30.60ms]
+(pass) habit harvest > harvest maps message-bearing events yet still skips foreign secrets [33.51ms]
+(pass) habit harvest > harvest separates misses by --type into distinct patterns [32.92ms]
+(pass) habit harvest > evaluation rejects a work completed before the habit was adopted [0.38ms]
+(pass) habit harvest > aggregate retro keeps legacy fields and adds habit next action [34.71ms]
+
+test/context-nav-cli.test.ts:
+(pass) gdm context CLI > executes a strict stdin query through the compiled binary [136.34ms]
+(pass) gdm context CLI > maps malformed input and argv to usage errors [73.29ms]
+(pass) gdm context CLI > reports one-shot status without waiting for stdin EOF [19.48ms]
+
+test/protocol-cli.test.ts:
+(pass) work protocol CLI > exports a deterministic actionable snapshot [285.38ms]
+(pass) work protocol CLI > exports the complete declared outcome from CLI-owned Work state [158.57ms]
+(pass) work protocol CLI > records idempotent causal handoffs and reports staleness [800.65ms]
+(pass) work protocol CLI > rejects a persisted first handoff before Work creation [286.55ms]
+(pass) work protocol CLI > allows a journal-only handoff after completion [491.54ms]
+(pass) work protocol CLI > completed audited work rejects a changed audit report during export [378.01ms]
+(pass) work protocol CLI > rejects credential-like values loaded from persisted work [775.41ms]
+(pass) work protocol CLI > rejects stale private or uncontained handoff input [1267.93ms]
+
+test/context-pack-e2e.test.ts:
+(pass) receipt-bound Context Pack e2e I O > binds actual anchor bytes to a strict side receipt [154.30ms]
+(pass) receipt-bound Context Pack e2e I O > search never scans or returns GDM evidence bodies [162.67ms]
+(pass) receipt-bound Context Pack e2e I O > binds a live Context provider result without retaining its body [211.64ms]
+(pass) receipt-bound Context Pack e2e I O > rejects bad nonce and unknown fields [0.21ms]
+(pass) receipt-bound Context Pack e2e I O > canonical command hash exposes arbitrary shell suffixes [0.08ms]
+(pass) receipt-bound Context Pack e2e I O > missing a reported direct read remains detectable [0.04ms]
+(pass) receipt-bound Context Pack e2e I O > rejects parent escape and symlink paths [136.83ms]
+(pass) receipt-bound Context Pack e2e I O > fixture manifest maps only deterministic path digests [142.43ms]
+
+test/state.test.ts:
+(pass) initWork > 정상 생성 [0.04ms]
+(pass) initWork > 선언한 outcome은 validateWork에서 여섯 필드 그대로 보존 [0.10ms]
+(pass) initWork > 잘못된 슬러그 거부 [0.10ms]
+(pass) initWork > 빈 brief 거부 [0.01ms]
+(pass) addCheck > id가 c1, c2로 증가 [0.05ms]
+(pass) addCheck > 자동 항목에 cmd 없으면 거부 [0.04ms]
+(pass) addCheck > manual 항목은 cmd 없이 허용 [0.03ms]
+(pass) addCheck > expect 없으면 거부 [0.02ms]
+(pass) passCheck > open → proven (sha256 포함) [0.04ms]
+(pass) passCheck > sha256 없으면 거부 [0.02ms]
+(pass) passCheck > 이미 proven이면 거부 [0.03ms]
+(pass) passCheck > 자동 항목에 수동 증거 거부 [0.02ms]
+(pass) passCheck > manual 항목에 자동 증거 거부 [0.03ms]
+(pass) passCheck > 없는 항목 거부 [0.03ms]
+(pass) editCheck > reason 없으면 거부 [0.03ms]
+(pass) editCheck > proven 항목 수정 시 open으로 회귀 + 증거 삭제 [0.03ms]
+(pass) editCheck > 변경 없으면 거부 [0.02ms]
+(pass) editCheck > 자동 항목의 cmd를 비우면 거부 [0.02ms]
+(pass) editCheck > desc를 비우면 거부 [0.01ms]
+(pass) closeWork > 미통과 항목 있으면 목록과 함께 거부 [0.04ms]
+(pass) closeWork > check 없이 done 거부 [0.02ms]
+(pass) closeWork > 전부 proven이면 done, 이후 add/close 거부 [0.04ms]
+(pass) audit 게이트 > 미통과 상태에서 verdict 거부 [0.03ms]
+(pass) audit 게이트 > 검수 필수 작업은 검수 없이 done 거부 [0.03ms]
+(pass) audit 게이트 > 검수 반려 상태에서 done 거부 [0.04ms]
+(pass) audit 게이트 > 검수 통과 후 done 성공 [0.02ms]
+(pass) audit 게이트 > 검수 후 상태가 바뀌면 done 거부 (stateHash 불일치) [0.04ms]
+(pass) audit 게이트 > 검수 불필요 작업은 audit 없이 done 가능
+(pass) audit 게이트 > checksHash는 checks 변경에만 반응 [0.02ms]
+(pass) revertChecks / refreshEvidence > revertChecks: proven → open + 증거 제거 [0.05ms]
+(pass) revertChecks / refreshEvidence > refreshEvidence: proven 자동 항목의 증거 갱신 [0.04ms]
+(pass) revertChecks / refreshEvidence > refreshEvidence: open 항목 거부 [0.02ms]
+(pass) revertChecks / refreshEvidence > refreshEvidence: 수동 항목 거부 [0.03ms]
+(pass) validateWork > checks가 배열이 아니면 거부 [0.02ms]
+(pass) validateWork > 잘못된 status 값 거부 [0.03ms]
+(pass) validateWork > 증거 없이 proven이면 거부 (손편집 우회 차단) [0.02ms]
+(pass) validateWork > 손상된 delivery 상태면 거부 [0.02ms]
+(pass) validateWork > createdAt/doneAt은 canonical timestamp와 일관된 완료 쌍이어야 함 [0.06ms]
+(pass) validateWork > 완료로 위조된 open/simplification/expert/audit 상태를 semantic corruption으로 거부 [0.12ms]
+(pass) validateWork > 정상 완료 legacy audit는 optional metadata 없이도 기존 checksHash로 검증 [0.05ms]
+(pass) store > 저장/로드 라운드트립 + work.md 생성 [0.86ms]
+(pass) store > 손상된 checks.json은 GdmError로 보고 [0.26ms]
+(pass) store > 디렉토리명과 slug 불일치는 손상으로 처리 [0.69ms]
+경고: 작업 "broken" 건너뜀 — 상태 파일이 손상됐습니다 (/var/folders/kk/7q8dj3h10mz6yckfddjcqjh40000gn/T/gdm-test-9c32H5/.gdm/broken/checks.json): JSON 파싱 실패
+(pass) store > 손상된 작업이 있어도 listWorks는 나머지를 반환 [0.71ms]
+(pass) store > resolveWork: 진행 중 1개면 자동 선택, Work 반환 [0.55ms]
+(pass) store > resolveWork: 0개/2개면 에러 [0.97ms]
+(pass) store > resolveWork: 경로 순회 슬러그 거부 [0.09ms]
+(pass) store > resolveWork: 없는 슬러그 에러 [0.06ms]
+(pass) store > resolveWorkForRead: 진행 중 없으면 가장 최근 작업(완료 포함) 선택 [0.74ms]
+(pass) store > 프리셋 저장/로드 라운드트립 [0.30ms]
+(pass) store > 손상된 프리셋 파일은 GdmError [0.17ms]
+(pass) store > checks.json symlink는 읽기와 저장 모두 거부하고 외부 파일을 바꾸지 않음 [0.36ms]
+
+test/pi-computer-use-launcher.test.ts:
+(pass) gdm-pi computer use launcher > explicitly loads only the isolated Computer Use extension while preserving existing boundaries [0.23ms]
+(pass) gdm-pi computer use launcher > renders the Computer Use tree byte-identically into the Pi target [32.77ms]
+
+test/state-recovery.test.ts:
+(pass) state recovery > explicit CLI repair removes only trailing NUL bytes and journals the recovery [66.83ms]
+(pass) state recovery > repair refuses clean, truncated, and non-NUL-suffix corruption without changing bytes [507.43ms]
+(pass) state recovery > concurrent CLI saves use independent temporary files and leave valid state [494.16ms]
+(pass) state recovery > repair requires its explicit mode flag [31.96ms]
+
+test/contract.test.ts:
+(pass) work contract > new work requires at least one explicit constraint [31.09ms]
+(pass) work contract > repeated constraints preserve order and trim values [38.43ms]
+(pass) work contract > constraint inputs reject atomically without reflection [434.83ms]
+(pass) work contract > legacy contract can upgrade only before a passed check [65.71ms]
+(pass) work contract > explicit commit approval is journaled without git mutation [317.15ms]
+(pass) work contract > read surfaces expose the latest contract and done never approves commit [318.82ms]
+(pass) work contract > legacy read normalizes a forbidden empty contract [30.96ms]
+
+test/attempt.test.ts:
+(pass) attempt gate > fingerprint uses the canonical normalized tuple [0.05ms]
+(pass) attempt gate > domain transitions require confirmation and changed evidence [0.65ms]
+(pass) attempt gate > changed evidence opens a new retry epoch [426.32ms]
+(pass) attempt gate > partial unchanged reused and escaping retries use stable exits [583.40ms]
+(pass) attempt gate > all change categories and capability fingerprints are accepted [956.51ms]
+(pass) attempt gate > secret-shaped attempt fields reject without reflection [208.67ms]
+
+test/pi-memory-extension.test.ts:
+(pass) gdm-pi memory extension > /remember stores project memory and before_agent_start injects it as untrusted data [1.99ms]
+(pass) gdm-pi memory extension > model remember and forget write automatically without confirmation [1.72ms]
+(pass) gdm-pi memory extension > automatic writes honor no-UI mode and untrusted project boundaries [1.43ms]
+(pass) gdm-pi memory extension > /memory lists, forgets, and diagnoses without automatic repair [1.77ms]
+(pass) gdm-pi memory extension > honors scoped recall and tab-separated remember flags [1.24ms]
+(pass) gdm-pi memory extension > pre-aborted automatic writes do not modify memory [0.42ms]
+
+test/work-protocol-routing.test.ts:
+(pass) vendor-neutral work protocol routing > keeps one canonical byte-identical block in plan, go, and full [0.45ms]
+(pass) vendor-neutral work protocol routing > routes v2 specialists through one capability-bound runner without granting authority [1684.58ms]
+(pass) vendor-neutral work protocol routing > documents the exact snapshot, handoff, and stale-detection surface [1.85ms]
+(pass) vendor-neutral work protocol routing > denies workflow authority and keeps same-session chatter lightweight [0.21ms]
+(pass) vendor-neutral work protocol routing > contains only intentional metavariables and no renderer or orchestrator claim [0.15ms]
+
+test/protocol-concurrency.test.ts:
+(pass) protocol writer linearizability > concurrent claims for one handoff have exactly one winner without journal loss [653.12ms]
+(pass) protocol writer linearizability > concurrent exact offer replay appends one deterministic event [525.40ms]
+(pass) protocol writer linearizability > concurrent distinct offers form one lossless causal chain [556.81ms]
+
+test/originality.test.ts:
+(pass) original public identity > gdm opens as a personal evidence loop [52.07ms]
+(pass) original public identity > public product files contain no borrowed brand vocabulary [11.72ms]
+(pass) original public identity > banned public token fails the gate [0.03ms]
+
+test/pi-computer-use-rfb.test.ts:
+(pass) gdm-pi Computer Use RFB primitives > uses all 8 CSPRNG bytes and encodes Apple legacy VNC authentication [0.13ms]
+(pass) gdm-pi Computer Use RFB primitives > negotiates authenticated raw framebuffer and emits guest-only input messages [138.13ms]
+
+test/pi-memory-core.test.ts:
+(pass) gdm-pi memory core > normalizes, folds, and deduplicates remember events deterministically [0.18ms]
+(pass) gdm-pi memory core > uses lexical relevance with deterministic recency and id tie breaks [0.19ms]
+(pass) gdm-pi memory core > keeps project and global budgets independent [0.37ms]
+(pass) gdm-pi memory core > renders a bounded block and neutralizes delimiter characters [0.40ms]
+(pass) gdm-pi memory core > detects representative secret-shaped content [0.02ms]
+
+test/pi-ax.test.ts:
+(pass) GDM Pi commands > keeps explicit process, model, and suite bounds small [0.09ms]
+(pass) GDM Pi commands > runs only an absolute executable and enforces timeout and byte bounds [16.04ms]
+(pass) GDM Pi commands > selects the newest active Work and labels outcome as declared and unmeasured [0.51ms]
+(pass) GDM Pi commands > parses only compact good or bad feedback [0.20ms]
+(pass) GDM Pi commands > registers live GDM commands plus notice-only AX migrations and leaves non-UI modes side-effect free [0.64ms]
+(pass) GDM Pi commands > shows declared outcome through /gdm and records reasoned bad feedback through exact argv [0.41ms]
+(pass) GDM Pi commands > rejects reasonless bad feedback before any subprocess but records reasonless good feedback [0.16ms]
+(pass) GDM Pi commands > keeps /ax and /ax-eval as notice-only migrations with zero subprocess or model calls [0.07ms]
+(pass) GDM Pi commands > fails closed on malformed or timed-out GDM state [0.17ms]
+(pass) GDM Pi commands > runs one bounded tool-free eval only through /gdm-contract-check [0.38ms]
+(pass) GDM Pi commands > does not replace the contract-check baseline with malformed, incomplete, or timed-out output [5.28ms]
+(pass) GDM Pi commands > uses exact choices for deterministic scoring [0.08ms]
+
+test/workflow-policy.test.ts:
+(pass) workflow policy > technical design is optional while explicit visual design keeps its artifact contract [0.86ms]
+(pass) workflow policy > go relies on done for the final automatic recheck [0.10ms]
+(pass) workflow policy > workflow defaults preserve authorization and calibrate verification to the goal [0.80ms]
+(pass) workflow policy > execution workflows carry preflight, red-green, scope, simplification, and risk gates [0.36ms]
+(pass) workflow policy > full binds audit identity and workspace while PR delivery is machine-gated [0.09ms]
+(pass) workflow policy > ordinary roles allow contextual nested delegation under one shared cap [0.55ms]
+(pass) workflow policy > every installed ordinary skill carries the same parser-valid envelope example [0.36ms]
+(pass) workflow policy > every ordinary workflow carries one bounded delegation lease [1.02ms]
+(pass) workflow policy > hard-boundary wording is conditional and has no unconditional concurrency claim [1.04ms]
+(pass) workflow policy > delegation envelopes own bounded scope and non-overlapping writes [0.24ms]
+(pass) workflow policy > implementation can be delegated across disjoint ownership [0.28ms]
+(pass) workflow policy > research delegates only newly found independent child axes [0.07ms]
+(pass) workflow policy > audit workers are one bounded leaf and cannot sweep user processes [1.14ms]
+(pass) workflow policy > audit runner kills only its owned tree on a process limit [1873.53ms]
+
+test/delivery.test.ts:
+(pass) delivery state machine > merge requires PR, matching HEAD, and explicit approval without requiring a CI record [598.05ms]
+(pass) delivery state machine > a known failed CI result for the current HEAD blocks merge until superseded [676.42ms]
+(pass) delivery state machine > a new Git HEAD invalidates the prepared delivery chain [487.41ms]
+
+test/pi-installed-smoke.test.ts:
+(pass) temp-HOME install launches a pinned coordinator and an installed read-only child policy without source writes [2644.46ms]
+
+test/audit-integrity.test.ts:
+(pass) audit integrity > outside reports and same-model audits are rejected [238.90ms]
+(pass) audit integrity > report verdict marker is singular and matches the requested verdict [372.80ms]
+(pass) audit integrity > report or git worktree changes invalidate a passed audit [523.99ms]
+(pass) audit integrity > an unchanged git-bound audit closes without a duplicate command run [313.60ms]
+
+test/cli.test.ts:
+(pass) CLI regression > bare and help show the current usage [60.04ms]
+(pass) CLI regression > unknown command exits 2 [31.00ms]
+(pass) CLI regression > plan pass done [157.23ms]
+(pass) CLI regression > manual evidence rejects paths outside the working tree [168.78ms]
+(pass) CLI regression > done re-runs auto checks and blocks on code regression [243.73ms]
+(pass) CLI regression > verification commands use an opt-in bounded timeout [576.00ms]
+(pass) CLI regression > audit pass survives done validation without changing audit-bound evidence [264.92ms]
+(pass) CLI regression > miss is visible in retro json [142.01ms]
+(pass) CLI regression > feedback records one safe event and exposes aggregate eval candidates [237.53ms]
+(pass) CLI regression > feedback without a slug selects the most recently active work [116.38ms]
+
+test/pi-integration.test.ts:
+(pass) Pi role-routed GDM harness policy > allows only bounded credential-free read-only child requests [0.34ms]
+(pass) Pi role-routed GDM harness policy > routes roles independently of the coordinator with bounded task effort and explicit override precedence [0.08ms]
+(pass) Pi role-routed GDM harness policy > routes all GDM skills by default while preserving explicit profiles and raw Pi [653.69ms]
+(pass) Pi role-routed GDM harness policy > bounds child output and terminates only the owned child group on timeout or abort [2603.26ms]
+
+test/graph-nav-provider.test.ts:
+(pass) graph navigation provider > keeps the v2 stdout contract byte-stable [66.86ms]
+(pass) graph navigation provider > returns relative import dependencies and dependents [77.04ms]
+(pass) graph navigation provider > discloses partial coverage and consistency [147.29ms]
+(pass) graph navigation provider > rejects unsafe paths and bounds traversal [430.61ms]
+
+test/context-nav-adversarial.test.ts:
+(pass) context navigation adversarial boundaries > rejects malformed schemas and unsafe query values [11.19ms]
+(pass) context navigation adversarial boundaries > returns an empty untrusted pack before repository inspection [0.34ms]
+(pass) context navigation adversarial boundaries > does not follow a trusted-root symlink [9.17ms]
+(pass) context navigation adversarial boundaries > fails closed when any GDM Work metadata is malformed [20.85ms]
+(pass) context navigation adversarial boundaries > fails closed when a candidate Work directory is incomplete [18.65ms]
+(pass) context navigation adversarial boundaries > marks a changing source graph stale instead of returning snippets as fresh [18.90ms]
+(pass) context navigation adversarial boundaries > uses the full file digest when truncated provenance prefixes collide [18.21ms]
+(pass) context navigation adversarial boundaries > hard-caps output and excludes secret-shaped and ignored corpus [104.20ms]
+
+test/expected-plan-fingerprint.test.ts:
+(pass) expected verification plan fingerprint > a declared outcome invalidates an expected fingerprint captured before that intent [143.65ms]
+(pass) expected verification plan fingerprint > pass, recheck, and done reject a stale plan before command or state mutation [291.00ms]
+(pass) expected verification plan fingerprint > malformed expected digests fail before mutation and old callers remain compatible [234.74ms]
+(pass) expected verification plan fingerprint > plan source stores one validated source digest without changing the plan identity [138.33ms]
+(pass) expected verification plan fingerprint > plan source rejects work parent and checks symlinks without touching outside bytes [65.29ms]
+(pass) expected verification plan fingerprint > plan source preserves state mode, leaves no temp, and refuses completed Work [230.49ms]
+(pass) expected verification plan fingerprint > oversized sparse checks state fails before allocation or replacement [102.44ms]
+(pass) expected verification plan fingerprint > narrow raw patch preserves legacy omissions and audit checksHash bytes [0.90ms]
+
+test/protocol-crash-recovery.test.ts:
+(pass) journal crash commit points > exit after data fsync exposes the old prefix and retry removes the orphan batch [42.20ms]
+(pass) journal crash commit points > exit after anchor rename exposes the new prefix and the next locked write converges [41.82ms]
+
+test/brief-checks.test.ts:
+(pass) parseBriefChecks > 자동·수동 항목과 백틱 cmd를 파싱한다 [0.26ms]
+(pass) parseBriefChecks > 다음 heading에서 섹션이 끝난다 [0.02ms]
+(pass) parseBriefChecks > regression·static·expert 분류를 실행 가능한 입력으로 보존한다 [0.03ms]
+(pass) parseBriefChecks > 섹션이 없으면 brief_checks_invalid [0.05ms]
+(pass) parseBriefChecks > 한 줄이라도 형식 오류면 전체 실패하고 행 번호를 알려준다 [0.03ms]
+(pass) parseBriefChecks > manual 항목에 cmd가 함께 있으면 실패한다 [0.01ms]
+(pass) parseBriefChecks > 항목이 하나도 없으면 실패한다
+
+3 tests skipped:
+(skip) keeps host focus unchanged while real Tart VNC types only inside the guest
+(skip) gdm-pi memory live session > recalls a global memory in a fresh real Pi session
+(skip) installed audit-done capability > installed binary preserves audit-bound hashes across done
+
+ 478 pass
+ 3 skip
+ 0 fail
+ 6307 expect() calls
+Ran 481 tests across 66 files. [140.28s]

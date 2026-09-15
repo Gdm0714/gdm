@@ -1,0 +1,599 @@
+{
+  "schema": "gdm-pi-routing-installation/v1",
+  "version": "0.11.0",
+  "settingsBefore": {
+    "defaultProvider": "openai-codex",
+    "defaultModel": "gpt-5.6-sol",
+    "defaultThinkingLevel": "max"
+  },
+  "settingsAfter": {
+    "defaultProvider": "openai-codex",
+    "defaultModel": "gpt-5.6-terra",
+    "defaultThinkingLevel": "high"
+  },
+  "settingsOtherKeysPreserved": true,
+  "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-routing-backup-2na1tsrs",
+  "files": [
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/auditor.md",
+      "sha256": "6885a99b350bff5e0039c430336ffc4a1606ed5b54648c5fee919311345b1fa7"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/design-auditor.md",
+      "sha256": "8dc222b56214e42322f53272464afd98b8274b0aab08d1d3a8ab3d02955c37b4"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/pi/ax.d.mts",
+      "sha256": "5617ff6ffba58f43913f7152e08d199ae5a4e023a90c3f24d04bc68353a75266"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/pi/ax.mjs",
+      "sha256": "f3da6233e45d33e405a54b879007bf7374165746de5ee6cc9ae3a31fa9166712"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/pi/coordinator.md",
+      "sha256": "81a49bfce8dc4f1a92575e8e15f2461515bb038a04abb9fcbd5d1d27d1011915"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/pi/delegate-policy.d.mts",
+      "sha256": "fedc4d6858b3035d55e4d7fc5bc77f65939fb8044fb83a37a01163b6893a51b9"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/pi/delegate-policy.mjs",
+      "sha256": "d74d909f23668a54c0d207dbf15634b090fb330f26aedc8e7ffa7b2b10d38075"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/pi/delegate-runner.d.mts",
+      "sha256": "c6c9598f1e7e6ea63091d125f1db64bc82af6a0a6774e46254e5ff56311f5d98"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/pi/delegate-runner.mjs",
+      "sha256": "5d819f7ed17cd8346a5c661b5becff017023179b4ed4588a75a1dfd44748da26"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/pi/gdm-computer-use/auth.ts",
+      "sha256": "825c001f193c91378e402f4fa9ffec74b2b5af9984786fabf2e508a543c2ccdb"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/pi/gdm-computer-use/index.ts",
+      "sha256": "c29270105e17cecd81a1dd910096784f24e70a647dc926f8c66953e26f930b04"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/pi/gdm-computer-use/keys.ts",
+      "sha256": "6d18065a40bf916a5d3c1de4d40316a3d0ff02be05f32c0e61a752fcb6f5d4c2"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/pi/gdm-computer-use/png.ts",
+      "sha256": "93b00bfa9f065f932d990ab16b27c6989d588eb61d18414a5f51f8b5654fa29d"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/pi/gdm-computer-use/rfb.ts",
+      "sha256": "975d681eeb9c75a7cc4d11e1db44128d69c3fc35a2010f4d2b0c257518313fef"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/pi/gdm-computer-use/setup.sh",
+      "sha256": "e3a86e327c19b6df2e15fb117d49530a0454f1fae7e20cad11db931395c3f032"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/pi/gdm-computer-use/vm.ts",
+      "sha256": "223cfc13170c4bfa4e856cc573ae4ca816f03a15ed6d85fc28f1d68003fc5370"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/pi/gdm-delegate.ts",
+      "sha256": "196f5b73370b4c80639d1956e5ed85acedfdcdf7e2d2203bb2bd4123fd08fa5c"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/pi/gdm-memory/core.ts",
+      "sha256": "9cdfe2ea2473d6a0a4ede91c004f723b524a581901af91c7ef38195b8ae94fca"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/pi/gdm-memory/index.ts",
+      "sha256": "9d11503947883fbae71478f1e887616465b3d748bcefad5cfd4dab838b820d28"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/pi/gdm-memory/store.ts",
+      "sha256": "416a3f13828d422b2be8adc4eeeb1ce078b3cc365f4fb70b337c36f0c5528947"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/pi/gdm-pi",
+      "sha256": "5565a2fe3137628aaf709369078da37666cc25217065eb21f576df206f491af2"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/pi/presentation.d.mts",
+      "sha256": "fbd4efbbac878b59f5aaecfaaace0eaba56abde0c2823cbd8dd300776f1aaa81"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/pi/presentation.mjs",
+      "sha256": "1de38584140733aec19df1030475b70fbc421fb766e729e2911e2a99b54e5529"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/providers/claude.sh",
+      "sha256": "3057a3f9312212799c6822501f9334d6d48d4c1f95f84f18f448c67161e621ee"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/providers/codex.sh",
+      "sha256": "a3762343eed53c9cb7dd7554dab21438e7946aebc917d96df636880b48972d68"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/providers/pi.sh",
+      "sha256": "1bb3455412115a3030551bcd4fc8a0752ce441327224e443d6e7441db00630dc"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/run-auditor.sh",
+      "sha256": "4ca3212609e2a33b8d9daaaf35d47ffae9dd5becc6a513ea731ede120102dbbc"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents/run-role.sh",
+      "sha256": "9f6530cd843d1f3e7c30465fb58a17cc161d813f26f9c61b0ba1fa49712f3456"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-analyze/SKILL.md",
+      "sha256": "432c02d221776ac3b1f4171ed34c60de4907f40ad9bfe30e711c5cfeefbd3f2e"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-db/SKILL.md",
+      "sha256": "353454f6d8c292c3aa1f78ce5f403b527a9d9b79286b8c5e417706563f6fdfe6"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-design/CRAFT.md",
+      "sha256": "e2cb5f20bcb0af441bc2cadbf3edad82dbc8ecd25d13a1c2a2143c6f78ecf0f5"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-design/SKILL.md",
+      "sha256": "42124897a5ed359196c56acc40ebea73de3e08063e39952e50922f39dba654cf"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-document/SKILL.md",
+      "sha256": "973364a644529715fa3c06db1a0a3645d8b37cea1b12082c9741300dad590fb5"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-document/agents/openai.yaml",
+      "sha256": "6dd309efd3edd84e85cd6521af84f351a7f44d1d8fe8b9c631400d9d065726ac"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-email/SKILL.md",
+      "sha256": "2ef1d251a477709403ea59a67e958d1ea183fb71811466129c46d7c7804d4c49"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-email/agents/openai.yaml",
+      "sha256": "a0727e8ff7e3d3c4e556406af40e6b93b57369e827d56abc1cd3bee0b37c9793"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-full/SKILL.md",
+      "sha256": "ff8d602b80bef9c87bf85f75954e9f7ee27e8dcd34b14451652d9475696052c5"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-go/SKILL.md",
+      "sha256": "d1201c9ce8e3cc165aebe175f4325412645e2721b6ca508fcbd43384111e808e"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-go/terminal-browser-background-tab.sh",
+      "sha256": "2121f623bfa46885dd48615bd67a86b3ce7faefc8c75ed81eef8961184b25033"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-plan/SKILL.md",
+      "sha256": "163492ed20e8e0ecccd15dc306cfa0e69e6130ee6477209779669f39bedb6a4e"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-pr/SKILL.md",
+      "sha256": "9293cd6367cdc9fa27ef52f9448ba80245f961413d50cf1059493c1412a31891"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-reflect/SKILL.md",
+      "sha256": "549e9b2330cc3bd4998b754634680d80e05dee5df676b22b182ffb5421b22d8d"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-reflect/agents/openai.yaml",
+      "sha256": "7447b3bf0dadc0baa306224d7a7f6d545f1f5a7c1a4d38a609a08e013e0bf7d8"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-research/SKILL.md",
+      "sha256": "fa1b2d141978179c1c9533a47be528fb1f5cbfd5a330e3c65dc1b7f41a7df05c"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-review/SKILL.md",
+      "sha256": "631ba8a95a9de063d44d4e23f647cea20c382b7b0eeb360ec00fe79eb3297c6f"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-target-manifest.json",
+      "sha256": "889b9fa0ce9ea8ddc64829cbddfe61dd6d4b7ad164cece7ffd8e97e94e7c4a1e"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-ui/SKILL.md",
+      "sha256": "8a15719d8eb5851b55d61f2b0f6c80bd7d886ac13d0d894a7620f74a6f18525a"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/auditor.md",
+      "sha256": "6885a99b350bff5e0039c430336ffc4a1606ed5b54648c5fee919311345b1fa7"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/design-auditor.md",
+      "sha256": "8dc222b56214e42322f53272464afd98b8274b0aab08d1d3a8ab3d02955c37b4"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/pi/ax.d.mts",
+      "sha256": "5617ff6ffba58f43913f7152e08d199ae5a4e023a90c3f24d04bc68353a75266"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/pi/ax.mjs",
+      "sha256": "f3da6233e45d33e405a54b879007bf7374165746de5ee6cc9ae3a31fa9166712"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/pi/coordinator.md",
+      "sha256": "81a49bfce8dc4f1a92575e8e15f2461515bb038a04abb9fcbd5d1d27d1011915"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/pi/delegate-policy.d.mts",
+      "sha256": "fedc4d6858b3035d55e4d7fc5bc77f65939fb8044fb83a37a01163b6893a51b9"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/pi/delegate-policy.mjs",
+      "sha256": "d74d909f23668a54c0d207dbf15634b090fb330f26aedc8e7ffa7b2b10d38075"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/pi/delegate-runner.d.mts",
+      "sha256": "c6c9598f1e7e6ea63091d125f1db64bc82af6a0a6774e46254e5ff56311f5d98"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/pi/delegate-runner.mjs",
+      "sha256": "5d819f7ed17cd8346a5c661b5becff017023179b4ed4588a75a1dfd44748da26"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/pi/gdm-computer-use/auth.ts",
+      "sha256": "825c001f193c91378e402f4fa9ffec74b2b5af9984786fabf2e508a543c2ccdb"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/pi/gdm-computer-use/index.ts",
+      "sha256": "c29270105e17cecd81a1dd910096784f24e70a647dc926f8c66953e26f930b04"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/pi/gdm-computer-use/keys.ts",
+      "sha256": "6d18065a40bf916a5d3c1de4d40316a3d0ff02be05f32c0e61a752fcb6f5d4c2"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/pi/gdm-computer-use/png.ts",
+      "sha256": "93b00bfa9f065f932d990ab16b27c6989d588eb61d18414a5f51f8b5654fa29d"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/pi/gdm-computer-use/rfb.ts",
+      "sha256": "975d681eeb9c75a7cc4d11e1db44128d69c3fc35a2010f4d2b0c257518313fef"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/pi/gdm-computer-use/setup.sh",
+      "sha256": "e3a86e327c19b6df2e15fb117d49530a0454f1fae7e20cad11db931395c3f032"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/pi/gdm-computer-use/vm.ts",
+      "sha256": "223cfc13170c4bfa4e856cc573ae4ca816f03a15ed6d85fc28f1d68003fc5370"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/pi/gdm-delegate.ts",
+      "sha256": "196f5b73370b4c80639d1956e5ed85acedfdcdf7e2d2203bb2bd4123fd08fa5c"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/pi/gdm-memory/core.ts",
+      "sha256": "9cdfe2ea2473d6a0a4ede91c004f723b524a581901af91c7ef38195b8ae94fca"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/pi/gdm-memory/index.ts",
+      "sha256": "9d11503947883fbae71478f1e887616465b3d748bcefad5cfd4dab838b820d28"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/pi/gdm-memory/store.ts",
+      "sha256": "416a3f13828d422b2be8adc4eeeb1ce078b3cc365f4fb70b337c36f0c5528947"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/pi/gdm-pi",
+      "sha256": "5565a2fe3137628aaf709369078da37666cc25217065eb21f576df206f491af2"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/pi/presentation.d.mts",
+      "sha256": "fbd4efbbac878b59f5aaecfaaace0eaba56abde0c2823cbd8dd300776f1aaa81"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/pi/presentation.mjs",
+      "sha256": "1de38584140733aec19df1030475b70fbc421fb766e729e2911e2a99b54e5529"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/providers/claude.sh",
+      "sha256": "3057a3f9312212799c6822501f9334d6d48d4c1f95f84f18f448c67161e621ee"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/providers/codex.sh",
+      "sha256": "a3762343eed53c9cb7dd7554dab21438e7946aebc917d96df636880b48972d68"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/providers/pi.sh",
+      "sha256": "1bb3455412115a3030551bcd4fc8a0752ce441327224e443d6e7441db00630dc"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/run-auditor.sh",
+      "sha256": "4ca3212609e2a33b8d9daaaf35d47ffae9dd5becc6a513ea731ede120102dbbc"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents/run-role.sh",
+      "sha256": "9f6530cd843d1f3e7c30465fb58a17cc161d813f26f9c61b0ba1fa49712f3456"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-analyze/SKILL.md",
+      "sha256": "3c294fead502d1dd35d56e066d7a7e25753cbd8bd44ac132daebfe418ac3297e"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-db/SKILL.md",
+      "sha256": "1bad7420c33bd0ca731147d8f8cef8aee8fe8cf006c9a63b59fe4ab523c6d617"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-design/CRAFT.md",
+      "sha256": "e2cb5f20bcb0af441bc2cadbf3edad82dbc8ecd25d13a1c2a2143c6f78ecf0f5"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-design/SKILL.md",
+      "sha256": "712f65824b8931454c64e893a2788aca7e5573782814b9d032413075a0b111ac"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-document/SKILL.md",
+      "sha256": "3de2a0236c4c983cd71fedd41246a822371039721a382c9648f467f76e45c7e1"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-document/agents/openai.yaml",
+      "sha256": "6dd309efd3edd84e85cd6521af84f351a7f44d1d8fe8b9c631400d9d065726ac"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-email/SKILL.md",
+      "sha256": "cb62b602f2fd974dc9903b3c629bcb03fd4a68d19a55ad01600b90925637b256"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-email/agents/openai.yaml",
+      "sha256": "a0727e8ff7e3d3c4e556406af40e6b93b57369e827d56abc1cd3bee0b37c9793"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-full/SKILL.md",
+      "sha256": "e4ec65a2338e3c4250a6ce85219e30b0fc01e3895ef320eef3a704b9d28c40eb"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-go/SKILL.md",
+      "sha256": "95c5ab5a606fcf0054ed895e7479a5ca8aa6b636226205968662afbf97c6d8b4"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-go/terminal-browser-background-tab.sh",
+      "sha256": "2121f623bfa46885dd48615bd67a86b3ce7faefc8c75ed81eef8961184b25033"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-plan/SKILL.md",
+      "sha256": "6ef37337a86e619b8ebf0f2357def21bc667eae29c587b2e3cffd783ac1e8086"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-pr/SKILL.md",
+      "sha256": "c8fa99faf023e2641275db6bef70586612efddbe6bae61d95d53ade4526bc464"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-reflect/SKILL.md",
+      "sha256": "bb6e5cb46c7b083a30bba12143f0c31814663e3b3df3c12e4be9d7860691a24f"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-reflect/agents/openai.yaml",
+      "sha256": "7447b3bf0dadc0baa306224d7a7f6d545f1f5a7c1a4d38a609a08e013e0bf7d8"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-research/SKILL.md",
+      "sha256": "fc979f86ba95447d31b88f18c8b1eab474f23d7fb37b11e55198b75c85168ab0"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-review/SKILL.md",
+      "sha256": "2093b73d4b3d62cb4e666c7bedef8eb1977b022aa890eb0a6bc6e0a2422387a2"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-target-manifest.json",
+      "sha256": "cdb95ab8b9d6f25f5ea65f22027e32fc5e4d6a50ca49111566529fa931f39b64"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-ui/SKILL.md",
+      "sha256": "2e0599094b602e2f3d0feb09c35161c059ab08342f41c1009c24472b5cf41b75"
+    },
+    {
+      "path": "/Users/godongmin/.local/bin/gdm",
+      "sha256": "afb0c06631393b7dda36a85edfc06fd0c196a3801d816d7998cdf189bf5bf8cc"
+    },
+    {
+      "path": "/Users/godongmin/.local/bin/gdm-pi",
+      "sha256": "5565a2fe3137628aaf709369078da37666cc25217065eb21f576df206f491af2"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/auditor.md",
+      "sha256": "6885a99b350bff5e0039c430336ffc4a1606ed5b54648c5fee919311345b1fa7"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/design-auditor.md",
+      "sha256": "8dc222b56214e42322f53272464afd98b8274b0aab08d1d3a8ab3d02955c37b4"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/pi/ax.d.mts",
+      "sha256": "5617ff6ffba58f43913f7152e08d199ae5a4e023a90c3f24d04bc68353a75266"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/pi/ax.mjs",
+      "sha256": "f3da6233e45d33e405a54b879007bf7374165746de5ee6cc9ae3a31fa9166712"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/pi/coordinator.md",
+      "sha256": "81a49bfce8dc4f1a92575e8e15f2461515bb038a04abb9fcbd5d1d27d1011915"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/pi/delegate-policy.d.mts",
+      "sha256": "fedc4d6858b3035d55e4d7fc5bc77f65939fb8044fb83a37a01163b6893a51b9"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/pi/delegate-policy.mjs",
+      "sha256": "d74d909f23668a54c0d207dbf15634b090fb330f26aedc8e7ffa7b2b10d38075"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/pi/delegate-runner.d.mts",
+      "sha256": "c6c9598f1e7e6ea63091d125f1db64bc82af6a0a6774e46254e5ff56311f5d98"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/pi/delegate-runner.mjs",
+      "sha256": "5d819f7ed17cd8346a5c661b5becff017023179b4ed4588a75a1dfd44748da26"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/pi/gdm-computer-use/auth.ts",
+      "sha256": "825c001f193c91378e402f4fa9ffec74b2b5af9984786fabf2e508a543c2ccdb"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/pi/gdm-computer-use/index.ts",
+      "sha256": "c29270105e17cecd81a1dd910096784f24e70a647dc926f8c66953e26f930b04"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/pi/gdm-computer-use/keys.ts",
+      "sha256": "6d18065a40bf916a5d3c1de4d40316a3d0ff02be05f32c0e61a752fcb6f5d4c2"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/pi/gdm-computer-use/png.ts",
+      "sha256": "93b00bfa9f065f932d990ab16b27c6989d588eb61d18414a5f51f8b5654fa29d"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/pi/gdm-computer-use/rfb.ts",
+      "sha256": "975d681eeb9c75a7cc4d11e1db44128d69c3fc35a2010f4d2b0c257518313fef"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/pi/gdm-computer-use/setup.sh",
+      "sha256": "e3a86e327c19b6df2e15fb117d49530a0454f1fae7e20cad11db931395c3f032"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/pi/gdm-computer-use/vm.ts",
+      "sha256": "223cfc13170c4bfa4e856cc573ae4ca816f03a15ed6d85fc28f1d68003fc5370"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/pi/gdm-delegate.ts",
+      "sha256": "196f5b73370b4c80639d1956e5ed85acedfdcdf7e2d2203bb2bd4123fd08fa5c"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/pi/gdm-memory/core.ts",
+      "sha256": "9cdfe2ea2473d6a0a4ede91c004f723b524a581901af91c7ef38195b8ae94fca"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/pi/gdm-memory/index.ts",
+      "sha256": "9d11503947883fbae71478f1e887616465b3d748bcefad5cfd4dab838b820d28"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/pi/gdm-memory/store.ts",
+      "sha256": "416a3f13828d422b2be8adc4eeeb1ce078b3cc365f4fb70b337c36f0c5528947"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/pi/gdm-pi",
+      "sha256": "5565a2fe3137628aaf709369078da37666cc25217065eb21f576df206f491af2"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/pi/presentation.d.mts",
+      "sha256": "fbd4efbbac878b59f5aaecfaaace0eaba56abde0c2823cbd8dd300776f1aaa81"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/pi/presentation.mjs",
+      "sha256": "1de38584140733aec19df1030475b70fbc421fb766e729e2911e2a99b54e5529"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/providers/claude.sh",
+      "sha256": "3057a3f9312212799c6822501f9334d6d48d4c1f95f84f18f448c67161e621ee"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/providers/codex.sh",
+      "sha256": "a3762343eed53c9cb7dd7554dab21438e7946aebc917d96df636880b48972d68"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/providers/pi.sh",
+      "sha256": "1bb3455412115a3030551bcd4fc8a0752ce441327224e443d6e7441db00630dc"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/run-auditor.sh",
+      "sha256": "4ca3212609e2a33b8d9daaaf35d47ffae9dd5becc6a513ea731ede120102dbbc"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents/run-role.sh",
+      "sha256": "9f6530cd843d1f3e7c30465fb58a17cc161d813f26f9c61b0ba1fa49712f3456"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-analyze/SKILL.md",
+      "sha256": "161517d8018c77bd981624a1f81cdc6ef63b2356c8d6a2e8a55111d4d7bb3aea"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-db/SKILL.md",
+      "sha256": "8d827d8f613103d2f828b6601554f4d7234f755a7ef635937fc097b9cd6533e1"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-design/CRAFT.md",
+      "sha256": "e2cb5f20bcb0af441bc2cadbf3edad82dbc8ecd25d13a1c2a2143c6f78ecf0f5"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-design/SKILL.md",
+      "sha256": "998088cae45243ba79d3bb63fe6c3345e967be5273cb4477710c0597e744ac7a"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-document/SKILL.md",
+      "sha256": "57b1d48957178ee48b0d5108c05cfefd2f4fe3731a839b889cd3bd850f3cccfb"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-document/agents/openai.yaml",
+      "sha256": "6dd309efd3edd84e85cd6521af84f351a7f44d1d8fe8b9c631400d9d065726ac"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-email/SKILL.md",
+      "sha256": "042788d991b4363bb9821e48bc459e8c67180d0b734426408ca044138cfe3b27"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-email/agents/openai.yaml",
+      "sha256": "a0727e8ff7e3d3c4e556406af40e6b93b57369e827d56abc1cd3bee0b37c9793"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-full/SKILL.md",
+      "sha256": "e29eb6440ed31d0f5d12f31eaf6e316b1c82cba9134b5301e435fe61a22d5848"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-go/SKILL.md",
+      "sha256": "e560be1eb6428287072c07c0f0d631d68dd984ae24158f918a1542bcce497d71"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-go/terminal-browser-background-tab.sh",
+      "sha256": "2121f623bfa46885dd48615bd67a86b3ce7faefc8c75ed81eef8961184b25033"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-plan/SKILL.md",
+      "sha256": "2d69ae1ce4207a157690fb8a96a5728314b6e3b8d96afa30dea083e02bb842a9"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-pr/SKILL.md",
+      "sha256": "811a655b4456ce7ccbd28683010d699b0410da8f3eaa8228ccdaef52548c1c6b"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-reflect/SKILL.md",
+      "sha256": "55bf0d1ea9571ee460107c83782754cd7d4974911994b71fefd5f22259229878"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-reflect/agents/openai.yaml",
+      "sha256": "7447b3bf0dadc0baa306224d7a7f6d545f1f5a7c1a4d38a609a08e013e0bf7d8"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-research/SKILL.md",
+      "sha256": "8d1c06ff68bf9884cd62781d5e532f548706c8d1ebc23070f0c781d74d59056a"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-review/SKILL.md",
+      "sha256": "5bc08e5f9023a50d7f7af3c7a97f5e3e9832afaffa01b2f8b7f7036b8c73a3dd"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-target-manifest.json",
+      "sha256": "fd1fe282baad076ec7fd52ffab154ffb93101a74c436a8efd3f749da5a57eb26"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-ui/SKILL.md",
+      "sha256": "61e6886bfa5ad6c9376e1f7263891e0a5866585a1b24b1fcf3f7d434b6c531ca"
+    }
+  ],
+  "entrypoints": {
+    "launcher": "/Users/godongmin/.local/bin/gdm-pi",
+    "interactivePiAlias": "gdm-pi",
+    "aliasSources": [
+      "/Users/godongmin/.zshrc",
+      "/Users/godongmin/.zprofile"
+    ],
+    "effect": "New gdm-pi sessions use Terra high and the role defaults; normal Pi also defaults to Terra high. Existing sessions are not restarted."
+  }
+}

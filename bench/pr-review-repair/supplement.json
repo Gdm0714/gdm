@@ -1,0 +1,984 @@
+{
+  "manifestSha256": "e55c1305f6d2036592e9757a2581c91d684c2cb8fd1a457f6005c3335d936047",
+  "scriptSha256": "cba887515562c95a07e3f8d78409181b4e39d8ed4f7cff5c48406e151db00a95",
+  "clarification": "Frozen functionalPass is a strict combined result. testsPass reports code behavior under original tests separately from protected-file policy. Only complete usage contributes to paired cost estimates. Added during execution after methodology QA; amended after host-sleep interruption. Incomplete final streams are partial usage even if all finished messages had valid usage. Model inputs, known targets and schedule unchanged.",
+  "rows": [
+    {
+      "id": "P01",
+      "case": "C01",
+      "arm": "self",
+      "repetition": 1,
+      "testsPass": true,
+      "gradingCoverageComplete": {
+        "hidden": true,
+        "visible": true
+      },
+      "normalCompletion": true,
+      "completedTestsPass": true,
+      "observedCalls": {
+        "repair": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        }
+      },
+      "reviewReadRequests": {
+        "contractReadRequested": false,
+        "diffReadRequested": false,
+        "sourceReadRequests": [],
+        "outsideReadRequests": []
+      },
+      "protectedChangedPaths": [
+        "cli/test/state-recovery.test.ts"
+      ],
+      "newHiddenFailures": [],
+      "newPublicFailures": [],
+      "seconds": 165.613,
+      "usageComplete": true,
+      "rawUsageCompleteFlag": true,
+      "recordedApiCostEstimateUSD": 0.28165840000000003,
+      "reviewCalls": 0,
+      "repairCalls": 1
+    },
+    {
+      "id": "P02",
+      "case": "C01",
+      "arm": "terra",
+      "repetition": 1,
+      "testsPass": true,
+      "gradingCoverageComplete": {
+        "hidden": true,
+        "visible": true
+      },
+      "normalCompletion": true,
+      "completedTestsPass": true,
+      "observedCalls": {
+        "review": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        },
+        "repair": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        }
+      },
+      "reviewReadRequests": {
+        "contractReadRequested": true,
+        "diffReadRequested": true,
+        "sourceReadRequests": [
+          "cli/src/cli.ts",
+          "cli/src/state.ts",
+          "cli/src/store.ts",
+          "cli/src/types.ts"
+        ],
+        "outsideReadRequests": []
+      },
+      "protectedChangedPaths": [
+        "cli/test/state-recovery.test.ts"
+      ],
+      "newHiddenFailures": [],
+      "newPublicFailures": [],
+      "seconds": 170.49599999999998,
+      "usageComplete": true,
+      "rawUsageCompleteFlag": true,
+      "recordedApiCostEstimateUSD": 0.3502372,
+      "reviewCalls": 1,
+      "repairCalls": 1
+    },
+    {
+      "id": "P03",
+      "case": "C01",
+      "arm": "astra",
+      "repetition": 1,
+      "testsPass": true,
+      "gradingCoverageComplete": {
+        "hidden": true,
+        "visible": true
+      },
+      "normalCompletion": true,
+      "completedTestsPass": true,
+      "observedCalls": {
+        "review": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        },
+        "repair": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        }
+      },
+      "reviewReadRequests": {
+        "contractReadRequested": true,
+        "diffReadRequested": true,
+        "sourceReadRequests": [
+          "cli/src/cli.ts",
+          "cli/src/contract.ts",
+          "cli/src/state.ts",
+          "cli/src/store.ts",
+          "cli/src/types.ts"
+        ],
+        "outsideReadRequests": []
+      },
+      "protectedChangedPaths": [
+        "cli/test/state-recovery.test.ts"
+      ],
+      "newHiddenFailures": [],
+      "newPublicFailures": [],
+      "seconds": 142.553,
+      "usageComplete": true,
+      "rawUsageCompleteFlag": true,
+      "recordedApiCostEstimateUSD": 0.6549624000000001,
+      "reviewCalls": 1,
+      "repairCalls": 1
+    },
+    {
+      "id": "P04",
+      "case": "C02",
+      "arm": "terra",
+      "repetition": 1,
+      "testsPass": true,
+      "gradingCoverageComplete": {
+        "hidden": true,
+        "visible": true
+      },
+      "normalCompletion": true,
+      "completedTestsPass": true,
+      "observedCalls": {
+        "review": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        },
+        "repair": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        }
+      },
+      "reviewReadRequests": {
+        "contractReadRequested": true,
+        "diffReadRequested": true,
+        "sourceReadRequests": [
+          "cli/src/audit-integrity.ts",
+          "cli/src/cli.ts",
+          "cli/src/contained-file.ts",
+          "cli/src/delivery-cli.ts",
+          "cli/src/delivery.ts",
+          "cli/src/state.ts",
+          "cli/src/store.ts"
+        ],
+        "outsideReadRequests": []
+      },
+      "protectedChangedPaths": [
+        "cli/test/delivery.test.ts"
+      ],
+      "newHiddenFailures": [],
+      "newPublicFailures": [],
+      "seconds": 172.934,
+      "usageComplete": true,
+      "rawUsageCompleteFlag": true,
+      "recordedApiCostEstimateUSD": 0.43215560000000003,
+      "reviewCalls": 1,
+      "repairCalls": 1
+    },
+    {
+      "id": "P05",
+      "case": "C02",
+      "arm": "astra",
+      "repetition": 1,
+      "testsPass": true,
+      "gradingCoverageComplete": {
+        "hidden": true,
+        "visible": true
+      },
+      "normalCompletion": true,
+      "completedTestsPass": true,
+      "observedCalls": {
+        "review": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        },
+        "repair": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        }
+      },
+      "reviewReadRequests": {
+        "contractReadRequested": true,
+        "diffReadRequested": true,
+        "sourceReadRequests": [
+          "cli/src/audit-integrity.ts",
+          "cli/src/cli-args.ts",
+          "cli/src/cli.ts",
+          "cli/src/contract.ts",
+          "cli/src/delivery-cli.ts",
+          "cli/src/delivery.ts",
+          "cli/src/state.ts",
+          "cli/src/store.ts",
+          "cli/src/types.ts"
+        ],
+        "outsideReadRequests": []
+      },
+      "protectedChangedPaths": [
+        "cli/test/delivery.test.ts"
+      ],
+      "newHiddenFailures": [],
+      "newPublicFailures": [],
+      "seconds": 170.06,
+      "usageComplete": true,
+      "rawUsageCompleteFlag": true,
+      "recordedApiCostEstimateUSD": 1.1542664,
+      "reviewCalls": 1,
+      "repairCalls": 1
+    },
+    {
+      "id": "P06",
+      "case": "C02",
+      "arm": "self",
+      "repetition": 1,
+      "testsPass": true,
+      "gradingCoverageComplete": {
+        "hidden": true,
+        "visible": true
+      },
+      "normalCompletion": true,
+      "completedTestsPass": true,
+      "observedCalls": {
+        "repair": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        }
+      },
+      "reviewReadRequests": {
+        "contractReadRequested": false,
+        "diffReadRequested": false,
+        "sourceReadRequests": [],
+        "outsideReadRequests": []
+      },
+      "protectedChangedPaths": [],
+      "newHiddenFailures": [],
+      "newPublicFailures": [],
+      "seconds": 140.069,
+      "usageComplete": true,
+      "rawUsageCompleteFlag": true,
+      "recordedApiCostEstimateUSD": 0.34938960000000013,
+      "reviewCalls": 0,
+      "repairCalls": 1
+    },
+    {
+      "id": "P07",
+      "case": "C03",
+      "arm": "astra",
+      "repetition": 1,
+      "testsPass": true,
+      "gradingCoverageComplete": {
+        "hidden": true,
+        "visible": true
+      },
+      "normalCompletion": true,
+      "completedTestsPass": true,
+      "observedCalls": {
+        "review": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        },
+        "repair": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        }
+      },
+      "reviewReadRequests": {
+        "contractReadRequested": true,
+        "diffReadRequested": true,
+        "sourceReadRequests": [
+          "cli/src/cli.ts",
+          "cli/src/contract.ts",
+          "cli/src/state.ts",
+          "cli/src/store.ts",
+          "cli/src/types.ts"
+        ],
+        "outsideReadRequests": []
+      },
+      "protectedChangedPaths": [
+        "cli/test/state-recovery.test.ts"
+      ],
+      "newHiddenFailures": [],
+      "newPublicFailures": [],
+      "seconds": 106.721,
+      "usageComplete": true,
+      "rawUsageCompleteFlag": true,
+      "recordedApiCostEstimateUSD": 0.6241672,
+      "reviewCalls": 1,
+      "repairCalls": 1
+    },
+    {
+      "id": "P08",
+      "case": "C03",
+      "arm": "self",
+      "repetition": 1,
+      "testsPass": true,
+      "gradingCoverageComplete": {
+        "hidden": true,
+        "visible": true
+      },
+      "normalCompletion": true,
+      "completedTestsPass": true,
+      "observedCalls": {
+        "repair": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        }
+      },
+      "reviewReadRequests": {
+        "contractReadRequested": false,
+        "diffReadRequested": false,
+        "sourceReadRequests": [],
+        "outsideReadRequests": []
+      },
+      "protectedChangedPaths": [],
+      "newHiddenFailures": [],
+      "newPublicFailures": [],
+      "seconds": 108.337,
+      "usageComplete": true,
+      "rawUsageCompleteFlag": true,
+      "recordedApiCostEstimateUSD": 0.2281648,
+      "reviewCalls": 0,
+      "repairCalls": 1
+    },
+    {
+      "id": "P09",
+      "case": "C03",
+      "arm": "terra",
+      "repetition": 1,
+      "testsPass": true,
+      "gradingCoverageComplete": {
+        "hidden": true,
+        "visible": true
+      },
+      "normalCompletion": true,
+      "completedTestsPass": true,
+      "observedCalls": {
+        "review": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        },
+        "repair": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        }
+      },
+      "reviewReadRequests": {
+        "contractReadRequested": true,
+        "diffReadRequested": true,
+        "sourceReadRequests": [
+          "cli/src/cli.ts",
+          "cli/src/contract.ts",
+          "cli/src/state.ts",
+          "cli/src/store.ts",
+          "cli/src/types.ts"
+        ],
+        "outsideReadRequests": []
+      },
+      "protectedChangedPaths": [
+        "cli/test/state-recovery.test.ts"
+      ],
+      "newHiddenFailures": [],
+      "newPublicFailures": [],
+      "seconds": 136.744,
+      "usageComplete": true,
+      "rawUsageCompleteFlag": true,
+      "recordedApiCostEstimateUSD": 0.33284440000000004,
+      "reviewCalls": 1,
+      "repairCalls": 1
+    },
+    {
+      "id": "P10",
+      "case": "C01",
+      "arm": "terra",
+      "repetition": 2,
+      "testsPass": true,
+      "gradingCoverageComplete": {
+        "hidden": true,
+        "visible": true
+      },
+      "normalCompletion": true,
+      "completedTestsPass": true,
+      "observedCalls": {
+        "review": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        },
+        "repair": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        }
+      },
+      "reviewReadRequests": {
+        "contractReadRequested": true,
+        "diffReadRequested": true,
+        "sourceReadRequests": [
+          "cli/src/cli.ts",
+          "cli/src/state.ts",
+          "cli/src/store.ts",
+          "cli/src/types.ts"
+        ],
+        "outsideReadRequests": []
+      },
+      "protectedChangedPaths": [
+        "cli/test/state-recovery.test.ts"
+      ],
+      "newHiddenFailures": [],
+      "newPublicFailures": [],
+      "seconds": 134.735,
+      "usageComplete": true,
+      "rawUsageCompleteFlag": true,
+      "recordedApiCostEstimateUSD": 0.31680519999999995,
+      "reviewCalls": 1,
+      "repairCalls": 1
+    },
+    {
+      "id": "P11",
+      "case": "C01",
+      "arm": "astra",
+      "repetition": 2,
+      "testsPass": true,
+      "gradingCoverageComplete": {
+        "hidden": true,
+        "visible": true
+      },
+      "normalCompletion": true,
+      "completedTestsPass": true,
+      "observedCalls": {
+        "review": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        },
+        "repair": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        }
+      },
+      "reviewReadRequests": {
+        "contractReadRequested": true,
+        "diffReadRequested": true,
+        "sourceReadRequests": [
+          "cli/src/cli.ts",
+          "cli/src/contract.ts",
+          "cli/src/state.ts",
+          "cli/src/store.ts",
+          "cli/src/types.ts"
+        ],
+        "outsideReadRequests": []
+      },
+      "protectedChangedPaths": [],
+      "newHiddenFailures": [],
+      "newPublicFailures": [],
+      "seconds": 191.39700000000002,
+      "usageComplete": true,
+      "rawUsageCompleteFlag": true,
+      "recordedApiCostEstimateUSD": 0.7979692000000002,
+      "reviewCalls": 1,
+      "repairCalls": 1
+    },
+    {
+      "id": "P12",
+      "case": "C01",
+      "arm": "self",
+      "repetition": 2,
+      "testsPass": true,
+      "gradingCoverageComplete": {
+        "hidden": true,
+        "visible": true
+      },
+      "normalCompletion": true,
+      "completedTestsPass": true,
+      "observedCalls": {
+        "repair": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        }
+      },
+      "reviewReadRequests": {
+        "contractReadRequested": false,
+        "diffReadRequested": false,
+        "sourceReadRequests": [],
+        "outsideReadRequests": []
+      },
+      "protectedChangedPaths": [
+        "cli/test/state-recovery.test.ts"
+      ],
+      "newHiddenFailures": [],
+      "newPublicFailures": [],
+      "seconds": 103.034,
+      "usageComplete": true,
+      "rawUsageCompleteFlag": true,
+      "recordedApiCostEstimateUSD": 0.1815068,
+      "reviewCalls": 0,
+      "repairCalls": 1
+    },
+    {
+      "id": "P13",
+      "case": "C02",
+      "arm": "astra",
+      "repetition": 2,
+      "testsPass": true,
+      "gradingCoverageComplete": {
+        "hidden": true,
+        "visible": true
+      },
+      "normalCompletion": true,
+      "completedTestsPass": true,
+      "observedCalls": {
+        "review": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        },
+        "repair": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        }
+      },
+      "reviewReadRequests": {
+        "contractReadRequested": true,
+        "diffReadRequested": true,
+        "sourceReadRequests": [
+          "cli/src/audit-integrity.ts",
+          "cli/src/cli-args.ts",
+          "cli/src/cli.ts",
+          "cli/src/contract.ts",
+          "cli/src/delivery-cli.ts",
+          "cli/src/delivery.ts",
+          "cli/src/state.ts",
+          "cli/src/store.ts",
+          "cli/src/types.ts"
+        ],
+        "outsideReadRequests": []
+      },
+      "protectedChangedPaths": [
+        "cli/test/delivery.test.ts"
+      ],
+      "newHiddenFailures": [],
+      "newPublicFailures": [],
+      "seconds": 176.18400000000003,
+      "usageComplete": true,
+      "rawUsageCompleteFlag": true,
+      "recordedApiCostEstimateUSD": 1.1948020000000001,
+      "reviewCalls": 1,
+      "repairCalls": 1
+    },
+    {
+      "id": "P14",
+      "case": "C02",
+      "arm": "self",
+      "repetition": 2,
+      "testsPass": true,
+      "gradingCoverageComplete": {
+        "hidden": true,
+        "visible": true
+      },
+      "normalCompletion": true,
+      "completedTestsPass": true,
+      "observedCalls": {
+        "repair": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        }
+      },
+      "reviewReadRequests": {
+        "contractReadRequested": false,
+        "diffReadRequested": false,
+        "sourceReadRequests": [],
+        "outsideReadRequests": []
+      },
+      "protectedChangedPaths": [
+        "cli/test/delivery.test.ts"
+      ],
+      "newHiddenFailures": [],
+      "newPublicFailures": [],
+      "seconds": 185.468,
+      "usageComplete": true,
+      "rawUsageCompleteFlag": true,
+      "recordedApiCostEstimateUSD": 0.4354239999999999,
+      "reviewCalls": 0,
+      "repairCalls": 1
+    },
+    {
+      "id": "P15",
+      "case": "C02",
+      "arm": "terra",
+      "repetition": 2,
+      "testsPass": true,
+      "gradingCoverageComplete": {
+        "hidden": true,
+        "visible": true
+      },
+      "normalCompletion": false,
+      "completedTestsPass": false,
+      "observedCalls": {
+        "review": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        },
+        "repair": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 0
+        }
+      },
+      "reviewReadRequests": {
+        "contractReadRequested": true,
+        "diffReadRequested": true,
+        "sourceReadRequests": [
+          "cli/src/contained-file.ts",
+          "cli/src/delivery-cli.ts",
+          "cli/src/delivery.ts"
+        ],
+        "outsideReadRequests": []
+      },
+      "protectedChangedPaths": [],
+      "newHiddenFailures": [],
+      "newPublicFailures": [],
+      "seconds": 400.39,
+      "usageComplete": false,
+      "rawUsageCompleteFlag": true,
+      "recordedApiCostEstimateUSD": 0.274324,
+      "reviewCalls": 1,
+      "repairCalls": 1
+    },
+    {
+      "id": "P16",
+      "case": "C03",
+      "arm": "self",
+      "repetition": 2,
+      "testsPass": true,
+      "gradingCoverageComplete": {
+        "hidden": true,
+        "visible": true
+      },
+      "normalCompletion": true,
+      "completedTestsPass": true,
+      "observedCalls": {
+        "repair": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        }
+      },
+      "reviewReadRequests": {
+        "contractReadRequested": false,
+        "diffReadRequested": false,
+        "sourceReadRequests": [],
+        "outsideReadRequests": []
+      },
+      "protectedChangedPaths": [],
+      "newHiddenFailures": [],
+      "newPublicFailures": [],
+      "seconds": 184.933,
+      "usageComplete": true,
+      "rawUsageCompleteFlag": true,
+      "recordedApiCostEstimateUSD": 0.3271744,
+      "reviewCalls": 0,
+      "repairCalls": 1
+    },
+    {
+      "id": "P17",
+      "case": "C03",
+      "arm": "terra",
+      "repetition": 2,
+      "testsPass": true,
+      "gradingCoverageComplete": {
+        "hidden": true,
+        "visible": true
+      },
+      "normalCompletion": false,
+      "completedTestsPass": false,
+      "observedCalls": {
+        "review": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 1
+        },
+        "repair": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 1,
+          "transportSuccess": 0
+        }
+      },
+      "reviewReadRequests": {
+        "contractReadRequested": true,
+        "diffReadRequested": true,
+        "sourceReadRequests": [
+          "cli/src/cli.ts",
+          "cli/src/contract.ts",
+          "cli/src/habit-cli.ts",
+          "cli/src/state.ts",
+          "cli/src/store.ts",
+          "cli/src/types.ts"
+        ],
+        "outsideReadRequests": []
+      },
+      "protectedChangedPaths": [],
+      "newHiddenFailures": [],
+      "newPublicFailures": [],
+      "seconds": 317.801,
+      "usageComplete": false,
+      "rawUsageCompleteFlag": true,
+      "recordedApiCostEstimateUSD": 0.23354759999999997,
+      "reviewCalls": 1,
+      "repairCalls": 1
+    },
+    {
+      "id": "P18",
+      "case": "C03",
+      "arm": "astra",
+      "repetition": 2,
+      "testsPass": true,
+      "gradingCoverageComplete": {
+        "hidden": true,
+        "visible": true
+      },
+      "normalCompletion": false,
+      "completedTestsPass": false,
+      "observedCalls": {
+        "review": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 0,
+          "transportSuccess": 0
+        },
+        "repair": {
+          "attempted": 1,
+          "launched": 1,
+          "modelResponseObserved": 0,
+          "transportSuccess": 0
+        }
+      },
+      "reviewReadRequests": {
+        "contractReadRequested": false,
+        "diffReadRequested": false,
+        "sourceReadRequests": [],
+        "outsideReadRequests": []
+      },
+      "protectedChangedPaths": [],
+      "newHiddenFailures": [],
+      "newPublicFailures": [],
+      "seconds": 1.986,
+      "usageComplete": false,
+      "rawUsageCompleteFlag": true,
+      "recordedApiCostEstimateUSD": 0,
+      "reviewCalls": 1,
+      "repairCalls": 1
+    }
+  ],
+  "arms": {
+    "self": {
+      "finalTestsPass": 6,
+      "snapshotTestsPass": 6,
+      "normalCompletions": 6,
+      "completeGradingRuns": 6,
+      "totalRuns": 6,
+      "newHiddenFailures": 0,
+      "newPublicFailures": 0,
+      "protectedEditRuns": 3,
+      "completeUsageRuns": 6,
+      "totalRecordedApiCostEstimateUSD": 1.803318,
+      "costTotalComplete": true,
+      "costTotalLabel": "complete API list estimate"
+    },
+    "terra": {
+      "finalTestsPass": 4,
+      "snapshotTestsPass": 6,
+      "normalCompletions": 4,
+      "completeGradingRuns": 6,
+      "totalRuns": 6,
+      "newHiddenFailures": 0,
+      "newPublicFailures": 0,
+      "protectedEditRuns": 4,
+      "completeUsageRuns": 4,
+      "totalRecordedApiCostEstimateUSD": 1.939914,
+      "costTotalComplete": false,
+      "costTotalLabel": "partial recorded lower bound; not comparable as an arm total"
+    },
+    "astra": {
+      "finalTestsPass": 5,
+      "snapshotTestsPass": 6,
+      "normalCompletions": 5,
+      "completeGradingRuns": 6,
+      "totalRuns": 6,
+      "newHiddenFailures": 0,
+      "newPublicFailures": 0,
+      "protectedEditRuns": 4,
+      "completeUsageRuns": 5,
+      "totalRecordedApiCostEstimateUSD": 4.4261672,
+      "costTotalComplete": false,
+      "costTotalLabel": "partial recorded lower bound; not comparable as an arm total"
+    }
+  },
+  "completeCostPairs": {
+    "self->terra": {
+      "completePairs": 4,
+      "excludedPairs": [
+        [
+          "P14",
+          "P15"
+        ],
+        [
+          "P16",
+          "P17"
+        ]
+      ],
+      "medianApiCostRatio": 1.351135805989456
+    },
+    "self->astra": {
+      "completePairs": 5,
+      "excludedPairs": [
+        [
+          "P16",
+          "P18"
+        ]
+      ],
+      "medianApiCostRatio": 2.7439966561328735
+    },
+    "terra->astra": {
+      "completePairs": 4,
+      "excludedPairs": [
+        [
+          "P15",
+          "P13"
+        ],
+        [
+          "P17",
+          "P18"
+        ]
+      ],
+      "medianApiCostRatio": 2.1970265238602114
+    }
+  },
+  "matchedThreeArmCohort": {
+    "caseRepetitionKeys": [
+      [
+        "C01",
+        1
+      ],
+      [
+        "C01",
+        2
+      ],
+      [
+        "C02",
+        1
+      ],
+      [
+        "C03",
+        1
+      ]
+    ],
+    "arms": {
+      "self": {
+        "ids": [
+          "P01",
+          "P06",
+          "P08",
+          "P12"
+        ],
+        "runs": 4,
+        "medianSeconds": 124.203,
+        "totalSeconds": 517.053,
+        "apiCostEstimateUSD": 1.0407196,
+        "medianApiCostEstimateUSD": 0.2549116,
+        "testsPass": 4
+      },
+      "terra": {
+        "ids": [
+          "P02",
+          "P04",
+          "P09",
+          "P10"
+        ],
+        "runs": 4,
+        "medianSeconds": 153.62,
+        "totalSeconds": 614.909,
+        "apiCostEstimateUSD": 1.4320424,
+        "medianApiCostEstimateUSD": 0.34154080000000003,
+        "testsPass": 4
+      },
+      "astra": {
+        "ids": [
+          "P03",
+          "P05",
+          "P07",
+          "P11"
+        ],
+        "runs": 4,
+        "medianSeconds": 156.3065,
+        "totalSeconds": 610.731,
+        "apiCostEstimateUSD": 3.2313652000000004,
+        "medianApiCostEstimateUSD": 0.7264658000000002,
+        "testsPass": 4
+      }
+    }
+  },
+  "actualCalls": {
+    "review": {
+      "attempted": 12,
+      "launched": 12,
+      "modelResponseObserved": 11,
+      "transportSuccess": 11
+    },
+    "repair": {
+      "attempted": 18,
+      "launched": 18,
+      "modelResponseObserved": 17,
+      "transportSuccess": 15
+    }
+  }
+}

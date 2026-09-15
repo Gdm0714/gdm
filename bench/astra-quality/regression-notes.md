@@ -1,0 +1,7 @@
+# Regression evidence
+
+The first full suite kept its complete failure output. It exposed one new rendered-policy omission (the shared Pi fragment no longer named `gdm_delegate`) and cold executable startup limits in subprocess tests. The fragment was corrected; generated hook and fake audit executables are warmed before the contract under test, and subprocess-heavy tests have explicit 30-second outer bounds. Production hook probe deadlines, audit process limits and owned/unowned process assertions remain unchanged. The new delegation test similarly warms its synthetic transport. The next complete run passed all 478 active tests (3 skipped), typecheck, build and smoke at version 0.12.0.
+
+The later 0.12.1 spawn-count patch adds a separate missing-executable regression. Targeted delegation tests passed 7 tests / 177 assertions, including attempted=1 but launched=0, and successful spawn=true. Final `gdm done` replays the full registered suite after this patch and installation.
+
+Evidence-parser tests verify nested rejected attempts, interrupted usage, final-source drift, missing read paths, malformed dispositions and timeout cleanup of detached children without killing an unowned sentinel. macOS returns EPERM for an already dead zombie-only process group; cleanup now checks for live group members before signaling and preserves PID/birth-time ownership checks. These tests are separate from model quality scoring.

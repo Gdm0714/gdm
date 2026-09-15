@@ -1,0 +1,676 @@
+{
+  "run": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-astra-quality-20260909-o0g4d2ne",
+  "manifestSha256": "797c027c6d1fa39cd9b6d3873fe4ad8fc75eeaebf2ab64ec36d6e462974c7619",
+  "regradeRoot": "/var/folders/kk/7q8dj3h10mz6yckfddjcqjh40000gn/T/gdm-quality-independent-grading-aj4v_pai",
+  "observations": [
+    {
+      "id": "tenant-authorization-epochs-solo-1",
+      "resultSha256": "e9885b5db39307237f9179b6e4751b820317bcdde8ec599945c80c41ddee3883",
+      "regrades": {
+        "final": {
+          "hidden": {
+            "exitCode": 0,
+            "passed": [
+              "expired sessions lose cached authorization",
+              "a replaced session id cannot inherit the earlier subject cache",
+              "membership stays tenant scoped",
+              "separator-rich and prototype-looking identifiers remain ordinary data",
+              "resource tenancy is enforced",
+              "subject deny overrides all group grants",
+              "cache decisions are action scoped",
+              "membership changes invalidate cached grant and denial",
+              "policy revocation invalidates cached grant",
+              "returned state is isolated"
+            ],
+            "failed": [],
+            "sha256": "419aff48d4b4c8f7a9f9fe14174b23ff19732faa145c068df101f3980309b75d"
+          },
+          "visible": {
+            "exitCode": 0,
+            "passed": [
+              "a current group grant authorizes"
+            ],
+            "failed": [],
+            "sha256": "bad4997dea59f7340f8e19cd0cf744c1c2470e9f5ef4c2b6c4e8cabc7c12811a"
+          }
+        }
+      },
+      "functionalPass": true,
+      "workflowCompliant": true,
+      "success": false
+    },
+    {
+      "id": "tenant-authorization-epochs-terra_team-1",
+      "resultSha256": "22c20f527d5622c35286564c6dd859497d5d53060f501326c5432446080df29b",
+      "regrades": {
+        "final": {
+          "hidden": {
+            "exitCode": 0,
+            "passed": [
+              "expired sessions lose cached authorization",
+              "a replaced session id cannot inherit the earlier subject cache",
+              "membership stays tenant scoped",
+              "separator-rich and prototype-looking identifiers remain ordinary data",
+              "resource tenancy is enforced",
+              "subject deny overrides all group grants",
+              "cache decisions are action scoped",
+              "membership changes invalidate cached grant and denial",
+              "policy revocation invalidates cached grant",
+              "returned state is isolated"
+            ],
+            "failed": [],
+            "sha256": "eb5a32d0da96803f79e037a6e39ad58e190018fb6f9776f430a4ebdcc383b078"
+          },
+          "visible": {
+            "exitCode": 0,
+            "passed": [
+              "a current group grant authorizes"
+            ],
+            "failed": [],
+            "sha256": "25ce6a7d3ecd3242dc2e80fcc1319134bf05b2e7a46191b7625aad9bcbb02595"
+          }
+        },
+        "preReview": {
+          "hidden": {
+            "exitCode": 0,
+            "passed": [
+              "expired sessions lose cached authorization",
+              "a replaced session id cannot inherit the earlier subject cache",
+              "membership stays tenant scoped",
+              "separator-rich and prototype-looking identifiers remain ordinary data",
+              "resource tenancy is enforced",
+              "subject deny overrides all group grants",
+              "cache decisions are action scoped",
+              "membership changes invalidate cached grant and denial",
+              "policy revocation invalidates cached grant",
+              "returned state is isolated"
+            ],
+            "failed": [],
+            "sha256": "93f369b671633f6f802b1eb8f54cb0abb07ca926b7bfe861c5bb1c1ad4034155"
+          },
+          "visible": {
+            "exitCode": 0,
+            "passed": [
+              "a current group grant authorizes"
+            ],
+            "failed": [],
+            "sha256": "7c63d1934d5548d33f978aa26b1a88493251c276cf62dc38819260fa4a377c6c"
+          }
+        }
+      },
+      "functionalPass": true,
+      "workflowCompliant": true,
+      "success": true
+    },
+    {
+      "id": "tenant-authorization-epochs-astra_team-1",
+      "resultSha256": "d1ea136963608cb3bc244925e83168d8d31e0142ff310306a33e5d16df684e1d",
+      "regrades": {
+        "final": {
+          "hidden": {
+            "exitCode": 0,
+            "passed": [
+              "expired sessions lose cached authorization",
+              "a replaced session id cannot inherit the earlier subject cache",
+              "membership stays tenant scoped",
+              "separator-rich and prototype-looking identifiers remain ordinary data",
+              "resource tenancy is enforced",
+              "subject deny overrides all group grants",
+              "cache decisions are action scoped",
+              "membership changes invalidate cached grant and denial",
+              "policy revocation invalidates cached grant",
+              "returned state is isolated"
+            ],
+            "failed": [],
+            "sha256": "609940760a80864304568256593091cb2d59ce075422f6927abe04e86b62a34a"
+          },
+          "visible": {
+            "exitCode": 0,
+            "passed": [
+              "a current group grant authorizes"
+            ],
+            "failed": [],
+            "sha256": "76e236abada48ec87f0aea54fde83b1f3b445dc9b1e01dba7217fa7153b8d52d"
+          }
+        },
+        "preReview": {
+          "hidden": {
+            "exitCode": 0,
+            "passed": [
+              "expired sessions lose cached authorization",
+              "a replaced session id cannot inherit the earlier subject cache",
+              "membership stays tenant scoped",
+              "separator-rich and prototype-looking identifiers remain ordinary data",
+              "resource tenancy is enforced",
+              "subject deny overrides all group grants",
+              "cache decisions are action scoped",
+              "membership changes invalidate cached grant and denial",
+              "policy revocation invalidates cached grant",
+              "returned state is isolated"
+            ],
+            "failed": [],
+            "sha256": "1d4f66f2ab6a56ea4da38b163041c5f1dee2835a7ffa8abbd7ad531f51e35dbe"
+          },
+          "visible": {
+            "exitCode": 0,
+            "passed": [
+              "a current group grant authorizes"
+            ],
+            "failed": [],
+            "sha256": "cdb3ee63f940ee4579bda6d33225f170e1618a3d24cca149ef87a581e1d64e1f"
+          }
+        }
+      },
+      "functionalPass": true,
+      "workflowCompliant": true,
+      "success": false
+    },
+    {
+      "id": "customer-outbox-leases-terra_team-1",
+      "resultSha256": "d822d9c815058e0c387e224da82065c7e6679fb7ea568ca2537e31bc63a0b283",
+      "regrades": {
+        "final": {
+          "hidden": {
+            "exitCode": 0,
+            "passed": [
+              "customer request identity is separator safe",
+              "same customer replay is idempotent and conflicts reject",
+              "invalid submission changes no state",
+              "event failure preserves existing records and retry adds one pair",
+              "returned records are isolated and event matches order",
+              "expired leases reclaim once and then become terminal at the attempt limit",
+              "ack and retry require current claim ownership",
+              "retry waits, increments attempts, and becomes dead at limit",
+              "cancel invalidates lease and terminal states stay terminal",
+              "claims use due time then store-wide commit order"
+            ],
+            "failed": [],
+            "sha256": "a52f11702c8cd4dc64151be03d984725ad8000683586d91e10b076301dc9abcc"
+          },
+          "visible": {
+            "exitCode": 0,
+            "passed": [
+              "submits and publishes one order"
+            ],
+            "failed": [],
+            "sha256": "c23be71468fb5555f7fbb3b054be47e69ead874e36e585bee292e987f8295a35"
+          }
+        },
+        "preReview": {
+          "hidden": {
+            "exitCode": 0,
+            "passed": [
+              "customer request identity is separator safe",
+              "same customer replay is idempotent and conflicts reject",
+              "invalid submission changes no state",
+              "event failure preserves existing records and retry adds one pair",
+              "returned records are isolated and event matches order",
+              "expired leases reclaim once and then become terminal at the attempt limit",
+              "ack and retry require current claim ownership",
+              "retry waits, increments attempts, and becomes dead at limit",
+              "cancel invalidates lease and terminal states stay terminal",
+              "claims use due time then store-wide commit order"
+            ],
+            "failed": [],
+            "sha256": "9b17b1af80d89c52d94e31fd10480e00c382d90825e433ec9326a7ab8f5eb342"
+          },
+          "visible": {
+            "exitCode": 0,
+            "passed": [
+              "submits and publishes one order"
+            ],
+            "failed": [],
+            "sha256": "858f23f363228df5d61f935d5e5b96da7da0389bc05b3f5ecb944175e525aa8b"
+          }
+        }
+      },
+      "functionalPass": true,
+      "workflowCompliant": true,
+      "success": true
+    },
+    {
+      "id": "customer-outbox-leases-astra_team-1",
+      "resultSha256": "fd912f01b02888b7211d68930bcbd2631b5af5e9c79b65d3712228b433bfea0b",
+      "regrades": {
+        "final": {
+          "hidden": {
+            "exitCode": 0,
+            "passed": [
+              "customer request identity is separator safe",
+              "same customer replay is idempotent and conflicts reject",
+              "invalid submission changes no state",
+              "event failure preserves existing records and retry adds one pair",
+              "returned records are isolated and event matches order",
+              "expired leases reclaim once and then become terminal at the attempt limit",
+              "ack and retry require current claim ownership",
+              "retry waits, increments attempts, and becomes dead at limit",
+              "cancel invalidates lease and terminal states stay terminal",
+              "claims use due time then store-wide commit order"
+            ],
+            "failed": [],
+            "sha256": "c6e46ca0f03f96f8a331d2306890a397aa63f68247d40c64c1fb50397b41bb6e"
+          },
+          "visible": {
+            "exitCode": 0,
+            "passed": [
+              "submits and publishes one order"
+            ],
+            "failed": [],
+            "sha256": "500f54f0b53341696ecf41871b9f34c671b481f92a4308cd6b746aa214e2b027"
+          }
+        },
+        "preReview": {
+          "hidden": {
+            "exitCode": 0,
+            "passed": [
+              "customer request identity is separator safe",
+              "same customer replay is idempotent and conflicts reject",
+              "invalid submission changes no state",
+              "event failure preserves existing records and retry adds one pair",
+              "returned records are isolated and event matches order",
+              "expired leases reclaim once and then become terminal at the attempt limit",
+              "ack and retry require current claim ownership",
+              "retry waits, increments attempts, and becomes dead at limit",
+              "cancel invalidates lease and terminal states stay terminal",
+              "claims use due time then store-wide commit order"
+            ],
+            "failed": [],
+            "sha256": "2daa58f7274689ee55b25410c4dcb6752a72b47753a376e0df7d2787d9eb6195"
+          },
+          "visible": {
+            "exitCode": 0,
+            "passed": [
+              "submits and publishes one order"
+            ],
+            "failed": [],
+            "sha256": "500f54f0b53341696ecf41871b9f34c671b481f92a4308cd6b746aa214e2b027"
+          }
+        }
+      },
+      "functionalPass": true,
+      "workflowCompliant": true,
+      "success": true
+    },
+    {
+      "id": "customer-outbox-leases-solo-1",
+      "resultSha256": "0d63065d21d97cdc22845d4c921553bd541006ea8202c39bf3f5fddb2254825e",
+      "regrades": {
+        "final": {
+          "hidden": {
+            "exitCode": 0,
+            "passed": [
+              "customer request identity is separator safe",
+              "same customer replay is idempotent and conflicts reject",
+              "invalid submission changes no state",
+              "event failure preserves existing records and retry adds one pair",
+              "returned records are isolated and event matches order",
+              "expired leases reclaim once and then become terminal at the attempt limit",
+              "ack and retry require current claim ownership",
+              "retry waits, increments attempts, and becomes dead at limit",
+              "cancel invalidates lease and terminal states stay terminal",
+              "claims use due time then store-wide commit order"
+            ],
+            "failed": [],
+            "sha256": "fbffc980fb2fb26c84c7930a5444967e23a438ec42fc44503e76e02b91cdf3b2"
+          },
+          "visible": {
+            "exitCode": 0,
+            "passed": [
+              "submits and publishes one order"
+            ],
+            "failed": [],
+            "sha256": "863d0d0f198efb32f712b134b1b188dbf235be7b44f83263b08b14666152c290"
+          }
+        }
+      },
+      "functionalPass": true,
+      "workflowCompliant": true,
+      "success": true
+    },
+    {
+      "id": "snapshot-pagination-lifecycle-astra_team-1",
+      "resultSha256": "df6a7509f5f5d411ae2af68fdf64692c22831eab63b2503ece379bc3944674f0",
+      "regrades": {
+        "final": {
+          "hidden": {
+            "exitCode": 0,
+            "passed": [
+              "snapshot-membership: excludes both forward and backdated appends",
+              "order-boundary: chronological keys survive nonmonotonic insertion and ties",
+              "tombstone-boundary: deletion of boundary and unseen rows skips without restart",
+              "cursor-scope: feed binding and impossible future snapshots",
+              "cursor-contract: malformed input and semantic validation independent of wire format",
+              "termination: exact-size final page and all remaining rows deleted",
+              "copy-isolation: store snapshots append results and pages cannot mutate storage",
+              "replay-and-limit: reusable cursor keeps boundary while limits change"
+            ],
+            "failed": [],
+            "sha256": "69602ee42bfa5f4b28e107a08d97456b250585b1400b014f1392c366d66f99f4"
+          },
+          "visible": {
+            "exitCode": 0,
+            "passed": [
+              "basic ordered first page and continuation",
+              "tombstones and invalid limits"
+            ],
+            "failed": [],
+            "sha256": "139cf92f57d6f02f8d8a48e5d6282a0d30423196750888757011cb8b8e0c114f"
+          }
+        },
+        "preReview": {
+          "hidden": {
+            "exitCode": 0,
+            "passed": [
+              "snapshot-membership: excludes both forward and backdated appends",
+              "order-boundary: chronological keys survive nonmonotonic insertion and ties",
+              "tombstone-boundary: deletion of boundary and unseen rows skips without restart",
+              "cursor-scope: feed binding and impossible future snapshots",
+              "cursor-contract: malformed input and semantic validation independent of wire format",
+              "termination: exact-size final page and all remaining rows deleted",
+              "copy-isolation: store snapshots append results and pages cannot mutate storage",
+              "replay-and-limit: reusable cursor keeps boundary while limits change"
+            ],
+            "failed": [],
+            "sha256": "b78bdcec2907dd5fc44a778ca84471cb7a480fcad6e20016963fce7bfecb531c"
+          },
+          "visible": {
+            "exitCode": 0,
+            "passed": [
+              "basic ordered first page and continuation",
+              "tombstones and invalid limits"
+            ],
+            "failed": [],
+            "sha256": "08a88d9c47089587d7ce2bf05a479b483c8b4d0b8f773bad8ba0a21867b7a919"
+          }
+        }
+      },
+      "functionalPass": true,
+      "workflowCompliant": true,
+      "success": false
+    },
+    {
+      "id": "snapshot-pagination-lifecycle-solo-1",
+      "resultSha256": "ec5bd9f93d618ee42815330cab70a85fb410042c63e5ac0ee61f9414aee144e7",
+      "regrades": {
+        "final": {
+          "hidden": {
+            "exitCode": 0,
+            "passed": [
+              "snapshot-membership: excludes both forward and backdated appends",
+              "order-boundary: chronological keys survive nonmonotonic insertion and ties",
+              "tombstone-boundary: deletion of boundary and unseen rows skips without restart",
+              "cursor-scope: feed binding and impossible future snapshots",
+              "cursor-contract: malformed input and semantic validation independent of wire format",
+              "termination: exact-size final page and all remaining rows deleted",
+              "copy-isolation: store snapshots append results and pages cannot mutate storage",
+              "replay-and-limit: reusable cursor keeps boundary while limits change"
+            ],
+            "failed": [],
+            "sha256": "c6404cda8577d78aafe242dede97dc17a4347523506b46d0953600945e4b1d32"
+          },
+          "visible": {
+            "exitCode": 0,
+            "passed": [
+              "basic ordered first page and continuation",
+              "tombstones and invalid limits"
+            ],
+            "failed": [],
+            "sha256": "161394145c20c31b08899b082f4e0355a61a0d43110a1643aa32217dc43a535e"
+          }
+        }
+      },
+      "functionalPass": true,
+      "workflowCompliant": true,
+      "success": false
+    },
+    {
+      "id": "snapshot-pagination-lifecycle-terra_team-1",
+      "resultSha256": "a59fce56e55a4d9fd52911056b5c9b562c6b427c1829320ab189f095184bd29c",
+      "regrades": {
+        "final": {
+          "hidden": {
+            "exitCode": 0,
+            "passed": [
+              "snapshot-membership: excludes both forward and backdated appends",
+              "order-boundary: chronological keys survive nonmonotonic insertion and ties",
+              "tombstone-boundary: deletion of boundary and unseen rows skips without restart",
+              "cursor-scope: feed binding and impossible future snapshots",
+              "cursor-contract: malformed input and semantic validation independent of wire format",
+              "termination: exact-size final page and all remaining rows deleted",
+              "copy-isolation: store snapshots append results and pages cannot mutate storage",
+              "replay-and-limit: reusable cursor keeps boundary while limits change"
+            ],
+            "failed": [],
+            "sha256": "9859f3de47b69b247068ca06458bac68685494b615845a0677c907aaeb1badfb"
+          },
+          "visible": {
+            "exitCode": 0,
+            "passed": [
+              "basic ordered first page and continuation",
+              "tombstones and invalid limits"
+            ],
+            "failed": [],
+            "sha256": "e5ddd5f0f268c9987d61117424474487dcadec5417900dfd9608bf39f5a61118"
+          }
+        },
+        "preReview": {
+          "hidden": {
+            "exitCode": 0,
+            "passed": [
+              "snapshot-membership: excludes both forward and backdated appends",
+              "order-boundary: chronological keys survive nonmonotonic insertion and ties",
+              "tombstone-boundary: deletion of boundary and unseen rows skips without restart",
+              "cursor-scope: feed binding and impossible future snapshots",
+              "cursor-contract: malformed input and semantic validation independent of wire format",
+              "termination: exact-size final page and all remaining rows deleted",
+              "copy-isolation: store snapshots append results and pages cannot mutate storage",
+              "replay-and-limit: reusable cursor keeps boundary while limits change"
+            ],
+            "failed": [],
+            "sha256": "f915c8768f732b48cfb9fa79c64b17f70484d4eda4eee9260a826ea823e0a0de"
+          },
+          "visible": {
+            "exitCode": 0,
+            "passed": [
+              "basic ordered first page and continuation",
+              "tombstones and invalid limits"
+            ],
+            "failed": [],
+            "sha256": "0102f26e770d8559e4e5d6829b054a50f57508b45fdbced6f5f8cee7f63302da"
+          }
+        }
+      },
+      "functionalPass": true,
+      "workflowCompliant": true,
+      "success": false
+    },
+    {
+      "id": "reservation-lifecycle-solo-1",
+      "resultSha256": "fd480bc51840a69e467d72e127ad6e2c8ddc86991e033ae7dd030b7be6c7f75b",
+      "regrades": {
+        "final": {
+          "hidden": {
+            "exitCode": 0,
+            "passed": [
+              "atomic-allocation: stale missing insufficient and invalid requests preserve all state",
+              "idempotent-retry: receipt survives unrelated activity and terminal transition",
+              "request-conflicts: every payload field except retry clock participates",
+              "terminal-transitions: same target is no-op and conflicting targets are atomic errors",
+              "expiry-boundary: inclusive deadline with exact once release and terminal conflicts",
+              "inventory-versions: interleaved shared SKU releases conserve stock and invalidate stale writes",
+              "copy-isolation: nested receipts live holds and snapshots remain detached",
+              "clock-contract: deterministic caller time validation and explicit expiry sweep"
+            ],
+            "failed": [],
+            "sha256": "27859ec661e6323ac86694e10a465db5ca2b255958d75ab1f70cf78577b5acf8"
+          },
+          "visible": {
+            "exitCode": 0,
+            "passed": [
+              "hold and cancel restore stock",
+              "confirmation consumes reserved stock"
+            ],
+            "failed": [],
+            "sha256": "3d8a3ae46a9b3d8683566d358d6806cdc6dc605709fd10be54e4ad48a4901079"
+          }
+        }
+      },
+      "functionalPass": true,
+      "workflowCompliant": true,
+      "success": false
+    },
+    {
+      "id": "reservation-lifecycle-terra_team-1",
+      "resultSha256": "ab6e0289aed7a2ef3f4017932d1ac7a31babf7d54d472255239bbe1b0551de8e",
+      "regrades": {
+        "final": {
+          "hidden": {
+            "exitCode": 0,
+            "passed": [
+              "atomic-allocation: stale missing insufficient and invalid requests preserve all state",
+              "idempotent-retry: receipt survives unrelated activity and terminal transition",
+              "request-conflicts: every payload field except retry clock participates",
+              "terminal-transitions: same target is no-op and conflicting targets are atomic errors",
+              "expiry-boundary: inclusive deadline with exact once release and terminal conflicts",
+              "inventory-versions: interleaved shared SKU releases conserve stock and invalidate stale writes",
+              "copy-isolation: nested receipts live holds and snapshots remain detached",
+              "clock-contract: deterministic caller time validation and explicit expiry sweep"
+            ],
+            "failed": [],
+            "sha256": "99fb8d661822b39d8489312bfcf61744abde79e511872862627c4b6f15715d84"
+          },
+          "visible": {
+            "exitCode": 0,
+            "passed": [
+              "hold and cancel restore stock",
+              "confirmation consumes reserved stock"
+            ],
+            "failed": [],
+            "sha256": "312bf9f679b0ba07cce10f8b9f0fd6256c1879135d3e2f32a2d3777c22632196"
+          }
+        },
+        "preReview": {
+          "hidden": {
+            "exitCode": 0,
+            "passed": [
+              "atomic-allocation: stale missing insufficient and invalid requests preserve all state",
+              "idempotent-retry: receipt survives unrelated activity and terminal transition",
+              "request-conflicts: every payload field except retry clock participates",
+              "terminal-transitions: same target is no-op and conflicting targets are atomic errors",
+              "expiry-boundary: inclusive deadline with exact once release and terminal conflicts",
+              "inventory-versions: interleaved shared SKU releases conserve stock and invalidate stale writes",
+              "copy-isolation: nested receipts live holds and snapshots remain detached",
+              "clock-contract: deterministic caller time validation and explicit expiry sweep"
+            ],
+            "failed": [],
+            "sha256": "8188353f897e21fb8383ded866d69b98e44ad54d463d236400d4b91188f55890"
+          },
+          "visible": {
+            "exitCode": 0,
+            "passed": [
+              "hold and cancel restore stock",
+              "confirmation consumes reserved stock"
+            ],
+            "failed": [],
+            "sha256": "40770558a910d1b15851b01f735add1d08ef9c99e8f27d46382db7e8f027e892"
+          }
+        }
+      },
+      "functionalPass": true,
+      "workflowCompliant": true,
+      "success": false
+    },
+    {
+      "id": "reservation-lifecycle-astra_team-1",
+      "resultSha256": "2140e6af530d4668aef22f5cd743bd9419d1552e0a9e6cba0368707d808a8f64",
+      "regrades": {
+        "final": {
+          "hidden": {
+            "exitCode": 0,
+            "passed": [
+              "atomic-allocation: stale missing insufficient and invalid requests preserve all state",
+              "idempotent-retry: receipt survives unrelated activity and terminal transition",
+              "request-conflicts: every payload field except retry clock participates",
+              "terminal-transitions: same target is no-op and conflicting targets are atomic errors",
+              "expiry-boundary: inclusive deadline with exact once release and terminal conflicts",
+              "inventory-versions: interleaved shared SKU releases conserve stock and invalidate stale writes",
+              "copy-isolation: nested receipts live holds and snapshots remain detached",
+              "clock-contract: deterministic caller time validation and explicit expiry sweep"
+            ],
+            "failed": [],
+            "sha256": "38969072d53336b0be5c8dbea6dd11cd2d8b7cf1953ec1c15354f375d1415a7f"
+          },
+          "visible": {
+            "exitCode": 0,
+            "passed": [
+              "hold and cancel restore stock",
+              "confirmation consumes reserved stock"
+            ],
+            "failed": [],
+            "sha256": "5c1a1409ea60a56611d330ba2499685593a77d1c9cb5668903f9ff6442f3701f"
+          }
+        },
+        "preReview": {
+          "hidden": {
+            "exitCode": 0,
+            "passed": [
+              "atomic-allocation: stale missing insufficient and invalid requests preserve all state",
+              "idempotent-retry: receipt survives unrelated activity and terminal transition",
+              "request-conflicts: every payload field except retry clock participates",
+              "terminal-transitions: same target is no-op and conflicting targets are atomic errors",
+              "expiry-boundary: inclusive deadline with exact once release and terminal conflicts",
+              "inventory-versions: interleaved shared SKU releases conserve stock and invalidate stale writes",
+              "copy-isolation: nested receipts live holds and snapshots remain detached",
+              "clock-contract: deterministic caller time validation and explicit expiry sweep"
+            ],
+            "failed": [],
+            "sha256": "5e08b0a1ffca809a1e11e949970eb9500a96387f773128301d5df59d06aaacda"
+          },
+          "visible": {
+            "exitCode": 0,
+            "passed": [
+              "hold and cancel restore stock",
+              "confirmation consumes reserved stock"
+            ],
+            "failed": [],
+            "sha256": "c5298d402ce693cd412a9d2782edd763e6add335915bbedf5d1fe5e7365f22be"
+          }
+        }
+      },
+      "functionalPass": true,
+      "workflowCompliant": true,
+      "success": true
+    }
+  ],
+  "runtimeVersions": {
+    "measured": "0.12.0",
+    "installed": "0.12.1",
+    "reason": "Successful spawn events now distinguish process start from failed launch attempts; model routing, prompts and grading unchanged",
+    "files": [
+      {
+        "path": "gdm-target-manifest.json",
+        "measuredSha256": "80d6a5c32aa415771e80c9783dd2d233edc09c9df6ad9e36e37ac9631bc3ede1",
+        "installedSha256": "259b611f99fca7f609fb5a19e3fa2569e3cf47836ccab5f6c6d440505965440b"
+      },
+      {
+        "path": "gdm-agents/pi/delegate-runner.d.mts",
+        "measuredSha256": "5c47e097a08ffe3b3a407778d821a35dfda2dbadf22d524c8fe568c44dff283d",
+        "installedSha256": "067a17e6e8249ca59dc62b8e8d31bb8977dcb358fb4f2c71135495cf3876de2a"
+      },
+      {
+        "path": "gdm-agents/pi/delegate-runner.mjs",
+        "measuredSha256": "8b31a8b8cd2fd977406895492a30ee052219830468de35e7fbba2a95f483230c",
+        "installedSha256": "2e35bbdd878ced89bd570584a81ec66a00d546ef71c4df832bdc918dd3193eb6"
+      },
+      {
+        "path": "gdm-agents/pi/gdm-delegate.ts",
+        "measuredSha256": "dfb32f3d877f478a5d55f38ca528cdc84cdfe110d7886178a241fdb948296420",
+        "installedSha256": "da6c767bb5a7a690b27d577652d92b7a3bed4c197ddd7c2de567380ec21b0cd9"
+      }
+    ]
+  },
+  "complete": true,
+  "analysisSha256": "1a019fc191e6e548b9d1a390a2f27c151280a44909226b647768e02e65d5b2eb",
+  "installationSha256": "c10e6183c6b20d8c691a037e44ed7136ae93c4af043ba9bf8030f181aa3e6dd1",
+  "probeSha256": "b8a05646b0053d9d11d0ef524fec605d6f3494b437ad93c3f03df3226156d230"
+}

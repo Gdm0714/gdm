@@ -1,0 +1,1223 @@
+{
+  "root": "/var/folders/kk/7q8dj3h10mz6yckfddjcqjh40000gn/T/gdm-quality-fixture-validation-m6g2218q",
+  "sourceSha256": {
+    "fixtures.py": "a4bc4aab057b6cfb810f90d31f723dadaf305364b1f62212b62b3e61d2ffb5d1",
+    "tasks/authorization.py": "feff8d9b5abea450033d714b30055a781af773d69625b0eae7b6caf4f44a3d9d",
+    "tasks/outbox.py": "96803219991dd42ec1f9e23293bbdc0f636dd98dbed2ab99bdac35390b71182b",
+    "tasks/pagination.py": "fc0d231d6b6b0e11b0acace8dc8e86c61f4ab070a5927d86ad17336eadeedbb8",
+    "tasks/reservations.py": "fcba3a021f61f6d265650ecf0364bb1551ee0765534346a56ba2c8c5f9e4dfb6"
+  },
+  "tasks": {
+    "tenant-authorization-epochs": {
+      "baseline": {
+        "visible": {
+          "exitCode": 0,
+          "passed": [
+            "a current group grant authorizes"
+          ],
+          "failed": [],
+          "sha256": "6cd7ec4a1e9046e33c743e13023a3fdfb42e51d0408479588f049d5812e41527"
+        },
+        "hidden": {
+          "exitCode": 1,
+          "passed": [
+            "expired sessions lose cached authorization",
+            "resource tenancy is enforced",
+            "subject deny overrides all group grants",
+            "returned state is isolated"
+          ],
+          "failed": [
+            "a replaced session id cannot inherit the earlier subject cache",
+            "membership stays tenant scoped",
+            "separator-rich and prototype-looking identifiers remain ordinary data",
+            "cache decisions are action scoped",
+            "membership changes invalidate cached grant and denial",
+            "policy revocation invalidates cached grant"
+          ],
+          "sha256": "395328fe7623deaa993413f442e929fc42be9c99aea1bd3152c04b2bcdba67b6"
+        }
+      },
+      "oracle": {
+        "visible": {
+          "exitCode": 0,
+          "passed": [
+            "a current group grant authorizes"
+          ],
+          "failed": [],
+          "sha256": "5ac7c52928b8fb8a10d3aa17118413f04592fac2ee8f255202436b953286ab39"
+        },
+        "hidden": {
+          "exitCode": 0,
+          "passed": [
+            "expired sessions lose cached authorization",
+            "a replaced session id cannot inherit the earlier subject cache",
+            "membership stays tenant scoped",
+            "separator-rich and prototype-looking identifiers remain ordinary data",
+            "resource tenancy is enforced",
+            "subject deny overrides all group grants",
+            "cache decisions are action scoped",
+            "membership changes invalidate cached grant and denial",
+            "policy revocation invalidates cached grant",
+            "returned state is isolated"
+          ],
+          "failed": [],
+          "sha256": "5dd239e16c5d0f6caf82a9e9a672a2952121dfd51b9d07427a57012c1475a2c4"
+        }
+      },
+      "groups": [
+        "expired sessions lose cached authorization",
+        "a replaced session id cannot inherit the earlier subject cache",
+        "membership stays tenant scoped",
+        "separator-rich and prototype-looking identifiers remain ordinary data",
+        "resource tenancy is enforced",
+        "subject deny overrides all group grants",
+        "cache decisions are action scoped",
+        "membership changes invalidate cached grant and denial",
+        "policy revocation invalidates cached grant",
+        "returned state is isolated"
+      ],
+      "mutants": {
+        "expired-session-allowed": {
+          "exitCode": 1,
+          "passed": [
+            "a replaced session id cannot inherit the earlier subject cache",
+            "membership stays tenant scoped",
+            "separator-rich and prototype-looking identifiers remain ordinary data",
+            "resource tenancy is enforced",
+            "subject deny overrides all group grants",
+            "cache decisions are action scoped",
+            "membership changes invalidate cached grant and denial",
+            "policy revocation invalidates cached grant",
+            "returned state is isolated"
+          ],
+          "failed": [
+            "expired sessions lose cached authorization"
+          ],
+          "sha256": "191313ee1a51346537fce789ead0a458cd11afd972418f6b0719e9205d872b57"
+        },
+        "session-replacement-cache-leak": {
+          "exitCode": 1,
+          "passed": [
+            "expired sessions lose cached authorization",
+            "membership stays tenant scoped",
+            "separator-rich and prototype-looking identifiers remain ordinary data",
+            "resource tenancy is enforced",
+            "subject deny overrides all group grants",
+            "cache decisions are action scoped",
+            "membership changes invalidate cached grant and denial",
+            "policy revocation invalidates cached grant",
+            "returned state is isolated"
+          ],
+          "failed": [
+            "a replaced session id cannot inherit the earlier subject cache"
+          ],
+          "sha256": "f754c97cfc845817ded99216d424051c67ec9b638857e297586fa8da2cfecb2f"
+        },
+        "action-cache-collision": {
+          "exitCode": 1,
+          "passed": [
+            "expired sessions lose cached authorization",
+            "a replaced session id cannot inherit the earlier subject cache",
+            "membership stays tenant scoped",
+            "separator-rich and prototype-looking identifiers remain ordinary data",
+            "resource tenancy is enforced",
+            "subject deny overrides all group grants",
+            "membership changes invalidate cached grant and denial",
+            "policy revocation invalidates cached grant",
+            "returned state is isolated"
+          ],
+          "failed": [
+            "cache decisions are action scoped"
+          ],
+          "sha256": "aaf0cdf1168c8847596f8773d95589138d05bb896340004130391cd30bb5e3f4"
+        },
+        "membership-cache-stale": {
+          "exitCode": 1,
+          "passed": [
+            "expired sessions lose cached authorization",
+            "a replaced session id cannot inherit the earlier subject cache",
+            "membership stays tenant scoped",
+            "resource tenancy is enforced",
+            "subject deny overrides all group grants",
+            "cache decisions are action scoped",
+            "returned state is isolated"
+          ],
+          "failed": [
+            "separator-rich and prototype-looking identifiers remain ordinary data",
+            "membership changes invalidate cached grant and denial",
+            "policy revocation invalidates cached grant"
+          ],
+          "sha256": "7a3f39b7721bec33b15506867a3db5fe2c7d6f4522ac4c0a17ab2dd60b2fdcfd"
+        },
+        "policy-cache-stale": {
+          "exitCode": 1,
+          "passed": [
+            "expired sessions lose cached authorization",
+            "a replaced session id cannot inherit the earlier subject cache",
+            "membership stays tenant scoped",
+            "resource tenancy is enforced",
+            "subject deny overrides all group grants",
+            "cache decisions are action scoped",
+            "membership changes invalidate cached grant and denial",
+            "returned state is isolated"
+          ],
+          "failed": [
+            "separator-rich and prototype-looking identifiers remain ordinary data",
+            "policy revocation invalidates cached grant"
+          ],
+          "sha256": "b88f3b7db1a46b1b1e59b43e59d13bc2d2a3523ca7a41fb74e6c10d6a66ad185"
+        },
+        "tenantless-groups": {
+          "exitCode": 1,
+          "passed": [
+            "expired sessions lose cached authorization",
+            "a replaced session id cannot inherit the earlier subject cache",
+            "separator-rich and prototype-looking identifiers remain ordinary data",
+            "resource tenancy is enforced",
+            "subject deny overrides all group grants",
+            "cache decisions are action scoped",
+            "membership changes invalidate cached grant and denial",
+            "policy revocation invalidates cached grant",
+            "returned state is isolated"
+          ],
+          "failed": [
+            "membership stays tenant scoped"
+          ],
+          "sha256": "4301c8f90394f2ef3cca8821b5dad38e3ff74a925c936ce110649c7be09a4d0c"
+        },
+        "prototype-backed-policy-dictionaries": {
+          "exitCode": 1,
+          "passed": [],
+          "failed": [
+            "expired sessions lose cached authorization",
+            "a replaced session id cannot inherit the earlier subject cache",
+            "membership stays tenant scoped",
+            "separator-rich and prototype-looking identifiers remain ordinary data",
+            "resource tenancy is enforced",
+            "subject deny overrides all group grants",
+            "cache decisions are action scoped",
+            "membership changes invalidate cached grant and denial",
+            "policy revocation invalidates cached grant",
+            "returned state is isolated"
+          ],
+          "sha256": "140e1bd8c329ca7714bd644acc831a867060619d68220649c0147556cdc32a4c"
+        },
+        "deny-does-not-win": {
+          "exitCode": 1,
+          "passed": [
+            "expired sessions lose cached authorization",
+            "a replaced session id cannot inherit the earlier subject cache",
+            "membership stays tenant scoped",
+            "resource tenancy is enforced",
+            "cache decisions are action scoped",
+            "membership changes invalidate cached grant and denial",
+            "policy revocation invalidates cached grant",
+            "returned state is isolated"
+          ],
+          "failed": [
+            "separator-rich and prototype-looking identifiers remain ordinary data",
+            "subject deny overrides all group grants"
+          ],
+          "sha256": "c11383b817fce32e4514d7c02518425545284236a14a79e1baa840922824f7b1"
+        }
+      }
+    },
+    "customer-outbox-leases": {
+      "baseline": {
+        "visible": {
+          "exitCode": 0,
+          "passed": [
+            "submits and publishes one order"
+          ],
+          "failed": [],
+          "sha256": "9e7ef0c1662ae90f3ad6318db0e27a739b94dae1e610c8c169ae81ed5f7a1ed5"
+        },
+        "hidden": {
+          "exitCode": 1,
+          "passed": [
+            "returned records are isolated and event matches order",
+            "retry waits, increments attempts, and becomes dead at limit"
+          ],
+          "failed": [
+            "customer request identity is separator safe",
+            "same customer replay is idempotent and conflicts reject",
+            "invalid submission changes no state",
+            "event failure preserves existing records and retry adds one pair",
+            "expired leases reclaim once and then become terminal at the attempt limit",
+            "ack and retry require current claim ownership",
+            "cancel invalidates lease and terminal states stay terminal",
+            "claims use due time then store-wide commit order"
+          ],
+          "sha256": "3ce78099895a6feb10514f3fe0c6d63346c78b50d73248baa65997f2d489d891"
+        }
+      },
+      "oracle": {
+        "visible": {
+          "exitCode": 0,
+          "passed": [
+            "submits and publishes one order"
+          ],
+          "failed": [],
+          "sha256": "4bc7f12bdfe0a6bcdda1992212eeb6375ac529e09c2225883e5c178b12711f7f"
+        },
+        "hidden": {
+          "exitCode": 0,
+          "passed": [
+            "customer request identity is separator safe",
+            "same customer replay is idempotent and conflicts reject",
+            "invalid submission changes no state",
+            "event failure preserves existing records and retry adds one pair",
+            "returned records are isolated and event matches order",
+            "expired leases reclaim once and then become terminal at the attempt limit",
+            "ack and retry require current claim ownership",
+            "retry waits, increments attempts, and becomes dead at limit",
+            "cancel invalidates lease and terminal states stay terminal",
+            "claims use due time then store-wide commit order"
+          ],
+          "failed": [],
+          "sha256": "0378579ce163e1192c4f9e60b8b83b99a68c578016a87b92b8cfb034d7573a1f"
+        }
+      },
+      "groups": [
+        "customer request identity is separator safe",
+        "same customer replay is idempotent and conflicts reject",
+        "invalid submission changes no state",
+        "event failure preserves existing records and retry adds one pair",
+        "returned records are isolated and event matches order",
+        "expired leases reclaim once and then become terminal at the attempt limit",
+        "ack and retry require current claim ownership",
+        "retry waits, increments attempts, and becomes dead at limit",
+        "cancel invalidates lease and terminal states stay terminal",
+        "claims use due time then store-wide commit order"
+      ],
+      "mutants": {
+        "customer-id-collision": {
+          "exitCode": 1,
+          "passed": [
+            "same customer replay is idempotent and conflicts reject",
+            "invalid submission changes no state",
+            "event failure preserves existing records and retry adds one pair",
+            "returned records are isolated and event matches order",
+            "expired leases reclaim once and then become terminal at the attempt limit",
+            "ack and retry require current claim ownership",
+            "retry waits, increments attempts, and becomes dead at limit",
+            "cancel invalidates lease and terminal states stay terminal",
+            "claims use due time then store-wide commit order"
+          ],
+          "failed": [
+            "customer request identity is separator safe"
+          ],
+          "sha256": "3f95edd93069811c322d0deda5d34cb2ef9006d59eaafaa343a4d56df8e58dc6"
+        },
+        "partial-commit-on-event-failure": {
+          "exitCode": 1,
+          "passed": [
+            "customer request identity is separator safe",
+            "same customer replay is idempotent and conflicts reject",
+            "invalid submission changes no state",
+            "returned records are isolated and event matches order",
+            "expired leases reclaim once and then become terminal at the attempt limit",
+            "ack and retry require current claim ownership",
+            "retry waits, increments attempts, and becomes dead at limit",
+            "cancel invalidates lease and terminal states stay terminal",
+            "claims use due time then store-wide commit order"
+          ],
+          "failed": [
+            "event failure preserves existing records and retry adds one pair"
+          ],
+          "sha256": "f806ba1655c70050185f742ac5d75cc82efb0181cf36fdd66fbc4acf80535a3c"
+        },
+        "replay-conflict-accepted": {
+          "exitCode": 1,
+          "passed": [
+            "customer request identity is separator safe",
+            "invalid submission changes no state",
+            "event failure preserves existing records and retry adds one pair",
+            "returned records are isolated and event matches order",
+            "expired leases reclaim once and then become terminal at the attempt limit",
+            "ack and retry require current claim ownership",
+            "retry waits, increments attempts, and becomes dead at limit",
+            "cancel invalidates lease and terminal states stay terminal",
+            "claims use due time then store-wide commit order"
+          ],
+          "failed": [
+            "same customer replay is idempotent and conflicts reject"
+          ],
+          "sha256": "1c74fb7f6a62e49dad20d8229480654bbf543f283d198d7245f7efeb6bad836a"
+        },
+        "reverse-store-order": {
+          "exitCode": 1,
+          "passed": [
+            "customer request identity is separator safe",
+            "same customer replay is idempotent and conflicts reject",
+            "invalid submission changes no state",
+            "returned records are isolated and event matches order",
+            "expired leases reclaim once and then become terminal at the attempt limit",
+            "ack and retry require current claim ownership",
+            "retry waits, increments attempts, and becomes dead at limit",
+            "cancel invalidates lease and terminal states stay terminal"
+          ],
+          "failed": [
+            "event failure preserves existing records and retry adds one pair",
+            "claims use due time then store-wide commit order"
+          ],
+          "sha256": "820f3b9a2c59eaf4a7d8dc2c17230b658321edb4e4e295048613ec41ce947561"
+        },
+        "expired-lease-not-reclaimed": {
+          "exitCode": 1,
+          "passed": [
+            "customer request identity is separator safe",
+            "same customer replay is idempotent and conflicts reject",
+            "invalid submission changes no state",
+            "event failure preserves existing records and retry adds one pair",
+            "returned records are isolated and event matches order",
+            "retry waits, increments attempts, and becomes dead at limit",
+            "cancel invalidates lease and terminal states stay terminal",
+            "claims use due time then store-wide commit order"
+          ],
+          "failed": [
+            "expired leases reclaim once and then become terminal at the attempt limit",
+            "ack and retry require current claim ownership"
+          ],
+          "sha256": "61f8aa018b0d392262643ff3377f2cde1f5e78e6a8eeb4644c02c48d667305dc"
+        },
+        "final-lease-reclaimed": {
+          "exitCode": 1,
+          "passed": [
+            "customer request identity is separator safe",
+            "same customer replay is idempotent and conflicts reject",
+            "invalid submission changes no state",
+            "event failure preserves existing records and retry adds one pair",
+            "returned records are isolated and event matches order",
+            "ack and retry require current claim ownership",
+            "retry waits, increments attempts, and becomes dead at limit",
+            "cancel invalidates lease and terminal states stay terminal",
+            "claims use due time then store-wide commit order"
+          ],
+          "failed": [
+            "expired leases reclaim once and then become terminal at the attempt limit"
+          ],
+          "sha256": "c95cf1bf890391c7282d51c1c8805017111ec60d306da0381452520fc9732267"
+        },
+        "stale-ack-accepted": {
+          "exitCode": 1,
+          "passed": [
+            "customer request identity is separator safe",
+            "same customer replay is idempotent and conflicts reject",
+            "invalid submission changes no state",
+            "event failure preserves existing records and retry adds one pair",
+            "returned records are isolated and event matches order",
+            "retry waits, increments attempts, and becomes dead at limit",
+            "claims use due time then store-wide commit order"
+          ],
+          "failed": [
+            "expired leases reclaim once and then become terminal at the attempt limit",
+            "ack and retry require current claim ownership",
+            "cancel invalidates lease and terminal states stay terminal"
+          ],
+          "sha256": "c8ce338acd2e1f5e90cec7da56c773357256f5159621af92ba9f6b8840f5fed6"
+        },
+        "retry-not-terminal": {
+          "exitCode": 1,
+          "passed": [
+            "customer request identity is separator safe",
+            "same customer replay is idempotent and conflicts reject",
+            "invalid submission changes no state",
+            "event failure preserves existing records and retry adds one pair",
+            "returned records are isolated and event matches order",
+            "expired leases reclaim once and then become terminal at the attempt limit",
+            "ack and retry require current claim ownership",
+            "cancel invalidates lease and terminal states stay terminal",
+            "claims use due time then store-wide commit order"
+          ],
+          "failed": [
+            "retry waits, increments attempts, and becomes dead at limit"
+          ],
+          "sha256": "20808081a4a81ab0a0219908d7d807c611115d35459342075b98065220edd018"
+        },
+        "cancel-leaves-lease-actionable": {
+          "exitCode": 1,
+          "passed": [
+            "customer request identity is separator safe",
+            "same customer replay is idempotent and conflicts reject",
+            "invalid submission changes no state",
+            "event failure preserves existing records and retry adds one pair",
+            "returned records are isolated and event matches order",
+            "expired leases reclaim once and then become terminal at the attempt limit",
+            "ack and retry require current claim ownership",
+            "retry waits, increments attempts, and becomes dead at limit",
+            "claims use due time then store-wide commit order"
+          ],
+          "failed": [
+            "cancel invalidates lease and terminal states stay terminal"
+          ],
+          "sha256": "a82989857450a77a2926a8d151c75f315a062bf03a92a0743ed9ceec0011e598"
+        }
+      }
+    },
+    "snapshot-pagination-lifecycle": {
+      "baseline": {
+        "visible": {
+          "exitCode": 0,
+          "passed": [
+            "basic ordered first page and continuation",
+            "tombstones and invalid limits"
+          ],
+          "failed": [],
+          "sha256": "e9a3e645ad842152929a3f5edb6253738b8c70cae4cc4d649ee2be3b8a021019"
+        },
+        "hidden": {
+          "exitCode": 1,
+          "passed": [],
+          "failed": [
+            "snapshot-membership: excludes both forward and backdated appends",
+            "order-boundary: chronological keys survive nonmonotonic insertion and ties",
+            "tombstone-boundary: deletion of boundary and unseen rows skips without restart",
+            "cursor-scope: feed binding and impossible future snapshots",
+            "cursor-contract: malformed input and semantic validation independent of wire format",
+            "termination: exact-size final page and all remaining rows deleted",
+            "copy-isolation: store snapshots append results and pages cannot mutate storage",
+            "replay-and-limit: reusable cursor keeps boundary while limits change"
+          ],
+          "sha256": "8775a1bf69a9016b5b557af427b4bb6e57a5215cd9235286fbb258af765f28cf"
+        }
+      },
+      "oracle": {
+        "visible": {
+          "exitCode": 0,
+          "passed": [
+            "basic ordered first page and continuation",
+            "tombstones and invalid limits"
+          ],
+          "failed": [],
+          "sha256": "94d50a2a4205bf4c3e9905c47499d49f3e8069e08dc3382106f41ef91b0ad08b"
+        },
+        "hidden": {
+          "exitCode": 0,
+          "passed": [
+            "snapshot-membership: excludes both forward and backdated appends",
+            "order-boundary: chronological keys survive nonmonotonic insertion and ties",
+            "tombstone-boundary: deletion of boundary and unseen rows skips without restart",
+            "cursor-scope: feed binding and impossible future snapshots",
+            "cursor-contract: malformed input and semantic validation independent of wire format",
+            "termination: exact-size final page and all remaining rows deleted",
+            "copy-isolation: store snapshots append results and pages cannot mutate storage",
+            "replay-and-limit: reusable cursor keeps boundary while limits change"
+          ],
+          "failed": [],
+          "sha256": "be83aa024cd107ba02af9a70a4330a68e760af139883d7b0d502492d071274cb"
+        }
+      },
+      "groups": [
+        "snapshot-membership: excludes both forward and backdated appends",
+        "order-boundary: chronological keys survive nonmonotonic insertion and ties",
+        "tombstone-boundary: deletion of boundary and unseen rows skips without restart",
+        "cursor-scope: feed binding and impossible future snapshots",
+        "cursor-contract: malformed input and semantic validation independent of wire format",
+        "termination: exact-size final page and all remaining rows deleted",
+        "copy-isolation: store snapshots append results and pages cannot mutate storage",
+        "replay-and-limit: reusable cursor keeps boundary while limits change"
+      ],
+      "mutants": {
+        "dynamic-membership": {
+          "exitCode": 1,
+          "passed": [
+            "order-boundary: chronological keys survive nonmonotonic insertion and ties",
+            "tombstone-boundary: deletion of boundary and unseen rows skips without restart",
+            "cursor-scope: feed binding and impossible future snapshots",
+            "cursor-contract: malformed input and semantic validation independent of wire format",
+            "termination: exact-size final page and all remaining rows deleted",
+            "copy-isolation: store snapshots append results and pages cannot mutate storage"
+          ],
+          "failed": [
+            "snapshot-membership: excludes both forward and backdated appends",
+            "replay-and-limit: reusable cursor keeps boundary while limits change"
+          ],
+          "sha256": "89eacd81d24cc3a8df98db118c74c083ceb640adbeb082d18f3e8197443112f3"
+        },
+        "sequence-boundary": {
+          "exitCode": 1,
+          "passed": [
+            "snapshot-membership: excludes both forward and backdated appends",
+            "cursor-scope: feed binding and impossible future snapshots",
+            "cursor-contract: malformed input and semantic validation independent of wire format",
+            "termination: exact-size final page and all remaining rows deleted",
+            "copy-isolation: store snapshots append results and pages cannot mutate storage",
+            "replay-and-limit: reusable cursor keeps boundary while limits change"
+          ],
+          "failed": [
+            "order-boundary: chronological keys survive nonmonotonic insertion and ties",
+            "tombstone-boundary: deletion of boundary and unseen rows skips without restart"
+          ],
+          "sha256": "0a9f0e48e33732c57b796d7e1d1b2fcd5852047a15cf0dcb06a03a04f784b7d1"
+        },
+        "cross-feed": {
+          "exitCode": 1,
+          "passed": [
+            "snapshot-membership: excludes both forward and backdated appends",
+            "order-boundary: chronological keys survive nonmonotonic insertion and ties",
+            "tombstone-boundary: deletion of boundary and unseen rows skips without restart",
+            "cursor-contract: malformed input and semantic validation independent of wire format",
+            "termination: exact-size final page and all remaining rows deleted",
+            "copy-isolation: store snapshots append results and pages cannot mutate storage",
+            "replay-and-limit: reusable cursor keeps boundary while limits change"
+          ],
+          "failed": [
+            "cursor-scope: feed binding and impossible future snapshots"
+          ],
+          "sha256": "9ca9bab6fbf0ff078ba43781c179709113f4a15a3f181a95268b30c5c64ced36"
+        },
+        "exact-page-cursor": {
+          "exitCode": 1,
+          "passed": [
+            "snapshot-membership: excludes both forward and backdated appends",
+            "order-boundary: chronological keys survive nonmonotonic insertion and ties",
+            "tombstone-boundary: deletion of boundary and unseen rows skips without restart",
+            "cursor-scope: feed binding and impossible future snapshots",
+            "cursor-contract: malformed input and semantic validation independent of wire format",
+            "copy-isolation: store snapshots append results and pages cannot mutate storage",
+            "replay-and-limit: reusable cursor keeps boundary while limits change"
+          ],
+          "failed": [
+            "termination: exact-size final page and all remaining rows deleted"
+          ],
+          "sha256": "71782f26d204bfa1956ff66c7dcc6209416cdcf81587dcfa09b4d347258e8f8e"
+        },
+        "live-snapshots": {
+          "exitCode": 1,
+          "passed": [
+            "snapshot-membership: excludes both forward and backdated appends",
+            "order-boundary: chronological keys survive nonmonotonic insertion and ties",
+            "tombstone-boundary: deletion of boundary and unseen rows skips without restart",
+            "cursor-scope: feed binding and impossible future snapshots",
+            "cursor-contract: malformed input and semantic validation independent of wire format",
+            "termination: exact-size final page and all remaining rows deleted",
+            "replay-and-limit: reusable cursor keeps boundary while limits change"
+          ],
+          "failed": [
+            "copy-isolation: store snapshots append results and pages cannot mutate storage"
+          ],
+          "sha256": "2e4fbf24c628c82df99ef1969ac3f2ff7ef7d8ee12f1fd41ae513cd17c3b6d77"
+        },
+        "old-order-accepted": {
+          "exitCode": 1,
+          "passed": [
+            "snapshot-membership: excludes both forward and backdated appends",
+            "order-boundary: chronological keys survive nonmonotonic insertion and ties",
+            "tombstone-boundary: deletion of boundary and unseen rows skips without restart",
+            "cursor-scope: feed binding and impossible future snapshots",
+            "termination: exact-size final page and all remaining rows deleted",
+            "copy-isolation: store snapshots append results and pages cannot mutate storage",
+            "replay-and-limit: reusable cursor keeps boundary while limits change"
+          ],
+          "failed": [
+            "cursor-contract: malformed input and semantic validation independent of wire format"
+          ],
+          "sha256": "2a88d587c318046de59f02997af9c1d3079e029e02a414f8d8aacebdb7dc93cb"
+        },
+        "deleted-visible": {
+          "exitCode": 1,
+          "passed": [
+            "snapshot-membership: excludes both forward and backdated appends",
+            "order-boundary: chronological keys survive nonmonotonic insertion and ties",
+            "cursor-scope: feed binding and impossible future snapshots",
+            "cursor-contract: malformed input and semantic validation independent of wire format",
+            "copy-isolation: store snapshots append results and pages cannot mutate storage"
+          ],
+          "failed": [
+            "tombstone-boundary: deletion of boundary and unseen rows skips without restart",
+            "termination: exact-size final page and all remaining rows deleted",
+            "replay-and-limit: reusable cursor keeps boundary while limits change"
+          ],
+          "sha256": "2f67fc00eacaabb94706336230c3cac0d8bdc770b5d4b10be0329e29146b6290"
+        }
+      }
+    },
+    "reservation-lifecycle": {
+      "baseline": {
+        "visible": {
+          "exitCode": 0,
+          "passed": [
+            "hold and cancel restore stock",
+            "confirmation consumes reserved stock"
+          ],
+          "failed": [],
+          "sha256": "0ac9ad4291ec79c2dae7c302eae5a9fcc0f54f9c064f63343d915f5f0f5c79cf"
+        },
+        "hidden": {
+          "exitCode": 1,
+          "passed": [
+            "request-conflicts: every payload field except retry clock participates",
+            "clock-contract: deterministic caller time validation and explicit expiry sweep"
+          ],
+          "failed": [
+            "atomic-allocation: stale missing insufficient and invalid requests preserve all state",
+            "idempotent-retry: receipt survives unrelated activity and terminal transition",
+            "terminal-transitions: same target is no-op and conflicting targets are atomic errors",
+            "expiry-boundary: inclusive deadline with exact once release and terminal conflicts",
+            "inventory-versions: interleaved shared SKU releases conserve stock and invalidate stale writes",
+            "copy-isolation: nested receipts live holds and snapshots remain detached"
+          ],
+          "sha256": "381fce60ab417746f744b8abe8130f279dac789104c73ffe9ee8c9ccb9ce4d0a"
+        }
+      },
+      "oracle": {
+        "visible": {
+          "exitCode": 0,
+          "passed": [
+            "hold and cancel restore stock",
+            "confirmation consumes reserved stock"
+          ],
+          "failed": [],
+          "sha256": "2eed655d6f9111286f33c6b21f82f50cd620cb18186f9b707d8361fa326c75dd"
+        },
+        "hidden": {
+          "exitCode": 0,
+          "passed": [
+            "atomic-allocation: stale missing insufficient and invalid requests preserve all state",
+            "idempotent-retry: receipt survives unrelated activity and terminal transition",
+            "request-conflicts: every payload field except retry clock participates",
+            "terminal-transitions: same target is no-op and conflicting targets are atomic errors",
+            "expiry-boundary: inclusive deadline with exact once release and terminal conflicts",
+            "inventory-versions: interleaved shared SKU releases conserve stock and invalidate stale writes",
+            "copy-isolation: nested receipts live holds and snapshots remain detached",
+            "clock-contract: deterministic caller time validation and explicit expiry sweep"
+          ],
+          "failed": [],
+          "sha256": "7c63b33c6682ebc40e4b3a15cc4f7540d1c8761aa31473797dd52ad7bea0dd12"
+        }
+      },
+      "groups": [
+        "atomic-allocation: stale missing insufficient and invalid requests preserve all state",
+        "idempotent-retry: receipt survives unrelated activity and terminal transition",
+        "request-conflicts: every payload field except retry clock participates",
+        "terminal-transitions: same target is no-op and conflicting targets are atomic errors",
+        "expiry-boundary: inclusive deadline with exact once release and terminal conflicts",
+        "inventory-versions: interleaved shared SKU releases conserve stock and invalidate stale writes",
+        "copy-isolation: nested receipts live holds and snapshots remain detached",
+        "clock-contract: deterministic caller time validation and explicit expiry sweep"
+      ],
+      "mutants": {
+        "aliased-commit-inputs": {
+          "exitCode": 1,
+          "passed": [
+            "atomic-allocation: stale missing insufficient and invalid requests preserve all state",
+            "idempotent-retry: receipt survives unrelated activity and terminal transition",
+            "request-conflicts: every payload field except retry clock participates",
+            "terminal-transitions: same target is no-op and conflicting targets are atomic errors",
+            "expiry-boundary: inclusive deadline with exact once release and terminal conflicts",
+            "inventory-versions: interleaved shared SKU releases conserve stock and invalidate stale writes",
+            "clock-contract: deterministic caller time validation and explicit expiry sweep"
+          ],
+          "failed": [
+            "copy-isolation: nested receipts live holds and snapshots remain detached"
+          ],
+          "sha256": "b7654cd29081c7f8a7422f093d29dde77bde3b8c9856205fa2d3adff87730b95"
+        },
+        "current-version-before-retry": {
+          "exitCode": 1,
+          "passed": [
+            "atomic-allocation: stale missing insufficient and invalid requests preserve all state",
+            "request-conflicts: every payload field except retry clock participates",
+            "terminal-transitions: same target is no-op and conflicting targets are atomic errors",
+            "expiry-boundary: inclusive deadline with exact once release and terminal conflicts",
+            "inventory-versions: interleaved shared SKU releases conserve stock and invalidate stale writes",
+            "copy-isolation: nested receipts live holds and snapshots remain detached",
+            "clock-contract: deterministic caller time validation and explicit expiry sweep"
+          ],
+          "failed": [
+            "idempotent-retry: receipt survives unrelated activity and terminal transition"
+          ],
+          "sha256": "bc90560f7fc0afb315bf72dfcb1e2ec42f95eb75c98c432f2c2403f7ae9cdcfd"
+        },
+        "live-retry-response": {
+          "exitCode": 1,
+          "passed": [
+            "atomic-allocation: stale missing insufficient and invalid requests preserve all state",
+            "request-conflicts: every payload field except retry clock participates",
+            "terminal-transitions: same target is no-op and conflicting targets are atomic errors",
+            "expiry-boundary: inclusive deadline with exact once release and terminal conflicts",
+            "inventory-versions: interleaved shared SKU releases conserve stock and invalidate stale writes",
+            "copy-isolation: nested receipts live holds and snapshots remain detached",
+            "clock-contract: deterministic caller time validation and explicit expiry sweep"
+          ],
+          "failed": [
+            "idempotent-retry: receipt survives unrelated activity and terminal transition"
+          ],
+          "sha256": "ed30035d25ba18ed429903c17c098c6a9b43824b4344bec74d91aa9cec82d51a"
+        },
+        "ignored-ttl-identity": {
+          "exitCode": 1,
+          "passed": [
+            "atomic-allocation: stale missing insufficient and invalid requests preserve all state",
+            "idempotent-retry: receipt survives unrelated activity and terminal transition",
+            "terminal-transitions: same target is no-op and conflicting targets are atomic errors",
+            "expiry-boundary: inclusive deadline with exact once release and terminal conflicts",
+            "inventory-versions: interleaved shared SKU releases conserve stock and invalidate stale writes",
+            "copy-isolation: nested receipts live holds and snapshots remain detached",
+            "clock-contract: deterministic caller time validation and explicit expiry sweep"
+          ],
+          "failed": [
+            "request-conflicts: every payload field except retry clock participates"
+          ],
+          "sha256": "474b8fe08e9fdc66128c0754106f65921f0c71163816c9232c8ea473e26409ba"
+        },
+        "quiet-terminal-conflict": {
+          "exitCode": 1,
+          "passed": [
+            "atomic-allocation: stale missing insufficient and invalid requests preserve all state",
+            "idempotent-retry: receipt survives unrelated activity and terminal transition",
+            "request-conflicts: every payload field except retry clock participates",
+            "inventory-versions: interleaved shared SKU releases conserve stock and invalidate stale writes",
+            "copy-isolation: nested receipts live holds and snapshots remain detached",
+            "clock-contract: deterministic caller time validation and explicit expiry sweep"
+          ],
+          "failed": [
+            "terminal-transitions: same target is no-op and conflicting targets are atomic errors",
+            "expiry-boundary: inclusive deadline with exact once release and terminal conflicts"
+          ],
+          "sha256": "e36c62f147446789b568d96c809f9919fd83accbbecbddc998a2dd58666b49d6"
+        },
+        "exclusive-expiry": {
+          "exitCode": 1,
+          "passed": [
+            "atomic-allocation: stale missing insufficient and invalid requests preserve all state",
+            "idempotent-retry: receipt survives unrelated activity and terminal transition",
+            "request-conflicts: every payload field except retry clock participates",
+            "terminal-transitions: same target is no-op and conflicting targets are atomic errors",
+            "copy-isolation: nested receipts live holds and snapshots remain detached",
+            "clock-contract: deterministic caller time validation and explicit expiry sweep"
+          ],
+          "failed": [
+            "expiry-boundary: inclusive deadline with exact once release and terminal conflicts",
+            "inventory-versions: interleaved shared SKU releases conserve stock and invalidate stale writes"
+          ],
+          "sha256": "50426d5bae39efceca00c69179671abd3e4763600d79ed15ef37d2b166912bcc"
+        },
+        "no-release-version": {
+          "exitCode": 1,
+          "passed": [
+            "atomic-allocation: stale missing insufficient and invalid requests preserve all state",
+            "idempotent-retry: receipt survives unrelated activity and terminal transition",
+            "request-conflicts: every payload field except retry clock participates",
+            "terminal-transitions: same target is no-op and conflicting targets are atomic errors",
+            "copy-isolation: nested receipts live holds and snapshots remain detached",
+            "clock-contract: deterministic caller time validation and explicit expiry sweep"
+          ],
+          "failed": [
+            "expiry-boundary: inclusive deadline with exact once release and terminal conflicts",
+            "inventory-versions: interleaved shared SKU releases conserve stock and invalidate stale writes"
+          ],
+          "sha256": "30881013886f009f77a9172fa2363c4efc17bafe05766f4befb97aac54506f62"
+        },
+        "aliased-receipt": {
+          "exitCode": 1,
+          "passed": [
+            "atomic-allocation: stale missing insufficient and invalid requests preserve all state",
+            "idempotent-retry: receipt survives unrelated activity and terminal transition",
+            "request-conflicts: every payload field except retry clock participates",
+            "terminal-transitions: same target is no-op and conflicting targets are atomic errors",
+            "expiry-boundary: inclusive deadline with exact once release and terminal conflicts",
+            "inventory-versions: interleaved shared SKU releases conserve stock and invalidate stale writes",
+            "clock-contract: deterministic caller time validation and explicit expiry sweep"
+          ],
+          "failed": [
+            "copy-isolation: nested receipts live holds and snapshots remain detached"
+          ],
+          "sha256": "9d428d2a1cc4bf9c1637858ce0b1ac416ec0870b8d214feb650ce17b42cfc15d"
+        },
+        "oversell": {
+          "exitCode": 1,
+          "passed": [
+            "idempotent-retry: receipt survives unrelated activity and terminal transition",
+            "request-conflicts: every payload field except retry clock participates",
+            "terminal-transitions: same target is no-op and conflicting targets are atomic errors",
+            "expiry-boundary: inclusive deadline with exact once release and terminal conflicts",
+            "inventory-versions: interleaved shared SKU releases conserve stock and invalidate stale writes",
+            "copy-isolation: nested receipts live holds and snapshots remain detached",
+            "clock-contract: deterministic caller time validation and explicit expiry sweep"
+          ],
+          "failed": [
+            "atomic-allocation: stale missing insufficient and invalid requests preserve all state"
+          ],
+          "sha256": "fde53e37dd441efd343ad052026a60ab2b799f8f54aeb77b9ae322f8f52cd8bd"
+        }
+      }
+    }
+  },
+  "logSha256": {
+    "customer-outbox-leases/baseline/TASK.md": "97c3508c3c22baec492b4a8622a1bea910cd54ac6df9264aee15eb5102058b9e",
+    "customer-outbox-leases/baseline/benchmark-hidden.test.ts": "2e76d00564ec65cd82c189b371c5c6a153d26ab50cffcfc4eebce97cdc180e46",
+    "customer-outbox-leases/baseline/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "customer-outbox-leases/baseline/src/keys.ts": "32d648fc1b8eabb9e8c154aee44b2e85c2ccbfe7b486fd2243637cd5a2bebe8c",
+    "customer-outbox-leases/baseline/src/orders.ts": "d0f3ca65a004eb618c0c3d474bc0c7dc1c65c3cec4dfb9a3bb9910f802e1490e",
+    "customer-outbox-leases/baseline/src/publisher.ts": "f57542380f3fd0e533030ed19ac87054631065be6d76fdd96dd34c5cdf5a7309",
+    "customer-outbox-leases/baseline/src/store.ts": "a9d9dd84412b517af32bfb5c128c80537cf9fea289bf55bd41d4a80d8b976e25",
+    "customer-outbox-leases/baseline/src/types.ts": "e0f2e0cf2f8ad25c240dd373163c0308423bc8ad57da9ce9e0f62ac36a74b7d2",
+    "customer-outbox-leases/baseline/test/visible.test.ts": "bc2caeba00471115e3df23f9a1b383205cf5acebe0f9f57d9e0db02d6a3a606a",
+    "customer-outbox-leases/baseline-hidden.log": "3ce78099895a6feb10514f3fe0c6d63346c78b50d73248baa65997f2d489d891",
+    "customer-outbox-leases/baseline-visible.log": "9e7ef0c1662ae90f3ad6318db0e27a739b94dae1e610c8c169ae81ed5f7a1ed5",
+    "customer-outbox-leases/cancel-leaves-lease-actionable/TASK.md": "97c3508c3c22baec492b4a8622a1bea910cd54ac6df9264aee15eb5102058b9e",
+    "customer-outbox-leases/cancel-leaves-lease-actionable/benchmark-hidden.test.ts": "2e76d00564ec65cd82c189b371c5c6a153d26ab50cffcfc4eebce97cdc180e46",
+    "customer-outbox-leases/cancel-leaves-lease-actionable/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "customer-outbox-leases/cancel-leaves-lease-actionable/src/keys.ts": "32d648fc1b8eabb9e8c154aee44b2e85c2ccbfe7b486fd2243637cd5a2bebe8c",
+    "customer-outbox-leases/cancel-leaves-lease-actionable/src/orders.ts": "d0f3ca65a004eb618c0c3d474bc0c7dc1c65c3cec4dfb9a3bb9910f802e1490e",
+    "customer-outbox-leases/cancel-leaves-lease-actionable/src/publisher.ts": "d0145aa078ca6ff34f01350567d071968c312dc2c6d83f28614bddefcc87939b",
+    "customer-outbox-leases/cancel-leaves-lease-actionable/src/store.ts": "a9d9dd84412b517af32bfb5c128c80537cf9fea289bf55bd41d4a80d8b976e25",
+    "customer-outbox-leases/cancel-leaves-lease-actionable/src/types.ts": "e0f2e0cf2f8ad25c240dd373163c0308423bc8ad57da9ce9e0f62ac36a74b7d2",
+    "customer-outbox-leases/cancel-leaves-lease-actionable/test/visible.test.ts": "bc2caeba00471115e3df23f9a1b383205cf5acebe0f9f57d9e0db02d6a3a606a",
+    "customer-outbox-leases/cancel-leaves-lease-actionable.log": "a82989857450a77a2926a8d151c75f315a062bf03a92a0743ed9ceec0011e598",
+    "customer-outbox-leases/customer-id-collision/TASK.md": "97c3508c3c22baec492b4a8622a1bea910cd54ac6df9264aee15eb5102058b9e",
+    "customer-outbox-leases/customer-id-collision/benchmark-hidden.test.ts": "2e76d00564ec65cd82c189b371c5c6a153d26ab50cffcfc4eebce97cdc180e46",
+    "customer-outbox-leases/customer-id-collision/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "customer-outbox-leases/customer-id-collision/src/keys.ts": "82f6417a9d3b273a69709ca48f16423db02ed96cf18d41ad839edcbccc2539cd",
+    "customer-outbox-leases/customer-id-collision/src/orders.ts": "d0f3ca65a004eb618c0c3d474bc0c7dc1c65c3cec4dfb9a3bb9910f802e1490e",
+    "customer-outbox-leases/customer-id-collision/src/publisher.ts": "f57542380f3fd0e533030ed19ac87054631065be6d76fdd96dd34c5cdf5a7309",
+    "customer-outbox-leases/customer-id-collision/src/store.ts": "a9d9dd84412b517af32bfb5c128c80537cf9fea289bf55bd41d4a80d8b976e25",
+    "customer-outbox-leases/customer-id-collision/src/types.ts": "e0f2e0cf2f8ad25c240dd373163c0308423bc8ad57da9ce9e0f62ac36a74b7d2",
+    "customer-outbox-leases/customer-id-collision/test/visible.test.ts": "bc2caeba00471115e3df23f9a1b383205cf5acebe0f9f57d9e0db02d6a3a606a",
+    "customer-outbox-leases/customer-id-collision.log": "3f95edd93069811c322d0deda5d34cb2ef9006d59eaafaa343a4d56df8e58dc6",
+    "customer-outbox-leases/expired-lease-not-reclaimed/TASK.md": "97c3508c3c22baec492b4a8622a1bea910cd54ac6df9264aee15eb5102058b9e",
+    "customer-outbox-leases/expired-lease-not-reclaimed/benchmark-hidden.test.ts": "2e76d00564ec65cd82c189b371c5c6a153d26ab50cffcfc4eebce97cdc180e46",
+    "customer-outbox-leases/expired-lease-not-reclaimed/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "customer-outbox-leases/expired-lease-not-reclaimed/src/keys.ts": "32d648fc1b8eabb9e8c154aee44b2e85c2ccbfe7b486fd2243637cd5a2bebe8c",
+    "customer-outbox-leases/expired-lease-not-reclaimed/src/orders.ts": "d0f3ca65a004eb618c0c3d474bc0c7dc1c65c3cec4dfb9a3bb9910f802e1490e",
+    "customer-outbox-leases/expired-lease-not-reclaimed/src/publisher.ts": "3f6bf4e7ce7d5bc4efdac89409ff611b8ded913ad4d38df59563480da40668d2",
+    "customer-outbox-leases/expired-lease-not-reclaimed/src/store.ts": "a9d9dd84412b517af32bfb5c128c80537cf9fea289bf55bd41d4a80d8b976e25",
+    "customer-outbox-leases/expired-lease-not-reclaimed/src/types.ts": "e0f2e0cf2f8ad25c240dd373163c0308423bc8ad57da9ce9e0f62ac36a74b7d2",
+    "customer-outbox-leases/expired-lease-not-reclaimed/test/visible.test.ts": "bc2caeba00471115e3df23f9a1b383205cf5acebe0f9f57d9e0db02d6a3a606a",
+    "customer-outbox-leases/expired-lease-not-reclaimed.log": "61f8aa018b0d392262643ff3377f2cde1f5e78e6a8eeb4644c02c48d667305dc",
+    "customer-outbox-leases/final-lease-reclaimed/TASK.md": "97c3508c3c22baec492b4a8622a1bea910cd54ac6df9264aee15eb5102058b9e",
+    "customer-outbox-leases/final-lease-reclaimed/benchmark-hidden.test.ts": "2e76d00564ec65cd82c189b371c5c6a153d26ab50cffcfc4eebce97cdc180e46",
+    "customer-outbox-leases/final-lease-reclaimed/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "customer-outbox-leases/final-lease-reclaimed/src/keys.ts": "32d648fc1b8eabb9e8c154aee44b2e85c2ccbfe7b486fd2243637cd5a2bebe8c",
+    "customer-outbox-leases/final-lease-reclaimed/src/orders.ts": "d0f3ca65a004eb618c0c3d474bc0c7dc1c65c3cec4dfb9a3bb9910f802e1490e",
+    "customer-outbox-leases/final-lease-reclaimed/src/publisher.ts": "a780b09429b8439f445a5fe4b29e701b5d8d4eeefdc34eef4fe07ad88ff64498",
+    "customer-outbox-leases/final-lease-reclaimed/src/store.ts": "a9d9dd84412b517af32bfb5c128c80537cf9fea289bf55bd41d4a80d8b976e25",
+    "customer-outbox-leases/final-lease-reclaimed/src/types.ts": "e0f2e0cf2f8ad25c240dd373163c0308423bc8ad57da9ce9e0f62ac36a74b7d2",
+    "customer-outbox-leases/final-lease-reclaimed/test/visible.test.ts": "bc2caeba00471115e3df23f9a1b383205cf5acebe0f9f57d9e0db02d6a3a606a",
+    "customer-outbox-leases/final-lease-reclaimed.log": "c95cf1bf890391c7282d51c1c8805017111ec60d306da0381452520fc9732267",
+    "customer-outbox-leases/oracle-hidden.log": "0378579ce163e1192c4f9e60b8b83b99a68c578016a87b92b8cfb034d7573a1f",
+    "customer-outbox-leases/oracle-visible.log": "4bc7f12bdfe0a6bcdda1992212eeb6375ac529e09c2225883e5c178b12711f7f",
+    "customer-outbox-leases/partial-commit-on-event-failure/TASK.md": "97c3508c3c22baec492b4a8622a1bea910cd54ac6df9264aee15eb5102058b9e",
+    "customer-outbox-leases/partial-commit-on-event-failure/benchmark-hidden.test.ts": "2e76d00564ec65cd82c189b371c5c6a153d26ab50cffcfc4eebce97cdc180e46",
+    "customer-outbox-leases/partial-commit-on-event-failure/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "customer-outbox-leases/partial-commit-on-event-failure/src/keys.ts": "32d648fc1b8eabb9e8c154aee44b2e85c2ccbfe7b486fd2243637cd5a2bebe8c",
+    "customer-outbox-leases/partial-commit-on-event-failure/src/orders.ts": "d0f3ca65a004eb618c0c3d474bc0c7dc1c65c3cec4dfb9a3bb9910f802e1490e",
+    "customer-outbox-leases/partial-commit-on-event-failure/src/publisher.ts": "f57542380f3fd0e533030ed19ac87054631065be6d76fdd96dd34c5cdf5a7309",
+    "customer-outbox-leases/partial-commit-on-event-failure/src/store.ts": "78071695acf1c6e928e36da2967a41a9dc5c973403b7466237b58d98b8a90087",
+    "customer-outbox-leases/partial-commit-on-event-failure/src/types.ts": "e0f2e0cf2f8ad25c240dd373163c0308423bc8ad57da9ce9e0f62ac36a74b7d2",
+    "customer-outbox-leases/partial-commit-on-event-failure/test/visible.test.ts": "bc2caeba00471115e3df23f9a1b383205cf5acebe0f9f57d9e0db02d6a3a606a",
+    "customer-outbox-leases/partial-commit-on-event-failure.log": "f806ba1655c70050185f742ac5d75cc82efb0181cf36fdd66fbc4acf80535a3c",
+    "customer-outbox-leases/replay-conflict-accepted/TASK.md": "97c3508c3c22baec492b4a8622a1bea910cd54ac6df9264aee15eb5102058b9e",
+    "customer-outbox-leases/replay-conflict-accepted/benchmark-hidden.test.ts": "2e76d00564ec65cd82c189b371c5c6a153d26ab50cffcfc4eebce97cdc180e46",
+    "customer-outbox-leases/replay-conflict-accepted/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "customer-outbox-leases/replay-conflict-accepted/src/keys.ts": "32d648fc1b8eabb9e8c154aee44b2e85c2ccbfe7b486fd2243637cd5a2bebe8c",
+    "customer-outbox-leases/replay-conflict-accepted/src/orders.ts": "80bc07622f4db46ff8cbf09ed6988a663092534b272b8a81c6fe8b6fe3c1cdf6",
+    "customer-outbox-leases/replay-conflict-accepted/src/publisher.ts": "f57542380f3fd0e533030ed19ac87054631065be6d76fdd96dd34c5cdf5a7309",
+    "customer-outbox-leases/replay-conflict-accepted/src/store.ts": "a9d9dd84412b517af32bfb5c128c80537cf9fea289bf55bd41d4a80d8b976e25",
+    "customer-outbox-leases/replay-conflict-accepted/src/types.ts": "e0f2e0cf2f8ad25c240dd373163c0308423bc8ad57da9ce9e0f62ac36a74b7d2",
+    "customer-outbox-leases/replay-conflict-accepted/test/visible.test.ts": "bc2caeba00471115e3df23f9a1b383205cf5acebe0f9f57d9e0db02d6a3a606a",
+    "customer-outbox-leases/replay-conflict-accepted.log": "1c74fb7f6a62e49dad20d8229480654bbf543f283d198d7245f7efeb6bad836a",
+    "customer-outbox-leases/retry-not-terminal/TASK.md": "97c3508c3c22baec492b4a8622a1bea910cd54ac6df9264aee15eb5102058b9e",
+    "customer-outbox-leases/retry-not-terminal/benchmark-hidden.test.ts": "2e76d00564ec65cd82c189b371c5c6a153d26ab50cffcfc4eebce97cdc180e46",
+    "customer-outbox-leases/retry-not-terminal/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "customer-outbox-leases/retry-not-terminal/src/keys.ts": "32d648fc1b8eabb9e8c154aee44b2e85c2ccbfe7b486fd2243637cd5a2bebe8c",
+    "customer-outbox-leases/retry-not-terminal/src/orders.ts": "d0f3ca65a004eb618c0c3d474bc0c7dc1c65c3cec4dfb9a3bb9910f802e1490e",
+    "customer-outbox-leases/retry-not-terminal/src/publisher.ts": "ea8292ed64a9b5cce1af8eb87d03ce72bbc1707c53619efc497ceb96d98b4632",
+    "customer-outbox-leases/retry-not-terminal/src/store.ts": "a9d9dd84412b517af32bfb5c128c80537cf9fea289bf55bd41d4a80d8b976e25",
+    "customer-outbox-leases/retry-not-terminal/src/types.ts": "e0f2e0cf2f8ad25c240dd373163c0308423bc8ad57da9ce9e0f62ac36a74b7d2",
+    "customer-outbox-leases/retry-not-terminal/test/visible.test.ts": "bc2caeba00471115e3df23f9a1b383205cf5acebe0f9f57d9e0db02d6a3a606a",
+    "customer-outbox-leases/retry-not-terminal.log": "20808081a4a81ab0a0219908d7d807c611115d35459342075b98065220edd018",
+    "customer-outbox-leases/reverse-store-order/TASK.md": "97c3508c3c22baec492b4a8622a1bea910cd54ac6df9264aee15eb5102058b9e",
+    "customer-outbox-leases/reverse-store-order/benchmark-hidden.test.ts": "2e76d00564ec65cd82c189b371c5c6a153d26ab50cffcfc4eebce97cdc180e46",
+    "customer-outbox-leases/reverse-store-order/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "customer-outbox-leases/reverse-store-order/src/keys.ts": "32d648fc1b8eabb9e8c154aee44b2e85c2ccbfe7b486fd2243637cd5a2bebe8c",
+    "customer-outbox-leases/reverse-store-order/src/orders.ts": "d0f3ca65a004eb618c0c3d474bc0c7dc1c65c3cec4dfb9a3bb9910f802e1490e",
+    "customer-outbox-leases/reverse-store-order/src/publisher.ts": "f57542380f3fd0e533030ed19ac87054631065be6d76fdd96dd34c5cdf5a7309",
+    "customer-outbox-leases/reverse-store-order/src/store.ts": "cfcf7cfe4bb0587dceea582a06e7b82594c6a1440275262a5f40cac40f66eb31",
+    "customer-outbox-leases/reverse-store-order/src/types.ts": "e0f2e0cf2f8ad25c240dd373163c0308423bc8ad57da9ce9e0f62ac36a74b7d2",
+    "customer-outbox-leases/reverse-store-order/test/visible.test.ts": "bc2caeba00471115e3df23f9a1b383205cf5acebe0f9f57d9e0db02d6a3a606a",
+    "customer-outbox-leases/reverse-store-order.log": "820f3b9a2c59eaf4a7d8dc2c17230b658321edb4e4e295048613ec41ce947561",
+    "customer-outbox-leases/stale-ack-accepted/TASK.md": "97c3508c3c22baec492b4a8622a1bea910cd54ac6df9264aee15eb5102058b9e",
+    "customer-outbox-leases/stale-ack-accepted/benchmark-hidden.test.ts": "2e76d00564ec65cd82c189b371c5c6a153d26ab50cffcfc4eebce97cdc180e46",
+    "customer-outbox-leases/stale-ack-accepted/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "customer-outbox-leases/stale-ack-accepted/src/keys.ts": "32d648fc1b8eabb9e8c154aee44b2e85c2ccbfe7b486fd2243637cd5a2bebe8c",
+    "customer-outbox-leases/stale-ack-accepted/src/orders.ts": "d0f3ca65a004eb618c0c3d474bc0c7dc1c65c3cec4dfb9a3bb9910f802e1490e",
+    "customer-outbox-leases/stale-ack-accepted/src/publisher.ts": "6c3012753def6bb1a245d9b38f0f4549efdbf80752b812d40fc75d39bb06d7b6",
+    "customer-outbox-leases/stale-ack-accepted/src/store.ts": "a9d9dd84412b517af32bfb5c128c80537cf9fea289bf55bd41d4a80d8b976e25",
+    "customer-outbox-leases/stale-ack-accepted/src/types.ts": "e0f2e0cf2f8ad25c240dd373163c0308423bc8ad57da9ce9e0f62ac36a74b7d2",
+    "customer-outbox-leases/stale-ack-accepted/test/visible.test.ts": "bc2caeba00471115e3df23f9a1b383205cf5acebe0f9f57d9e0db02d6a3a606a",
+    "customer-outbox-leases/stale-ack-accepted.log": "c8ce338acd2e1f5e90cec7da56c773357256f5159621af92ba9f6b8840f5fed6",
+    "reservation-lifecycle/aliased-commit-inputs/TASK.md": "7dd3879fb39e2c519a826370c9f4ebdebb8595b2d7d010bf8f07e39c84a1d728",
+    "reservation-lifecycle/aliased-commit-inputs/benchmark-hidden.test.ts": "852c207d23c09f4e4ba8ec3c7a3b731a071f70c90d93200d7d5a4790d5116123",
+    "reservation-lifecycle/aliased-commit-inputs/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "reservation-lifecycle/aliased-commit-inputs/src/policy.ts": "8a2083f3af2dae19f6de30d41046dc620d68ca49f98e9a61575853287d3cffb4",
+    "reservation-lifecycle/aliased-commit-inputs/src/service.ts": "9e363a82d80646b3d4bda80847e3c9c0fe1cc015a55825b4d927980e0a61825b",
+    "reservation-lifecycle/aliased-commit-inputs/src/store.ts": "8f97959f495eab0bb72c23f11c45f0a7375fdf95b943968d4eca99005b912216",
+    "reservation-lifecycle/aliased-commit-inputs/src/types.ts": "4065a0765ce66e488c2e07cace3b93282b3a2372843ec1afe2915390b1f5f96c",
+    "reservation-lifecycle/aliased-commit-inputs/test/visible.test.ts": "e83f384ea492f1c5f77a20fc07cb7ddf49bd65d4e3c0b42eca034df91eeade8a",
+    "reservation-lifecycle/aliased-commit-inputs.log": "b7654cd29081c7f8a7422f093d29dde77bde3b8c9856205fa2d3adff87730b95",
+    "reservation-lifecycle/aliased-receipt/TASK.md": "7dd3879fb39e2c519a826370c9f4ebdebb8595b2d7d010bf8f07e39c84a1d728",
+    "reservation-lifecycle/aliased-receipt/benchmark-hidden.test.ts": "852c207d23c09f4e4ba8ec3c7a3b731a071f70c90d93200d7d5a4790d5116123",
+    "reservation-lifecycle/aliased-receipt/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "reservation-lifecycle/aliased-receipt/src/policy.ts": "8a2083f3af2dae19f6de30d41046dc620d68ca49f98e9a61575853287d3cffb4",
+    "reservation-lifecycle/aliased-receipt/src/service.ts": "9e363a82d80646b3d4bda80847e3c9c0fe1cc015a55825b4d927980e0a61825b",
+    "reservation-lifecycle/aliased-receipt/src/store.ts": "23676724abdc8f07b1544195085a3b25700b74e3043ca0326de3b5e8f5a2e023",
+    "reservation-lifecycle/aliased-receipt/src/types.ts": "4065a0765ce66e488c2e07cace3b93282b3a2372843ec1afe2915390b1f5f96c",
+    "reservation-lifecycle/aliased-receipt/test/visible.test.ts": "e83f384ea492f1c5f77a20fc07cb7ddf49bd65d4e3c0b42eca034df91eeade8a",
+    "reservation-lifecycle/aliased-receipt.log": "9d428d2a1cc4bf9c1637858ce0b1ac416ec0870b8d214feb650ce17b42cfc15d",
+    "reservation-lifecycle/baseline/TASK.md": "7dd3879fb39e2c519a826370c9f4ebdebb8595b2d7d010bf8f07e39c84a1d728",
+    "reservation-lifecycle/baseline/benchmark-hidden.test.ts": "852c207d23c09f4e4ba8ec3c7a3b731a071f70c90d93200d7d5a4790d5116123",
+    "reservation-lifecycle/baseline/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "reservation-lifecycle/baseline/src/policy.ts": "8a2083f3af2dae19f6de30d41046dc620d68ca49f98e9a61575853287d3cffb4",
+    "reservation-lifecycle/baseline/src/service.ts": "9e363a82d80646b3d4bda80847e3c9c0fe1cc015a55825b4d927980e0a61825b",
+    "reservation-lifecycle/baseline/src/store.ts": "3d89d18708592165d23e83c9c95a5b8c581bf88f9ebf240817ac5c8ae390814f",
+    "reservation-lifecycle/baseline/src/types.ts": "4065a0765ce66e488c2e07cace3b93282b3a2372843ec1afe2915390b1f5f96c",
+    "reservation-lifecycle/baseline/test/visible.test.ts": "e83f384ea492f1c5f77a20fc07cb7ddf49bd65d4e3c0b42eca034df91eeade8a",
+    "reservation-lifecycle/baseline-hidden.log": "381fce60ab417746f744b8abe8130f279dac789104c73ffe9ee8c9ccb9ce4d0a",
+    "reservation-lifecycle/baseline-visible.log": "0ac9ad4291ec79c2dae7c302eae5a9fcc0f54f9c064f63343d915f5f0f5c79cf",
+    "reservation-lifecycle/current-version-before-retry/TASK.md": "7dd3879fb39e2c519a826370c9f4ebdebb8595b2d7d010bf8f07e39c84a1d728",
+    "reservation-lifecycle/current-version-before-retry/benchmark-hidden.test.ts": "852c207d23c09f4e4ba8ec3c7a3b731a071f70c90d93200d7d5a4790d5116123",
+    "reservation-lifecycle/current-version-before-retry/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "reservation-lifecycle/current-version-before-retry/src/policy.ts": "8a2083f3af2dae19f6de30d41046dc620d68ca49f98e9a61575853287d3cffb4",
+    "reservation-lifecycle/current-version-before-retry/src/service.ts": "407b6ab09bfb1a7d2fde0f1e46665cbf84e3e1dcd47ab08faba61cbde9e5dc13",
+    "reservation-lifecycle/current-version-before-retry/src/store.ts": "3d89d18708592165d23e83c9c95a5b8c581bf88f9ebf240817ac5c8ae390814f",
+    "reservation-lifecycle/current-version-before-retry/src/types.ts": "4065a0765ce66e488c2e07cace3b93282b3a2372843ec1afe2915390b1f5f96c",
+    "reservation-lifecycle/current-version-before-retry/test/visible.test.ts": "e83f384ea492f1c5f77a20fc07cb7ddf49bd65d4e3c0b42eca034df91eeade8a",
+    "reservation-lifecycle/current-version-before-retry.log": "bc90560f7fc0afb315bf72dfcb1e2ec42f95eb75c98c432f2c2403f7ae9cdcfd",
+    "reservation-lifecycle/exclusive-expiry/TASK.md": "7dd3879fb39e2c519a826370c9f4ebdebb8595b2d7d010bf8f07e39c84a1d728",
+    "reservation-lifecycle/exclusive-expiry/benchmark-hidden.test.ts": "852c207d23c09f4e4ba8ec3c7a3b731a071f70c90d93200d7d5a4790d5116123",
+    "reservation-lifecycle/exclusive-expiry/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "reservation-lifecycle/exclusive-expiry/src/policy.ts": "8a2083f3af2dae19f6de30d41046dc620d68ca49f98e9a61575853287d3cffb4",
+    "reservation-lifecycle/exclusive-expiry/src/service.ts": "3b1f8e2f113d5f99147c92815cc19d5b54c936b7f30682138f23d00f4baec209",
+    "reservation-lifecycle/exclusive-expiry/src/store.ts": "3d89d18708592165d23e83c9c95a5b8c581bf88f9ebf240817ac5c8ae390814f",
+    "reservation-lifecycle/exclusive-expiry/src/types.ts": "4065a0765ce66e488c2e07cace3b93282b3a2372843ec1afe2915390b1f5f96c",
+    "reservation-lifecycle/exclusive-expiry/test/visible.test.ts": "e83f384ea492f1c5f77a20fc07cb7ddf49bd65d4e3c0b42eca034df91eeade8a",
+    "reservation-lifecycle/exclusive-expiry.log": "50426d5bae39efceca00c69179671abd3e4763600d79ed15ef37d2b166912bcc",
+    "reservation-lifecycle/ignored-ttl-identity/TASK.md": "7dd3879fb39e2c519a826370c9f4ebdebb8595b2d7d010bf8f07e39c84a1d728",
+    "reservation-lifecycle/ignored-ttl-identity/benchmark-hidden.test.ts": "852c207d23c09f4e4ba8ec3c7a3b731a071f70c90d93200d7d5a4790d5116123",
+    "reservation-lifecycle/ignored-ttl-identity/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "reservation-lifecycle/ignored-ttl-identity/src/policy.ts": "aac8c7d34cc8faa203c9a66659d68b88a4c034749e9e16f42065310f47ef6a19",
+    "reservation-lifecycle/ignored-ttl-identity/src/service.ts": "9e363a82d80646b3d4bda80847e3c9c0fe1cc015a55825b4d927980e0a61825b",
+    "reservation-lifecycle/ignored-ttl-identity/src/store.ts": "3d89d18708592165d23e83c9c95a5b8c581bf88f9ebf240817ac5c8ae390814f",
+    "reservation-lifecycle/ignored-ttl-identity/src/types.ts": "4065a0765ce66e488c2e07cace3b93282b3a2372843ec1afe2915390b1f5f96c",
+    "reservation-lifecycle/ignored-ttl-identity/test/visible.test.ts": "e83f384ea492f1c5f77a20fc07cb7ddf49bd65d4e3c0b42eca034df91eeade8a",
+    "reservation-lifecycle/ignored-ttl-identity.log": "474b8fe08e9fdc66128c0754106f65921f0c71163816c9232c8ea473e26409ba",
+    "reservation-lifecycle/live-retry-response/TASK.md": "7dd3879fb39e2c519a826370c9f4ebdebb8595b2d7d010bf8f07e39c84a1d728",
+    "reservation-lifecycle/live-retry-response/benchmark-hidden.test.ts": "852c207d23c09f4e4ba8ec3c7a3b731a071f70c90d93200d7d5a4790d5116123",
+    "reservation-lifecycle/live-retry-response/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "reservation-lifecycle/live-retry-response/src/policy.ts": "8a2083f3af2dae19f6de30d41046dc620d68ca49f98e9a61575853287d3cffb4",
+    "reservation-lifecycle/live-retry-response/src/service.ts": "793366170ca36dbcab2b0c724f27e04e571f0598dd71da7aae2308039136856b",
+    "reservation-lifecycle/live-retry-response/src/store.ts": "3d89d18708592165d23e83c9c95a5b8c581bf88f9ebf240817ac5c8ae390814f",
+    "reservation-lifecycle/live-retry-response/src/types.ts": "4065a0765ce66e488c2e07cace3b93282b3a2372843ec1afe2915390b1f5f96c",
+    "reservation-lifecycle/live-retry-response/test/visible.test.ts": "e83f384ea492f1c5f77a20fc07cb7ddf49bd65d4e3c0b42eca034df91eeade8a",
+    "reservation-lifecycle/live-retry-response.log": "ed30035d25ba18ed429903c17c098c6a9b43824b4344bec74d91aa9cec82d51a",
+    "reservation-lifecycle/no-release-version/TASK.md": "7dd3879fb39e2c519a826370c9f4ebdebb8595b2d7d010bf8f07e39c84a1d728",
+    "reservation-lifecycle/no-release-version/benchmark-hidden.test.ts": "852c207d23c09f4e4ba8ec3c7a3b731a071f70c90d93200d7d5a4790d5116123",
+    "reservation-lifecycle/no-release-version/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "reservation-lifecycle/no-release-version/src/policy.ts": "1416d6da642943bb4ce0674fb8c16a9d795b5e17f9187e1b72501fd4eaa711b9",
+    "reservation-lifecycle/no-release-version/src/service.ts": "9e363a82d80646b3d4bda80847e3c9c0fe1cc015a55825b4d927980e0a61825b",
+    "reservation-lifecycle/no-release-version/src/store.ts": "3d89d18708592165d23e83c9c95a5b8c581bf88f9ebf240817ac5c8ae390814f",
+    "reservation-lifecycle/no-release-version/src/types.ts": "4065a0765ce66e488c2e07cace3b93282b3a2372843ec1afe2915390b1f5f96c",
+    "reservation-lifecycle/no-release-version/test/visible.test.ts": "e83f384ea492f1c5f77a20fc07cb7ddf49bd65d4e3c0b42eca034df91eeade8a",
+    "reservation-lifecycle/no-release-version.log": "30881013886f009f77a9172fa2363c4efc17bafe05766f4befb97aac54506f62",
+    "reservation-lifecycle/oracle-hidden.log": "7c63b33c6682ebc40e4b3a15cc4f7540d1c8761aa31473797dd52ad7bea0dd12",
+    "reservation-lifecycle/oracle-visible.log": "2eed655d6f9111286f33c6b21f82f50cd620cb18186f9b707d8361fa326c75dd",
+    "reservation-lifecycle/oversell/TASK.md": "7dd3879fb39e2c519a826370c9f4ebdebb8595b2d7d010bf8f07e39c84a1d728",
+    "reservation-lifecycle/oversell/benchmark-hidden.test.ts": "852c207d23c09f4e4ba8ec3c7a3b731a071f70c90d93200d7d5a4790d5116123",
+    "reservation-lifecycle/oversell/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "reservation-lifecycle/oversell/src/policy.ts": "c824db6bfe456890e485050654d4e44a0f9acf6d085658e71ed10cddfd6732a1",
+    "reservation-lifecycle/oversell/src/service.ts": "9e363a82d80646b3d4bda80847e3c9c0fe1cc015a55825b4d927980e0a61825b",
+    "reservation-lifecycle/oversell/src/store.ts": "3d89d18708592165d23e83c9c95a5b8c581bf88f9ebf240817ac5c8ae390814f",
+    "reservation-lifecycle/oversell/src/types.ts": "4065a0765ce66e488c2e07cace3b93282b3a2372843ec1afe2915390b1f5f96c",
+    "reservation-lifecycle/oversell/test/visible.test.ts": "e83f384ea492f1c5f77a20fc07cb7ddf49bd65d4e3c0b42eca034df91eeade8a",
+    "reservation-lifecycle/oversell.log": "fde53e37dd441efd343ad052026a60ab2b799f8f54aeb77b9ae322f8f52cd8bd",
+    "reservation-lifecycle/quiet-terminal-conflict/TASK.md": "7dd3879fb39e2c519a826370c9f4ebdebb8595b2d7d010bf8f07e39c84a1d728",
+    "reservation-lifecycle/quiet-terminal-conflict/benchmark-hidden.test.ts": "852c207d23c09f4e4ba8ec3c7a3b731a071f70c90d93200d7d5a4790d5116123",
+    "reservation-lifecycle/quiet-terminal-conflict/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "reservation-lifecycle/quiet-terminal-conflict/src/policy.ts": "17d7c63441a85968ba5d616f8afafc272dc3ce0dec7a8546f333a9d0590d79e9",
+    "reservation-lifecycle/quiet-terminal-conflict/src/service.ts": "9e363a82d80646b3d4bda80847e3c9c0fe1cc015a55825b4d927980e0a61825b",
+    "reservation-lifecycle/quiet-terminal-conflict/src/store.ts": "3d89d18708592165d23e83c9c95a5b8c581bf88f9ebf240817ac5c8ae390814f",
+    "reservation-lifecycle/quiet-terminal-conflict/src/types.ts": "4065a0765ce66e488c2e07cace3b93282b3a2372843ec1afe2915390b1f5f96c",
+    "reservation-lifecycle/quiet-terminal-conflict/test/visible.test.ts": "e83f384ea492f1c5f77a20fc07cb7ddf49bd65d4e3c0b42eca034df91eeade8a",
+    "reservation-lifecycle/quiet-terminal-conflict.log": "e36c62f147446789b568d96c809f9919fd83accbbecbddc998a2dd58666b49d6",
+    "snapshot-pagination-lifecycle/baseline/TASK.md": "b884dfbc8c9aad04ffc7ccc7947dc4cb6df7866491def33faeac013093cf8785",
+    "snapshot-pagination-lifecycle/baseline/benchmark-hidden.test.ts": "e0b5fedd0d5e74ec5b4745b05b4684f9d368aaafbd255ae9862f56135d303b86",
+    "snapshot-pagination-lifecycle/baseline/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "snapshot-pagination-lifecycle/baseline/src/cursor.ts": "d7f7b7d2851b4a447d999a2c61e2801cc777756b5b4e7350eb3217a8d740b7db",
+    "snapshot-pagination-lifecycle/baseline/src/feed.ts": "0c0adea4dbf0b7211166865f2753805523e2e0604865bd698aef37ba7063a01a",
+    "snapshot-pagination-lifecycle/baseline/src/store.ts": "e851a9a936445627fb9f5ae318edc81bb74b42e2ced995dede67d703e7411b12",
+    "snapshot-pagination-lifecycle/baseline/src/types.ts": "8b734ac705d869287b027519fc9864c8a9bd67b56e34f1457d7ae53955cc5621",
+    "snapshot-pagination-lifecycle/baseline/test/visible.test.ts": "c0a44f67a463fc736d97616e5c12835cb8aa594428a8f20ffe90a5527db33386",
+    "snapshot-pagination-lifecycle/baseline-hidden.log": "8775a1bf69a9016b5b557af427b4bb6e57a5215cd9235286fbb258af765f28cf",
+    "snapshot-pagination-lifecycle/baseline-visible.log": "e9a3e645ad842152929a3f5edb6253738b8c70cae4cc4d649ee2be3b8a021019",
+    "snapshot-pagination-lifecycle/cross-feed/TASK.md": "b884dfbc8c9aad04ffc7ccc7947dc4cb6df7866491def33faeac013093cf8785",
+    "snapshot-pagination-lifecycle/cross-feed/benchmark-hidden.test.ts": "e0b5fedd0d5e74ec5b4745b05b4684f9d368aaafbd255ae9862f56135d303b86",
+    "snapshot-pagination-lifecycle/cross-feed/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "snapshot-pagination-lifecycle/cross-feed/src/cursor.ts": "d7f7b7d2851b4a447d999a2c61e2801cc777756b5b4e7350eb3217a8d740b7db",
+    "snapshot-pagination-lifecycle/cross-feed/src/feed.ts": "ce6e7c54640d98017811aa77f777c63cfae768d42acfed592ae4292d4c462c87",
+    "snapshot-pagination-lifecycle/cross-feed/src/store.ts": "e851a9a936445627fb9f5ae318edc81bb74b42e2ced995dede67d703e7411b12",
+    "snapshot-pagination-lifecycle/cross-feed/src/types.ts": "8b734ac705d869287b027519fc9864c8a9bd67b56e34f1457d7ae53955cc5621",
+    "snapshot-pagination-lifecycle/cross-feed/test/visible.test.ts": "c0a44f67a463fc736d97616e5c12835cb8aa594428a8f20ffe90a5527db33386",
+    "snapshot-pagination-lifecycle/cross-feed.log": "9ca9bab6fbf0ff078ba43781c179709113f4a15a3f181a95268b30c5c64ced36",
+    "snapshot-pagination-lifecycle/deleted-visible/TASK.md": "b884dfbc8c9aad04ffc7ccc7947dc4cb6df7866491def33faeac013093cf8785",
+    "snapshot-pagination-lifecycle/deleted-visible/benchmark-hidden.test.ts": "e0b5fedd0d5e74ec5b4745b05b4684f9d368aaafbd255ae9862f56135d303b86",
+    "snapshot-pagination-lifecycle/deleted-visible/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "snapshot-pagination-lifecycle/deleted-visible/src/cursor.ts": "d7f7b7d2851b4a447d999a2c61e2801cc777756b5b4e7350eb3217a8d740b7db",
+    "snapshot-pagination-lifecycle/deleted-visible/src/feed.ts": "0c0adea4dbf0b7211166865f2753805523e2e0604865bd698aef37ba7063a01a",
+    "snapshot-pagination-lifecycle/deleted-visible/src/store.ts": "b37090542deb1aeb3251b2a5ccefd2d48d6eb47729abe6872df686a924e8bbd8",
+    "snapshot-pagination-lifecycle/deleted-visible/src/types.ts": "8b734ac705d869287b027519fc9864c8a9bd67b56e34f1457d7ae53955cc5621",
+    "snapshot-pagination-lifecycle/deleted-visible/test/visible.test.ts": "c0a44f67a463fc736d97616e5c12835cb8aa594428a8f20ffe90a5527db33386",
+    "snapshot-pagination-lifecycle/deleted-visible.log": "2f67fc00eacaabb94706336230c3cac0d8bdc770b5d4b10be0329e29146b6290",
+    "snapshot-pagination-lifecycle/dynamic-membership/TASK.md": "b884dfbc8c9aad04ffc7ccc7947dc4cb6df7866491def33faeac013093cf8785",
+    "snapshot-pagination-lifecycle/dynamic-membership/benchmark-hidden.test.ts": "e0b5fedd0d5e74ec5b4745b05b4684f9d368aaafbd255ae9862f56135d303b86",
+    "snapshot-pagination-lifecycle/dynamic-membership/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "snapshot-pagination-lifecycle/dynamic-membership/src/cursor.ts": "d7f7b7d2851b4a447d999a2c61e2801cc777756b5b4e7350eb3217a8d740b7db",
+    "snapshot-pagination-lifecycle/dynamic-membership/src/feed.ts": "0c0adea4dbf0b7211166865f2753805523e2e0604865bd698aef37ba7063a01a",
+    "snapshot-pagination-lifecycle/dynamic-membership/src/store.ts": "2a6f674004c7b03e3fe9f0e3938bf4171fa61af8dd6eab2736b313b504395558",
+    "snapshot-pagination-lifecycle/dynamic-membership/src/types.ts": "8b734ac705d869287b027519fc9864c8a9bd67b56e34f1457d7ae53955cc5621",
+    "snapshot-pagination-lifecycle/dynamic-membership/test/visible.test.ts": "c0a44f67a463fc736d97616e5c12835cb8aa594428a8f20ffe90a5527db33386",
+    "snapshot-pagination-lifecycle/dynamic-membership.log": "89eacd81d24cc3a8df98db118c74c083ceb640adbeb082d18f3e8197443112f3",
+    "snapshot-pagination-lifecycle/exact-page-cursor/TASK.md": "b884dfbc8c9aad04ffc7ccc7947dc4cb6df7866491def33faeac013093cf8785",
+    "snapshot-pagination-lifecycle/exact-page-cursor/benchmark-hidden.test.ts": "e0b5fedd0d5e74ec5b4745b05b4684f9d368aaafbd255ae9862f56135d303b86",
+    "snapshot-pagination-lifecycle/exact-page-cursor/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "snapshot-pagination-lifecycle/exact-page-cursor/src/cursor.ts": "d7f7b7d2851b4a447d999a2c61e2801cc777756b5b4e7350eb3217a8d740b7db",
+    "snapshot-pagination-lifecycle/exact-page-cursor/src/feed.ts": "99175c94c0ee492dd74787a6937bb78545c4d5a59ed5ae07d38b761b49fb6244",
+    "snapshot-pagination-lifecycle/exact-page-cursor/src/store.ts": "e851a9a936445627fb9f5ae318edc81bb74b42e2ced995dede67d703e7411b12",
+    "snapshot-pagination-lifecycle/exact-page-cursor/src/types.ts": "8b734ac705d869287b027519fc9864c8a9bd67b56e34f1457d7ae53955cc5621",
+    "snapshot-pagination-lifecycle/exact-page-cursor/test/visible.test.ts": "c0a44f67a463fc736d97616e5c12835cb8aa594428a8f20ffe90a5527db33386",
+    "snapshot-pagination-lifecycle/exact-page-cursor.log": "71782f26d204bfa1956ff66c7dcc6209416cdcf81587dcfa09b4d347258e8f8e",
+    "snapshot-pagination-lifecycle/live-snapshots/TASK.md": "b884dfbc8c9aad04ffc7ccc7947dc4cb6df7866491def33faeac013093cf8785",
+    "snapshot-pagination-lifecycle/live-snapshots/benchmark-hidden.test.ts": "e0b5fedd0d5e74ec5b4745b05b4684f9d368aaafbd255ae9862f56135d303b86",
+    "snapshot-pagination-lifecycle/live-snapshots/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "snapshot-pagination-lifecycle/live-snapshots/src/cursor.ts": "d7f7b7d2851b4a447d999a2c61e2801cc777756b5b4e7350eb3217a8d740b7db",
+    "snapshot-pagination-lifecycle/live-snapshots/src/feed.ts": "0c0adea4dbf0b7211166865f2753805523e2e0604865bd698aef37ba7063a01a",
+    "snapshot-pagination-lifecycle/live-snapshots/src/store.ts": "5466ca85d7d265c333d0f87b259571dbd801e6bfb1ea62aad7990bd423af7e15",
+    "snapshot-pagination-lifecycle/live-snapshots/src/types.ts": "8b734ac705d869287b027519fc9864c8a9bd67b56e34f1457d7ae53955cc5621",
+    "snapshot-pagination-lifecycle/live-snapshots/test/visible.test.ts": "c0a44f67a463fc736d97616e5c12835cb8aa594428a8f20ffe90a5527db33386",
+    "snapshot-pagination-lifecycle/live-snapshots.log": "2e4fbf24c628c82df99ef1969ac3f2ff7ef7d8ee12f1fd41ae513cd17c3b6d77",
+    "snapshot-pagination-lifecycle/old-order-accepted/TASK.md": "b884dfbc8c9aad04ffc7ccc7947dc4cb6df7866491def33faeac013093cf8785",
+    "snapshot-pagination-lifecycle/old-order-accepted/benchmark-hidden.test.ts": "e0b5fedd0d5e74ec5b4745b05b4684f9d368aaafbd255ae9862f56135d303b86",
+    "snapshot-pagination-lifecycle/old-order-accepted/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "snapshot-pagination-lifecycle/old-order-accepted/src/cursor.ts": "f08a8e610bb111ec4dee09bac4072d4cac3c034bc870fe8df99728938cf2051c",
+    "snapshot-pagination-lifecycle/old-order-accepted/src/feed.ts": "0c0adea4dbf0b7211166865f2753805523e2e0604865bd698aef37ba7063a01a",
+    "snapshot-pagination-lifecycle/old-order-accepted/src/store.ts": "e851a9a936445627fb9f5ae318edc81bb74b42e2ced995dede67d703e7411b12",
+    "snapshot-pagination-lifecycle/old-order-accepted/src/types.ts": "8b734ac705d869287b027519fc9864c8a9bd67b56e34f1457d7ae53955cc5621",
+    "snapshot-pagination-lifecycle/old-order-accepted/test/visible.test.ts": "c0a44f67a463fc736d97616e5c12835cb8aa594428a8f20ffe90a5527db33386",
+    "snapshot-pagination-lifecycle/old-order-accepted.log": "2a88d587c318046de59f02997af9c1d3079e029e02a414f8d8aacebdb7dc93cb",
+    "snapshot-pagination-lifecycle/oracle-hidden.log": "be83aa024cd107ba02af9a70a4330a68e760af139883d7b0d502492d071274cb",
+    "snapshot-pagination-lifecycle/oracle-visible.log": "94d50a2a4205bf4c3e9905c47499d49f3e8069e08dc3382106f41ef91b0ad08b",
+    "snapshot-pagination-lifecycle/sequence-boundary/TASK.md": "b884dfbc8c9aad04ffc7ccc7947dc4cb6df7866491def33faeac013093cf8785",
+    "snapshot-pagination-lifecycle/sequence-boundary/benchmark-hidden.test.ts": "e0b5fedd0d5e74ec5b4745b05b4684f9d368aaafbd255ae9862f56135d303b86",
+    "snapshot-pagination-lifecycle/sequence-boundary/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "snapshot-pagination-lifecycle/sequence-boundary/src/cursor.ts": "d7f7b7d2851b4a447d999a2c61e2801cc777756b5b4e7350eb3217a8d740b7db",
+    "snapshot-pagination-lifecycle/sequence-boundary/src/feed.ts": "5376f6a8397f65ede833903f4c408f6a01a8b3d07378d4122a5638d9e2e6b9da",
+    "snapshot-pagination-lifecycle/sequence-boundary/src/store.ts": "e851a9a936445627fb9f5ae318edc81bb74b42e2ced995dede67d703e7411b12",
+    "snapshot-pagination-lifecycle/sequence-boundary/src/types.ts": "8b734ac705d869287b027519fc9864c8a9bd67b56e34f1457d7ae53955cc5621",
+    "snapshot-pagination-lifecycle/sequence-boundary/test/visible.test.ts": "c0a44f67a463fc736d97616e5c12835cb8aa594428a8f20ffe90a5527db33386",
+    "snapshot-pagination-lifecycle/sequence-boundary.log": "0a9f0e48e33732c57b796d7e1d1b2fcd5852047a15cf0dcb06a03a04f784b7d1",
+    "tenant-authorization-epochs/action-cache-collision/TASK.md": "7d5e33fc6760af654922f19df40f67bb2297ad83fa3932c004b8bf8da867e51b",
+    "tenant-authorization-epochs/action-cache-collision/benchmark-hidden.test.ts": "94b882f11035d1bd87e641184d0514d549f1ad94352e053d634b5fc697868f1a",
+    "tenant-authorization-epochs/action-cache-collision/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "tenant-authorization-epochs/action-cache-collision/src/authorization.ts": "b4f292217bad1fac42ede30a30411dd74ab0fc0cfb992adb13817293db9ebeb5",
+    "tenant-authorization-epochs/action-cache-collision/src/clock.ts": "775e3ed4194ec575154ec2abe54fc5af452fe2d72999eabbe04a80086b0fbc26",
+    "tenant-authorization-epochs/action-cache-collision/src/groups.ts": "3c483eeaa4934bdb237764c76e36a5beca538715b811c9afa59616e82734f848",
+    "tenant-authorization-epochs/action-cache-collision/src/policies.ts": "f78b35b7a268a8460c306ce0a60fa6dbeffe442f05258160754fc8caf5ee611a",
+    "tenant-authorization-epochs/action-cache-collision/src/sessions.ts": "da288aa47f56ae6b870928edfbdc831bf9b2189b206e6a9bb7c290574fa70008",
+    "tenant-authorization-epochs/action-cache-collision/src/types.ts": "084a428afddc88ec3f1eac3d417623acfc02283cf5b161b8e12c1164c61269fc",
+    "tenant-authorization-epochs/action-cache-collision/test/visible.test.ts": "d0973fe02f0f95a2fa60ae3af975096ac671c41f9b8dbd589162ebd561637b00",
+    "tenant-authorization-epochs/action-cache-collision.log": "aaf0cdf1168c8847596f8773d95589138d05bb896340004130391cd30bb5e3f4",
+    "tenant-authorization-epochs/baseline/TASK.md": "7d5e33fc6760af654922f19df40f67bb2297ad83fa3932c004b8bf8da867e51b",
+    "tenant-authorization-epochs/baseline/benchmark-hidden.test.ts": "94b882f11035d1bd87e641184d0514d549f1ad94352e053d634b5fc697868f1a",
+    "tenant-authorization-epochs/baseline/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "tenant-authorization-epochs/baseline/src/authorization.ts": "59ca25131dc7e362cc8cdc3abe2324eca968ce5704aff2bababceaab32cf74dc",
+    "tenant-authorization-epochs/baseline/src/clock.ts": "775e3ed4194ec575154ec2abe54fc5af452fe2d72999eabbe04a80086b0fbc26",
+    "tenant-authorization-epochs/baseline/src/groups.ts": "3c483eeaa4934bdb237764c76e36a5beca538715b811c9afa59616e82734f848",
+    "tenant-authorization-epochs/baseline/src/policies.ts": "f78b35b7a268a8460c306ce0a60fa6dbeffe442f05258160754fc8caf5ee611a",
+    "tenant-authorization-epochs/baseline/src/sessions.ts": "da288aa47f56ae6b870928edfbdc831bf9b2189b206e6a9bb7c290574fa70008",
+    "tenant-authorization-epochs/baseline/src/types.ts": "084a428afddc88ec3f1eac3d417623acfc02283cf5b161b8e12c1164c61269fc",
+    "tenant-authorization-epochs/baseline/test/visible.test.ts": "d0973fe02f0f95a2fa60ae3af975096ac671c41f9b8dbd589162ebd561637b00",
+    "tenant-authorization-epochs/baseline-hidden.log": "395328fe7623deaa993413f442e929fc42be9c99aea1bd3152c04b2bcdba67b6",
+    "tenant-authorization-epochs/baseline-visible.log": "6cd7ec4a1e9046e33c743e13023a3fdfb42e51d0408479588f049d5812e41527",
+    "tenant-authorization-epochs/deny-does-not-win/TASK.md": "7d5e33fc6760af654922f19df40f67bb2297ad83fa3932c004b8bf8da867e51b",
+    "tenant-authorization-epochs/deny-does-not-win/benchmark-hidden.test.ts": "94b882f11035d1bd87e641184d0514d549f1ad94352e053d634b5fc697868f1a",
+    "tenant-authorization-epochs/deny-does-not-win/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "tenant-authorization-epochs/deny-does-not-win/src/authorization.ts": "9a6a087a730dfc0ce8b3881c282678a86eab56fefba508a9be4f0e6a2b3883d7",
+    "tenant-authorization-epochs/deny-does-not-win/src/clock.ts": "775e3ed4194ec575154ec2abe54fc5af452fe2d72999eabbe04a80086b0fbc26",
+    "tenant-authorization-epochs/deny-does-not-win/src/groups.ts": "3c483eeaa4934bdb237764c76e36a5beca538715b811c9afa59616e82734f848",
+    "tenant-authorization-epochs/deny-does-not-win/src/policies.ts": "f78b35b7a268a8460c306ce0a60fa6dbeffe442f05258160754fc8caf5ee611a",
+    "tenant-authorization-epochs/deny-does-not-win/src/sessions.ts": "da288aa47f56ae6b870928edfbdc831bf9b2189b206e6a9bb7c290574fa70008",
+    "tenant-authorization-epochs/deny-does-not-win/src/types.ts": "084a428afddc88ec3f1eac3d417623acfc02283cf5b161b8e12c1164c61269fc",
+    "tenant-authorization-epochs/deny-does-not-win/test/visible.test.ts": "d0973fe02f0f95a2fa60ae3af975096ac671c41f9b8dbd589162ebd561637b00",
+    "tenant-authorization-epochs/deny-does-not-win.log": "c11383b817fce32e4514d7c02518425545284236a14a79e1baa840922824f7b1",
+    "tenant-authorization-epochs/expired-session-allowed/TASK.md": "7d5e33fc6760af654922f19df40f67bb2297ad83fa3932c004b8bf8da867e51b",
+    "tenant-authorization-epochs/expired-session-allowed/benchmark-hidden.test.ts": "94b882f11035d1bd87e641184d0514d549f1ad94352e053d634b5fc697868f1a",
+    "tenant-authorization-epochs/expired-session-allowed/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "tenant-authorization-epochs/expired-session-allowed/src/authorization.ts": "7d976893d2637bddc16957aabdec916e36cc2e67b35979f10f37b0da601a5e00",
+    "tenant-authorization-epochs/expired-session-allowed/src/clock.ts": "775e3ed4194ec575154ec2abe54fc5af452fe2d72999eabbe04a80086b0fbc26",
+    "tenant-authorization-epochs/expired-session-allowed/src/groups.ts": "3c483eeaa4934bdb237764c76e36a5beca538715b811c9afa59616e82734f848",
+    "tenant-authorization-epochs/expired-session-allowed/src/policies.ts": "f78b35b7a268a8460c306ce0a60fa6dbeffe442f05258160754fc8caf5ee611a",
+    "tenant-authorization-epochs/expired-session-allowed/src/sessions.ts": "da288aa47f56ae6b870928edfbdc831bf9b2189b206e6a9bb7c290574fa70008",
+    "tenant-authorization-epochs/expired-session-allowed/src/types.ts": "084a428afddc88ec3f1eac3d417623acfc02283cf5b161b8e12c1164c61269fc",
+    "tenant-authorization-epochs/expired-session-allowed/test/visible.test.ts": "d0973fe02f0f95a2fa60ae3af975096ac671c41f9b8dbd589162ebd561637b00",
+    "tenant-authorization-epochs/expired-session-allowed.log": "191313ee1a51346537fce789ead0a458cd11afd972418f6b0719e9205d872b57",
+    "tenant-authorization-epochs/membership-cache-stale/TASK.md": "7d5e33fc6760af654922f19df40f67bb2297ad83fa3932c004b8bf8da867e51b",
+    "tenant-authorization-epochs/membership-cache-stale/benchmark-hidden.test.ts": "94b882f11035d1bd87e641184d0514d549f1ad94352e053d634b5fc697868f1a",
+    "tenant-authorization-epochs/membership-cache-stale/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "tenant-authorization-epochs/membership-cache-stale/src/authorization.ts": "b568104a5a801da4bcfe306898911c896d7bea05a93664a6058071afa08382e1",
+    "tenant-authorization-epochs/membership-cache-stale/src/clock.ts": "775e3ed4194ec575154ec2abe54fc5af452fe2d72999eabbe04a80086b0fbc26",
+    "tenant-authorization-epochs/membership-cache-stale/src/groups.ts": "3c483eeaa4934bdb237764c76e36a5beca538715b811c9afa59616e82734f848",
+    "tenant-authorization-epochs/membership-cache-stale/src/policies.ts": "f78b35b7a268a8460c306ce0a60fa6dbeffe442f05258160754fc8caf5ee611a",
+    "tenant-authorization-epochs/membership-cache-stale/src/sessions.ts": "da288aa47f56ae6b870928edfbdc831bf9b2189b206e6a9bb7c290574fa70008",
+    "tenant-authorization-epochs/membership-cache-stale/src/types.ts": "084a428afddc88ec3f1eac3d417623acfc02283cf5b161b8e12c1164c61269fc",
+    "tenant-authorization-epochs/membership-cache-stale/test/visible.test.ts": "d0973fe02f0f95a2fa60ae3af975096ac671c41f9b8dbd589162ebd561637b00",
+    "tenant-authorization-epochs/membership-cache-stale.log": "7a3f39b7721bec33b15506867a3db5fe2c7d6f4522ac4c0a17ab2dd60b2fdcfd",
+    "tenant-authorization-epochs/oracle-hidden.log": "5dd239e16c5d0f6caf82a9e9a672a2952121dfd51b9d07427a57012c1475a2c4",
+    "tenant-authorization-epochs/oracle-visible.log": "5ac7c52928b8fb8a10d3aa17118413f04592fac2ee8f255202436b953286ab39",
+    "tenant-authorization-epochs/policy-cache-stale/TASK.md": "7d5e33fc6760af654922f19df40f67bb2297ad83fa3932c004b8bf8da867e51b",
+    "tenant-authorization-epochs/policy-cache-stale/benchmark-hidden.test.ts": "94b882f11035d1bd87e641184d0514d549f1ad94352e053d634b5fc697868f1a",
+    "tenant-authorization-epochs/policy-cache-stale/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "tenant-authorization-epochs/policy-cache-stale/src/authorization.ts": "22b0a52ad0429cc1e7be9657baaad7dfa361be2da85cc43e6a7e3839ca4729cc",
+    "tenant-authorization-epochs/policy-cache-stale/src/clock.ts": "775e3ed4194ec575154ec2abe54fc5af452fe2d72999eabbe04a80086b0fbc26",
+    "tenant-authorization-epochs/policy-cache-stale/src/groups.ts": "3c483eeaa4934bdb237764c76e36a5beca538715b811c9afa59616e82734f848",
+    "tenant-authorization-epochs/policy-cache-stale/src/policies.ts": "f78b35b7a268a8460c306ce0a60fa6dbeffe442f05258160754fc8caf5ee611a",
+    "tenant-authorization-epochs/policy-cache-stale/src/sessions.ts": "da288aa47f56ae6b870928edfbdc831bf9b2189b206e6a9bb7c290574fa70008",
+    "tenant-authorization-epochs/policy-cache-stale/src/types.ts": "084a428afddc88ec3f1eac3d417623acfc02283cf5b161b8e12c1164c61269fc",
+    "tenant-authorization-epochs/policy-cache-stale/test/visible.test.ts": "d0973fe02f0f95a2fa60ae3af975096ac671c41f9b8dbd589162ebd561637b00",
+    "tenant-authorization-epochs/policy-cache-stale.log": "b88f3b7db1a46b1b1e59b43e59d13bc2d2a3523ca7a41fb74e6c10d6a66ad185",
+    "tenant-authorization-epochs/prototype-backed-policy-dictionaries/TASK.md": "7d5e33fc6760af654922f19df40f67bb2297ad83fa3932c004b8bf8da867e51b",
+    "tenant-authorization-epochs/prototype-backed-policy-dictionaries/benchmark-hidden.test.ts": "94b882f11035d1bd87e641184d0514d549f1ad94352e053d634b5fc697868f1a",
+    "tenant-authorization-epochs/prototype-backed-policy-dictionaries/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "tenant-authorization-epochs/prototype-backed-policy-dictionaries/src/authorization.ts": "59ca25131dc7e362cc8cdc3abe2324eca968ce5704aff2bababceaab32cf74dc",
+    "tenant-authorization-epochs/prototype-backed-policy-dictionaries/src/clock.ts": "775e3ed4194ec575154ec2abe54fc5af452fe2d72999eabbe04a80086b0fbc26",
+    "tenant-authorization-epochs/prototype-backed-policy-dictionaries/src/groups.ts": "3c483eeaa4934bdb237764c76e36a5beca538715b811c9afa59616e82734f848",
+    "tenant-authorization-epochs/prototype-backed-policy-dictionaries/src/policies.ts": "3e172220137b91ab158d5bba231a5ace23fb8247875a09dd1992b595f223c371",
+    "tenant-authorization-epochs/prototype-backed-policy-dictionaries/src/sessions.ts": "da288aa47f56ae6b870928edfbdc831bf9b2189b206e6a9bb7c290574fa70008",
+    "tenant-authorization-epochs/prototype-backed-policy-dictionaries/src/types.ts": "084a428afddc88ec3f1eac3d417623acfc02283cf5b161b8e12c1164c61269fc",
+    "tenant-authorization-epochs/prototype-backed-policy-dictionaries/test/visible.test.ts": "d0973fe02f0f95a2fa60ae3af975096ac671c41f9b8dbd589162ebd561637b00",
+    "tenant-authorization-epochs/prototype-backed-policy-dictionaries.log": "140e1bd8c329ca7714bd644acc831a867060619d68220649c0147556cdc32a4c",
+    "tenant-authorization-epochs/session-replacement-cache-leak/TASK.md": "7d5e33fc6760af654922f19df40f67bb2297ad83fa3932c004b8bf8da867e51b",
+    "tenant-authorization-epochs/session-replacement-cache-leak/benchmark-hidden.test.ts": "94b882f11035d1bd87e641184d0514d549f1ad94352e053d634b5fc697868f1a",
+    "tenant-authorization-epochs/session-replacement-cache-leak/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "tenant-authorization-epochs/session-replacement-cache-leak/src/authorization.ts": "65907321ea496625ae37303e4f5b61c20cd82be725cdceadfdf40f9a82d45149",
+    "tenant-authorization-epochs/session-replacement-cache-leak/src/clock.ts": "775e3ed4194ec575154ec2abe54fc5af452fe2d72999eabbe04a80086b0fbc26",
+    "tenant-authorization-epochs/session-replacement-cache-leak/src/groups.ts": "3c483eeaa4934bdb237764c76e36a5beca538715b811c9afa59616e82734f848",
+    "tenant-authorization-epochs/session-replacement-cache-leak/src/policies.ts": "f78b35b7a268a8460c306ce0a60fa6dbeffe442f05258160754fc8caf5ee611a",
+    "tenant-authorization-epochs/session-replacement-cache-leak/src/sessions.ts": "da288aa47f56ae6b870928edfbdc831bf9b2189b206e6a9bb7c290574fa70008",
+    "tenant-authorization-epochs/session-replacement-cache-leak/src/types.ts": "084a428afddc88ec3f1eac3d417623acfc02283cf5b161b8e12c1164c61269fc",
+    "tenant-authorization-epochs/session-replacement-cache-leak/test/visible.test.ts": "d0973fe02f0f95a2fa60ae3af975096ac671c41f9b8dbd589162ebd561637b00",
+    "tenant-authorization-epochs/session-replacement-cache-leak.log": "f754c97cfc845817ded99216d424051c67ec9b638857e297586fa8da2cfecb2f",
+    "tenant-authorization-epochs/tenantless-groups/TASK.md": "7d5e33fc6760af654922f19df40f67bb2297ad83fa3932c004b8bf8da867e51b",
+    "tenant-authorization-epochs/tenantless-groups/benchmark-hidden.test.ts": "94b882f11035d1bd87e641184d0514d549f1ad94352e053d634b5fc697868f1a",
+    "tenant-authorization-epochs/tenantless-groups/package.json": "e22880be28a5aeb887afb791cf2c798b274970f54c5581e3032bd3f87867c5b6",
+    "tenant-authorization-epochs/tenantless-groups/src/authorization.ts": "59ca25131dc7e362cc8cdc3abe2324eca968ce5704aff2bababceaab32cf74dc",
+    "tenant-authorization-epochs/tenantless-groups/src/clock.ts": "775e3ed4194ec575154ec2abe54fc5af452fe2d72999eabbe04a80086b0fbc26",
+    "tenant-authorization-epochs/tenantless-groups/src/groups.ts": "355ef96dd1b0d9dfc7d8cd099316671050480cc0ee05b13ff4c17aba590de94a",
+    "tenant-authorization-epochs/tenantless-groups/src/policies.ts": "f78b35b7a268a8460c306ce0a60fa6dbeffe442f05258160754fc8caf5ee611a",
+    "tenant-authorization-epochs/tenantless-groups/src/sessions.ts": "da288aa47f56ae6b870928edfbdc831bf9b2189b206e6a9bb7c290574fa70008",
+    "tenant-authorization-epochs/tenantless-groups/src/types.ts": "084a428afddc88ec3f1eac3d417623acfc02283cf5b161b8e12c1164c61269fc",
+    "tenant-authorization-epochs/tenantless-groups/test/visible.test.ts": "d0973fe02f0f95a2fa60ae3af975096ac671c41f9b8dbd589162ebd561637b00",
+    "tenant-authorization-epochs/tenantless-groups.log": "4301c8f90394f2ef3cca8821b5dad38e3ff74a925c936ce110649c7be09a4d0c"
+  }
+}

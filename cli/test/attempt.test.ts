@@ -358,7 +358,7 @@ describe("attempt gate", () => {
     expect(exits).toEqual([0, 0, 0, 0, 0]);
     expect(capability.exitCode).toBe(0);
     expect(ambiguous.exitCode).toBe(2);
-  });
+  }, 15_000); // This integration case starts 28 CLI processes, including coverage runs.
 
   test("secret-shaped attempt fields reject without reflection", () => {
     // Given: a valid work and secret-shaped identifiers or hypothesis.

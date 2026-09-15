@@ -1,0 +1,22 @@
+{
+  "schema": "gdm-pi-routing-canary/v1",
+  "path": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-model-routing-20260908-x_cq5a1f",
+  "manifestSha256": "43409f0d2c3cfd510c688d8330e0596471419a898a288038d064cff0750bf42d",
+  "reason": "One infrastructure canary before comparative batch. Review found retryable agent_end parsing issue; final runtime will be frozen after correction. No arm comparisons or promotion based on this canary.",
+  "result": {
+    "id": "t1-legacy-1",
+    "success": true,
+    "seconds": 194.576,
+    "usageComplete": true,
+    "children": [],
+    "totalUsage": {
+      "input": 36966,
+      "output": 4453,
+      "cacheRead": 173824,
+      "cacheWrite": 0,
+      "totalTokens": 215243,
+      "reasoning": 2710,
+      "apiCostEstimateUSD": 0.405332
+    }
+  }
+}

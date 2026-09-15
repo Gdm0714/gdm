@@ -1,0 +1,648 @@
+{
+  "schemaVersion": "gdm-feature-value-stage0-summary/v1",
+  "protocol": "gdm-feature-value-stage0/v1",
+  "scale": "local-stage0",
+  "runId": "6c99186bd9d15ecca92289e341018132",
+  "createdAt": "2026-09-04T06:41:29.595Z",
+  "retention": "hashes-counts-bytes-timings-no-bodies",
+  "measurementScope": "cost-and-safety-only",
+  "utilityConclusion": "not-measured",
+  "freshInputConclusion": "not-measured",
+  "promotionEligible": false,
+  "removalEligible": false,
+  "defaultActivation": "unchanged",
+  "source": [
+    {
+      "id": "protocol",
+      "sha256": "204f1bf771d4bb52bdfc15f005101afcad2f7f1559c2d041d9cdee555feaf265",
+      "bytes": 20553
+    },
+    {
+      "id": "probe-child",
+      "sha256": "c738a8e081c04d676e533ba35288c7a258caf7691e4aed290d959b153fff3eb1",
+      "bytes": 6299
+    },
+    {
+      "id": "stage0",
+      "sha256": "3dab532fc56436df358ab0804a5620f32e0f7128999fd42521845dce51891686",
+      "bytes": 26027
+    },
+    {
+      "id": "result",
+      "sha256": "6052d4839190a81575b63e1ac58950a3dcf1b0f8dbc9d5b55875cfa56d11cfe4",
+      "bytes": 8468
+    },
+    {
+      "id": "publisher",
+      "sha256": "03db6a0b5951284fd19927274618a3f9d9da3dfd9dbe6616cf583ea6eccbfcbb",
+      "bytes": 2022
+    },
+    {
+      "id": "verifier",
+      "sha256": "2ca6e87da9badbc11af963a15d277db9ad39fd05f793f557e4fc0cc9a6bf7568",
+      "bytes": 6676
+    },
+    {
+      "id": "static-check",
+      "sha256": "1d15e4c83d4bddc21fedb2801019b1a0b52246b4052ae4e6977be8f589da24aa",
+      "bytes": 2892
+    },
+    {
+      "id": "memory-core",
+      "sha256": "9cdfe2ea2473d6a0a4ede91c004f723b524a581901af91c7ef38195b8ae94fca",
+      "bytes": 13023
+    },
+    {
+      "id": "memory-store",
+      "sha256": "416a3f13828d422b2be8adc4eeeb1ce078b3cc365f4fb70b337c36f0c5528947",
+      "bytes": 5955
+    },
+    {
+      "id": "memory-extension",
+      "sha256": "9d11503947883fbae71478f1e887616465b3d748bcefad5cfd4dab838b820d28",
+      "bytes": 12649
+    },
+    {
+      "id": "computer-use-extension",
+      "sha256": "c29270105e17cecd81a1dd910096784f24e70a647dc926f8c66953e26f930b04",
+      "bytes": 6678
+    },
+    {
+      "id": "computer-use-vm",
+      "sha256": "223cfc13170c4bfa4e856cc573ae4ca816f03a15ed6d85fc28f1d68003fc5370",
+      "bytes": 35324
+    },
+    {
+      "id": "source-launcher",
+      "sha256": "2fe4144e7d58fed308e36541f96d28fbedb842abbfd859627c0e4fce2377b328",
+      "bytes": 6504
+    },
+    {
+      "id": "installed-launcher",
+      "sha256": "61038e014d3a67971a38f45ae7cf600618683eae366710c47c0116974cef02d3",
+      "bytes": 6789
+    },
+    {
+      "id": "installed-memory-extension",
+      "sha256": "9d11503947883fbae71478f1e887616465b3d748bcefad5cfd4dab838b820d28",
+      "bytes": 12649
+    },
+    {
+      "id": "installed-computer-use-extension",
+      "sha256": "c29270105e17cecd81a1dd910096784f24e70a647dc926f8c66953e26f930b04",
+      "bytes": 6678
+    },
+    {
+      "id": "status-extension",
+      "sha256": "6c74b8b9f78f73cd2708fd5cf822295f67ce25c466a4329d445915bce93d5420",
+      "bytes": 4576
+    },
+    {
+      "id": "context-v2-pointer",
+      "sha256": "ec1bdbbcbba2f84433e67422e1b53963c0a9735db1f5d49640a73ac587716a8d",
+      "bytes": 338
+    },
+    {
+      "id": "context-v2-summary",
+      "sha256": "7a81d563ae09f417582ccb7f9f652bc7cd48a8a17e63f712c14e16b15dc8be17",
+      "bytes": 17110
+    },
+    {
+      "id": "context-v2-assessor",
+      "sha256": "257d62b80dc8eb9352fb7d2305894bcb88b5995fb916a9104ee49ef7342be49c",
+      "bytes": 3766
+    },
+    {
+      "id": "context-v2-evaluation",
+      "sha256": "27f45da0dec503449bba97410e2a9a7d128309613059bff3664d0da6ed652948",
+      "bytes": 5491
+    }
+  ],
+  "sourceSha256": "3d8d3dff78c11c5896167103e21d1d7c95903d53864f30db8fff6f9f2abcf546",
+  "registration": {
+    "repetitions": 10,
+    "arms": [
+      {
+        "arm": "baseline",
+        "repetitions": 10,
+        "toolCount": 0,
+        "toolSchemaBytes": 0,
+        "promptMetadataBytes": 0,
+        "toolDefinitionBytes": 2,
+        "statusIntervalMs": null,
+        "statusFetchCalls": 0,
+        "statusSetCalls": 0,
+        "statusFormattingValid": null,
+        "statusProviderHideValid": null,
+        "processWallMs": {
+          "samples": 10,
+          "min": 15.470124999999996,
+          "median": 15.918750000000017,
+          "p95": 20.480999999999995,
+          "max": 20.480999999999995
+        },
+        "loadMs": {
+          "samples": 10,
+          "min": 0.07858300000000007,
+          "median": 0.08020800000000072,
+          "p95": 0.09812499999999957,
+          "max": 0.09812499999999957
+        },
+        "cpuUserMicros": {
+          "samples": 10,
+          "min": 1,
+          "median": 1,
+          "p95": 2,
+          "max": 2
+        },
+        "cpuSystemMicros": {
+          "samples": 10,
+          "min": 2,
+          "median": 3,
+          "p95": 3,
+          "max": 3
+        },
+        "rssBytes": {
+          "samples": 10,
+          "min": 32407552,
+          "median": 32456704,
+          "p95": 32505856,
+          "max": 32505856
+        },
+        "heapUsedBytes": {
+          "samples": 10,
+          "min": 175406,
+          "median": 175406,
+          "p95": 175406,
+          "max": 175406
+        }
+      },
+      {
+        "arm": "memory",
+        "repetitions": 10,
+        "toolCount": 1,
+        "toolSchemaBytes": 452,
+        "promptMetadataBytes": 1003,
+        "toolDefinitionBytes": 1556,
+        "statusIntervalMs": null,
+        "statusFetchCalls": 0,
+        "statusSetCalls": 0,
+        "statusFormattingValid": null,
+        "statusProviderHideValid": null,
+        "processWallMs": {
+          "samples": 10,
+          "min": 211.11862500000007,
+          "median": 217.11537499999986,
+          "p95": 326.266875,
+          "max": 326.266875
+        },
+        "loadMs": {
+          "samples": 10,
+          "min": 193.977417,
+          "median": 199.6465,
+          "p95": 309.398417,
+          "max": 309.398417
+        },
+        "cpuUserMicros": {
+          "samples": 10,
+          "min": 297379,
+          "median": 305124,
+          "p95": 313109,
+          "max": 313109
+        },
+        "cpuSystemMicros": {
+          "samples": 10,
+          "min": 91382,
+          "median": 95532,
+          "p95": 120626,
+          "max": 120626
+        },
+        "rssBytes": {
+          "samples": 10,
+          "min": 185204736,
+          "median": 187318272,
+          "p95": 195674112,
+          "max": 195674112
+        },
+        "heapUsedBytes": {
+          "samples": 10,
+          "min": 1124296,
+          "median": 1125752,
+          "p95": 12986356,
+          "max": 12986356
+        }
+      },
+      {
+        "arm": "computer-use",
+        "repetitions": 10,
+        "toolCount": 1,
+        "toolSchemaBytes": 1042,
+        "promptMetadataBytes": 653,
+        "toolDefinitionBytes": 1800,
+        "statusIntervalMs": null,
+        "statusFetchCalls": 0,
+        "statusSetCalls": 0,
+        "statusFormattingValid": null,
+        "statusProviderHideValid": null,
+        "processWallMs": {
+          "samples": 10,
+          "min": 76.55662500000017,
+          "median": 78.31304199999977,
+          "p95": 83.26241600000003,
+          "max": 83.26241600000003
+        },
+        "loadMs": {
+          "samples": 10,
+          "min": 59.363333000000004,
+          "median": 61.423500000000004,
+          "p95": 66.0415,
+          "max": 66.0415
+        },
+        "cpuUserMicros": {
+          "samples": 10,
+          "min": 91051,
+          "median": 92189,
+          "p95": 95514,
+          "max": 95514
+        },
+        "cpuSystemMicros": {
+          "samples": 10,
+          "min": 49342,
+          "median": 52724,
+          "p95": 55444,
+          "max": 55444
+        },
+        "rssBytes": {
+          "samples": 10,
+          "min": 89669632,
+          "median": 90095616,
+          "p95": 92241920,
+          "max": 92241920
+        },
+        "heapUsedBytes": {
+          "samples": 10,
+          "min": 1110949,
+          "median": 1110949,
+          "p95": 1112405,
+          "max": 1112405
+        }
+      },
+      {
+        "arm": "both",
+        "repetitions": 10,
+        "toolCount": 2,
+        "toolSchemaBytes": 1494,
+        "promptMetadataBytes": 1656,
+        "toolDefinitionBytes": 3355,
+        "statusIntervalMs": null,
+        "statusFetchCalls": 0,
+        "statusSetCalls": 0,
+        "statusFormattingValid": null,
+        "statusProviderHideValid": null,
+        "processWallMs": {
+          "samples": 10,
+          "min": 215.27049999999963,
+          "median": 220.2540829999998,
+          "p95": 230.73425000000043,
+          "max": 230.73425000000043
+        },
+        "loadMs": {
+          "samples": 10,
+          "min": 198.190333,
+          "median": 202.848791,
+          "p95": 213.389833,
+          "max": 213.389833
+        },
+        "cpuUserMicros": {
+          "samples": 10,
+          "min": 311179,
+          "median": 318689,
+          "p95": 328872,
+          "max": 328872
+        },
+        "cpuSystemMicros": {
+          "samples": 10,
+          "min": 91625,
+          "median": 94752,
+          "p95": 96941,
+          "max": 96941
+        },
+        "rssBytes": {
+          "samples": 10,
+          "min": 186859520,
+          "median": 189906944,
+          "p95": 193363968,
+          "max": 193363968
+        },
+        "heapUsedBytes": {
+          "samples": 10,
+          "min": 19629590,
+          "median": 19671375,
+          "p95": 19783505,
+          "max": 19783505
+        }
+      },
+      {
+        "arm": "status",
+        "repetitions": 10,
+        "toolCount": 0,
+        "toolSchemaBytes": 0,
+        "promptMetadataBytes": 0,
+        "toolDefinitionBytes": 2,
+        "statusIntervalMs": 1000,
+        "statusFetchCalls": 0,
+        "statusSetCalls": 3,
+        "statusFormattingValid": true,
+        "statusProviderHideValid": true,
+        "processWallMs": {
+          "samples": 10,
+          "min": 16.749832999999853,
+          "median": 17.251124999999774,
+          "p95": 22.92845800000032,
+          "max": 22.92845800000032
+        },
+        "loadMs": {
+          "samples": 10,
+          "min": 1.043291,
+          "median": 1.146082999999999,
+          "p95": 1.67225,
+          "max": 1.67225
+        },
+        "cpuUserMicros": {
+          "samples": 10,
+          "min": 1245,
+          "median": 1289,
+          "p95": 1816,
+          "max": 1816
+        },
+        "cpuSystemMicros": {
+          "samples": 10,
+          "min": 366,
+          "median": 421,
+          "p95": 698,
+          "max": 698
+        },
+        "rssBytes": {
+          "samples": 10,
+          "min": 33701888,
+          "median": 33751040,
+          "p95": 33783808,
+          "max": 33783808
+        },
+        "heapUsedBytes": {
+          "samples": 10,
+          "min": 1125564,
+          "median": 1125564,
+          "p95": 1127020,
+          "max": 1127020
+        }
+      },
+      {
+        "arm": "all",
+        "repetitions": 10,
+        "toolCount": 2,
+        "toolSchemaBytes": 1494,
+        "promptMetadataBytes": 1656,
+        "toolDefinitionBytes": 3355,
+        "statusIntervalMs": 1000,
+        "statusFetchCalls": 0,
+        "statusSetCalls": 3,
+        "statusFormattingValid": true,
+        "statusProviderHideValid": true,
+        "processWallMs": {
+          "samples": 10,
+          "min": 217.44866699999966,
+          "median": 223.60929099999976,
+          "p95": 242.3719999999994,
+          "max": 242.3719999999994
+        },
+        "loadMs": {
+          "samples": 10,
+          "min": 200.21574999999999,
+          "median": 206.276791,
+          "p95": 215.872834,
+          "max": 215.872834
+        },
+        "cpuUserMicros": {
+          "samples": 10,
+          "min": 315979,
+          "median": 322299,
+          "p95": 341030,
+          "max": 341030
+        },
+        "cpuSystemMicros": {
+          "samples": 10,
+          "min": 91751,
+          "median": 96085,
+          "p95": 101060,
+          "max": 101060
+        },
+        "rssBytes": {
+          "samples": 10,
+          "min": 188760064,
+          "median": 191086592,
+          "p95": 193675264,
+          "max": 193675264
+        },
+        "heapUsedBytes": {
+          "samples": 10,
+          "min": 19628958,
+          "median": 19741672,
+          "p95": 19783874,
+          "max": 19783874
+        }
+      }
+    ]
+  },
+  "memory": {
+    "syntheticOnly": true,
+    "corpusSha256": "afcfcaff64f5d5d7b4d64fadf091165fea1267c844ab8794cfdf1ecd3ece108b",
+    "selectionIterations": 1000,
+    "storeReadIterations": 100,
+    "zeroOverlapInjects": true,
+    "scenarios": [
+      {
+        "id": "empty",
+        "totalEntries": 0,
+        "selectedProject": 0,
+        "selectedGlobal": 0,
+        "renderedChars": 0,
+        "renderedBytes": 0,
+        "selectedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "storeBytes": 0,
+        "relevantEntryFirst": null,
+        "selectionMs": {
+          "samples": 1000,
+          "min": 0.0012079999996785773,
+          "median": 0.0015419999999721767,
+          "p95": 0.003500000000713044,
+          "max": 0.7146659999998519
+        },
+        "storeReadMs": {
+          "samples": 100,
+          "min": 0.046124999999847205,
+          "median": 0.055249999999432475,
+          "p95": 0.07608299999992596,
+          "max": 0.7265840000000026
+        }
+      },
+      {
+        "id": "irrelevant-10",
+        "totalEntries": 10,
+        "selectedProject": 5,
+        "selectedGlobal": 4,
+        "renderedChars": 1071,
+        "renderedBytes": 1071,
+        "selectedSha256": "ef642c5aa167a255c3a22e0260aeeed68ea9a9b6e2f2b7f3da9f47d626560903",
+        "storeBytes": 3230,
+        "relevantEntryFirst": null,
+        "selectionMs": {
+          "samples": 1000,
+          "min": 0.01708299999972951,
+          "median": 0.02033300000039162,
+          "p95": 0.026917000000139524,
+          "max": 0.27395899999919493
+        },
+        "storeReadMs": {
+          "samples": 100,
+          "min": 0.11091699999997218,
+          "median": 0.12320799999997689,
+          "p95": 0.19887500000004366,
+          "max": 1.190458000000035
+        }
+      },
+      {
+        "id": "irrelevant-200",
+        "totalEntries": 200,
+        "selectedProject": 6,
+        "selectedGlobal": 4,
+        "renderedChars": 1158,
+        "renderedBytes": 1158,
+        "selectedSha256": "0aa900acdd2535850a25fbeb3fa4f171c11aaf85f052dd6732c906d8bdded902",
+        "storeBytes": 64600,
+        "relevantEntryFirst": null,
+        "selectionMs": {
+          "samples": 1000,
+          "min": 0.3018339999998716,
+          "median": 0.32458300000052986,
+          "p95": 0.35579199999847333,
+          "max": 0.7087089999995442
+        },
+        "storeReadMs": {
+          "samples": 100,
+          "min": 0.6330420000012964,
+          "median": 0.6803339999987656,
+          "p95": 0.808167000001049,
+          "max": 1.2214590000003227
+        }
+      },
+      {
+        "id": "relevant-200",
+        "totalEntries": 200,
+        "selectedProject": 6,
+        "selectedGlobal": 4,
+        "renderedChars": 1150,
+        "renderedBytes": 1150,
+        "selectedSha256": "74e839c5aea3a10062f712b29b400479d2f661ec134fd23898b7234ebf96f3f2",
+        "storeBytes": 64592,
+        "relevantEntryFirst": true,
+        "selectionMs": {
+          "samples": 1000,
+          "min": 0.3069580000010319,
+          "median": 0.3274999999994179,
+          "p95": 0.35962499999914144,
+          "max": 0.6842500000002474
+        },
+        "storeReadMs": {
+          "samples": 100,
+          "min": 0.6484159999999974,
+          "median": 0.6776250000002619,
+          "p95": 0.8336669999989681,
+          "max": 1.1474169999983133
+        }
+      }
+    ]
+  },
+  "computerUse": {
+    "trialsPlanned": 3,
+    "trials": [
+      {
+        "trial": 1,
+        "startMs": 71352.265291,
+        "screenshotMs": 3091.1396660000028,
+        "guiMutationMs": 12912.556582999998,
+        "stopMs": 5275.564167000004,
+        "pngBytes": 591353,
+        "frameWidth": 2048,
+        "frameHeight": 1536,
+        "vmProcessCount": 2,
+        "vmRssBytes": 45842432,
+        "vmCpuPercent": 0.2,
+        "vmDiskBytesBefore": 32357183488,
+        "vmDiskBytesAfter": 32340070400,
+        "hostFocusChanges": 0,
+        "hostTcpListenerLines": 0,
+        "hostSentinelCreated": false,
+        "guestWriteVerified": false,
+        "cleanupVerified": true,
+        "failureCode": "guest-write-failed",
+        "valid": false
+      },
+      {
+        "trial": 2,
+        "startMs": 109809.04845799999,
+        "screenshotMs": 5032.666583000013,
+        "guiMutationMs": 23424.381416999997,
+        "stopMs": 168.47208300000057,
+        "pngBytes": 4335926,
+        "frameWidth": 2048,
+        "frameHeight": 1536,
+        "vmProcessCount": 2,
+        "vmRssBytes": 46841856,
+        "vmCpuPercent": 0.5,
+        "vmDiskBytesBefore": 32340070400,
+        "vmDiskBytesAfter": 32340926464,
+        "hostFocusChanges": 1,
+        "hostTcpListenerLines": 0,
+        "hostSentinelCreated": false,
+        "guestWriteVerified": false,
+        "cleanupVerified": true,
+        "failureCode": "host-focus-changed",
+        "valid": false
+      }
+    ],
+    "safetyViolations": 1,
+    "liveValid": false
+  },
+  "statusline": {
+    "measurementScope": "display-extension-only",
+    "piCodexLimitIncluded": false,
+    "qualityConclusion": "not-measured",
+    "available": true,
+    "intervalMs": 1000,
+    "fetchCalls": 0,
+    "formattingValid": true,
+    "providerHideValid": true
+  },
+  "contextCarryForward": {
+    "measurementValid": false,
+    "validRuns": 13,
+    "totalRuns": 18,
+    "tokenConclusion": "invalid-not-evidence",
+    "promotionEligible": false,
+    "defaultActivation": "blocked"
+  },
+  "gates": {
+    "sourceBound": true,
+    "syntheticOnly": true,
+    "bodyFree": true,
+    "registrationComplete": true,
+    "memoryComplete": true,
+    "statusComplete": true,
+    "contextCarryForwardValid": true,
+    "computerUseComplete": false,
+    "computerUseSafety": false
+  },
+  "measurementValid": false,
+  "stage1Eligible": false
+}

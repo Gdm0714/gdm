@@ -1,0 +1,3 @@
+$ bun build src/cli.ts --compile --outfile dist/gdm
+   [6ms]  bundle  45 modules
+ [111ms] compile  dist/gdm

@@ -1,0 +1,93 @@
+[
+  {
+    "skill": "analyze",
+    "sourceBytes": 7261,
+    "renderedBytes": 13238,
+    "protocolBytes": 0,
+    "matchesInstalled": true
+  },
+  {
+    "skill": "db",
+    "sourceBytes": 4003,
+    "renderedBytes": 5665,
+    "protocolBytes": 0,
+    "matchesInstalled": true
+  },
+  {
+    "skill": "design",
+    "sourceBytes": 19653,
+    "renderedBytes": 21315,
+    "protocolBytes": 0,
+    "matchesInstalled": true
+  },
+  {
+    "skill": "document",
+    "sourceBytes": 6834,
+    "renderedBytes": 8495,
+    "protocolBytes": 0,
+    "matchesInstalled": true
+  },
+  {
+    "skill": "email",
+    "sourceBytes": 4063,
+    "renderedBytes": 5724,
+    "protocolBytes": 0,
+    "matchesInstalled": true
+  },
+  {
+    "skill": "full",
+    "sourceBytes": 20890,
+    "renderedBytes": 26867,
+    "protocolBytes": 7055,
+    "matchesInstalled": true
+  },
+  {
+    "skill": "go",
+    "sourceBytes": 22515,
+    "renderedBytes": 28492,
+    "protocolBytes": 7055,
+    "matchesInstalled": true
+  },
+  {
+    "skill": "plan",
+    "sourceBytes": 19575,
+    "renderedBytes": 25552,
+    "protocolBytes": 7055,
+    "matchesInstalled": true
+  },
+  {
+    "skill": "pr",
+    "sourceBytes": 6902,
+    "renderedBytes": 8564,
+    "protocolBytes": 0,
+    "matchesInstalled": true
+  },
+  {
+    "skill": "reflect",
+    "sourceBytes": 4138,
+    "renderedBytes": 5800,
+    "protocolBytes": 0,
+    "matchesInstalled": true
+  },
+  {
+    "skill": "research",
+    "sourceBytes": 4192,
+    "renderedBytes": 10169,
+    "protocolBytes": 0,
+    "matchesInstalled": true
+  },
+  {
+    "skill": "review",
+    "sourceBytes": 9670,
+    "renderedBytes": 15647,
+    "protocolBytes": 0,
+    "matchesInstalled": true
+  },
+  {
+    "skill": "ui",
+    "sourceBytes": 5598,
+    "renderedBytes": 7260,
+    "protocolBytes": 0,
+    "matchesInstalled": true
+  }
+]

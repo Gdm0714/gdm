@@ -1,0 +1,77 @@
+{
+  "schema": "gdm-quality-exploratory-review/v1",
+  "root": "/var/folders/kk/7q8dj3h10mz6yckfddjcqjh40000gn/T/gdm-quality-exploratory-identity-3dmbg5x0",
+  "triggerRun": "reservation-lifecycle-terra_team-1",
+  "triggerEventsSha256": "4a73fc8b7423bfd5865669813f9eb81cc90437d5c05e44ecc838aff5c3b85853",
+  "probe": "import {expect,test} from 'bun:test';\nimport {Store} from './src/store';\nimport {Reservations} from './src/service';\ntest('exploratory runtime non-string identities are rejected without state changes',()=>{\n  for (const id of [1, {}, ['id']] as any[]) {\n    const store=new Store([{sku:'s',available:1,version:0}]);const r=new Reservations(store);\n    const before=store.snapshot();expect(()=>r.hold(id,'s',1,0,0,1)).toThrow();expect(store.snapshot()).toEqual(before);\n  }\n});\n",
+  "probeSha256": "cc482b11ff04566821725efbd484c15150cd2e7f7afd58dbacde06e5363e380b",
+  "primaryScoreChanged": false,
+  "interpretation": "Added after observing Terra reviewer R1. Tests runtime rejection beyond the static string signature; this is an exploratory robustness check, not a new preregistered requirement group. All three arms receive the same probe. R2 overflow uses arithmetic outside the explicitly bounded task domain and earns no defect-removal credit.",
+  "results": [
+    {
+      "arm": "solo",
+      "snapshot": "final",
+      "sourceSnapshot": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-astra-quality-20260909-o0g4d2ne/runs/reservation-lifecycle-solo-1/final-snapshot",
+      "result": {
+        "exitCode": 0,
+        "passed": [
+          "exploratory runtime non-string identities are rejected without state changes"
+        ],
+        "failed": [],
+        "sha256": "e98658c26fe9633feba03c69d04c89fa077a1f9165d7b220531771f902c364e3"
+      }
+    },
+    {
+      "arm": "terra_team",
+      "snapshot": "final",
+      "sourceSnapshot": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-astra-quality-20260909-o0g4d2ne/runs/reservation-lifecycle-terra_team-1/final-snapshot",
+      "result": {
+        "exitCode": 0,
+        "passed": [
+          "exploratory runtime non-string identities are rejected without state changes"
+        ],
+        "failed": [],
+        "sha256": "6e40e2f13995112d867cd1e1c57e60fa581a93e874df15d10022c3435015006f"
+      }
+    },
+    {
+      "arm": "terra_team",
+      "snapshot": "preReview",
+      "sourceSnapshot": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-astra-quality-20260909-o0g4d2ne/runs/reservation-lifecycle-terra_team-1/trace/snapshots/0047",
+      "result": {
+        "exitCode": 1,
+        "passed": [],
+        "failed": [
+          "exploratory runtime non-string identities are rejected without state changes"
+        ],
+        "sha256": "674c87f52166e050cdf3cc97ca4bda2fb8b1d00634f2fabbc61d413251ebf7fc"
+      }
+    },
+    {
+      "arm": "astra_team",
+      "snapshot": "final",
+      "sourceSnapshot": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-astra-quality-20260909-o0g4d2ne/runs/reservation-lifecycle-astra_team-1/final-snapshot",
+      "result": {
+        "exitCode": 0,
+        "passed": [
+          "exploratory runtime non-string identities are rejected without state changes"
+        ],
+        "failed": [],
+        "sha256": "54b1242f3b71acdae8a0a2aa38647c472aa28a18ca488fc63d305d5ad5644906"
+      }
+    },
+    {
+      "arm": "astra_team",
+      "snapshot": "preReview",
+      "sourceSnapshot": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-astra-quality-20260909-o0g4d2ne/runs/reservation-lifecycle-astra_team-1/trace/snapshots/0043",
+      "result": {
+        "exitCode": 0,
+        "passed": [
+          "exploratory runtime non-string identities are rejected without state changes"
+        ],
+        "failed": [],
+        "sha256": "d4393ed980786ce886087791c48d1e821cb953e2ad4dd370d7547f3ede4f9cef"
+      }
+    }
+  ]
+}

@@ -1,0 +1,593 @@
+{
+  "schema": "gdm-pi-model-routing-verification/v1",
+  "run": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-model-routing-20260908-7bd72wn6",
+  "verifiedRuns": 64,
+  "successes": 60,
+  "correctedSuccesses": 64,
+  "gradingCorrectionChecked": true,
+  "outcomes": [
+    {
+      "id": "t1-legacy-1",
+      "success": true,
+      "hidden": {
+        "pass": 5,
+        "fail": 0
+      },
+      "resultSha256": "8c35ba0f6975ddb9e30d8b136fcaa861be1b2279dfc837a8e41273c7f62f70df"
+    },
+    {
+      "id": "t1-terra-1",
+      "success": true,
+      "hidden": {
+        "pass": 5,
+        "fail": 0
+      },
+      "resultSha256": "dc965b91f2462a25d549d18a91b0a8348c60319a0c937215e0ca28529f60600e"
+    },
+    {
+      "id": "t1-routed-1",
+      "success": true,
+      "hidden": {
+        "pass": 5,
+        "fail": 0
+      },
+      "resultSha256": "86fa26aa4d4c15727f5212092ac753b8042e72de1e582faf4b189c790cc666b6"
+    },
+    {
+      "id": "t1-astra-1",
+      "success": true,
+      "hidden": {
+        "pass": 5,
+        "fail": 0
+      },
+      "resultSha256": "f1b605867270c978bc965e360fcce57ead0bff55458e7d0e710c53409cd9c8cf"
+    },
+    {
+      "id": "t2-terra-1",
+      "success": true,
+      "hidden": {
+        "pass": 9,
+        "fail": 0
+      },
+      "resultSha256": "18909f7c92bf46ca320d3dfa7fb7ea334b9d953c8e117690dc0f1567a2b42a85"
+    },
+    {
+      "id": "t2-routed-1",
+      "success": true,
+      "hidden": {
+        "pass": 9,
+        "fail": 0
+      },
+      "resultSha256": "150b0039adfb154057a7481f4120afe5f4de0b495f30c5c3ef7534658f1256dc"
+    },
+    {
+      "id": "t2-astra-1",
+      "success": true,
+      "hidden": {
+        "pass": 9,
+        "fail": 0
+      },
+      "resultSha256": "02d5e7fb06447f7dff964eee9c93139b3c7b8619f7d79b375b10f00927fccf2a"
+    },
+    {
+      "id": "t2-legacy-1",
+      "success": true,
+      "hidden": {
+        "pass": 9,
+        "fail": 0
+      },
+      "resultSha256": "d75f8942269a963997f42310ce16a41029991347763d77ffe33f933e5652ffb4"
+    },
+    {
+      "id": "t3-routed-1",
+      "success": true,
+      "hidden": {
+        "pass": 7,
+        "fail": 0
+      },
+      "resultSha256": "3f107ff1ee7b23b0fda0bd631accd822069b8f181c8c0136afd3ffd1420f1db3"
+    },
+    {
+      "id": "t3-astra-1",
+      "success": true,
+      "hidden": {
+        "pass": 7,
+        "fail": 0
+      },
+      "resultSha256": "4b4baaaeb44e4b169f131acc94ff470e0b1ca9301e6a2d183208834ac6d71819"
+    },
+    {
+      "id": "t3-legacy-1",
+      "success": true,
+      "hidden": {
+        "pass": 7,
+        "fail": 0
+      },
+      "resultSha256": "3dc30161f8c35e42c656a8a670d0b1a7fbba41dbddad16b51f84902dea22fb01"
+    },
+    {
+      "id": "t3-terra-1",
+      "success": true,
+      "hidden": {
+        "pass": 7,
+        "fail": 0
+      },
+      "resultSha256": "ca7c8446a09e6d215ae6ccebc8a9f33344a0cb15bc849eae56b43fcfdbea93c9"
+    },
+    {
+      "id": "t4-astra-1",
+      "success": true,
+      "hidden": {
+        "pass": 4,
+        "fail": 0
+      },
+      "resultSha256": "4b370ff96f498065bfdb2febc4c67c052ae4e771cbe4012ee3e0258f128d9a91"
+    },
+    {
+      "id": "t4-legacy-1",
+      "success": false,
+      "hidden": {
+        "pass": 3,
+        "fail": 1
+      },
+      "resultSha256": "dffeef6d3b7fc9bc1ecf236e338a0bed07b739371d84730e579fde827653f91c"
+    },
+    {
+      "id": "t4-terra-1",
+      "success": false,
+      "hidden": {
+        "pass": 3,
+        "fail": 1
+      },
+      "resultSha256": "f6b6cf5913759ee0b8593a300585712eadea2e863197ef166bcd250d4f2c8b00"
+    },
+    {
+      "id": "t4-routed-1",
+      "success": true,
+      "hidden": {
+        "pass": 4,
+        "fail": 0
+      },
+      "resultSha256": "30affaf0f4cf9a2494e1597559d4d584547d09d7687c4c6a3417f0f7d60f804a"
+    },
+    {
+      "id": "t5-legacy-1",
+      "success": true,
+      "hidden": {
+        "pass": 5,
+        "fail": 0
+      },
+      "resultSha256": "f1214d395882066cc9fd2dec5845d0514c1132aaa6a823d346a98b3954a02ded"
+    },
+    {
+      "id": "t5-terra-1",
+      "success": true,
+      "hidden": {
+        "pass": 5,
+        "fail": 0
+      },
+      "resultSha256": "6c29a091030dea587112d6e164dd21d1afa481c72f19f9c314823ac4db7ec847"
+    },
+    {
+      "id": "t5-routed-1",
+      "success": true,
+      "hidden": {
+        "pass": 5,
+        "fail": 0
+      },
+      "resultSha256": "349a45b50b3720c64fa3c262420f2a77cb238a162358a78aca9a9cfa215d149a"
+    },
+    {
+      "id": "t5-astra-1",
+      "success": true,
+      "hidden": {
+        "pass": 5,
+        "fail": 0
+      },
+      "resultSha256": "13a9cd405017d92acbbc191a5dba33579849913a540df39c0d949839fba10b76"
+    },
+    {
+      "id": "t6-terra-1",
+      "success": true,
+      "hidden": {
+        "pass": 4,
+        "fail": 0
+      },
+      "resultSha256": "f837579b9507e7ddcc3b4ea07c2d4a22464af2ae6dc59cd816dec725ef0c9a5f"
+    },
+    {
+      "id": "t6-routed-1",
+      "success": true,
+      "hidden": {
+        "pass": 4,
+        "fail": 0
+      },
+      "resultSha256": "81d444eb819c5f7d9e226c2a21b46092e5dceace1c4f24a8fbeeeff0838ecc3e"
+    },
+    {
+      "id": "t6-astra-1",
+      "success": true,
+      "hidden": {
+        "pass": 4,
+        "fail": 0
+      },
+      "resultSha256": "9807f8fe000f8ef76f8c6b73b48f94de2dda7945cfe787a99a93a11e990d272a"
+    },
+    {
+      "id": "t6-legacy-1",
+      "success": true,
+      "hidden": {
+        "pass": 4,
+        "fail": 0
+      },
+      "resultSha256": "27a28f06233e9ef0870b922f3bef75d3e30383ec7b28304a2b3e5ab39d1295de"
+    },
+    {
+      "id": "t7-routed-1",
+      "success": true,
+      "hidden": {
+        "pass": 6,
+        "fail": 0
+      },
+      "resultSha256": "d13c6e7fb8a961a0a8a119150400826a74bc43686c29de6fccd22b894760c7c8"
+    },
+    {
+      "id": "t7-astra-1",
+      "success": true,
+      "hidden": {
+        "pass": 6,
+        "fail": 0
+      },
+      "resultSha256": "1df12b2448af00d1fa6d888828c09fc779c3d1cb09dd8dc43dddfd77e7a23a75"
+    },
+    {
+      "id": "t7-legacy-1",
+      "success": true,
+      "hidden": {
+        "pass": 6,
+        "fail": 0
+      },
+      "resultSha256": "b2c1da7efe72bdb85b4f8990597caa1f1187e2c73d7d74443481efd30847561b"
+    },
+    {
+      "id": "t7-terra-1",
+      "success": true,
+      "hidden": {
+        "pass": 6,
+        "fail": 0
+      },
+      "resultSha256": "dcb36574795294a8b79b57b5fead3505e341f0244002f52abd04651a6f6b03ed"
+    },
+    {
+      "id": "t8-astra-1",
+      "success": true,
+      "hidden": {
+        "pass": 6,
+        "fail": 0
+      },
+      "resultSha256": "bc1e0af7eea78358ec6dbaa56c64963d53daa7545eb9ad9134a610c222c786ab"
+    },
+    {
+      "id": "t8-legacy-1",
+      "success": true,
+      "hidden": {
+        "pass": 6,
+        "fail": 0
+      },
+      "resultSha256": "fefd79af5fd49ab60dc5800fd61b0589d88d6788c42bb4fe93e5fcb8c467c461"
+    },
+    {
+      "id": "t8-terra-1",
+      "success": true,
+      "hidden": {
+        "pass": 6,
+        "fail": 0
+      },
+      "resultSha256": "09326edbd1ff11adeef44a967b44766f3325dfaa6a2849f6b1db904788dc4bd0"
+    },
+    {
+      "id": "t8-routed-1",
+      "success": true,
+      "hidden": {
+        "pass": 6,
+        "fail": 0
+      },
+      "resultSha256": "2574c0f5295c1d1e8a355724cb5fa27fc53530d95dee3cbef13ff80ec065eaaa"
+    },
+    {
+      "id": "t1-astra-2",
+      "success": true,
+      "hidden": {
+        "pass": 5,
+        "fail": 0
+      },
+      "resultSha256": "c67aaeb3ced584eded844f7339c7ea73a6d42711a7c09fecb7539c868b94b8b0"
+    },
+    {
+      "id": "t1-routed-2",
+      "success": true,
+      "hidden": {
+        "pass": 5,
+        "fail": 0
+      },
+      "resultSha256": "34b0ab1d84582723224f6b5a96861b3663177d56b515f9b58752d66aa871af60"
+    },
+    {
+      "id": "t1-terra-2",
+      "success": true,
+      "hidden": {
+        "pass": 5,
+        "fail": 0
+      },
+      "resultSha256": "a425b87084cc3bbc7f22c694a32e63fba1ed35c04ac05860833ac8921e503c6b"
+    },
+    {
+      "id": "t1-legacy-2",
+      "success": true,
+      "hidden": {
+        "pass": 5,
+        "fail": 0
+      },
+      "resultSha256": "b01a904d2e9169b20013cbfb2b6fd759ce0fbc1958fbee3cc560b8f4f7dea5a3"
+    },
+    {
+      "id": "t2-legacy-2",
+      "success": true,
+      "hidden": {
+        "pass": 9,
+        "fail": 0
+      },
+      "resultSha256": "96014b6afa0bc4388ae7d3367ca88ad925a7d3dbc560116df00a9c0c52876355"
+    },
+    {
+      "id": "t2-astra-2",
+      "success": true,
+      "hidden": {
+        "pass": 9,
+        "fail": 0
+      },
+      "resultSha256": "faa3837f76d7b6b537ef3db2f7a28863c70dfac06faa00f3d6be8900fbd03dce"
+    },
+    {
+      "id": "t2-routed-2",
+      "success": true,
+      "hidden": {
+        "pass": 9,
+        "fail": 0
+      },
+      "resultSha256": "f6c5454262a42a57683a885c23709b3217dff56097bec67d1e8fed57d8c09456"
+    },
+    {
+      "id": "t2-terra-2",
+      "success": true,
+      "hidden": {
+        "pass": 9,
+        "fail": 0
+      },
+      "resultSha256": "7617b5c892b3670122837fa020b7dfceafdf93ce33acadc7406878ed4a756556"
+    },
+    {
+      "id": "t3-terra-2",
+      "success": true,
+      "hidden": {
+        "pass": 7,
+        "fail": 0
+      },
+      "resultSha256": "0d727975f764ae71c5fb391d2420b976f17a71cfee59bde38ae7b16a49b09ee1"
+    },
+    {
+      "id": "t3-legacy-2",
+      "success": true,
+      "hidden": {
+        "pass": 7,
+        "fail": 0
+      },
+      "resultSha256": "efa514c3db951b145e9c2066d1a3dfd7bdf177197660a4faa4937772684f266b"
+    },
+    {
+      "id": "t3-astra-2",
+      "success": true,
+      "hidden": {
+        "pass": 7,
+        "fail": 0
+      },
+      "resultSha256": "56ce5ae679f286587c6f62f77303f47c217340d3c32d2cb7f4fc149829babc56"
+    },
+    {
+      "id": "t3-routed-2",
+      "success": true,
+      "hidden": {
+        "pass": 7,
+        "fail": 0
+      },
+      "resultSha256": "682f949d94156db10fc6787016ebd46ade9029aa6f39d69e7e0a5ae9e6c0ee46"
+    },
+    {
+      "id": "t4-routed-2",
+      "success": false,
+      "hidden": {
+        "pass": 3,
+        "fail": 1
+      },
+      "resultSha256": "c32ec08b975f2fffe059f7465399dd49de3cf4ebceb254875fbc3af886e9ea57"
+    },
+    {
+      "id": "t4-terra-2",
+      "success": true,
+      "hidden": {
+        "pass": 4,
+        "fail": 0
+      },
+      "resultSha256": "c80d57a9f0f47965ac7d3f12ab25eb7947acd074e2c20d1ab635a4d94fafc06f"
+    },
+    {
+      "id": "t4-legacy-2",
+      "success": false,
+      "hidden": {
+        "pass": 3,
+        "fail": 1
+      },
+      "resultSha256": "d47f549a175fc7293eae34c89459e5ad909aee78a549cb1f63aebe81874ef30b"
+    },
+    {
+      "id": "t4-astra-2",
+      "success": true,
+      "hidden": {
+        "pass": 4,
+        "fail": 0
+      },
+      "resultSha256": "9170eb43d566752fef144992d0433aae1dae7b78a206cff000cb23c8c177e544"
+    },
+    {
+      "id": "t5-astra-2",
+      "success": true,
+      "hidden": {
+        "pass": 5,
+        "fail": 0
+      },
+      "resultSha256": "beae36bbd8753ac0a5fd9aaa31337a8e507fa83b626b29c69ff13c2a731d550f"
+    },
+    {
+      "id": "t5-routed-2",
+      "success": true,
+      "hidden": {
+        "pass": 5,
+        "fail": 0
+      },
+      "resultSha256": "90b4213036a09413019f82fc782c120feedbcce83005716c7d65148cf3a5b9d1"
+    },
+    {
+      "id": "t5-terra-2",
+      "success": true,
+      "hidden": {
+        "pass": 5,
+        "fail": 0
+      },
+      "resultSha256": "94fe7de74276b93120dbbd96147ba8be0396864c107dabd8935f873b7caacc6d"
+    },
+    {
+      "id": "t5-legacy-2",
+      "success": true,
+      "hidden": {
+        "pass": 5,
+        "fail": 0
+      },
+      "resultSha256": "8d8c488c4c9eb314e33a17f93af4f03ea96f6eb989ec54880464017e2920664a"
+    },
+    {
+      "id": "t6-legacy-2",
+      "success": true,
+      "hidden": {
+        "pass": 4,
+        "fail": 0
+      },
+      "resultSha256": "456de61e65882858a5db6fb180b405acd8d7dbd8c38e7dd65e12d5f38e623c0a"
+    },
+    {
+      "id": "t6-astra-2",
+      "success": true,
+      "hidden": {
+        "pass": 4,
+        "fail": 0
+      },
+      "resultSha256": "343c691657b2eb263a8c2880a015835b62348088ad61b7c9795f8df779a45c50"
+    },
+    {
+      "id": "t6-routed-2",
+      "success": true,
+      "hidden": {
+        "pass": 4,
+        "fail": 0
+      },
+      "resultSha256": "bfa4dd51336322dcdae566eb74c5ed409e705ab2e18d03fa7b2f77cd17601e57"
+    },
+    {
+      "id": "t6-terra-2",
+      "success": true,
+      "hidden": {
+        "pass": 4,
+        "fail": 0
+      },
+      "resultSha256": "370a0a7643c6f50071d95fd0e29554626200ebd8abd0445872fa6077a03589e9"
+    },
+    {
+      "id": "t7-terra-2",
+      "success": true,
+      "hidden": {
+        "pass": 6,
+        "fail": 0
+      },
+      "resultSha256": "a4771c1309166b8fae6bb764531e19e0274d0836b9f74cdf6e48965a1797977c"
+    },
+    {
+      "id": "t7-legacy-2",
+      "success": true,
+      "hidden": {
+        "pass": 6,
+        "fail": 0
+      },
+      "resultSha256": "f04148f792d32566695dbc1eace468a3455b6cc34a3fb6e4b3268daa75155b6b"
+    },
+    {
+      "id": "t7-astra-2",
+      "success": true,
+      "hidden": {
+        "pass": 6,
+        "fail": 0
+      },
+      "resultSha256": "3c5a31c44e4239b4fb03649cbd0df33f98c8f96b3eb9eff212f3646eb7f6ae8d"
+    },
+    {
+      "id": "t7-routed-2",
+      "success": true,
+      "hidden": {
+        "pass": 6,
+        "fail": 0
+      },
+      "resultSha256": "b758426b8ee9826f1310d596e0aeb4bd684994eeafefa749e6075cb169caff57"
+    },
+    {
+      "id": "t8-routed-2",
+      "success": true,
+      "hidden": {
+        "pass": 6,
+        "fail": 0
+      },
+      "resultSha256": "078b2e3c9b4afafd754b9ffa1e155b2b4258d0e208137a3214fb7eba14afb183"
+    },
+    {
+      "id": "t8-terra-2",
+      "success": true,
+      "hidden": {
+        "pass": 6,
+        "fail": 0
+      },
+      "resultSha256": "caf4d2a57766c166c23f6de1065092d0168aaf96f1faed0816a0e12787057464"
+    },
+    {
+      "id": "t8-legacy-2",
+      "success": true,
+      "hidden": {
+        "pass": 6,
+        "fail": 0
+      },
+      "resultSha256": "69de2039126fdabd6103a2c8c7855ecbfc0416d1eefcfee8c689be42671912b0"
+    },
+    {
+      "id": "t8-astra-2",
+      "success": true,
+      "hidden": {
+        "pass": 6,
+        "fail": 0
+      },
+      "resultSha256": "ab0867e322c9b074eaca16dc3dfd72d9d4f6813386c53cf4c59683959f39e479"
+    }
+  ],
+  "installationChecked": true,
+  "limitations": [
+    "Model-reported token counts are not provider billing receipts",
+    "GDM state is checked by experiment outcome; hidden replay is the independent correctness check",
+    "One documented post-hoc grading correction accepts valid write-through cache updates; original outcomes remain preserved",
+    "No LLM judge or production repository replay"
+  ]
+}
