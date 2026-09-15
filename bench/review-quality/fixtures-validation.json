@@ -1,0 +1,78 @@
+{
+  "manifestSha256": "8a95f4df2d1ea0ee2143d2b19f4fba3cddeac9dad0bfad4a17ba5e8bad6b7c89",
+  "success": true,
+  "cases": [
+    {
+      "case": "C01",
+      "family": "launch",
+      "defective": true,
+      "exitCode": 1,
+      "success": true,
+      "log": "/Users/godongmin/projects/harness-bench-runs/gdm-review-quality-20260909-dkqcq95x/validation/C01-1.log",
+      "sha256": "ec09554b897008da2094d16811731363557ad14f8c2c5620061c0b4c02367c8b"
+    },
+    {
+      "case": "C02",
+      "family": "effort",
+      "defective": false,
+      "exitCode": 0,
+      "success": true,
+      "log": "/Users/godongmin/projects/harness-bench-runs/gdm-review-quality-20260909-dkqcq95x/validation/C02-1.log",
+      "sha256": "d17d1a9b982c27989fa006b0fd62a33fcea9deceefe0bc1c455218274f6f27f9"
+    },
+    {
+      "case": "C03",
+      "family": "launch",
+      "defective": false,
+      "exitCode": 0,
+      "success": true,
+      "log": "/Users/godongmin/projects/harness-bench-runs/gdm-review-quality-20260909-dkqcq95x/validation/C03-1.log",
+      "sha256": "cdd8ac78152993d276a8c17feb801c87c88e22718959db54401427677ec0cf90"
+    },
+    {
+      "case": "C04",
+      "family": "audit",
+      "defective": true,
+      "exitCode": 1,
+      "success": true,
+      "log": "/Users/godongmin/projects/harness-bench-runs/gdm-review-quality-20260909-dkqcq95x/validation/C04-1.log",
+      "sha256": "89d9b7ce5c34924471a718e2d1b2cd951fa81719c1efd2dc78fb77f982371bdb"
+    },
+    {
+      "case": "C05",
+      "family": "audit",
+      "defective": false,
+      "exitCode": 0,
+      "success": true,
+      "log": "/Users/godongmin/projects/harness-bench-runs/gdm-review-quality-20260909-dkqcq95x/validation/C05-1.log",
+      "sha256": "1a5ee52a1be458e17fbb7de9a1ffa6e46d3fbf6fb8f055d90fd6e6de6fdcb342"
+    },
+    {
+      "case": "C06",
+      "family": "effort",
+      "defective": true,
+      "exitCode": 1,
+      "success": true,
+      "log": "/Users/godongmin/projects/harness-bench-runs/gdm-review-quality-20260909-dkqcq95x/validation/C06-1.log",
+      "sha256": "11a02e68069b7bcfd724116a006d9158537351966200b06db5a7ab70b696cba3"
+    },
+    {
+      "case": "C07",
+      "family": "atomic",
+      "defective": false,
+      "exitCode": 0,
+      "success": true,
+      "log": "/Users/godongmin/projects/harness-bench-runs/gdm-review-quality-20260909-dkqcq95x/validation/C07-1.log",
+      "sha256": "603be133ea094ba69934bd50f774cffffd5d4977d4fcc8da6a371f94b532d2ba"
+    },
+    {
+      "case": "C08",
+      "family": "atomic",
+      "defective": true,
+      "exitCode": 1,
+      "success": true,
+      "log": "/Users/godongmin/projects/harness-bench-runs/gdm-review-quality-20260909-dkqcq95x/validation/C08-1.log",
+      "sha256": "8026bd0f28cc3b6ab53c81ad8e6e27ec13d9fae8584111076c383aa8beb2b862"
+    }
+  ]
+}

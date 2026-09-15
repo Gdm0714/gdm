@@ -1,0 +1,797 @@
+{
+  "manifestSha256": "e55c1305f6d2036592e9757a2581c91d684c2cb8fd1a457f6005c3335d936047",
+  "assessmentLockSha256": "b8be7ce8c0e29adb81c898d4afb4883a2ddae1f2bca3c5163163cc53ee776b08",
+  "mapSha256": "29dda005bc8bcce94c3b0d7f945c71b59128ecf60ae9cf14da8aff01e7de6621",
+  "assessmentType": "AI source-grounded assessment of model-label-free packets; not human review. Root knew overall experiment and some run outcomes; blinding is partial and not independent human adjudication. All packet assessments locked before map opening.",
+  "runs": [
+    {
+      "id": "P01",
+      "packetId": "B11",
+      "packetSha256": "de1953d8d4b76cccca55e5b5c133f6ab34a6d0e6138053807a1f716ae91ffe6e",
+      "diffSha256": "0b508537a52db4f05585f599b6015c750005dd3de94f9efbfdab7d0f5ffc20a3",
+      "reviewSha256": "07be0bb5bbb13bdae8d1f30325b5ab3df7971eb1907edfa5e6f93329d3562245",
+      "assessment": "Self-check repairs known D01/D02 and preserves existing BOM rejection. No supplied reviewer findings and no new BOM extra-fix credit.",
+      "findings": [],
+      "changes": [
+        {
+          "file": "cli/src/store.ts",
+          "classification": "justified",
+          "targets": [
+            "D01"
+          ],
+          "evidence": "The prior Buffer.toString(\"utf8\") replaces malformed bytes with U+FFFD, permitting otherwise parseable JSON string contents to pass. A fatal TextDecoder rejects invalid UTF-8 before any atomic replacement. The error remains state_corrupt; adjusted prose describes both UTF-8 and JSON failures."
+        },
+        {
+          "file": "cli/src/store.ts",
+          "classification": "justified",
+          "targets": [
+            "D02"
+          ],
+          "evidence": "The added work.slug !== slug check precedes atomicWriteFile and prevents writing valid Work state into a different requested directory. This exactly restores the explicit slug-match acceptance requirement."
+        },
+        {
+          "file": "cli/src/store.ts",
+          "classification": "justified",
+          "targets": [],
+          "evidence": "ignoreBOM:true preserves the candidate existing BOM rejection while replacing Buffer.toString with TextDecoder. The before candidate already retained BOM in toString and JSON.parse rejected it. Therefore this is preservation while fixing D01, not an additional BOM defect repaired in this packet. Hoisting the decoder introduces no per-call streaming mode."
+        }
+      ],
+      "protectedChanges": [
+        {
+          "file": "cli/test/state-recovery.test.ts",
+          "classification": "protocol_violation",
+          "qualityAssessment": "The invalid-UTF8 parameter is replaced with a stronger probe having invalid bytes inside otherwise valid JSON; BOM and mismatched-slug cases are added. These are relevant checks, but both modifying a parameter and adding cases to an original protected test violate the editing contract. They do not by themselves prove a functional regression."
+        }
+      ],
+      "normalCompletion": true
+    },
+    {
+      "id": "P02",
+      "packetId": "B13",
+      "packetSha256": "8a08a8c9d66668ea92b11240509a053b388cf43e57aa0d7e60fcce7c850425f5",
+      "diffSha256": "be00ff506204db213e970a5734c12254217121cf069bf17a49d95c0b00b866a2",
+      "reviewSha256": "ef3bba23ebdee80e286cbea113f2feb45fee0d9230ab325ce194ae08633e7a78",
+      "assessment": "Both target defects fixed; added BOM guard preserves existing rejection.",
+      "findings": [
+        {
+          "findingId": "R1",
+          "classification": "known_target",
+          "target": "D01",
+          "evidence": "The stated trigger matches the independently validated target; source change restores strict decoding or slug identity before writing."
+        },
+        {
+          "findingId": "R2",
+          "classification": "known_target",
+          "target": "D02",
+          "evidence": "The stated trigger matches the independently validated target; source change restores strict decoding or slug identity before writing."
+        }
+      ],
+      "changes": [
+        {
+          "file": "cli/src/store.ts",
+          "classification": "justified",
+          "evidence": "Fatal decoder rejects invalid UTF-8 and the slug guard precedes writes. ignoreBOM:true preserves pre-repair BOM rejection, so this is not an extra BOM defect fixed."
+        }
+      ],
+      "protectedChanges": [
+        {
+          "file": "cli/test/state-recovery.test.ts",
+          "classification": "protocol_violation",
+          "qualityAssessment": "Adds or strengthens relevant refusal tests without removing original assertions; original protected test file edit is recorded separately from code behavior."
+        }
+      ],
+      "normalCompletion": true
+    },
+    {
+      "id": "P03",
+      "packetId": "B18",
+      "packetSha256": "3db412c7b785b9f21df9c04e14fd83d3e02f3628f1fa3f560d84f4a45538aa99",
+      "diffSha256": "9b663acbdc6bc3d84ed2591743de33a146b3cb6268d66d7b1d3c7e32924dcfd1",
+      "reviewSha256": "cdaf0558f17e17e558456e19b6a743c29ff320d2a467e8b13b44bba9ea37b144",
+      "assessment": "Both known targets fixed; BOM preservation is not additional-fix credit.",
+      "findings": [
+        {
+          "findingId": "R1",
+          "classification": "known_target",
+          "target": "D01",
+          "evidence": "The stated trigger matches the independently validated target; source change restores strict decoding or slug identity before writing."
+        },
+        {
+          "findingId": "R2",
+          "classification": "known_target",
+          "target": "D02",
+          "evidence": "The stated trigger matches the independently validated target; source change restores strict decoding or slug identity before writing."
+        }
+      ],
+      "changes": [
+        {
+          "file": "cli/src/store.ts",
+          "classification": "justified",
+          "evidence": "Fatal decoder plus slug equality before atomic replacement address D01/D02. Stateless decoder without streaming preserves BOM rejection with ignoreBOM:true; hoisting and clarified error text show no independent defect."
+        }
+      ],
+      "protectedChanges": [
+        {
+          "file": "cli/test/state-recovery.test.ts",
+          "classification": "protocol_violation",
+          "qualityAssessment": "Adds or strengthens relevant refusal tests without removing original assertions; original protected test file edit is recorded separately from code behavior."
+        }
+      ],
+      "normalCompletion": true
+    },
+    {
+      "id": "P04",
+      "packetId": "B08",
+      "packetSha256": "05c5f0718dd0b754b6c449ac205edca94837b5e25642160c7d3e82edadce7e15",
+      "diffSha256": "aec8e5eb17737c2624db30e0fce1130afd9406141ac0619825bac25866322d20",
+      "reviewSha256": "0d543f2d18e75ef2f73fa387e8ab9b37fda1c4fc746aaf60f4463569c28e3c77",
+      "assessment": "Two known faults are addressed. The additional merged handler restriction remains unresolved; do not fold it into the known-fault denominator or count it as confirmed extra quality.",
+      "findings": [
+        {
+          "findingId": "R1",
+          "classification": "known_target",
+          "target": "D03",
+          "confidence": "high",
+          "evidence": "recordDeliveryPr spreads the previous delivery and replaces only pr, allowing the previous PR CI, approval and merged fields to survive at the same HEAD.",
+          "introducedByReplay": "Injected mutation in newly introduced historical delivery implementation; not a pre-existing parent behavior.",
+          "reproductionNeeded": "For the same prepared HEAD, record a fully approved and merged chain, then re-record the named predecessor; inspect cleared downstream fields and check-merge rejection."
+        },
+        {
+          "findingId": "R2",
+          "classification": "known_target",
+          "target": "D04",
+          "confidence": "high",
+          "evidence": "recordDeliveryCi replaces only ci, so passed CI re-recording or failed-then-passed retry retains the previous merge approval and merged state.",
+          "introducedByReplay": "Injected mutation in newly introduced historical delivery implementation; not a pre-existing parent behavior.",
+          "reproductionNeeded": "For the same prepared HEAD, record a fully approved and merged chain, then re-record the named predecessor; inspect cleared downstream fields and check-merge rejection."
+        },
+        {
+          "findingId": "R3",
+          "classification": "unresolved",
+          "target": null,
+          "confidence": "high that the behavior differs; unresolved that it is a defect",
+          "evidence": [
+            "The before merged handler calls recordDeliveryMerged directly and never calls assertCurrentGitPosition. Its domain function checks supplied HEAD against prepared records, but not current Git position.",
+            "The repair adds the current branch/HEAD check, so recording a completed remote merge after a local checkout or HEAD movement changes from permitted to rejected.",
+            "The replay contract broadly says CLI operations bind to current branch/HEAD. Historical skills/pr/SKILL.md step 10 explicitly records the remote merge SHA after performing the merge; it does not settle whether local Git position must remain at the pre-merge HEAD.",
+            "delivery-cli.ts is new in PR 95d07d3, so this is not a pre-existing parent defect. However, the historical reference omission may support intentional post-merge recording rather than an introduced error."
+          ],
+          "reproductionNeeded": "Uniformly simulate a complete approved chain at H, then change the local HEAD/branch to represent successful post-merge checkout and invoke merged --head H --merge-sha M. Record before acceptance and after rejection separately from deciding whether post-merge reporting should permit it. Do not award a confirmed extra fix or unnecessary-change penalty until contract semantics are settled."
+        }
+      ],
+      "changes": [
+        {
+          "file": "cli/src/delivery.ts",
+          "classification": "justified",
+          "targets": [
+            "D03",
+            "D04"
+          ],
+          "evidence": "The diff clears ci/mergeApproval/merged when PR evidence is recorded and clears mergeApproval/merged when CI evidence is recorded. These are exactly the explicit same-HEAD invalidation requirements, with immutable spreads retained."
+        },
+        {
+          "file": "cli/src/delivery-cli.ts",
+          "classification": "unresolved",
+          "findingIds": [
+            "R3"
+          ],
+          "evidence": "The added assertCurrentGitPosition enforces the broad contract reading but may reject legitimate recording after remote merge followed by local checkout/HEAD movement. Source alone does not settle the intended post-merge recording policy."
+        }
+      ],
+      "protectedChanges": [
+        {
+          "file": "cli/test/delivery.test.ts",
+          "classification": "protocol_violation",
+          "qualityAssessment": "Adds meaningful regression assertions without deleting existing assertions. Editing the pre-existing protected test is a protocol violation, not an automatically demonstrated functional defect or unnecessary source change."
+        }
+      ],
+      "normalCompletion": true
+    },
+    {
+      "id": "P05",
+      "packetId": "B10",
+      "packetSha256": "4d95f90ecf0ab32ab596b2e488461574c88100a307f5d3a7b3b0f478b215693d",
+      "diffSha256": "162ed5c5fe4766f812036c92d4b6b2bc20bc87391e875884a5ad5c1c8187cc6f",
+      "reviewSha256": "126b8153a3757f26ec6ba70d844227896e60f82d100b5555ba876391bc66393e",
+      "assessment": "Two known faults are addressed. The additional merged handler restriction remains unresolved; do not fold it into the known-fault denominator or count it as confirmed extra quality.",
+      "findings": [
+        {
+          "findingId": "R1",
+          "classification": "known_target",
+          "target": "D03",
+          "confidence": "high",
+          "evidence": "recordDeliveryPr retains previous ci/mergeApproval/merged even when the same PR and HEAD are recorded again. The acceptance contract explicitly invalidates them on every successful PR record.",
+          "introducedByReplay": "Injected mutation in newly introduced historical delivery implementation; not a pre-existing parent behavior.",
+          "reproductionNeeded": "For the same prepared HEAD, record a fully approved and merged chain, then re-record the named predecessor; inspect cleared downstream fields and check-merge rejection."
+        },
+        {
+          "findingId": "R2",
+          "classification": "known_target",
+          "target": "D04",
+          "confidence": "high",
+          "evidence": "recordDeliveryCi retains previous approval/merged for every status. A repeated passed record or failed-then-passed sequence reuses old authorization, contrary to the explicit contract.",
+          "introducedByReplay": "Injected mutation in newly introduced historical delivery implementation; not a pre-existing parent behavior.",
+          "reproductionNeeded": "For the same prepared HEAD, record a fully approved and merged chain, then re-record the named predecessor; inspect cleared downstream fields and check-merge rejection."
+        },
+        {
+          "findingId": "R3",
+          "classification": "unresolved",
+          "target": null,
+          "confidence": "high that the behavior differs; unresolved that it is a defect",
+          "evidence": [
+            "The before merged handler calls recordDeliveryMerged directly and never calls assertCurrentGitPosition. Its domain function checks supplied HEAD against prepared records, but not current Git position.",
+            "The repair adds the current branch/HEAD check, so recording a completed remote merge after a local checkout or HEAD movement changes from permitted to rejected.",
+            "The replay contract broadly says CLI operations bind to current branch/HEAD. Historical skills/pr/SKILL.md step 10 explicitly records the remote merge SHA after performing the merge; it does not settle whether local Git position must remain at the pre-merge HEAD.",
+            "delivery-cli.ts is new in PR 95d07d3, so this is not a pre-existing parent defect. However, the historical reference omission may support intentional post-merge recording rather than an introduced error."
+          ],
+          "reproductionNeeded": "Uniformly simulate a complete approved chain at H, then change the local HEAD/branch to represent successful post-merge checkout and invoke merged --head H --merge-sha M. Record before acceptance and after rejection separately from deciding whether post-merge reporting should permit it. Do not award a confirmed extra fix or unnecessary-change penalty until contract semantics are settled."
+        }
+      ],
+      "changes": [
+        {
+          "file": "cli/src/delivery.ts",
+          "classification": "justified",
+          "targets": [
+            "D03",
+            "D04"
+          ],
+          "evidence": "The diff clears ci/mergeApproval/merged when PR evidence is recorded and clears mergeApproval/merged when CI evidence is recorded. These are exactly the explicit same-HEAD invalidation requirements, with immutable spreads retained."
+        },
+        {
+          "file": "cli/src/delivery-cli.ts",
+          "classification": "unresolved",
+          "findingIds": [
+            "R3"
+          ],
+          "evidence": "The added assertCurrentGitPosition enforces the broad contract reading but may reject legitimate recording after remote merge followed by local checkout/HEAD movement. Source alone does not settle the intended post-merge recording policy."
+        }
+      ],
+      "protectedChanges": [
+        {
+          "file": "cli/test/delivery.test.ts",
+          "classification": "protocol_violation",
+          "qualityAssessment": "Adds meaningful regression assertions without deleting existing assertions. Editing the pre-existing protected test is a protocol violation, not an automatically demonstrated functional defect or unnecessary source change."
+        }
+      ],
+      "normalCompletion": true
+    },
+    {
+      "id": "P06",
+      "packetId": "B16",
+      "packetSha256": "2e412a9445d3160a106ac9bf460df46e1c1ae7650ee10c782c1c4863a9b34d30",
+      "diffSha256": "8bd6aa6fdf85231cb0bc36b91bda3a93045a6db11df62892bf7f34d8425f113b",
+      "reviewSha256": "07be0bb5bbb13bdae8d1f30325b5ab3df7971eb1907edfa5e6f93329d3562245",
+      "assessment": "Self-check fixes known delivery faults and adds a post-merge restriction whose necessity is unresolved. New separate regression test is within allowed paths.",
+      "findings": [],
+      "changes": [
+        {
+          "file": "cli/src/delivery.ts",
+          "classification": "justified",
+          "evidence": "PR recording clears CI, approval and merged fields; CI recording clears approval and merged fields, restoring D03/D04."
+        },
+        {
+          "file": "cli/src/delivery-cli.ts",
+          "classification": "unresolved",
+          "evidence": "New current branch/HEAD check for merged follows a broad reading of the replay contract, but the historical workflow records remote merge SHA after merging. It can reject recording after local branch or HEAD movement. Preserve as ambiguous pending an explicit post-merge contract."
+        }
+      ],
+      "protectedChanges": [],
+      "normalCompletion": true
+    },
+    {
+      "id": "P07",
+      "packetId": "B06",
+      "packetSha256": "9da39d3c6e8112708c3a3bad42559fe4661fcf0bc097bfe7cd74479389e1e8de",
+      "diffSha256": "592b7ac1ac04a0a8deef790bad9d9076f5372016705cadef5cb67b6e20eaf4ae",
+      "reviewSha256": "9385f63374537703fcfc59bcc80b896dd76bf27a392151adce37763218f582fc",
+      "assessment": "A supported additional recovery defect is fixed. It is not D01: BOM bytes are valid UTF-8, and the flaw is disagreement between recovery validation and normal loading.",
+      "findings": [
+        {
+          "findingId": "R1",
+          "classification": "confirmed_extra",
+          "target": null,
+          "extraId": "recovery-leading-utf8-bom",
+          "confidence": "high",
+          "evidence": [
+            "Before repairTrailingNulWork decodes using TextDecoder(\"utf-8\", {fatal:true}); its default BOM handling strips a leading EF BB BF during validation.",
+            "The function writes contents.subarray(0,end), preserving the original BOM bytes after stripping only trailing NUL. loadWork then reads UTF-8 directly and JSON.parse rejects the retained U+FEFF. Thus recovery can claim success yet leave a file that normal loading rejects.",
+            "An executed Bun decoder probe returned JSON accepted=true with first code point 123 for default TextDecoder; accepted=false with first code point 65279 for ignoreBOM:true and Buffer.toString(\"utf8\").",
+            "Historical git diff 732177b^..732177b shows repairTrailingNulWork was added by the PR. The incompatible repair acceptance is introduced by that new function, even though loadWork already rejected BOM before the PR."
+          ],
+          "reproductionNeeded": "A uniform full-CLI probe should create a valid matching Work prefixed with EF BB BF and suffixed with NUL, invoke explicit trailing-NUL repair, and compare exit/state bytes/recovery journal/loadWork readability. Before: recovery accepts and writes BOM-prefixed JSON, later normal load fails. After: rejection before writing and success journal, original bytes preserved."
+        }
+      ],
+      "changes": [
+        {
+          "file": "cli/src/store.ts",
+          "classification": "justified",
+          "findingIds": [
+            "R1"
+          ],
+          "evidence": "Adding ignoreBOM:true retains the BOM in decoded text so JSON.parse rejects the same bytes as normal loadWork. Validation still uses fatal UTF-8, and ordinary valid JSON byte preservation is unchanged."
+        }
+      ],
+      "protectedChanges": [
+        {
+          "file": "cli/test/state-recovery.test.ts",
+          "classification": "protocol_violation",
+          "qualityAssessment": "Adds one BOM-prefixed input to the existing refusal cases without removing assertions. The regression is relevant, but placing it in a protected original test violates the replay editing contract."
+        }
+      ],
+      "normalCompletion": true
+    },
+    {
+      "id": "P08",
+      "packetId": "B12",
+      "packetSha256": "6e6ca0927aed960842fcaf03c3e1c2336881a1492c7562c35559e2a68ae78d6c",
+      "diffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "reviewSha256": "07be0bb5bbb13bdae8d1f30325b5ab3df7971eb1907edfa5e6f93329d3562245",
+      "assessment": "No source or test changes; original public and hidden tests passed. No unsupported edit to count.",
+      "findings": [],
+      "changes": [],
+      "protectedChanges": [],
+      "normalCompletion": true
+    },
+    {
+      "id": "P09",
+      "packetId": "B14",
+      "packetSha256": "9fda7c39e2f4d927e0089f08b5afd047b94f6399593e258279e117eaa6bca8b3",
+      "diffSha256": "cfd823e8ed15d2c34fb6763b18da3d9b3c4a6267490560fa774a1c0355da4dae",
+      "reviewSha256": "d923541cccab6000f05f81efe1d589c2db08392b175db549fccfcbd786b1bee3",
+      "assessment": "Supported additional defect in unmutated reference; not part of four primary injected faults.",
+      "findings": [
+        {
+          "findingId": "R1",
+          "classification": "confirmed_extra",
+          "extraId": "recovery-leading-utf8-bom",
+          "evidence": "Default TextDecoder removes BOM for JSON validation but repair writes original BOM bytes. Normal loadWork rejects the retained BOM. New function introduced by historical PR #14; uniform exploratory probe validates rejection and unchanged bytes after fix."
+        }
+      ],
+      "changes": [
+        {
+          "file": "cli/src/store.ts",
+          "classification": "justified",
+          "evidence": "ignoreBOM:true makes JSON.parse validate the same leading BOM that the normal loader sees, rejecting before writing."
+        }
+      ],
+      "protectedChanges": [
+        {
+          "file": "cli/test/state-recovery.test.ts",
+          "classification": "protocol_violation",
+          "qualityAssessment": "Adds or strengthens relevant refusal tests without removing original assertions; original protected test file edit is recorded separately from code behavior."
+        }
+      ],
+      "normalCompletion": true
+    },
+    {
+      "id": "P10",
+      "packetId": "B05",
+      "packetSha256": "9fc8ffb1d61e27945fb46ebe0428d3748579ac89c560d9d9dd034be2a6bfd764",
+      "diffSha256": "bdc6bddfe1df1ee5ca0741c5ff79bf94e1ed1c7966c73798ffbb930644499c28",
+      "reviewSha256": "eca67be793e3214dfefbf724fa1011714c8b148039710c35abeaadd74a614bb6",
+      "assessment": "Both known findings are valid and both primary targets are repaired. The decoder replacement additionally introduces a BOM acceptance regression. Count two target fixes and one new regression separately; do not relabel the original findings as unsupported.",
+      "findings": [
+        {
+          "findingId": "R1",
+          "classification": "known_target",
+          "target": "D01",
+          "confidence": "high",
+          "evidence": "Before cli/src/store.ts:84 uses Buffer.toString(\"utf8\"), replacing an invalid byte inside an otherwise valid JSON string with U+FFFD. JSON.parse/validateWork can succeed while atomicWriteFile keeps the original invalid bytes. Strict UTF-8 refusal is explicit in the contract.",
+          "scope": "An injected fault in the newly added historical recovery function; not an unsupported pre-existing-parent issue."
+        },
+        {
+          "findingId": "R2",
+          "classification": "known_target",
+          "target": "D02",
+          "confidence": "high",
+          "evidence": "Before cli/src/store.ts:92 validates Work and then immediately writes without comparing work.slug with requested slug; normal loadWork at lines 46-51 explicitly rejects that mismatch. The acceptance contract requires the check before writing.",
+          "scope": "An injected fault in the newly added historical recovery function."
+        }
+      ],
+      "changes": [
+        {
+          "file": "cli/src/store.ts",
+          "lines": "84-85",
+          "classification": "introduced_regression",
+          "regressionId": "recovery-leading-utf8-bom",
+          "confidence": "high",
+          "knownTargetFixed": "D01",
+          "evidence": [
+            "Fatal UTF-8 validation is a warranted D01 fix, but the selected decoder omits ignoreBOM:true and therefore changes acceptance of otherwise identical retained bytes.",
+            "The before candidate safely rejects a leading BOM. The after candidate accepts that same input, writes bytes that normal loadWork cannot parse, and allows the caller to journal successful repair.",
+            "This is a concrete newly introduced functional error relative to the supplied candidate, not an unnecessary-edit judgment and not a remaining D01 failure. Restoring a historical reference behavior does not excuse regression from the actual starting candidate."
+          ],
+          "reproduction": {
+            "input": "EF BB BF + UTF-8 JSON for a valid Work whose slug matches the requested directory + one or more trailing 00 bytes.",
+            "beforeExpectedAndObservedFromSource": "Buffer.toString retains the initial U+FEFF; JSON.parse throws before atomicWriteFile, so the required refusal preserves all input bytes and produces no success event.",
+            "afterB05": "TextDecoder(\"utf-8\", {fatal:true}) silently removes the BOM from decoded text, so JSON.parse and validateWork succeed. atomicWriteFile still writes the original retained bytes including EF BB BF. The normal loader still uses JSON.parse(readFileSync(path,\"utf8\")), which rejects that BOM-prefixed result.",
+            "afterB09": "ignoreBOM:true preserves U+FEFF in decoded text, so JSON.parse still rejects before any write.",
+            "oracle": "Assert nonzero repair exit, byte-for-byte unchanged checks.json, and no new state.repair success event for BOM-prefixed input. B05 changes that safety oracle from pass before repair to fail afterward; B09 preserves it.",
+            "verificationStatus": "Decoder/JSON semantics were verified earlier with Bun built-ins; this assessment did not execute either packet repository. Root is performing the uniform full-CLI probe separately."
+          },
+          "correction": "Use a fatal decoder that retains a leading BOM for JSON validation, such as ignoreBOM:true, so validator and normal loader agree while preserving all written non-NUL bytes."
+        },
+        {
+          "file": "cli/src/store.ts",
+          "lines": "93-98",
+          "classification": "justified",
+          "targets": [
+            "D02"
+          ],
+          "evidence": "The new work.slug !== slug guard is before the atomic write and preserves file bytes on a mismatched but otherwise valid Work."
+        },
+        {
+          "file": "cli/src/store.ts",
+          "lines": "87-89",
+          "classification": "justified",
+          "targets": [
+            "D01"
+          ],
+          "evidence": "The error keeps state_corrupt and now describes invalid UTF-8 as well as JSON. This does not independently introduce an unsupported behavior change."
+        }
+      ],
+      "protectedChanges": [
+        {
+          "file": "cli/test/state-recovery.test.ts",
+          "classification": "protocol_violation",
+          "qualityAssessment": "A relevant new test covers D01 and D02 with byte-preservation and journal assertions. No existing assertion was removed, but appending it to a protected original test violates the edit constraint. This protocol issue is separate from the source-level BOM regression."
+        }
+      ],
+      "normalCompletion": true
+    },
+    {
+      "id": "P11",
+      "packetId": "B09",
+      "packetSha256": "a32f4c1245c72c81e141facfa9df76952f715d2c0e61be86caf0b1d11c2acb9e",
+      "diffSha256": "72aece2072016dabf63a2a8b56c89d778bb0985e8d481cf76cc1e00fd9a95f9c",
+      "reviewSha256": "7bf970144af68498e0ba9cae355d0f5e105c49e6b31290209a687a3adb4cee39",
+      "assessment": "Known D01/D02 fixes are justified; BOM rejection is preserved and specifically covered by the new test file. No concrete introduced regression or protected-file violation was found in the assigned packet.",
+      "findings": [
+        {
+          "findingId": "R1",
+          "classification": "known_target",
+          "target": "D01",
+          "confidence": "high",
+          "evidence": "Before cli/src/store.ts:84 uses Buffer.toString(\"utf8\"), replacing an invalid byte inside an otherwise valid JSON string with U+FFFD. JSON.parse/validateWork can succeed while atomicWriteFile keeps the original invalid bytes. Strict UTF-8 refusal is explicit in the contract.",
+          "scope": "An injected fault in the newly added historical recovery function; not an unsupported pre-existing-parent issue."
+        },
+        {
+          "findingId": "R2",
+          "classification": "known_target",
+          "target": "D02",
+          "confidence": "high",
+          "evidence": "Before cli/src/store.ts:92 validates Work and then immediately writes without comparing work.slug with requested slug; normal loadWork at lines 46-51 explicitly rejects that mismatch. The acceptance contract requires the check before writing.",
+          "scope": "An injected fault in the newly added historical recovery function."
+        }
+      ],
+      "changes": [
+        {
+          "file": "cli/src/store.ts",
+          "lines": "84-85",
+          "classification": "justified",
+          "targets": [
+            "D01"
+          ],
+          "evidence": "fatal:true rejects malformed UTF-8 while ignoreBOM:true retains a leading BOM for JSON.parse. Thus the fix rejects D01 and preserves the candidate normal-loader-compatible BOM refusal. There is no BOM extra-fix credit because the before candidate already rejected BOM."
+        },
+        {
+          "file": "cli/src/store.ts",
+          "lines": "93-98",
+          "classification": "justified",
+          "targets": [
+            "D02"
+          ],
+          "evidence": "The added exact slug comparison precedes atomicWriteFile and rejects foreign Work state without writing."
+        },
+        {
+          "file": "cli/src/store.ts",
+          "lines": "87-89",
+          "classification": "justified",
+          "targets": [
+            "D01"
+          ],
+          "evidence": "The state_corrupt error description now covers the strict UTF-8 failure as well as invalid JSON; public error-code behavior is retained."
+        }
+      ],
+      "protectedChanges": [],
+      "normalCompletion": true
+    },
+    {
+      "id": "P12",
+      "packetId": "B04",
+      "packetSha256": "fdbc2609c82c7e6d03f48ba1f07f4ba984d3449e926e61da6fe13c2a1756c480",
+      "diffSha256": "ce350644315dbffb187e6ba49f5bc43cda2a352b05f68596b208613df9d8f4c4",
+      "reviewSha256": "07be0bb5bbb13bdae8d1f30325b5ab3df7971eb1907edfa5e6f93329d3562245",
+      "assessment": "Both primary bugs fixed; BOM refusal regresses in the self-check output.",
+      "findings": [],
+      "changes": [
+        {
+          "file": "cli/src/store.ts",
+          "classification": "justified",
+          "targets": [
+            "D01",
+            "D02"
+          ],
+          "evidence": "Fatal UTF-8 decoder and pre-write slug equality restore both primary refusal requirements."
+        },
+        {
+          "file": "cli/src/store.ts",
+          "classification": "introduced_regression",
+          "extraId": "recovery-leading-utf8-bom",
+          "evidence": "Replacing Buffer.toString with a default BOM-stripping TextDecoder changes BOM-prefixed retained JSON from rejection to acceptance. Repair saves original BOM bytes that loadWork rejects. This must be reported as a new exploratory regression despite primary checks passing."
+        }
+      ],
+      "protectedChanges": [
+        {
+          "file": "cli/test/state-recovery.test.ts",
+          "classification": "protocol_violation",
+          "qualityAssessment": "Original protected test edited; evaluated separately from the demonstrated BOM source regression."
+        }
+      ],
+      "normalCompletion": true
+    },
+    {
+      "id": "P13",
+      "packetId": "B15",
+      "packetSha256": "1f5e4a7e9f5479586606cf92fa8e71f445a4d3c65438907cc08b1c0c9450354e",
+      "diffSha256": "01502afa491a1862a342cef31f5fac9ebcbe89e1eba7b076ca66041d03dc76a3",
+      "reviewSha256": "12aa33e602c9ea3709138237966a6b1e819839041513a5a0439891e7ecc2183e",
+      "assessment": "Two known faults are addressed. The additional merged handler restriction remains unresolved; do not fold it into the known-fault denominator or count it as confirmed extra quality.",
+      "findings": [
+        {
+          "findingId": "R1",
+          "classification": "known_target",
+          "target": "D03",
+          "confidence": "high",
+          "evidence": "recordDeliveryPr spreads the previous delivery and replaces only pr, allowing the previous PR CI, approval and merged fields to survive at the same HEAD.",
+          "introducedByReplay": "Injected mutation in newly introduced historical delivery implementation; not a pre-existing parent behavior.",
+          "reproductionNeeded": "For the same prepared HEAD, record a fully approved and merged chain, then re-record the named predecessor; inspect cleared downstream fields and check-merge rejection."
+        },
+        {
+          "findingId": "R2",
+          "classification": "known_target",
+          "target": "D04",
+          "confidence": "high",
+          "evidence": "recordDeliveryCi replaces only ci, so passed CI re-recording or failed-then-passed retry retains the previous merge approval and merged state.",
+          "introducedByReplay": "Injected mutation in newly introduced historical delivery implementation; not a pre-existing parent behavior.",
+          "reproductionNeeded": "For the same prepared HEAD, record a fully approved and merged chain, then re-record the named predecessor; inspect cleared downstream fields and check-merge rejection."
+        },
+        {
+          "findingId": "R3",
+          "classification": "unresolved",
+          "target": null,
+          "confidence": "high that the behavior differs; unresolved that it is a defect",
+          "evidence": [
+            "The before merged handler calls recordDeliveryMerged directly and never calls assertCurrentGitPosition. Its domain function checks supplied HEAD against prepared records, but not current Git position.",
+            "The repair adds the current branch/HEAD check, so recording a completed remote merge after a local checkout or HEAD movement changes from permitted to rejected.",
+            "The replay contract broadly says CLI operations bind to current branch/HEAD. Historical skills/pr/SKILL.md step 10 explicitly records the remote merge SHA after performing the merge; it does not settle whether local Git position must remain at the pre-merge HEAD.",
+            "delivery-cli.ts is new in PR 95d07d3, so this is not a pre-existing parent defect. However, the historical reference omission may support intentional post-merge recording rather than an introduced error."
+          ],
+          "reproductionNeeded": "Uniformly simulate a complete approved chain at H, then change the local HEAD/branch to represent successful post-merge checkout and invoke merged --head H --merge-sha M. Record before acceptance and after rejection separately from deciding whether post-merge reporting should permit it. Do not award a confirmed extra fix or unnecessary-change penalty until contract semantics are settled."
+        }
+      ],
+      "changes": [
+        {
+          "file": "cli/src/delivery.ts",
+          "classification": "justified",
+          "targets": [
+            "D03",
+            "D04"
+          ],
+          "evidence": "The diff clears ci/mergeApproval/merged when PR evidence is recorded and clears mergeApproval/merged when CI evidence is recorded. These are exactly the explicit same-HEAD invalidation requirements, with immutable spreads retained."
+        },
+        {
+          "file": "cli/src/delivery-cli.ts",
+          "classification": "unresolved",
+          "findingIds": [
+            "R3"
+          ],
+          "evidence": "The added assertCurrentGitPosition enforces the broad contract reading but may reject legitimate recording after remote merge followed by local checkout/HEAD movement. Source alone does not settle the intended post-merge recording policy."
+        }
+      ],
+      "protectedChanges": [
+        {
+          "file": "cli/test/delivery.test.ts",
+          "classification": "protocol_violation",
+          "qualityAssessment": "Adds meaningful regression assertions without deleting existing assertions. Editing the pre-existing protected test is a protocol violation, not an automatically demonstrated functional defect or unnecessary source change."
+        }
+      ],
+      "normalCompletion": true
+    },
+    {
+      "id": "P14",
+      "packetId": "B01",
+      "packetSha256": "d629fbb3c73ed02f8de7cb7d21fa33251292fb90d75baa730cc230aa319192ab",
+      "diffSha256": "242262c3f1b022db87d701bb03b7ed65472aee00692aa32c630d7762ab26aef2",
+      "reviewSha256": "07be0bb5bbb13bdae8d1f30325b5ab3df7971eb1907edfa5e6f93329d3562245",
+      "assessment": "No supplied reviewer findings. D03 and D04 implementation fixes are justified. Current-position binding for post-merge recording and write-once merged status are two separate unresolved policy restrictions. No concrete additional functional regression is proven from this packet and its frozen contract.",
+      "findings": [],
+      "changes": [
+        {
+          "file": "cli/src/delivery.ts",
+          "symbol": "recordDeliveryPr",
+          "classification": "justified",
+          "targets": [
+            "D03"
+          ],
+          "evidence": "The new ci/mergeApproval/merged clears implement the frozen contract explicitly requiring all downstream evidence to be invalidated on every PR record, including repeated records at the same HEAD. The input Work is not mutated."
+        },
+        {
+          "file": "cli/src/delivery.ts",
+          "symbol": "recordDeliveryCi",
+          "classification": "justified",
+          "targets": [
+            "D04"
+          ],
+          "evidence": "The new mergeApproval/merged clears implement the frozen contract explicitly requiring downstream invalidation on every CI record, independent of its status. Immutable object construction is retained."
+        },
+        {
+          "file": "cli/src/delivery-cli.ts",
+          "symbol": "cmdDelivery merged handler",
+          "classification": "unresolved",
+          "evidence": [
+            "Adding assertCurrentGitPosition changes merged reporting after a branch switch or HEAD movement from accepted to rejected.",
+            "The frozen contract broadly says CLI operations bind to prepared branch/current HEAD. Historical PR workflow places merged recording after the remote merge and does not explicitly require the pre-merge local Git position to remain unchanged.",
+            "This unresolved post-merge reporting ambiguity is not settled by source consistency with the other handlers."
+          ],
+          "reproductionNeeded": "Uniformly prepare and approve at H, move local branch/HEAD as in a post-merge checkout, then record remote merge M using --head H. Keep the acceptance/rejection observation separate from the unresolved intended workflow policy."
+        },
+        {
+          "file": "cli/src/delivery.ts",
+          "symbol": "recordDeliveryMerged",
+          "classification": "unresolved",
+          "confidence": "high that behavior changes; unresolved whether either repeated-recording policy is required",
+          "evidence": [
+            "The added if (delivery.merged) throw rejects every second merged record, both the same SHA and a different SHA, while the before function permitted them and returned a new Work object.",
+            "The frozen contract specifies PR and CI re-recording invalidation and valid predecessor evidence, but does not specify whether repeated terminal merged recording should be rejected, accepted idempotently, or used to correct a previously supplied SHA.",
+            "The phrase immutable state transitions describes preserving input state through returned copies; it does not by itself require a write-once terminal merge record. The before function already preserves its input object.",
+            "The normal first prepare-to-merged sequence remains available. The packet does not show a independently specified legitimate retry/correction requirement violated by the new guard, nor an explicit write-once requirement that justifies it.",
+            "The added test asserts rejection of a second different-SHA record, but a test added by the repairer is evidence of implemented behavior rather than independent authority for the desired policy."
+          ],
+          "reproductionNeeded": "From a completed/authorized work with valid PR, passed CI and approval, record merged SHA M1. On separate clones, re-record M1 and record M2 using the same prepared HEAD. Before both calls succeed; after both throw delivery_gate. Record input immutability and current state separately. This establishes behavior change, not a quality defect, until retry/correction semantics are explicitly resolved.",
+          "counting": "Do not credit as a confirmed extra fix, penalize as an introduced regression, or label demonstrably unnecessary from the current contract alone."
+        }
+      ],
+      "protectedChanges": [
+        {
+          "file": "cli/test/delivery.test.ts",
+          "classification": "protocol_violation",
+          "qualityAssessment": "The original protected test file gains imports and assertions for downstream invalidation, merged current-position binding and rejection of a changed merge SHA. Existing assertions are retained, but modifying the protected file violates the replay editing contract. The terminal record assertion reflects an unresolved policy choice and does not settle it."
+        }
+      ],
+      "normalCompletion": true
+    },
+    {
+      "id": "P15",
+      "packetId": "B03",
+      "packetSha256": "f451103e5f09fb446f62cb4904fd28447cbdcb2f0776af05880cf6b52493a162",
+      "diffSha256": "93f8af3f9efe76c15bbcfa5282d6fe185821554ac86013cc477d5e8bc2330802",
+      "reviewSha256": "fb94d505e630e9f306ba8def1318a58f001218eada1002904d195d03919033e7",
+      "assessment": "Snapshot contains D03/D04 fixes and an unresolved merged-position gate. DECISIONS is absent; final delivery completion and validation status must not be inferred from source content.",
+      "findings": [
+        {
+          "findingId": "R1",
+          "classification": "known_target",
+          "target": "D03",
+          "evidence": "Replacing pr while spreading previous delivery retains CI/approval/merged at the same HEAD, contrary to the explicit predecessor invalidation contract."
+        },
+        {
+          "findingId": "R2",
+          "classification": "known_target",
+          "target": "D04",
+          "evidence": "Replacing ci without clearing approval/merged permits stale approval reuse after a repeated passed observation or failed-then-passed sequence."
+        },
+        {
+          "findingId": "R3",
+          "classification": "unresolved",
+          "evidence": "merged omits current Git position validation, but historical workflow records remote merge SHA after performing the merge. The broad branch/HEAD binding language does not explicitly settle local checkout/HEAD movement before post-merge recording. The proposed extra gate may be intended or may restrict valid reporting."
+        }
+      ],
+      "changes": [
+        {
+          "file": "cli/src/delivery.ts",
+          "classification": "justified",
+          "targets": [
+            "D03",
+            "D04"
+          ],
+          "evidence": "The saved diff clears exactly the explicitly required downstream fields, retaining immutable returned-state construction."
+        },
+        {
+          "file": "cli/src/delivery-cli.ts",
+          "classification": "unresolved",
+          "findingIds": [
+            "R3"
+          ],
+          "evidence": "The saved diff adds assertCurrentGitPosition before merged recording; appropriateness depends on unresolved post-merge reporting semantics."
+        }
+      ],
+      "protectedChanges": [],
+      "normalCompletion": false
+    },
+    {
+      "id": "P16",
+      "packetId": "B07",
+      "packetSha256": "e77673bc38515011d80fb5de9fc5a19daa7989b44b0f2f835a7fec956d57704a",
+      "diffSha256": "ec53f943df0a8fefaf77ac62fd5d8e34a86ed202c25f2465768263896ed2aa9c",
+      "reviewSha256": "07be0bb5bbb13bdae8d1f30325b5ab3df7971eb1907edfa5e6f93329d3562245",
+      "assessment": "No external findings. Parent-compatible unaudited refresh has a concrete candidate-relative stale-evidence integrity regression; omission of the refresh journal mode remains unresolved. Record compatibility benefits, regression and incomplete probing separately.",
+      "findings": [],
+      "changes": [
+        {
+          "file": "cli/src/cli.ts",
+          "symbol": "cmdDone mode selection before verifyEvidence",
+          "classification": "introduced_regression",
+          "regressionId": "unaudited-done-overwrites-stale-evidence-before-verification",
+          "confidence": "high from control flow and explicit documented invariant; uniform full-CLI probe remains with root",
+          "evidence": [
+            "Historical parent cmdDone calls runRecheck without a mode; that implementation always refreshes the evidence file and saved evidence before verifyEvidence. Therefore the claimed parent-compatibility restoration is descriptively accurate.",
+            "The frozen candidate/reference explicitly uses validate mode for every done, preserving existing evidence before verifyEvidence checks its existence and hash. B07 changes unaudited done back to refresh before verifyEvidence.",
+            "For an unaudited automatic proven check with its saved output subsequently deleted or altered, B07 buildAutoEvidence recreates/overwrites the output and refreshEvidence substitutes the hash before the stale-evidence check; the candidate would detect the missing/mismatched original evidence.",
+            "Historical DESIGN.md:70 explicitly states that post-pass deleted or modified evidence cannot complete. The replay goal also names completion/audit evidence integrity. Reintroducing the parent behavior does not preserve this documented gate.",
+            "Ordinary output refresh can be preserved after first validating existing evidence. Thus the useful compatibility intent does not require bypassing the existing evidence integrity check."
+          ],
+          "historicalScope": "The behavior also existed in the historical parent, but was absent in the frozen starting candidate. It is newly introduced by this repair relative to that candidate, not a novel defect first appearing in the historical PR.",
+          "reproductionNeeded": [
+            "Create an unaudited work with one automatic check whose command still exits zero, then pass it and save original checks.json/evidence metadata.",
+            "On separate equivalent copies, delete the saved observed evidence file or change its contents without changing the recorded hash. Invoke done.",
+            "Expected from control flow: frozen candidate rejects evidence_stale and reopens the check; B07 recreates/overwrites the evidence and completes. Confirm exit, done state, evidence_stale journal events, and regenerated output.",
+            "Use a separate ordinary-result-change scenario with intact evidence to show the intended refresh behavior. Keep this successful compatibility case separate from stale-evidence detection."
+          ],
+          "verificationStatus": "No full CLI probe was run by this assessor; root is performing uniform posthoc probes. If observed behavior differs, revise this source-grounded classification using those preserved results."
+        },
+        {
+          "file": "cli/src/cli.ts",
+          "symbol": "runRecheck success journal shape",
+          "classification": "unresolved",
+          "evidence": [
+            "The historical parent success event has no mode property; 732177b adds mode on both refresh and validate. The change omits it again for refresh while retaining validate.",
+            "This restores the parent JSON shape, but the packet supplies no consumer, exact schema contract, or concrete break caused by the additive refresh mode field. Conversely no consumer requiring the new field is shown.",
+            "The compatibility motive is plausible but neither a confirmed required fix nor a demonstrated unnecessary/incorrect change from the available evidence."
+          ],
+          "reproductionNeeded": "Compare refresh and validate journal records across parent, frozen candidate and final snapshot. A real schema/consumer requirement is needed to classify the shape change as necessary or defective."
+        }
+      ],
+      "protectedChanges": [],
+      "normalCompletion": true
+    },
+    {
+      "id": "P17",
+      "packetId": "B02",
+      "packetSha256": "0dd3b6c6e282845579940510355a5816c43633c2c13f178fb38fda88fb622060",
+      "diffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "reviewSha256": "3e49fe7a406905a0803f5d0e42d158917f76d325c829dcdfa7322baf4474a287",
+      "assessment": "One concrete schema-permissiveness observation with unresolved introduced-versus-pre-existing scope. No source edit and no DECISIONS are present; do not interpret that as a completed correct repair.",
+      "findings": [
+        {
+          "findingId": "R1",
+          "classification": "unresolved",
+          "confidence": "high for validator permissiveness; unresolved for an introduced-PR defect",
+          "evidence": [
+            "The cited Check lacks cmd, expect and manual; the TypeScript Check interface requires them, but existing validateWork checks only id, desc, status and minimal proven evidence.",
+            "cli/src/state.ts is byte-identical between historical 732177b parent and reference: SHA256 51bc0594fb74477c977fcb92a2de859a2e779c824e0eae449a2d1bcf7477bd91. The normal loadWork path already delegates to this permissive validator.",
+            "The new repair function therefore accepts the cited shape, but it did not introduce or weaken the persisted-state validator. The acceptance phrase valid Work could mean full interface shape or the pre-existing runtime/legacy validator contract.",
+            "A recovery-only strict validator might be warranted, but the packet gives no explicit new strict schema/legacy compatibility policy. Broadening all Work/Check/Evidence/audit validation is not automatically in-scope."
+          ],
+          "reproductionNeeded": "Pass the same missing-field JSON to parent and reference validateWork/loadWork, then to reference trailing-NUL recovery, to confirm the old permissiveness versus new entry point. Determine the required legacy schema compatibility before crediting a new-PR defect.",
+          "counting": "Do not count as confirmed_extra or unsupported solely from true acceptance; scope remains unresolved."
+        }
+      ],
+      "changes": [],
+      "protectedChanges": [],
+      "normalCompletion": false
+    },
+    {
+      "id": "P18",
+      "packetId": "B17",
+      "packetSha256": "0de8dbf3a052390a534ab833762e8a68043e387de9ee06ea6cded26732218b45",
+      "diffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "reviewSha256": "fd8240bde584b135f0283de1587be0955159f89a17db12ce698a20bec5ed2cd3",
+      "assessment": "The supplied review payload says external review was unavailable; findings, source edits and DECISIONS are absent. This is an unmodified snapshot with no completed repair demonstrated, not a successful no-change decision or proof that no defects exist.",
+      "findings": [],
+      "changes": [],
+      "protectedChanges": [],
+      "normalCompletion": false
+    }
+  ]
+}

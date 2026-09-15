@@ -1,0 +1,11 @@
+{
+  "success": true,
+  "manifestSha256": "8a95f4df2d1ea0ee2143d2b19f4fba3cddeac9dad0bfad4a17ba5e8bad6b7c89",
+  "observations": 32,
+  "adjudicatedFindings": 31,
+  "adjudicationsSha256": "687e1916fab29178e15bf8544c92c0374e45a33b53c8cda143ceda3c422e7886",
+  "resultsSha256": "8c63d3b347f7c68a2322be660a60fb84ae8b4a005c29ea168248eab1a92ce554",
+  "outcomeSha256": "4a47630fe6083bfa3f07271db9513676d350fd49551b73c38a262fbe34108a88",
+  "independentHumanReview": false,
+  "transportSuccesses": 32
+}

@@ -1,0 +1,47 @@
+--- ondemand
++++ calibrated
+@@ -31,9 +31,9 @@
+   exit code로 하므로, 그냥 실행되는 명령이 아니라 검증하는 명령이어야 한다.
+   (예: `./gradlew test --tests '*Excel*'`, `grep -q "limit=500000" src/config.ts`,
+   `curl -sf localhost:8080/health | grep -q '"status":"UP"'`)
+-- IMPORTANT: check는 3~7개로 유지한다. 그보다 많으면 작업을 쪼개는 신호다.
++- IMPORTANT: check 수는 요청의 독립적인 수용 조건과 위험에 맞춘다. 개수를 맞추기 위한 검사는 추가하지 않는다.
+ - IMPORTANT: init 전에 가정·불확실성·허용/금지 경로·중단 조건·위험도·검증 가능성을
+-  분류한다. 소스·설정 동작 변경은 `--simplify`를 사용하고 proven `static` check로
++  분류한다. 구조 복잡성 위험이 있는 변경만 `--simplify`를 사용하고 proven `static` check로
+   불필요한 추상화·dead code·중복이 없음을 프로젝트에 맞는 정적 명령으로 증명한다.
+   라인 수나 diff 크기만으로 간소화를 판정하지 않는다.
+ - IMPORTANT: `risk=high`는 gdm-full의 독립 검수로 올린다. `high+opaque`는 실제 도메인
+@@ -83,9 +83,9 @@
+ gdm pass 판정을 소유한다.
+ 
+ 1. 지속 계획의 작업 계약 초안에서 가정·불확실성·허용/금지 경로·중단 조건·risk·verification을
+-   꺼내 `gdm plan init`에 명시한다. 소스·설정 동작을 바꾸면 `--simplify`를 붙인다.
++   꺼내 `gdm plan init`에 명시한다. 구조 복잡성 위험이 있는 변경에만 `--simplify`를 붙인다.
+    init 기준선은 이미 존재하던 로컬 변경을 보존하고 이후 delta만 범위 판정한다.
+-   작업을 3~7개의 `regression|behavior|edge|static|manual` 항목으로 분해해 `gdm plan add`.
++   작업에 필요한 `regression|behavior|edge|static|manual` 항목으로 분해해 `gdm plan add`.
+    기존 결함을 고치는 regression은 **구현 전에** `gdm pass <id> --red`로 동일 명령의
+    non-zero 실패를 기록한다. red가 성공(exit 0)하면 결함을 드러내는 항목이 아니므로 고친다.
+    좋은 check의
+@@ -110,11 +110,8 @@
+ 3. `gdm done` 전에 diff를 열어 요청 범위 밖 변경이 섞이지 않았는지 최종 대조한다.
+    `gdm done`이 자동 항목을 다시 실행하므로 직전에 `gdm recheck`를 중복 실행하지 않는다.
+    `recheck`는 구현 도중 이미 통과한 항목의 중간 회귀를 확인해야 할 때만 사용한다.
+-4. `gdm done` 성공 뒤 `gdm habit harvest --json`을 정확히 한 번 실행해 이번 작업의
+-   반복 사건을 수확하고, 적용한 habit이 있으면 `ineligible|skipped|clean|recurred` 중
+-   실제 결과를 `gdm habit evaluate`로 기록한다. 새 후보 검토가 필요하면
+-   `gdm-reflect`를 안내하되 자동 채택하지 않는다.
+-5. 이 피드백 checkpoint까지 끝난 뒤에만 완료를 보고한다. 재개는 `gdm resume`. 완료 이후
++4. `gdm done` 성공 뒤 완료를 보고한다. 반복 실패나 adopted habit이 있는 작업만 habit harvest/evaluate를 수행하며, 수확 자체를 완료의 추가 조건으로 삼지 않는다.
++5. 재개는 `gdm resume`. 완료 이후
+    이 작업에서 결함이 발견되면 `gdm miss --desc ... --type ...`으로 기록한다
+    — 게이트 개선(retro --all)의 입력이 된다.
+ 
+@@ -135,3 +132,6 @@
+ 
+ ## 필요할 때 읽는 참고
+ 역할 인계·다중 에이전트·웹 UI 검증·도메인 예시는 해당 기능을 실제로 사용할 때 읽는다. 이번 과제는 로컬 단일 실행자 작업이다. 핵심 CLI 검증 게이트는 그대로 적용한다.
++
++## 검증 범위 조정
++요청의 결과와 관련 경계 조건을 검증한다. 기존 결함의 red→green, 범위 보존, evidence 무결성과 gdm done 게이트는 유지한다. 검사 통과 후에는 새 변경·실패·남은 우려가 있을 때만 검증을 넓히거나 반복한다. 이 규칙은 CLI가 요구하는 done 재실행을 생략할 권한이 아니다.

@@ -1,0 +1,28 @@
+bun test v1.3.14 (0d9b296a)
+
+test/pi-computer-use-extension.test.ts:
+(pass) gdm-pi isolated Computer Use extension > dispatches the single tool and returns guest screenshots as images [1821.46ms]
+(pass) gdm-pi isolated Computer Use extension > rejects concurrent, cancelled, and malformed actions before backend mutation [3.01ms]
+(pass) gdm-pi isolated Computer Use extension > fails closed on unauthenticated, oversized, out-of-bounds, and stalled RFB peers [50.81ms]
+(pass) gdm-pi isolated Computer Use extension > blocks an immediate short Tart fork before setsid escape can occur [772.39ms]
+(pass) gdm-pi isolated Computer Use extension > refuses to attach to a VM owned by another process [459.37ms]
+269 | esac
+270 | `);
+271 |     chmodSync(tart, 0o755);
+272 |     process.env.GDM_TART_PATH = tart;
+273 |     const manager = new TartVmManager();
+274 |     await expect(manager.start()).rejects.toThrow("exposed a host TCP listener");
+                                                ^
+error: expect(received).toThrow(expected)
+
+Expected substring: "exposed a host TCP listener"
+Received message: "Host TCP listener inspection failed (1)"
+
+      at <anonymous> (/Users/godongmin/projects/gdm/cli/test/pi-computer-use-extension.test.ts:274:43)
+(fail) gdm-pi isolated Computer Use extension > kills its owned VM when the Tart process exposes a host TCP listener [996.69ms]
+(pass) gdm-pi isolated Computer Use extension > continuously detects a delayed descendant listener and removes the owned process groups [1486.51ms]
+
+ 6 pass
+ 1 fail
+ 27 expect() calls
+Ran 7 tests across 1 file. [5.75s]

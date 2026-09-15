@@ -1,0 +1,175 @@
+{
+  "schema": "gdm-astra-ablation/v1",
+  "createdAt": "2026-09-08T00:23:25Z",
+  "repoHead": "5a9d331fd9dc52e52825819f438707a539ae163a",
+  "modelRequested": "gpt-6-astra",
+  "reasoningRequested": "xhigh",
+  "codexVersion": "codex-cli 0.153.4",
+  "gdmVersion": "0.9.1",
+  "codexSha256": "b973d440acac501fd2594a43e7ca9ce41e0a65b9dfb28d0d7a7837c99e1261e3",
+  "gdmSha256": "5a1b3aca35ccd4f0dc492f1b904239a896bf007502a8deed4422e91095f1e6d5",
+  "artifacts": [
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-go/SKILL.md",
+      "sha256": "62bb2dc069808d6f51076b7216b200bc9aaf4687820b764e81774aeb7af3f10f"
+    },
+    {
+      "path": "/Users/godongmin/projects/gdm/bench/astra-ablation/run.py",
+      "sha256": "f6156699e0dd283f83a939b38c82cff2bfb3b9f805601855bce642fadd0e62ad"
+    },
+    {
+      "path": "/Users/godongmin/projects/harness-bench-hidden/t1.hidden.test.ts",
+      "sha256": "767df27b7ca73edc17f3a78fbd41453336fc7c8364a4a1c9a967bc78ed8b7e4f"
+    },
+    {
+      "path": "/Users/godongmin/projects/harness-bench-hidden/t2.hidden.test.ts",
+      "sha256": "41a397d99f3d6ce5b6e9f21d630fd10e41a6c8188d29b8899c6d3e83d467b021"
+    },
+    {
+      "path": "/Users/godongmin/projects/harness-bench-hidden/t3.hidden.test.ts",
+      "sha256": "4f3e211278a5b48ddfba220c08edc3a115ee3070cb93bc58b2f6ec4bbafba291"
+    },
+    {
+      "path": "/Users/godongmin/projects/harness-bench-hidden/briefs/t1.md",
+      "sha256": "817a5bbcce5213cade3bdf4625e40e80eae7b3c9b1c6bc9a3e24a2f5ec0e9e44"
+    },
+    {
+      "path": "/Users/godongmin/projects/harness-bench-hidden/briefs/t2.md",
+      "sha256": "020c8c20d47c475a2216b77c5fafcbf3035df33de3ae009434e9b14916449ad8"
+    },
+    {
+      "path": "/Users/godongmin/projects/harness-bench-hidden/briefs/t3.md",
+      "sha256": "ebf7138a8d8c07cad99ea01f05eef84ae73c25cccb0f090a6cf498de55f844dd"
+    }
+  ],
+  "fixtureCommits": {
+    "t1": "730763e78b2f549d553984f69759de3c1749a4bf",
+    "t2": "5ec556f49651e371633185d5be15b210e4ed30d9",
+    "t3": "5ec556f49651e371633185d5be15b210e4ed30d9"
+  },
+  "arms": {
+    "current": {
+      "bytes": 28492,
+      "sha256": "62bb2dc069808d6f51076b7216b200bc9aaf4687820b764e81774aeb7af3f10f"
+    },
+    "ondemand": {
+      "bytes": 10140,
+      "sha256": "8a1b4d6c5704da21c060f7961466730486b873a82278b1a0435c8770fad9ab71"
+    },
+    "calibrated": {
+      "bytes": 10370,
+      "sha256": "eb9a11338357b5cf1b9038c13b9de9f7617f86afcafb2fd9d07dca4f6010e99f"
+    }
+  },
+  "schedule": [
+    {
+      "task": "t1",
+      "arm": "current",
+      "trial": 1
+    },
+    {
+      "task": "t1",
+      "arm": "ondemand",
+      "trial": 1
+    },
+    {
+      "task": "t1",
+      "arm": "calibrated",
+      "trial": 1
+    },
+    {
+      "task": "t2",
+      "arm": "ondemand",
+      "trial": 1
+    },
+    {
+      "task": "t2",
+      "arm": "calibrated",
+      "trial": 1
+    },
+    {
+      "task": "t2",
+      "arm": "current",
+      "trial": 1
+    },
+    {
+      "task": "t3",
+      "arm": "calibrated",
+      "trial": 1
+    },
+    {
+      "task": "t3",
+      "arm": "current",
+      "trial": 1
+    },
+    {
+      "task": "t3",
+      "arm": "ondemand",
+      "trial": 1
+    },
+    {
+      "task": "t1",
+      "arm": "calibrated",
+      "trial": 2
+    },
+    {
+      "task": "t1",
+      "arm": "ondemand",
+      "trial": 2
+    },
+    {
+      "task": "t1",
+      "arm": "current",
+      "trial": 2
+    },
+    {
+      "task": "t2",
+      "arm": "current",
+      "trial": 2
+    },
+    {
+      "task": "t2",
+      "arm": "calibrated",
+      "trial": 2
+    },
+    {
+      "task": "t2",
+      "arm": "ondemand",
+      "trial": 2
+    },
+    {
+      "task": "t3",
+      "arm": "ondemand",
+      "trial": 2
+    },
+    {
+      "task": "t3",
+      "arm": "current",
+      "trial": 2
+    },
+    {
+      "task": "t3",
+      "arm": "calibrated",
+      "trial": 2
+    }
+  ],
+  "timeoutSeconds": 480,
+  "primaryOutcome": "hidden and original visible tests pass, original tests unchanged, real gdm done and completion marker",
+  "secondaryOutcomes": [
+    "wall time",
+    "fresh input",
+    "total input",
+    "cached input",
+    "output",
+    "commands",
+    "checks"
+  ],
+  "limitations": [
+    "3 small reused fixtures: ceiling effect, no large-repository quality generalization",
+    "single implementer, no external designer, no browser, no remote tools; those policy changes are not tested",
+    "CLI requested model identity is observable; server identity is not independently attested",
+    "machine grading only; no blind qualitative LLM judge",
+    "hidden tests outside workspace withheld until model exits; OS read access is not a hard hidden-test security boundary",
+    "calibrated combines several workflow changes; cannot attribute its outcome to one rule"
+  ]
+}

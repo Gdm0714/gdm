@@ -1,0 +1,59 @@
+{
+  "phase": "Anonymous finding adjudication; arm labels not yet joined",
+  "primaryScoreChanged": false,
+  "scriptSha256": "386361e5a5f250380f1348b9db843ee4b25b7420bd85e430bc3783f2e66cec55",
+  "results": [
+    {
+      "case": "C02",
+      "exitCode": 0,
+      "observed": {
+        "bearerTab": {
+          "rawHeuristicMatches": true,
+          "serializedHeuristicMatches": false,
+          "validation": null
+        },
+        "awsShape": {
+          "length": 20,
+          "rawHeuristicMatches": true,
+          "validation": "task 1 contains a credential-shaped value"
+        },
+        "whitespace": {
+          "length": 1,
+          "validation": "task 1 field scope must be nonempty text"
+        },
+        "validControl": {
+          "validation": null
+        }
+      },
+      "log": "adjudication-logs/C02.log",
+      "logSha256": "b46f0ba9cd6696027bc65c2efa52f4e8ac13bafecb59155ae118276d0261c951",
+      "sourceSha256": "381ff03f6ae6f9699e9b0bb72739fa14342bca472c0952ff289ccf18bc2d5563"
+    },
+    {
+      "case": "C06",
+      "exitCode": 0,
+      "observed": {
+        "bearerTab": {
+          "rawHeuristicMatches": true,
+          "serializedHeuristicMatches": false,
+          "validation": null
+        },
+        "awsShape": {
+          "length": 20,
+          "rawHeuristicMatches": true,
+          "validation": "task 1 contains a credential-shaped value"
+        },
+        "whitespace": {
+          "length": 1,
+          "validation": "task 1 field scope must be nonempty text"
+        },
+        "validControl": {
+          "validation": null
+        }
+      },
+      "log": "adjudication-logs/C06.log",
+      "logSha256": "b46f0ba9cd6696027bc65c2efa52f4e8ac13bafecb59155ae118276d0261c951",
+      "sourceSha256": "07cbab420d0494a18e4f86a25bdf4c9f3a027ca6ff2a382a6d766128afdba00b"
+    }
+  ]
+}

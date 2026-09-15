@@ -1,0 +1,272 @@
+{
+  "judge": "Root AI coordinator; model names removed, not independent human expert review",
+  "manifestSha256": "8a95f4df2d1ea0ee2143d2b19f4fba3cddeac9dad0bfad4a17ba5e8bad6b7c89",
+  "findings": [
+    {
+      "blindId": "B01",
+      "findingId": "R1",
+      "case": "C04",
+      "label": "known_true_positive",
+      "reason": "done 호출이 validate 모드를 생략해 기존 증거와 metadata를 refresh하고 감사 해시를 무효화한다. 제시된 조건이 실행 재현과 일치한다.",
+      "evidence": "frozen/fixtures/C04/probe.test.ts: 두 번째 명령 출력이 달라지는 감사 완료에서 실패; C05 수정 대조는 증거를 보존하고 완료한다."
+    },
+    {
+      "blindId": "B03",
+      "findingId": "R1",
+      "case": "C04",
+      "label": "known_true_positive",
+      "reason": "done 호출이 validate 모드를 생략해 기존 증거와 metadata를 refresh하고 감사 해시를 무효화한다. 제시된 조건이 실행 재현과 일치한다.",
+      "evidence": "frozen/fixtures/C04/probe.test.ts: 두 번째 명령 출력이 달라지는 감사 완료에서 실패; C05 수정 대조는 증거를 보존하고 완료한다."
+    },
+    {
+      "blindId": "B05",
+      "findingId": "R1",
+      "case": "C08",
+      "label": "unsupported",
+      "reason": "입력 계약 첫 문단에서 표준 Node fs/path/crypto 의존성과 ROOT 및 GdmError를 제공한다고 명시했다. 이 재구성 발췌를 독립 파일 전체로 해석한 컴파일 불가 주장은 평가 조건과 충돌한다.",
+      "evidence": "frozen/packets/C08.md 첫 문단: Use standard Node fs, path and crypto imports, ROOT=\".gdm\", and GdmError as a typed Error. 실제 fixture는 정상 로드되어 control 검사가 통과한다."
+    },
+    {
+      "blindId": "B05",
+      "findingId": "R2",
+      "case": "C08",
+      "label": "known_true_positive",
+      "reason": "고정 presets.json.tmp를 공유하는 동시 쓰기의 덮어쓰기 및 ENOENT 반례가 합법적인 파일 연산 순서이며 재현된다.",
+      "evidence": "frozen/fixtures/C08/probe.test.ts: write A → write B → rename B → rename A 순서에서 실패; C07 UUID 대조는 통과."
+    },
+    {
+      "blindId": "B05",
+      "findingId": "R3",
+      "case": "C08",
+      "label": "unresolved",
+      "reason": "숫자 값 JSON을 타입 단언만으로 반환하는 결함은 두 버전에서 재현된다. 다만 입력이 로더를 unchanged라고 부르면서 candidate addition 안에 포함하고 검증 의무를 명시해 리뷰 범위가 충돌한다. 참/거짓 확정 대신 범위 미확정으로 보존한다.",
+      "evidence": "exploratory-loader.json 및 exploratory-logs/C08.log: invalid numeric record rejection 실패, valid string record control 통과. 기본 동시 쓰기 표적 분모에는 추가하지 않는다.",
+      "functionalReproduced": true,
+      "scopeAmbiguous": true
+    },
+    {
+      "blindId": "B06",
+      "findingId": "R1",
+      "case": "C02",
+      "label": "unsupported",
+      "reason": "정규식은 {12}가 아니라 {12,}로 12자 이상을 매칭한다. 제시한 16자 suffix도 탐지·거부되므로 반례가 성립하지 않는다.",
+      "evidence": "adjudication-probes.json C02/C06 awsShape: rawHeuristicMatches=true, validation=credential-shaped rejection. 최초 주장 재현 실패 로그도 adjudication-logs/C02-initial-claim-disproved.log로 보존."
+    },
+    {
+      "blindId": "B07",
+      "findingId": "R1",
+      "case": "C08",
+      "label": "known_true_positive",
+      "reason": "고정 presets.json.tmp를 공유하는 동시 쓰기의 덮어쓰기 및 ENOENT 반례가 합법적인 파일 연산 순서이며 재현된다.",
+      "evidence": "frozen/fixtures/C08/probe.test.ts: write A → write B → rename B → rename A 순서에서 실패; C07 UUID 대조는 통과."
+    },
+    {
+      "blindId": "B07",
+      "findingId": "R2",
+      "case": "C08",
+      "label": "unresolved",
+      "reason": "숫자 값 JSON을 타입 단언만으로 반환하는 결함은 두 버전에서 재현된다. 다만 입력이 로더를 unchanged라고 부르면서 candidate addition 안에 포함하고 검증 의무를 명시해 리뷰 범위가 충돌한다. 참/거짓 확정 대신 범위 미확정으로 보존한다.",
+      "evidence": "exploratory-loader.json 및 exploratory-logs/C08.log: invalid numeric record rejection 실패, valid string record control 통과. 기본 동시 쓰기 표적 분모에는 추가하지 않는다.",
+      "functionalReproduced": true,
+      "scopeAmbiguous": true
+    },
+    {
+      "blindId": "B10",
+      "findingId": "R1",
+      "case": "C06",
+      "label": "known_true_positive",
+      "reason": "scout의 공개된 medium/high thinking 입력을 역할 조건으로 거부하는 원인과 반례가 일치한다.",
+      "evidence": "frozen/fixtures/C06/probe.test.ts: explicit medium/high 실패; C02 수정 대조와 기본값은 통과."
+    },
+    {
+      "blindId": "B11",
+      "findingId": "R1",
+      "case": "C04",
+      "label": "known_true_positive",
+      "reason": "done 호출이 validate 모드를 생략해 기존 증거와 metadata를 refresh하고 감사 해시를 무효화한다. 제시된 조건이 실행 재현과 일치한다.",
+      "evidence": "frozen/fixtures/C04/probe.test.ts: 두 번째 명령 출력이 달라지는 감사 완료에서 실패; C05 수정 대조는 증거를 보존하고 완료한다."
+    },
+    {
+      "blindId": "B12",
+      "findingId": "R1",
+      "case": "C01",
+      "label": "known_true_positive",
+      "reason": "settled result를 실행 성공한 프로세스로 세는 원인과 nonexistent executable 반례가 일치한다.",
+      "evidence": "frozen/fixtures/C01/probe.test.ts: 실제 spawn 실패에서 spawned=false, launched=1; C03 수정 대조는 launched=0."
+    },
+    {
+      "blindId": "B13",
+      "findingId": "R1",
+      "case": "C07",
+      "label": "unresolved",
+      "reason": "숫자 값 JSON을 타입 단언만으로 반환하는 결함은 두 버전에서 재현된다. 다만 입력이 로더를 unchanged라고 부르면서 candidate addition 안에 포함하고 검증 의무를 명시해 리뷰 범위가 충돌한다. 참/거짓 확정 대신 범위 미확정으로 보존한다.",
+      "evidence": "exploratory-loader.json 및 exploratory-logs/C07.log: invalid numeric record rejection 실패, valid string record control 통과. 기본 동시 쓰기 표적 분모에는 추가하지 않는다.",
+      "functionalReproduced": true,
+      "scopeAmbiguous": true
+    },
+    {
+      "blindId": "B15",
+      "findingId": "R1",
+      "case": "C07",
+      "label": "unsupported",
+      "reason": "입력 계약 첫 문단에서 표준 Node fs/path/crypto 의존성과 ROOT 및 GdmError를 제공한다고 명시했다. 이 재구성 발췌를 독립 파일 전체로 해석한 컴파일 불가 주장은 평가 조건과 충돌한다.",
+      "evidence": "frozen/packets/C07.md 첫 문단: Use standard Node fs, path and crypto imports, ROOT=\".gdm\", and GdmError as a typed Error. 실제 fixture는 정상 로드되어 control 검사가 통과한다."
+    },
+    {
+      "blindId": "B15",
+      "findingId": "R2",
+      "case": "C07",
+      "label": "unresolved",
+      "reason": "숫자 값 JSON을 타입 단언만으로 반환하는 결함은 두 버전에서 재현된다. 다만 입력이 로더를 unchanged라고 부르면서 candidate addition 안에 포함하고 검증 의무를 명시해 리뷰 범위가 충돌한다. 참/거짓 확정 대신 범위 미확정으로 보존한다.",
+      "evidence": "exploratory-loader.json 및 exploratory-logs/C07.log: invalid numeric record rejection 실패, valid string record control 통과. 기본 동시 쓰기 표적 분모에는 추가하지 않는다.",
+      "functionalReproduced": true,
+      "scopeAmbiguous": true
+    },
+    {
+      "blindId": "B17",
+      "findingId": "R1",
+      "case": "C01",
+      "label": "known_true_positive",
+      "reason": "settled result를 실행 성공한 프로세스로 세는 원인과 nonexistent executable 반례가 일치한다.",
+      "evidence": "frozen/fixtures/C01/probe.test.ts: 실제 spawn 실패에서 spawned=false, launched=1; C03 수정 대조는 launched=0."
+    },
+    {
+      "blindId": "B18",
+      "findingId": "R1",
+      "case": "C01",
+      "label": "known_true_positive",
+      "reason": "settled result를 실행 성공한 프로세스로 세는 원인과 nonexistent executable 반례가 일치한다.",
+      "evidence": "frozen/fixtures/C01/probe.test.ts: 실제 spawn 실패에서 spawned=false, launched=1; C03 수정 대조는 launched=0."
+    },
+    {
+      "blindId": "B19",
+      "findingId": "R1",
+      "case": "C06",
+      "label": "known_true_positive",
+      "reason": "scout의 공개된 medium/high thinking 입력을 역할 조건으로 거부하는 원인과 반례가 일치한다.",
+      "evidence": "frozen/fixtures/C06/probe.test.ts: explicit medium/high 실패; C02 수정 대조와 기본값은 통과."
+    },
+    {
+      "blindId": "B20",
+      "findingId": "R1",
+      "case": "C06",
+      "label": "known_true_positive",
+      "reason": "scout의 공개된 medium/high thinking 입력을 역할 조건으로 거부하는 원인과 반례가 일치한다.",
+      "evidence": "frozen/fixtures/C06/probe.test.ts: explicit medium/high 실패; C02 수정 대조와 기본값은 통과."
+    },
+    {
+      "blindId": "B21",
+      "findingId": "R1",
+      "case": "C08",
+      "label": "unsupported",
+      "reason": "입력 계약 첫 문단에서 표준 Node fs/path/crypto 의존성과 ROOT 및 GdmError를 제공한다고 명시했다. 이 재구성 발췌를 독립 파일 전체로 해석한 컴파일 불가 주장은 평가 조건과 충돌한다.",
+      "evidence": "frozen/packets/C08.md 첫 문단: Use standard Node fs, path and crypto imports, ROOT=\".gdm\", and GdmError as a typed Error. 실제 fixture는 정상 로드되어 control 검사가 통과한다."
+    },
+    {
+      "blindId": "B21",
+      "findingId": "R2",
+      "case": "C08",
+      "label": "known_true_positive",
+      "reason": "고정 presets.json.tmp를 공유하는 동시 쓰기의 덮어쓰기 및 ENOENT 반례가 합법적인 파일 연산 순서이며 재현된다.",
+      "evidence": "frozen/fixtures/C08/probe.test.ts: write A → write B → rename B → rename A 순서에서 실패; C07 UUID 대조는 통과."
+    },
+    {
+      "blindId": "B21",
+      "findingId": "R3",
+      "case": "C08",
+      "label": "unresolved",
+      "reason": "숫자 값 JSON을 타입 단언만으로 반환하는 결함은 두 버전에서 재현된다. 다만 입력이 로더를 unchanged라고 부르면서 candidate addition 안에 포함하고 검증 의무를 명시해 리뷰 범위가 충돌한다. 참/거짓 확정 대신 범위 미확정으로 보존한다.",
+      "evidence": "exploratory-loader.json 및 exploratory-logs/C08.log: invalid numeric record rejection 실패, valid string record control 통과. 기본 동시 쓰기 표적 분모에는 추가하지 않는다.",
+      "functionalReproduced": true,
+      "scopeAmbiguous": true
+    },
+    {
+      "blindId": "B23",
+      "findingId": "R1",
+      "case": "C07",
+      "label": "unresolved",
+      "reason": "숫자 값 JSON을 타입 단언만으로 반환하는 결함은 두 버전에서 재현된다. 다만 입력이 로더를 unchanged라고 부르면서 candidate addition 안에 포함하고 검증 의무를 명시해 리뷰 범위가 충돌한다. 참/거짓 확정 대신 범위 미확정으로 보존한다.",
+      "evidence": "exploratory-loader.json 및 exploratory-logs/C07.log: invalid numeric record rejection 실패, valid string record control 통과. 기본 동시 쓰기 표적 분모에는 추가하지 않는다.",
+      "functionalReproduced": true,
+      "scopeAmbiguous": true
+    },
+    {
+      "blindId": "B25",
+      "findingId": "R1",
+      "case": "C07",
+      "label": "unsupported",
+      "reason": "입력 계약 첫 문단에서 표준 Node fs/path/crypto 의존성과 ROOT 및 GdmError를 제공한다고 명시했다. 이 재구성 발췌를 독립 파일 전체로 해석한 컴파일 불가 주장은 평가 조건과 충돌한다.",
+      "evidence": "frozen/packets/C07.md 첫 문단: Use standard Node fs, path and crypto imports, ROOT=\".gdm\", and GdmError as a typed Error. 실제 fixture는 정상 로드되어 control 검사가 통과한다."
+    },
+    {
+      "blindId": "B25",
+      "findingId": "R2",
+      "case": "C07",
+      "label": "unresolved",
+      "reason": "숫자 값 JSON을 타입 단언만으로 반환하는 결함은 두 버전에서 재현된다. 다만 입력이 로더를 unchanged라고 부르면서 candidate addition 안에 포함하고 검증 의무를 명시해 리뷰 범위가 충돌한다. 참/거짓 확정 대신 범위 미확정으로 보존한다.",
+      "evidence": "exploratory-loader.json 및 exploratory-logs/C07.log: invalid numeric record rejection 실패, valid string record control 통과. 기본 동시 쓰기 표적 분모에는 추가하지 않는다.",
+      "functionalReproduced": true,
+      "scopeAmbiguous": true
+    },
+    {
+      "blindId": "B26",
+      "findingId": "R1",
+      "case": "C02",
+      "label": "unresolved",
+      "reason": "공백 문자열을 trim으로 거부하는 현상은 재현된다. 그러나 계약의 nonempty가 길이 0만 금지하는지 의미 있는 nonblank 텍스트를 요구하는지 명시하지 않아, 어느 의미를 의도했는지 AI가 사후 확정하지 않는다.",
+      "evidence": "adjudication-probes.json C02/C06 whitespace: length=1, validation=nonempty-text rejection. 입력은 nonempty strings라고만 명시한다."
+    },
+    {
+      "blindId": "B27",
+      "findingId": "R1",
+      "case": "C04",
+      "label": "known_true_positive",
+      "reason": "done 호출이 validate 모드를 생략해 기존 증거와 metadata를 refresh하고 감사 해시를 무효화한다. 제시된 조건이 실행 재현과 일치한다.",
+      "evidence": "frozen/fixtures/C04/probe.test.ts: 두 번째 명령 출력이 달라지는 감사 완료에서 실패; C05 수정 대조는 증거를 보존하고 완료한다."
+    },
+    {
+      "blindId": "B28",
+      "findingId": "R1",
+      "case": "C06",
+      "label": "known_true_positive",
+      "reason": "scout의 공개된 medium/high thinking 입력을 역할 조건으로 거부하는 원인과 반례가 일치한다.",
+      "evidence": "frozen/fixtures/C06/probe.test.ts: explicit medium/high 실패; C02 수정 대조와 기본값은 통과."
+    },
+    {
+      "blindId": "B30",
+      "findingId": "R1",
+      "case": "C08",
+      "label": "known_true_positive",
+      "reason": "고정 presets.json.tmp를 공유하는 동시 쓰기의 덮어쓰기 및 ENOENT 반례가 합법적인 파일 연산 순서이며 재현된다.",
+      "evidence": "frozen/fixtures/C08/probe.test.ts: write A → write B → rename B → rename A 순서에서 실패; C07 UUID 대조는 통과."
+    },
+    {
+      "blindId": "B30",
+      "findingId": "R2",
+      "case": "C08",
+      "label": "unresolved",
+      "reason": "숫자 값 JSON을 타입 단언만으로 반환하는 결함은 두 버전에서 재현된다. 다만 입력이 로더를 unchanged라고 부르면서 candidate addition 안에 포함하고 검증 의무를 명시해 리뷰 범위가 충돌한다. 참/거짓 확정 대신 범위 미확정으로 보존한다.",
+      "evidence": "exploratory-loader.json 및 exploratory-logs/C08.log: invalid numeric record rejection 실패, valid string record control 통과. 기본 동시 쓰기 표적 분모에는 추가하지 않는다.",
+      "functionalReproduced": true,
+      "scopeAmbiguous": true
+    },
+    {
+      "blindId": "B31",
+      "findingId": "R1",
+      "case": "C02",
+      "label": "additional_confirmed",
+      "reason": "제공된 Bearer\\s+ 패턴은 원래 문자열의 탭을 포함한 입력을 탐지하지만 JSON.stringify 뒤에는 탭이 백슬래시-t로 바뀌어 탐지가 누락된다. 제공된 패턴 자체의 탐지 범위에 드는 입력에 대한 실제 호출 경로 결함이다.",
+      "evidence": "adjudication-probes.json C02/C06 bearerTab: rawHeuristicMatches=true, serializedHeuristicMatches=false, validation=null. 두 버전 모두 동일하게 확인했으며 원래 표적 결함 분모는 유지한다.",
+      "reproduction": "adjudication_probes.py",
+      "reproductionSha256": "386361e5a5f250380f1348b9db843ee4b25b7420bd85e430bc3783f2e66cec55"
+    },
+    {
+      "blindId": "B32",
+      "findingId": "R1",
+      "case": "C01",
+      "label": "known_true_positive",
+      "reason": "settled result를 실행 성공한 프로세스로 세는 원인과 nonexistent executable 반례가 일치한다.",
+      "evidence": "frozen/fixtures/C01/probe.test.ts: 실제 spawn 실패에서 spawned=false, launched=1; C03 수정 대조는 launched=0."
+    }
+  ]
+}

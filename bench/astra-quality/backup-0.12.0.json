@@ -1,0 +1,205 @@
+{
+  "path": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j",
+  "files": [
+    {
+      "path": "/Users/godongmin/.local/bin/gdm",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.local/bin/gdm"
+    },
+    {
+      "path": "/Users/godongmin/.local/bin/gdm-pi",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.local/bin/gdm-pi"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/settings.json",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.pi/agent/settings.json"
+    },
+    {
+      "path": "/Users/godongmin/.codex/config.toml",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.codex/config.toml"
+    },
+    {
+      "path": "/Users/godongmin/.codex/hooks.json",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.codex/hooks.json"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-pr",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.codex/skills/gdm-pr"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-agents",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.codex/skills/gdm-agents"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-db",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.codex/skills/gdm-db"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-design",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.codex/skills/gdm-design"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-reflect",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.codex/skills/gdm-reflect"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-ui",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.codex/skills/gdm-ui"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-plan",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.codex/skills/gdm-plan"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-go",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.codex/skills/gdm-go"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-research",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.codex/skills/gdm-research"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-analyze",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.codex/skills/gdm-analyze"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-full",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.codex/skills/gdm-full"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-document",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.codex/skills/gdm-document"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-review",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.codex/skills/gdm-review"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-target-manifest.json",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.codex/skills/gdm-target-manifest.json"
+    },
+    {
+      "path": "/Users/godongmin/.codex/skills/gdm-email",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.codex/skills/gdm-email"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-pr",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.claude/skills/gdm-pr"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-agents",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.claude/skills/gdm-agents"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-db",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.claude/skills/gdm-db"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-design",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.claude/skills/gdm-design"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-reflect",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.claude/skills/gdm-reflect"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-ui",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.claude/skills/gdm-ui"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-plan",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.claude/skills/gdm-plan"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-go",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.claude/skills/gdm-go"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-research",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.claude/skills/gdm-research"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-analyze",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.claude/skills/gdm-analyze"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-full",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.claude/skills/gdm-full"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-document",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.claude/skills/gdm-document"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-review",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.claude/skills/gdm-review"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-target-manifest.json",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.claude/skills/gdm-target-manifest.json"
+    },
+    {
+      "path": "/Users/godongmin/.claude/skills/gdm-email",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.claude/skills/gdm-email"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-pr",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.pi/agent/skills/gdm-pr"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-agents",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.pi/agent/skills/gdm-agents"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-db",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.pi/agent/skills/gdm-db"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-design",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.pi/agent/skills/gdm-design"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-reflect",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.pi/agent/skills/gdm-reflect"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-ui",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.pi/agent/skills/gdm-ui"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-plan",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.pi/agent/skills/gdm-plan"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-go",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.pi/agent/skills/gdm-go"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-research",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.pi/agent/skills/gdm-research"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-analyze",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.pi/agent/skills/gdm-analyze"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-full",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.pi/agent/skills/gdm-full"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-document",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.pi/agent/skills/gdm-document"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-review",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.pi/agent/skills/gdm-review"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-target-manifest.json",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.pi/agent/skills/gdm-target-manifest.json"
+    },
+    {
+      "path": "/Users/godongmin/.pi/agent/skills/gdm-email",
+      "backup": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-quality-backup-bbs3y30j/.pi/agent/skills/gdm-email"
+    }
+  ]
+}

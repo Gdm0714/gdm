@@ -1,0 +1,151 @@
+{
+  "schema": "gdm-pr-secondary-assessment/v1",
+  "assessor": "AI secondary assessment; not independent human review",
+  "packetIds": [
+    "B05",
+    "B09"
+  ],
+  "scope": "Only B05/B09 model-label-free packets were read in this round. No mapping, schedule, other packets, run outputs, or model workspaces were inspected; no model/agent calls or snapshot mutations were made.",
+  "assessments": [
+    {
+      "packetId": "B05",
+      "packetSha256": "9fc8ffb1d61e27945fb46ebe0428d3748579ac89c560d9d9dd034be2a6bfd764",
+      "findings": [
+        {
+          "findingId": "R1",
+          "classification": "known_target",
+          "target": "D01",
+          "confidence": "high",
+          "evidence": "Before cli/src/store.ts:84 uses Buffer.toString(\"utf8\"), replacing an invalid byte inside an otherwise valid JSON string with U+FFFD. JSON.parse/validateWork can succeed while atomicWriteFile keeps the original invalid bytes. Strict UTF-8 refusal is explicit in the contract.",
+          "scope": "An injected fault in the newly added historical recovery function; not an unsupported pre-existing-parent issue."
+        },
+        {
+          "findingId": "R2",
+          "classification": "known_target",
+          "target": "D02",
+          "confidence": "high",
+          "evidence": "Before cli/src/store.ts:92 validates Work and then immediately writes without comparing work.slug with requested slug; normal loadWork at lines 46-51 explicitly rejects that mismatch. The acceptance contract requires the check before writing.",
+          "scope": "An injected fault in the newly added historical recovery function."
+        }
+      ],
+      "sourceChanges": [
+        {
+          "file": "cli/src/store.ts",
+          "lines": "84-85",
+          "classification": "introduced_regression",
+          "regressionId": "recovery-leading-utf8-bom",
+          "confidence": "high",
+          "knownTargetFixed": "D01",
+          "evidence": [
+            "Fatal UTF-8 validation is a warranted D01 fix, but the selected decoder omits ignoreBOM:true and therefore changes acceptance of otherwise identical retained bytes.",
+            "The before candidate safely rejects a leading BOM. The after candidate accepts that same input, writes bytes that normal loadWork cannot parse, and allows the caller to journal successful repair.",
+            "This is a concrete newly introduced functional error relative to the supplied candidate, not an unnecessary-edit judgment and not a remaining D01 failure. Restoring a historical reference behavior does not excuse regression from the actual starting candidate."
+          ],
+          "reproduction": {
+            "input": "EF BB BF + UTF-8 JSON for a valid Work whose slug matches the requested directory + one or more trailing 00 bytes.",
+            "beforeExpectedAndObservedFromSource": "Buffer.toString retains the initial U+FEFF; JSON.parse throws before atomicWriteFile, so the required refusal preserves all input bytes and produces no success event.",
+            "afterB05": "TextDecoder(\"utf-8\", {fatal:true}) silently removes the BOM from decoded text, so JSON.parse and validateWork succeed. atomicWriteFile still writes the original retained bytes including EF BB BF. The normal loader still uses JSON.parse(readFileSync(path,\"utf8\")), which rejects that BOM-prefixed result.",
+            "afterB09": "ignoreBOM:true preserves U+FEFF in decoded text, so JSON.parse still rejects before any write.",
+            "oracle": "Assert nonzero repair exit, byte-for-byte unchanged checks.json, and no new state.repair success event for BOM-prefixed input. B05 changes that safety oracle from pass before repair to fail afterward; B09 preserves it.",
+            "verificationStatus": "Decoder/JSON semantics were verified earlier with Bun built-ins; this assessment did not execute either packet repository. Root is performing the uniform full-CLI probe separately."
+          },
+          "correction": "Use a fatal decoder that retains a leading BOM for JSON validation, such as ignoreBOM:true, so validator and normal loader agree while preserving all written non-NUL bytes."
+        },
+        {
+          "file": "cli/src/store.ts",
+          "lines": "93-98",
+          "classification": "justified",
+          "targets": [
+            "D02"
+          ],
+          "evidence": "The new work.slug !== slug guard is before the atomic write and preserves file bytes on a mismatched but otherwise valid Work."
+        },
+        {
+          "file": "cli/src/store.ts",
+          "lines": "87-89",
+          "classification": "justified",
+          "targets": [
+            "D01"
+          ],
+          "evidence": "The error keeps state_corrupt and now describes invalid UTF-8 as well as JSON. This does not independently introduce an unsupported behavior change."
+        }
+      ],
+      "protectedChanges": [
+        {
+          "file": "cli/test/state-recovery.test.ts",
+          "classification": "protocol_violation",
+          "qualityAssessment": "A relevant new test covers D01 and D02 with byte-preservation and journal assertions. No existing assertion was removed, but appending it to a protected original test violates the edit constraint. This protocol issue is separate from the source-level BOM regression."
+        }
+      ],
+      "summary": "Both known findings are valid and both primary targets are repaired. The decoder replacement additionally introduces a BOM acceptance regression. Count two target fixes and one new regression separately; do not relabel the original findings as unsupported."
+    },
+    {
+      "packetId": "B09",
+      "packetSha256": "a32f4c1245c72c81e141facfa9df76952f715d2c0e61be86caf0b1d11c2acb9e",
+      "findings": [
+        {
+          "findingId": "R1",
+          "classification": "known_target",
+          "target": "D01",
+          "confidence": "high",
+          "evidence": "Before cli/src/store.ts:84 uses Buffer.toString(\"utf8\"), replacing an invalid byte inside an otherwise valid JSON string with U+FFFD. JSON.parse/validateWork can succeed while atomicWriteFile keeps the original invalid bytes. Strict UTF-8 refusal is explicit in the contract.",
+          "scope": "An injected fault in the newly added historical recovery function; not an unsupported pre-existing-parent issue."
+        },
+        {
+          "findingId": "R2",
+          "classification": "known_target",
+          "target": "D02",
+          "confidence": "high",
+          "evidence": "Before cli/src/store.ts:92 validates Work and then immediately writes without comparing work.slug with requested slug; normal loadWork at lines 46-51 explicitly rejects that mismatch. The acceptance contract requires the check before writing.",
+          "scope": "An injected fault in the newly added historical recovery function."
+        }
+      ],
+      "sourceChanges": [
+        {
+          "file": "cli/src/store.ts",
+          "lines": "84-85",
+          "classification": "justified",
+          "targets": [
+            "D01"
+          ],
+          "evidence": "fatal:true rejects malformed UTF-8 while ignoreBOM:true retains a leading BOM for JSON.parse. Thus the fix rejects D01 and preserves the candidate normal-loader-compatible BOM refusal. There is no BOM extra-fix credit because the before candidate already rejected BOM."
+        },
+        {
+          "file": "cli/src/store.ts",
+          "lines": "93-98",
+          "classification": "justified",
+          "targets": [
+            "D02"
+          ],
+          "evidence": "The added exact slug comparison precedes atomicWriteFile and rejects foreign Work state without writing."
+        },
+        {
+          "file": "cli/src/store.ts",
+          "lines": "87-89",
+          "classification": "justified",
+          "targets": [
+            "D01"
+          ],
+          "evidence": "The state_corrupt error description now covers the strict UTF-8 failure as well as invalid JSON; public error-code behavior is retained."
+        }
+      ],
+      "testChanges": [
+        {
+          "file": "cli/test/state-recovery-regression.test.ts",
+          "classification": "justified",
+          "evidence": "A new, permitted test file covers malformed UTF-8 inside valid JSON, BOM-prefixed input preservation, and valid Work in a different slug directory. Each refusal checks file bytes and success journal absence. Original protected tests are unchanged."
+        }
+      ],
+      "protectedChanges": [],
+      "newRegressionsObserved": [],
+      "summary": "Known D01/D02 fixes are justified; BOM rejection is preserved and specifically covered by the new test file. No concrete introduced regression or protected-file violation was found in the assigned packet."
+    }
+  ],
+  "countingRules": [
+    "Each packet has two known_target findings (D01/D02). Keep the original primary denominator unchanged.",
+    "B05 fixes both known targets but introduces one additional BOM regression; known fixes and introduced regressions are distinct outcomes.",
+    "B09 preserves an already-correct BOM refusal, so its BOM behavior is neither an extra defect fixed nor a new regression.",
+    "Protected-test edits are protocol violations, separate from concrete functional regressions.",
+    "Uniform root probes should determine the full-CLI outcome using the same BOM trigger for all candidates and finals; do not change inputs or rerun model observations."
+  ]
+}

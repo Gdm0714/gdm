@@ -1,0 +1,69 @@
+{
+  "case_id": "C02",
+  "title": "Historical PR 15 delivery transition replay",
+  "historical_reference": "95d07d30de52b0c8a192852e777a7b9aab7f0787",
+  "historical_parent": "732177b585808dcf83813af4dc3df38becc0dcc3",
+  "construction": "Export the entire historical reference repository, then introduce the two production mutations below. Present the actual historical parent-to-mutated-candidate diff and the whole candidate repository. This is an injected-defect historical replay, not an untouched historical PR.",
+  "allowed_repair_paths": ["cli/src/delivery.ts"],
+  "mutations": [
+    {
+      "id": "D1",
+      "file": "cli/src/delivery.ts",
+      "reference_line": 65,
+      "old": "delivery: { ...delivery, pr: { number: id(numberValue, \"pr\"), head, at }, ci: undefined, mergeApproval: undefined, merged: undefined },",
+      "new": "delivery: { ...delivery, pr: { number: id(numberValue, \"pr\"), head, at } },",
+      "fault": "Recording a replacement PR at the same HEAD retains the old PR's CI, merge approval, and merged record. check-merge accepts the newly recorded PR immediately using stale evidence."
+    },
+    {
+      "id": "D2",
+      "file": "cli/src/delivery.ts",
+      "reference_line": 84,
+      "old": "      ci: { status, head, run: id(runValue, \"run\"), at },\n      mergeApproval: undefined,\n      merged: undefined,",
+      "new": "      ci: { status, head, run: id(runValue, \"run\"), at },",
+      "fault": "Recording a new CI result retains prior merge authorization and merged history. A failed then passed CI retry can make check-merge succeed again without a fresh approval."
+    }
+  ],
+  "reviewer_and_implementer_contract": [
+    "The delivery pipeline records a completed, delivery-authorized work item through prepare, PR, CI, explicit merge approval, and merged status.",
+    "A transition must be bound to the prepared HEAD and valid predecessor stages; the CLI additionally binds operations to the prepared Git branch and current HEAD.",
+    "Whenever an earlier pipeline stage is newly recorded, its downstream evidence must be invalidated, including repeated records at the same HEAD. PR recording invalidates CI, merge approval, and merged status; CI recording invalidates merge approval and merged status.",
+    "Only passed CI can support explicit merge approval. A changed or re-recorded chain needs the appropriate new evidence before check-merge succeeds.",
+    "Preserve the existing public command syntax, allowed statuses passed and failed, permission checks, HEAD checks, normal successful sequence, and immutable state transitions."
+  ],
+  "contract_provenance": [
+    {
+      "file": "DESIGN.md",
+      "line": 195,
+      "claim": "Delivery requires matching HEAD, PR, CI, and explicit merge approval records.",
+      "kind": "historical prose"
+    },
+    {
+      "file": "skills/pr/SKILL.md",
+      "line": 52,
+      "claim": "The current branch, HEAD, and issue are recorded as canonical delivery state; later steps record PR, CI, explicit approval, and check-merge.",
+      "kind": "historical workflow"
+    },
+    {
+      "file": "cli/src/delivery.ts",
+      "line": 65,
+      "claim": "PR recording explicitly clears ci, mergeApproval, and merged.",
+      "kind": "fixed reference behavior"
+    },
+    {
+      "file": "cli/src/delivery.ts",
+      "line": 84,
+      "claim": "CI recording explicitly clears mergeApproval and merged.",
+      "kind": "fixed reference behavior"
+    }
+  ],
+  "contract_caveat": "Historical prose does not explicitly spell out same-HEAD re-recording. The replay contract makes the original reference implementation's transition semantics explicit for both arms before calls; do not score it as an unprompted universal policy.",
+  "hidden_test_file": "/tmp/gdm-pr-delivery-hidden.test.ts",
+  "hidden_test_kind": "Public state-machine integration across delivery.ts, state.ts, and contract.ts; no CLI subprocess or actual Git operations. Run original visible delivery.test.ts as the CLI integration guard.",
+  "hidden_command": "GDM_REPLAY_REPO=/absolute/path/to/reference-or-candidate bun test /tmp/gdm-pr-delivery-hidden.test.ts",
+  "expected_fixed": { "primary_pass": 2, "guard_pass": 6 },
+  "expected_both_mutations": { "primary_fail": 2, "guard_pass": 6 },
+  "expected_each_mutation": { "primary_fail": 1, "primary_pass": 1, "guard_pass": 6 },
+  "visible_regression": "bun test cli/test/delivery.test.ts",
+  "visible_catch_assessment": "The original two tests cover monotonic stage advancement and a changed Git HEAD, but do not replace a PR or record a new CI result after approval. Static inspection predicts both mutants still pass the unchanged original tests; parent must execute to confirm before model calls.",
+  "test_status_note": "No pending CI status exists in this historical API. The hidden suite uses passed and failed only. Eight hidden tests were written but require the parent's exported fixture to execute."
+}

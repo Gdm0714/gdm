@@ -1,0 +1,11 @@
+{
+  "runs": 18,
+  "successfulCompletions": 15,
+  "measurementValidRuns": 14,
+  "completeGroups": 3,
+  "rawEventDiffAndTestOutputHashesValid": true,
+  "runtimeBinaryHashesUnchanged": true,
+  "frozenRunnerMatchesManifest": true,
+  "hiddenTestsRemovedFromAllWorkspaces": true,
+  "reportLinksValid": true
+}

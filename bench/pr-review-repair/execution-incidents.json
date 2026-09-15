@@ -1,0 +1,106 @@
+{
+  "manifestSha256": "e55c1305f6d2036592e9757a2581c91d684c2cb8fd1a457f6005c3335d936047",
+  "failedRoleObservations": [
+    {
+      "id": "P15",
+      "role": "repair",
+      "startedAtLocal": "2026-09-09T13:00:32.616388+09:00",
+      "exitCode": 143,
+      "timeout": true,
+      "stopReason": "toolUse",
+      "agentEnded": false,
+      "errors": [
+        "WebSocket closed 1006 Connection ended"
+      ],
+      "retryEvents": [
+        {
+          "type": "auto_retry_start",
+          "attempt": 1,
+          "maxAttempts": 3,
+          "delayMs": 2000,
+          "errorMessage": "WebSocket closed 1006 Connection ended"
+        },
+        {
+          "type": "auto_retry_end",
+          "success": true,
+          "attempt": 1
+        }
+      ],
+      "rawLogSha256": "e3d55d103800d1e53bc15ef4508bfb2b4c2debe87ee1fdf35966ec692f47384e",
+      "resultSha256": "14b88b12166f2f48f3436a57080ebf483fba4f0fa79a6910fd18a31ad0bcd925"
+    },
+    {
+      "id": "P17",
+      "role": "repair",
+      "startedAtLocal": "2026-09-09T13:41:14.343720+09:00",
+      "exitCode": 0,
+      "timeout": false,
+      "stopReason": "error",
+      "agentEnded": true,
+      "errors": [
+        "WebSocket idle timeout after 300000ms",
+        "Unable to connect. Is the computer able to access the url?"
+      ],
+      "retryEvents": [
+        {
+          "type": "auto_retry_start",
+          "attempt": 1,
+          "maxAttempts": 3,
+          "delayMs": 2000,
+          "errorMessage": "WebSocket idle timeout after 300000ms"
+        },
+        {
+          "type": "auto_retry_end",
+          "success": false,
+          "attempt": 1,
+          "finalError": "Unable to connect. Is the computer able to access the url?"
+        }
+      ],
+      "rawLogSha256": "16c2c960ba4b7e1e88b44f8d0bd0384f801f78694d4e0c919c8dc58e8ec18612",
+      "resultSha256": "1ea031999a124c2879b69f7863dbb4324f0758ed72df863e1e17097919ee1f73"
+    },
+    {
+      "id": "P18",
+      "role": "repair",
+      "startedAtLocal": "2026-09-09T13:50:08.409365+09:00",
+      "exitCode": 0,
+      "timeout": false,
+      "stopReason": "error",
+      "agentEnded": true,
+      "errors": [
+        "Was there a typo in the url or port?"
+      ],
+      "retryEvents": [],
+      "rawLogSha256": "113fe72dadb487884d2c7b51dbfc1cbbda7f0500be6072f6dc0ec7e390b7a977",
+      "resultSha256": "495c085994c63044a607b5d35715d457f54cead3345eccab510e1f905214d7e7"
+    },
+    {
+      "id": "P18",
+      "role": "review",
+      "startedAtLocal": "2026-09-09T13:50:07.625105+09:00",
+      "exitCode": 0,
+      "timeout": false,
+      "stopReason": "error",
+      "agentEnded": true,
+      "errors": [
+        "Was there a typo in the url or port?"
+      ],
+      "retryEvents": [],
+      "rawLogSha256": "ecf8c20993bd506ad5ede1bc4949cdac46ed7dc6198ab53eeab053ab97635a7c",
+      "resultSha256": "159ef290578e56ce64fbd936e759dac1f9ef7e5b887d4b03d0ee4e22d150f302"
+    }
+  ],
+  "excludedThreeArmKeys": [
+    [
+      "C02",
+      2
+    ],
+    [
+      "C03",
+      2
+    ]
+  ],
+  "classification": "Host-sleep overlap and subsequent network/WebSocket errors; model quality not blamed for incomplete execution",
+  "note": "Supervisor never reran a role process. Any Pi-internal transport retry events are preserved within that observation. A Pi role execution is not a single HTTP/API request.",
+  "idleSleepPrevention": "caffeinate -i attached to owned benchmark PID after wake; stops when runner exits"
+}

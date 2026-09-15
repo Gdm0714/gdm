@@ -1,0 +1,21 @@
+{
+  "affectedPipeline": "P15",
+  "affectedRole": "repair",
+  "startedAtLocal": "2026-09-09T13:00:32.616388+09:00",
+  "observedResultAtLocal": "2026-09-09T13:36:37.233471+09:00",
+  "reportedMonotonicSeconds": 360.296,
+  "wallStartToReceiptSeconds": 2164.617082595825,
+  "timeout": true,
+  "exitCode": 143,
+  "agentEnded": false,
+  "lastCompletedStopReason": "toolUse",
+  "powerLogSha256": "72990ba31eb853794669a61a0a53ac2d036c23bdc23ec41cb2a9a21b089ce0be",
+  "classification": "Infrastructure-interrupted observation overlapping host sleep; partial code snapshot, not a normally completed repair",
+  "handling": [
+    "No model retry; preserve the original observation and grading of its partial snapshot",
+    "Do not label this as an ordinary model quality failure or a completed deliverable",
+    "Usage from completed messages is a partial lower bound because the final assistant stream never ended",
+    "Exclude P15 from complete pair latency/cost; three-arm matched cohort excludes C02 repetition 2 for all arms",
+    "Keep all requested, launched, observed-response and successful-transport counts distinct"
+  ]
+}

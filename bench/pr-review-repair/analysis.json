@@ -1,0 +1,804 @@
+{
+  "manifestSha256": "e55c1305f6d2036592e9757a2581c91d684c2cb8fd1a457f6005c3335d936047",
+  "rows": [
+    {
+      "id": "P01",
+      "case": "C01",
+      "arm": "self",
+      "repetition": 1,
+      "seconds": 165.613,
+      "reviewSeconds": 0,
+      "repairSeconds": 165.613,
+      "usage": {
+        "input": 54328,
+        "output": 6387,
+        "cacheRead": 481792,
+        "cacheWrite": 0,
+        "totalTokens": 542507,
+        "apiCostEstimateUSD": 0.28165840000000003
+      },
+      "usageComplete": true,
+      "protectedUnchanged": false,
+      "unexpectedAddedFiles": [],
+      "unsafe": false,
+      "decisionsValid": true,
+      "changedSourceFiles": [
+        "cli/src/store.ts"
+      ],
+      "reviewAvailable": false,
+      "reviewRequested": false,
+      "repairTransportSuccess": true,
+      "knownDefects": [
+        "D01",
+        "D02"
+      ],
+      "fixedKnownDefects": [
+        "D01",
+        "D02"
+      ],
+      "remainingKnownDefects": 0,
+      "hiddenPassed": 8,
+      "hiddenFailed": 0,
+      "visiblePassed": 105,
+      "visibleFailed": 0,
+      "functionalPass": false
+    },
+    {
+      "id": "P02",
+      "case": "C01",
+      "arm": "terra",
+      "repetition": 1,
+      "seconds": 170.49599999999998,
+      "reviewSeconds": 41.075,
+      "repairSeconds": 129.421,
+      "usage": {
+        "input": 85007,
+        "output": 7185,
+        "cacheRead": 470016,
+        "cacheWrite": 0,
+        "totalTokens": 562208,
+        "apiCostEstimateUSD": 0.3502372
+      },
+      "usageComplete": true,
+      "protectedUnchanged": false,
+      "unexpectedAddedFiles": [],
+      "unsafe": false,
+      "decisionsValid": true,
+      "changedSourceFiles": [
+        "cli/src/store.ts"
+      ],
+      "reviewAvailable": true,
+      "reviewRequested": true,
+      "repairTransportSuccess": true,
+      "knownDefects": [
+        "D01",
+        "D02"
+      ],
+      "fixedKnownDefects": [
+        "D01",
+        "D02"
+      ],
+      "remainingKnownDefects": 0,
+      "hiddenPassed": 8,
+      "hiddenFailed": 0,
+      "visiblePassed": 105,
+      "visibleFailed": 0,
+      "functionalPass": false
+    },
+    {
+      "id": "P03",
+      "case": "C01",
+      "arm": "astra",
+      "repetition": 1,
+      "seconds": 142.553,
+      "reviewSeconds": 36.522,
+      "repairSeconds": 106.031,
+      "usage": {
+        "input": 82642,
+        "output": 5367,
+        "cacheRead": 227712,
+        "cacheWrite": 0,
+        "totalTokens": 315721,
+        "apiCostEstimateUSD": 0.6549624000000001
+      },
+      "usageComplete": true,
+      "protectedUnchanged": false,
+      "unexpectedAddedFiles": [],
+      "unsafe": false,
+      "decisionsValid": true,
+      "changedSourceFiles": [
+        "cli/src/store.ts"
+      ],
+      "reviewAvailable": true,
+      "reviewRequested": true,
+      "repairTransportSuccess": true,
+      "knownDefects": [
+        "D01",
+        "D02"
+      ],
+      "fixedKnownDefects": [
+        "D01",
+        "D02"
+      ],
+      "remainingKnownDefects": 0,
+      "hiddenPassed": 8,
+      "hiddenFailed": 0,
+      "visiblePassed": 105,
+      "visibleFailed": 0,
+      "functionalPass": false
+    },
+    {
+      "id": "P04",
+      "case": "C02",
+      "arm": "terra",
+      "repetition": 1,
+      "seconds": 172.934,
+      "reviewSeconds": 54.167,
+      "repairSeconds": 118.767,
+      "usage": {
+        "input": 124523,
+        "output": 7289,
+        "cacheRead": 478208,
+        "cacheWrite": 0,
+        "totalTokens": 610020,
+        "apiCostEstimateUSD": 0.43215560000000003
+      },
+      "usageComplete": true,
+      "protectedUnchanged": false,
+      "unexpectedAddedFiles": [],
+      "unsafe": false,
+      "decisionsValid": true,
+      "changedSourceFiles": [
+        "cli/src/delivery-cli.ts",
+        "cli/src/delivery.ts"
+      ],
+      "reviewAvailable": true,
+      "reviewRequested": true,
+      "repairTransportSuccess": true,
+      "knownDefects": [
+        "D03",
+        "D04"
+      ],
+      "fixedKnownDefects": [
+        "D03",
+        "D04"
+      ],
+      "remainingKnownDefects": 0,
+      "hiddenPassed": 8,
+      "hiddenFailed": 0,
+      "visiblePassed": 116,
+      "visibleFailed": 0,
+      "functionalPass": false
+    },
+    {
+      "id": "P05",
+      "case": "C02",
+      "arm": "astra",
+      "repetition": 1,
+      "seconds": 170.06,
+      "reviewSeconds": 45.007,
+      "repairSeconds": 125.053,
+      "usage": {
+        "input": 137735,
+        "output": 6046,
+        "cacheRead": 582016,
+        "cacheWrite": 0,
+        "totalTokens": 725797,
+        "apiCostEstimateUSD": 1.1542664
+      },
+      "usageComplete": true,
+      "protectedUnchanged": false,
+      "unexpectedAddedFiles": [],
+      "unsafe": false,
+      "decisionsValid": true,
+      "changedSourceFiles": [
+        "cli/src/delivery-cli.ts",
+        "cli/src/delivery.ts"
+      ],
+      "reviewAvailable": true,
+      "reviewRequested": true,
+      "repairTransportSuccess": true,
+      "knownDefects": [
+        "D03",
+        "D04"
+      ],
+      "fixedKnownDefects": [
+        "D03",
+        "D04"
+      ],
+      "remainingKnownDefects": 0,
+      "hiddenPassed": 8,
+      "hiddenFailed": 0,
+      "visiblePassed": 116,
+      "visibleFailed": 0,
+      "functionalPass": false
+    },
+    {
+      "id": "P06",
+      "case": "C02",
+      "arm": "self",
+      "repetition": 1,
+      "seconds": 140.069,
+      "reviewSeconds": 0,
+      "repairSeconds": 140.069,
+      "usage": {
+        "input": 72686,
+        "output": 5362,
+        "cacheRead": 698368,
+        "cacheWrite": 0,
+        "totalTokens": 776416,
+        "apiCostEstimateUSD": 0.34938960000000013
+      },
+      "usageComplete": true,
+      "protectedUnchanged": true,
+      "unexpectedAddedFiles": [],
+      "unsafe": false,
+      "decisionsValid": true,
+      "changedSourceFiles": [
+        "cli/src/delivery-cli.ts",
+        "cli/src/delivery.ts"
+      ],
+      "reviewAvailable": false,
+      "reviewRequested": false,
+      "repairTransportSuccess": true,
+      "knownDefects": [
+        "D03",
+        "D04"
+      ],
+      "fixedKnownDefects": [
+        "D03",
+        "D04"
+      ],
+      "remainingKnownDefects": 0,
+      "hiddenPassed": 8,
+      "hiddenFailed": 0,
+      "visiblePassed": 116,
+      "visibleFailed": 0,
+      "functionalPass": true
+    },
+    {
+      "id": "P07",
+      "case": "C03",
+      "arm": "astra",
+      "repetition": 1,
+      "seconds": 106.721,
+      "reviewSeconds": 32.612,
+      "repairSeconds": 74.109,
+      "usage": {
+        "input": 81850,
+        "output": 3163,
+        "cacheRead": 218624,
+        "cacheWrite": 0,
+        "totalTokens": 303637,
+        "apiCostEstimateUSD": 0.6241672
+      },
+      "usageComplete": true,
+      "protectedUnchanged": false,
+      "unexpectedAddedFiles": [],
+      "unsafe": false,
+      "decisionsValid": true,
+      "changedSourceFiles": [
+        "cli/src/store.ts"
+      ],
+      "reviewAvailable": true,
+      "reviewRequested": true,
+      "repairTransportSuccess": true,
+      "knownDefects": [],
+      "fixedKnownDefects": [],
+      "remainingKnownDefects": 0,
+      "hiddenPassed": 8,
+      "hiddenFailed": 0,
+      "visiblePassed": 105,
+      "visibleFailed": 0,
+      "functionalPass": false
+    },
+    {
+      "id": "P08",
+      "case": "C03",
+      "arm": "self",
+      "repetition": 1,
+      "seconds": 108.337,
+      "reviewSeconds": 0,
+      "repairSeconds": 108.337,
+      "usage": {
+        "input": 60650,
+        "output": 4963,
+        "cacheRead": 236544,
+        "cacheWrite": 0,
+        "totalTokens": 302157,
+        "apiCostEstimateUSD": 0.2281648
+      },
+      "usageComplete": true,
+      "protectedUnchanged": true,
+      "unexpectedAddedFiles": [],
+      "unsafe": false,
+      "decisionsValid": true,
+      "changedSourceFiles": [],
+      "reviewAvailable": false,
+      "reviewRequested": false,
+      "repairTransportSuccess": true,
+      "knownDefects": [],
+      "fixedKnownDefects": [],
+      "remainingKnownDefects": 0,
+      "hiddenPassed": 8,
+      "hiddenFailed": 0,
+      "visiblePassed": 105,
+      "visibleFailed": 0,
+      "functionalPass": true
+    },
+    {
+      "id": "P09",
+      "case": "C03",
+      "arm": "terra",
+      "repetition": 1,
+      "seconds": 136.744,
+      "reviewSeconds": 53.518,
+      "repairSeconds": 83.226,
+      "usage": {
+        "input": 94255,
+        "output": 5278,
+        "cacheRead": 404992,
+        "cacheWrite": 0,
+        "totalTokens": 504525,
+        "apiCostEstimateUSD": 0.33284440000000004
+      },
+      "usageComplete": true,
+      "protectedUnchanged": false,
+      "unexpectedAddedFiles": [],
+      "unsafe": false,
+      "decisionsValid": true,
+      "changedSourceFiles": [
+        "cli/src/store.ts"
+      ],
+      "reviewAvailable": true,
+      "reviewRequested": true,
+      "repairTransportSuccess": true,
+      "knownDefects": [],
+      "fixedKnownDefects": [],
+      "remainingKnownDefects": 0,
+      "hiddenPassed": 8,
+      "hiddenFailed": 0,
+      "visiblePassed": 105,
+      "visibleFailed": 0,
+      "functionalPass": false
+    },
+    {
+      "id": "P10",
+      "case": "C01",
+      "arm": "terra",
+      "repetition": 2,
+      "seconds": 134.735,
+      "reviewSeconds": 35.063,
+      "repairSeconds": 99.672,
+      "usage": {
+        "input": 92417,
+        "output": 5340,
+        "cacheRead": 339456,
+        "cacheWrite": 0,
+        "totalTokens": 437213,
+        "apiCostEstimateUSD": 0.31680519999999995
+      },
+      "usageComplete": true,
+      "protectedUnchanged": false,
+      "unexpectedAddedFiles": [],
+      "unsafe": false,
+      "decisionsValid": true,
+      "changedSourceFiles": [
+        "cli/src/store.ts"
+      ],
+      "reviewAvailable": true,
+      "reviewRequested": true,
+      "repairTransportSuccess": true,
+      "knownDefects": [
+        "D01",
+        "D02"
+      ],
+      "fixedKnownDefects": [
+        "D01",
+        "D02"
+      ],
+      "remainingKnownDefects": 0,
+      "hiddenPassed": 8,
+      "hiddenFailed": 0,
+      "visiblePassed": 105,
+      "visibleFailed": 0,
+      "functionalPass": false
+    },
+    {
+      "id": "P11",
+      "case": "C01",
+      "arm": "astra",
+      "repetition": 2,
+      "seconds": 191.39700000000002,
+      "reviewSeconds": 53.585,
+      "repairSeconds": 137.812,
+      "usage": {
+        "input": 95996,
+        "output": 6301,
+        "cacheRead": 444544,
+        "cacheWrite": 0,
+        "totalTokens": 546841,
+        "apiCostEstimateUSD": 0.7979692000000002
+      },
+      "usageComplete": true,
+      "protectedUnchanged": true,
+      "unexpectedAddedFiles": [],
+      "unsafe": false,
+      "decisionsValid": true,
+      "changedSourceFiles": [
+        "cli/src/store.ts"
+      ],
+      "reviewAvailable": true,
+      "reviewRequested": true,
+      "repairTransportSuccess": true,
+      "knownDefects": [
+        "D01",
+        "D02"
+      ],
+      "fixedKnownDefects": [
+        "D01",
+        "D02"
+      ],
+      "remainingKnownDefects": 0,
+      "hiddenPassed": 8,
+      "hiddenFailed": 0,
+      "visiblePassed": 105,
+      "visibleFailed": 0,
+      "functionalPass": true
+    },
+    {
+      "id": "P12",
+      "case": "C01",
+      "arm": "self",
+      "repetition": 2,
+      "seconds": 103.034,
+      "reviewSeconds": 0,
+      "repairSeconds": 103.034,
+      "usage": {
+        "input": 45181,
+        "output": 4677,
+        "cacheRead": 175104,
+        "cacheWrite": 0,
+        "totalTokens": 224962,
+        "apiCostEstimateUSD": 0.1815068
+      },
+      "usageComplete": true,
+      "protectedUnchanged": false,
+      "unexpectedAddedFiles": [],
+      "unsafe": false,
+      "decisionsValid": true,
+      "changedSourceFiles": [
+        "cli/src/store.ts"
+      ],
+      "reviewAvailable": false,
+      "reviewRequested": false,
+      "repairTransportSuccess": true,
+      "knownDefects": [
+        "D01",
+        "D02"
+      ],
+      "fixedKnownDefects": [
+        "D01",
+        "D02"
+      ],
+      "remainingKnownDefects": 0,
+      "hiddenPassed": 8,
+      "hiddenFailed": 0,
+      "visiblePassed": 105,
+      "visibleFailed": 0,
+      "functionalPass": false
+    },
+    {
+      "id": "P13",
+      "case": "C02",
+      "arm": "astra",
+      "repetition": 2,
+      "seconds": 176.18400000000003,
+      "reviewSeconds": 41.503,
+      "repairSeconds": 134.681,
+      "usage": {
+        "input": 136342,
+        "output": 6169,
+        "cacheRead": 793856,
+        "cacheWrite": 0,
+        "totalTokens": 936367,
+        "apiCostEstimateUSD": 1.1948020000000001
+      },
+      "usageComplete": true,
+      "protectedUnchanged": false,
+      "unexpectedAddedFiles": [],
+      "unsafe": false,
+      "decisionsValid": true,
+      "changedSourceFiles": [
+        "cli/src/delivery-cli.ts",
+        "cli/src/delivery.ts"
+      ],
+      "reviewAvailable": true,
+      "reviewRequested": true,
+      "repairTransportSuccess": true,
+      "knownDefects": [
+        "D03",
+        "D04"
+      ],
+      "fixedKnownDefects": [
+        "D03",
+        "D04"
+      ],
+      "remainingKnownDefects": 0,
+      "hiddenPassed": 8,
+      "hiddenFailed": 0,
+      "visiblePassed": 116,
+      "visibleFailed": 0,
+      "functionalPass": false
+    },
+    {
+      "id": "P14",
+      "case": "C02",
+      "arm": "self",
+      "repetition": 2,
+      "seconds": 185.468,
+      "reviewSeconds": 0,
+      "repairSeconds": 185.468,
+      "usage": {
+        "input": 81158,
+        "output": 7015,
+        "cacheRead": 944640,
+        "cacheWrite": 0,
+        "totalTokens": 1032813,
+        "apiCostEstimateUSD": 0.4354239999999999
+      },
+      "usageComplete": true,
+      "protectedUnchanged": false,
+      "unexpectedAddedFiles": [],
+      "unsafe": false,
+      "decisionsValid": true,
+      "changedSourceFiles": [
+        "cli/src/delivery-cli.ts",
+        "cli/src/delivery.ts"
+      ],
+      "reviewAvailable": false,
+      "reviewRequested": false,
+      "repairTransportSuccess": true,
+      "knownDefects": [
+        "D03",
+        "D04"
+      ],
+      "fixedKnownDefects": [
+        "D03",
+        "D04"
+      ],
+      "remainingKnownDefects": 0,
+      "hiddenPassed": 8,
+      "hiddenFailed": 0,
+      "visiblePassed": 116,
+      "visibleFailed": 0,
+      "functionalPass": false
+    },
+    {
+      "id": "P15",
+      "case": "C02",
+      "arm": "terra",
+      "repetition": 2,
+      "seconds": 400.39,
+      "reviewSeconds": 40.094,
+      "repairSeconds": 360.296,
+      "usage": {
+        "input": 88312,
+        "output": 3235,
+        "cacheRead": 294400,
+        "cacheWrite": 0,
+        "totalTokens": 385947,
+        "apiCostEstimateUSD": 0.274324
+      },
+      "usageComplete": true,
+      "protectedUnchanged": true,
+      "unexpectedAddedFiles": [],
+      "unsafe": false,
+      "decisionsValid": false,
+      "changedSourceFiles": [
+        "cli/src/delivery-cli.ts",
+        "cli/src/delivery.ts"
+      ],
+      "reviewAvailable": true,
+      "reviewRequested": true,
+      "repairTransportSuccess": false,
+      "knownDefects": [
+        "D03",
+        "D04"
+      ],
+      "fixedKnownDefects": [
+        "D03",
+        "D04"
+      ],
+      "remainingKnownDefects": 0,
+      "hiddenPassed": 8,
+      "hiddenFailed": 0,
+      "visiblePassed": 116,
+      "visibleFailed": 0,
+      "functionalPass": true
+    },
+    {
+      "id": "P16",
+      "case": "C03",
+      "arm": "self",
+      "repetition": 2,
+      "seconds": 184.933,
+      "reviewSeconds": 0,
+      "repairSeconds": 184.933,
+      "usage": {
+        "input": 75498,
+        "output": 6097,
+        "cacheRead": 515072,
+        "cacheWrite": 0,
+        "totalTokens": 596667,
+        "apiCostEstimateUSD": 0.3271744
+      },
+      "usageComplete": true,
+      "protectedUnchanged": true,
+      "unexpectedAddedFiles": [],
+      "unsafe": false,
+      "decisionsValid": true,
+      "changedSourceFiles": [
+        "cli/src/cli.ts"
+      ],
+      "reviewAvailable": false,
+      "reviewRequested": false,
+      "repairTransportSuccess": true,
+      "knownDefects": [],
+      "fixedKnownDefects": [],
+      "remainingKnownDefects": 0,
+      "hiddenPassed": 8,
+      "hiddenFailed": 0,
+      "visiblePassed": 105,
+      "visibleFailed": 0,
+      "functionalPass": true
+    },
+    {
+      "id": "P17",
+      "case": "C03",
+      "arm": "terra",
+      "repetition": 2,
+      "seconds": 317.801,
+      "reviewSeconds": 60.197,
+      "repairSeconds": 257.604,
+      "usage": {
+        "input": 78647,
+        "output": 4059,
+        "cacheRead": 137728,
+        "cacheWrite": 0,
+        "totalTokens": 220434,
+        "apiCostEstimateUSD": 0.23354759999999997
+      },
+      "usageComplete": true,
+      "protectedUnchanged": true,
+      "unexpectedAddedFiles": [],
+      "unsafe": false,
+      "decisionsValid": false,
+      "changedSourceFiles": [],
+      "reviewAvailable": true,
+      "reviewRequested": true,
+      "repairTransportSuccess": false,
+      "knownDefects": [],
+      "fixedKnownDefects": [],
+      "remainingKnownDefects": 0,
+      "hiddenPassed": 8,
+      "hiddenFailed": 0,
+      "visiblePassed": 105,
+      "visibleFailed": 0,
+      "functionalPass": true
+    },
+    {
+      "id": "P18",
+      "case": "C03",
+      "arm": "astra",
+      "repetition": 2,
+      "seconds": 1.986,
+      "reviewSeconds": 0.736,
+      "repairSeconds": 1.25,
+      "usage": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "totalTokens": 0,
+        "apiCostEstimateUSD": 0
+      },
+      "usageComplete": true,
+      "protectedUnchanged": true,
+      "unexpectedAddedFiles": [],
+      "unsafe": false,
+      "decisionsValid": false,
+      "changedSourceFiles": [],
+      "reviewAvailable": false,
+      "reviewRequested": true,
+      "repairTransportSuccess": false,
+      "knownDefects": [],
+      "fixedKnownDefects": [],
+      "remainingKnownDefects": 0,
+      "hiddenPassed": 8,
+      "hiddenFailed": 0,
+      "visiblePassed": 105,
+      "visibleFailed": 0,
+      "functionalPass": true
+    }
+  ],
+  "arms": {
+    "self": {
+      "runs": 6,
+      "functionalPass": 3,
+      "knownDefectOpportunities": 8,
+      "fixedKnownDefects": 8,
+      "remainingKnownDefects": 0,
+      "hiddenGroupsPassed": 48,
+      "hiddenGroupsTotal": 48,
+      "visibleTestFailures": 0,
+      "protectedViolations": 3,
+      "cleanCandidateSourceEdits": 1,
+      "medianSeconds": 152.841,
+      "totalSeconds": 887.454,
+      "medianReviewSeconds": 0.0,
+      "medianRepairSeconds": 152.841,
+      "tokens": 3475522,
+      "apiCostEstimateUSD": 1.803318,
+      "allUsageComplete": true,
+      "reviewAvailable": 0,
+      "repairsTransportSuccess": 6
+    },
+    "terra": {
+      "runs": 6,
+      "functionalPass": 2,
+      "knownDefectOpportunities": 8,
+      "fixedKnownDefects": 8,
+      "remainingKnownDefects": 0,
+      "hiddenGroupsPassed": 48,
+      "hiddenGroupsTotal": 48,
+      "visibleTestFailures": 0,
+      "protectedViolations": 4,
+      "cleanCandidateSourceEdits": 1,
+      "medianSeconds": 171.71499999999997,
+      "totalSeconds": 1333.1,
+      "medianReviewSeconds": 47.2965,
+      "medianRepairSeconds": 124.094,
+      "tokens": 2720347,
+      "apiCostEstimateUSD": 1.939914,
+      "allUsageComplete": true,
+      "reviewAvailable": 6,
+      "repairsTransportSuccess": 4
+    },
+    "astra": {
+      "runs": 6,
+      "functionalPass": 2,
+      "knownDefectOpportunities": 8,
+      "fixedKnownDefects": 8,
+      "remainingKnownDefects": 0,
+      "hiddenGroupsPassed": 48,
+      "hiddenGroupsTotal": 48,
+      "visibleTestFailures": 0,
+      "protectedViolations": 4,
+      "cleanCandidateSourceEdits": 1,
+      "medianSeconds": 156.3065,
+      "totalSeconds": 788.9010000000001,
+      "medianReviewSeconds": 39.0125,
+      "medianRepairSeconds": 115.542,
+      "tokens": 2828363,
+      "apiCostEstimateUSD": 4.4261672,
+      "allUsageComplete": true,
+      "reviewAvailable": 5,
+      "repairsTransportSuccess": 5
+    }
+  },
+  "pairedRatios": {
+    "self->terra": {
+      "medianPairedTimeRatio": 1.2849423615576012,
+      "medianPairedApiCostRatio": 1.240184796470861
+    },
+    "self->astra": {
+      "medianPairedTimeRatio": 0.9675132145350456,
+      "medianPairedApiCostRatio": 2.739797392602246
+    },
+    "terra->astra": {
+      "medianPairedTimeRatio": 0.8082756704350134,
+      "medianPairedApiCostRatio": 2.1970265238602114
+    }
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "path": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-fixture-check-zqwh9zv_",
+  "results": [
+    {
+      "task": "t1",
+      "visibleBaseline": 0,
+      "hiddenBaseline": 1
+    },
+    {
+      "task": "t2",
+      "visibleBaseline": 0,
+      "hiddenBaseline": 1
+    },
+    {
+      "task": "t3",
+      "visibleBaseline": 0,
+      "hiddenBaseline": 1
+    },
+    {
+      "task": "t4",
+      "visibleBaseline": 0,
+      "hiddenBaseline": 1,
+      "oracleVisible": 0,
+      "oracleHidden": 0
+    },
+    {
+      "task": "t5",
+      "visibleBaseline": 0,
+      "hiddenBaseline": 1,
+      "oracleVisible": 0,
+      "oracleHidden": 0
+    },
+    {
+      "task": "t6",
+      "visibleBaseline": 0,
+      "hiddenBaseline": 1,
+      "oracleVisible": 0,
+      "oracleHidden": 0
+    },
+    {
+      "task": "t7",
+      "visibleBaseline": 0,
+      "hiddenBaseline": 1,
+      "oracleVisible": 0,
+      "oracleHidden": 0
+    },
+    {
+      "task": "t8",
+      "visibleBaseline": 0,
+      "hiddenBaseline": 1,
+      "oracleVisible": 0,
+      "oracleHidden": 0
+    }
+  ]
+}

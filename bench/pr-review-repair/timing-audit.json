@@ -1,0 +1,212 @@
+[
+  {
+    "id": "P01",
+    "role": "repair",
+    "reportedSeconds": 165.613,
+    "wallStartToReceiptSeconds": 165.64025783538818,
+    "wallMinusReported": 0.02725783538818405
+  },
+  {
+    "id": "P02",
+    "role": "repair",
+    "reportedSeconds": 129.421,
+    "wallStartToReceiptSeconds": 129.43820118904114,
+    "wallMinusReported": 0.017201189041145426
+  },
+  {
+    "id": "P02",
+    "role": "review",
+    "reportedSeconds": 41.075,
+    "wallStartToReceiptSeconds": 41.10084795951843,
+    "wallMinusReported": 0.025847959518429775
+  },
+  {
+    "id": "P03",
+    "role": "repair",
+    "reportedSeconds": 106.031,
+    "wallStartToReceiptSeconds": 106.06218242645264,
+    "wallMinusReported": 0.031182426452630807
+  },
+  {
+    "id": "P03",
+    "role": "review",
+    "reportedSeconds": 36.522,
+    "wallStartToReceiptSeconds": 36.542190074920654,
+    "wallMinusReported": 0.02019007492065583
+  },
+  {
+    "id": "P04",
+    "role": "repair",
+    "reportedSeconds": 118.767,
+    "wallStartToReceiptSeconds": 118.79697799682617,
+    "wallMinusReported": 0.029977996826175968
+  },
+  {
+    "id": "P04",
+    "role": "review",
+    "reportedSeconds": 54.167,
+    "wallStartToReceiptSeconds": 54.19458746910095,
+    "wallMinusReported": 0.027587469100950557
+  },
+  {
+    "id": "P05",
+    "role": "repair",
+    "reportedSeconds": 125.053,
+    "wallStartToReceiptSeconds": 125.0869414806366,
+    "wallMinusReported": 0.03394148063659941
+  },
+  {
+    "id": "P05",
+    "role": "review",
+    "reportedSeconds": 45.007,
+    "wallStartToReceiptSeconds": 45.03793263435364,
+    "wallMinusReported": 0.0309326343536398
+  },
+  {
+    "id": "P06",
+    "role": "repair",
+    "reportedSeconds": 140.069,
+    "wallStartToReceiptSeconds": 140.10135459899902,
+    "wallMinusReported": 0.032354598999035034
+  },
+  {
+    "id": "P07",
+    "role": "repair",
+    "reportedSeconds": 74.109,
+    "wallStartToReceiptSeconds": 74.12722659111023,
+    "wallMinusReported": 0.018226591110234835
+  },
+  {
+    "id": "P07",
+    "role": "review",
+    "reportedSeconds": 32.612,
+    "wallStartToReceiptSeconds": 32.63742804527283,
+    "wallMinusReported": 0.025428045272825273
+  },
+  {
+    "id": "P08",
+    "role": "repair",
+    "reportedSeconds": 108.337,
+    "wallStartToReceiptSeconds": 108.35454082489014,
+    "wallMinusReported": 0.017540824890133422
+  },
+  {
+    "id": "P09",
+    "role": "repair",
+    "reportedSeconds": 83.226,
+    "wallStartToReceiptSeconds": 83.25219464302063,
+    "wallMinusReported": 0.026194643020630792
+  },
+  {
+    "id": "P09",
+    "role": "review",
+    "reportedSeconds": 53.518,
+    "wallStartToReceiptSeconds": 53.53966498374939,
+    "wallMinusReported": 0.021664983749388966
+  },
+  {
+    "id": "P10",
+    "role": "repair",
+    "reportedSeconds": 99.672,
+    "wallStartToReceiptSeconds": 99.69995880126953,
+    "wallMinusReported": 0.027958801269534206
+  },
+  {
+    "id": "P10",
+    "role": "review",
+    "reportedSeconds": 35.063,
+    "wallStartToReceiptSeconds": 35.082836389541626,
+    "wallMinusReported": 0.01983638954162359
+  },
+  {
+    "id": "P11",
+    "role": "repair",
+    "reportedSeconds": 137.812,
+    "wallStartToReceiptSeconds": 137.83969640731812,
+    "wallMinusReported": 0.02769640731810341
+  },
+  {
+    "id": "P11",
+    "role": "review",
+    "reportedSeconds": 53.585,
+    "wallStartToReceiptSeconds": 53.608296155929565,
+    "wallMinusReported": 0.023296155929564577
+  },
+  {
+    "id": "P12",
+    "role": "repair",
+    "reportedSeconds": 103.034,
+    "wallStartToReceiptSeconds": 103.05997061729431,
+    "wallMinusReported": 0.025970617294305498
+  },
+  {
+    "id": "P13",
+    "role": "repair",
+    "reportedSeconds": 134.681,
+    "wallStartToReceiptSeconds": 134.71335530281067,
+    "wallMinusReported": 0.03235530281065735
+  },
+  {
+    "id": "P13",
+    "role": "review",
+    "reportedSeconds": 41.503,
+    "wallStartToReceiptSeconds": 41.53280186653137,
+    "wallMinusReported": 0.029801866531371957
+  },
+  {
+    "id": "P14",
+    "role": "repair",
+    "reportedSeconds": 185.468,
+    "wallStartToReceiptSeconds": 185.50383043289185,
+    "wallMinusReported": 0.03583043289185639
+  },
+  {
+    "id": "P15",
+    "role": "repair",
+    "reportedSeconds": 360.296,
+    "wallStartToReceiptSeconds": 2164.617082595825,
+    "wallMinusReported": 1804.3210825958251
+  },
+  {
+    "id": "P15",
+    "role": "review",
+    "reportedSeconds": 40.094,
+    "wallStartToReceiptSeconds": 44.75622010231018,
+    "wallMinusReported": 4.6622201023101795
+  },
+  {
+    "id": "P16",
+    "role": "repair",
+    "reportedSeconds": 184.933,
+    "wallStartToReceiptSeconds": 184.96066331863403,
+    "wallMinusReported": 0.02766331863404048
+  },
+  {
+    "id": "P17",
+    "role": "repair",
+    "reportedSeconds": 257.604,
+    "wallStartToReceiptSeconds": 518.2579090595245,
+    "wallMinusReported": 260.65390905952455
+  },
+  {
+    "id": "P17",
+    "role": "review",
+    "reportedSeconds": 60.197,
+    "wallStartToReceiptSeconds": 60.222625970840454,
+    "wallMinusReported": 0.025625970840451373
+  },
+  {
+    "id": "P18",
+    "role": "repair",
+    "reportedSeconds": 1.25,
+    "wallStartToReceiptSeconds": 1.2710320949554443,
+    "wallMinusReported": 0.021032094955444336
+  },
+  {
+    "id": "P18",
+    "role": "review",
+    "reportedSeconds": 0.736,
+    "wallStartToReceiptSeconds": 0.7437953948974609,
+    "wallMinusReported": 0.00779539489746095
+  }
+]

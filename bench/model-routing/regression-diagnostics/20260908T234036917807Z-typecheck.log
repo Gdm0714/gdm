@@ -1,0 +1,4 @@
+$ bunx --bun tsc --noEmit
+Resolving dependencies
+Resolved, downloaded and extracted [2]
+Saved lockfile

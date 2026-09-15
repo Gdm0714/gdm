@@ -1,0 +1,15 @@
+bun test v1.3.14 (0d9b296a)
+
+test/pi-computer-use-extension.test.ts:
+(pass) gdm-pi isolated Computer Use extension > dispatches the single tool and returns guest screenshots as images [1810.71ms]
+(pass) gdm-pi isolated Computer Use extension > rejects concurrent, cancelled, and malformed actions before backend mutation [0.66ms]
+(pass) gdm-pi isolated Computer Use extension > fails closed on unauthenticated, oversized, out-of-bounds, and stalled RFB peers [37.43ms]
+(pass) gdm-pi isolated Computer Use extension > blocks an immediate short Tart fork before setsid escape can occur [596.46ms]
+(pass) gdm-pi isolated Computer Use extension > refuses to attach to a VM owned by another process [282.09ms]
+(pass) gdm-pi isolated Computer Use extension > kills its owned VM when the Tart process exposes a host TCP listener [1227.72ms]
+(pass) gdm-pi isolated Computer Use extension > continuously detects a delayed descendant listener and removes the owned process groups [1522.15ms]
+
+ 7 pass
+ 0 fail
+ 31 expect() calls
+Ran 7 tests across 1 file. [5.50s]

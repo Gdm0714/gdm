@@ -23,6 +23,7 @@
 | `quality-judge.sh <task>` | 태스크의 전 arm diff를 익명 셔플해 눈가림 심판(claude -p) 비교 평가 → JSON |
 | `graph-quality-judge.sh <task>` | `gdm`과 `gdm-graph` 두 diff만 익명 셔플해 같은 관점으로 쌍대 비교 → JSON |
 | `context-pack-evaluation-2026-09-03.md` | Context Pack 도입 근거, 실제 token 수치, 유효성 한계와 재검증 기준 |
+| `feature-value/` | 최근 memory·Computer Use·Context Pack·statusline의 항상 노출 비용과 후속 utility A/B 진입 조건 |
 
 ## Context Pack 비교 기록
 
@@ -32,6 +33,15 @@ Graph 27,910, Context 22,441이었다. 세 arm 모두 valid인 동일 조건 3�
 확대 benchmark에서 재현하기 위해서다. 전체는 13/18 valid였으므로 확정 효과나 기본 활성화
 근거로 쓰지 않는다. 원시 경로와 task별 편차는
 `bench/context-pack-evaluation-2026-09-03.md`에 기록했다.
+
+## 최근 기능 가치 측정
+
+`feature-value/` Stage 0은 LLM 없이 실제 extension metadata, synthetic memory 선택·store read,
+설치된 status 표시 extension의 증분 동작, Tart 3회 lifecycle 비용과 host 격리를 측정한다. 이
+단계는 fresh input token이나 작업 성공률을 측정하지 않으므로 기능 유지·항상 노출·기본 활성화·
+제거 근거가 아니다. body-free·source-bound·Computer Use safety gate가 모두 통과한 경우에만 별도
+Stage 1에서 memory와 Computer Use의 enabled/disabled E2E crossover를 실행한다. Context Pack은
+기존 `invalid-not-evidence`와 no-promotion을 그대로 유지하며 같은 2-task smoke를 재사용하지 않는다.
 
 ## 경로 계약
 

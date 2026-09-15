@@ -1,0 +1,23 @@
+{
+  "measuredVersion": "0.12.0",
+  "installedVersion": "0.12.1",
+  "files": [
+    {
+      "path": "gdm-agents/pi/delegate-runner.mjs",
+      "measuredSha256": "8b31a8b8cd2fd977406895492a30ee052219830468de35e7fbba2a95f483230c",
+      "installedSourceSha256": "2e35bbdd878ced89bd570584a81ec66a00d546ef71c4df832bdc918dd3193eb6"
+    },
+    {
+      "path": "gdm-agents/pi/delegate-runner.d.mts",
+      "measuredSha256": "5c47e097a08ffe3b3a407778d821a35dfda2dbadf22d524c8fe568c44dff283d",
+      "installedSourceSha256": "067a17e6e8249ca59dc62b8e8d31bb8977dcb358fb4f2c71135495cf3876de2a"
+    },
+    {
+      "path": "gdm-agents/pi/gdm-delegate.ts",
+      "measuredSha256": "dfb32f3d877f478a5d55f38ca528cdc84cdfe110d7886178a241fdb948296420",
+      "installedSourceSha256": "da6c767bb5a7a690b27d577652d92b7a3bed4c197ddd7c2de567380ec21b0cd9"
+    }
+  ],
+  "diffSha256": "7ce5f939a6f36d67f43be1ff0a2d86004894537d40d6f4336350d0e46d55d9f9",
+  "reason": "Count successful process creation separately from failed launch attempts. Independent Astra source review confirmed this bounded change."
+}

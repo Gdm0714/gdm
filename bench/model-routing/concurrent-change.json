@@ -1,0 +1,39 @@
+{
+  "observedAt": "2026-09-08T23:22:32.373692+00:00",
+  "ownerSlug": "harness-repository-separation",
+  "ownerDoneAt": "2026-09-08T08:40:21.957Z",
+  "reason": "A separate completed task removed product code and adjusted repository documentation during the Pi benchmark. This receipt observes and preserves those changes; they are not authored by the model-routing task.",
+  "preservedFiles": {
+    ".gitignore": "5d03d95768d781122609222d9e86a0ffb5ddb004587efb9b1e8536c569be0ea8",
+    "README.md": "834295b8fb006e801fa1e3336b75302c0dc18849e8ef5d629ef60d5826117e00",
+    "cli/test/readme.test.ts": "77aa3d2451b12172664ff57d608001ce8a285e426c484eb2c69448176c521e51"
+  },
+  "preservedAbsences": [
+    "native",
+    "website",
+    "assets",
+    "design-system.md"
+  ],
+  "ownerChecks": [
+    {
+      "id": "c1",
+      "sha256": "e4a4772a1602b5b6a261a8fbb512ae1a92b8b9af9ab998c5524972ccefe72f83"
+    },
+    {
+      "id": "c2",
+      "sha256": "0b6e63df6c07ebf335786841b6cbc10d77cde20524c55b5461e9eacb4978df5b"
+    },
+    {
+      "id": "c3",
+      "sha256": "4046dd6d196137cfcdeca5e36156bf23c79cb0ac6f248721825e458b57e114bd"
+    },
+    {
+      "id": "c4",
+      "sha256": "7f9f52ab073983e03b18561a620072bb82c430d1b12292465aaf3ead002d0b63"
+    },
+    {
+      "id": "c5",
+      "sha256": "8d1b41d6b70ec76b9d18e915b072f816d9ff9f118806873d838a141a57882f98"
+    }
+  ]
+}

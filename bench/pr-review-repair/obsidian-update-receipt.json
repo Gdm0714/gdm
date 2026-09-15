@@ -1,0 +1,62 @@
+{
+  "vaultRoot": "/Users/godongmin/Documents/Obsidian Vault/Inkdrop Import 2026-07-03",
+  "backup": "/var/folders/kk/7q8dj3h10mz6yckfddjcqjh40000gn/T/gdm-pr-obsidian-backup-golfnuqu",
+  "createdAt": "2026-09-09T14:11:32+09:00",
+  "files": [
+    {
+      "path": "Wiki/AI 에이전트/실제 PR 리뷰 반영과 최종 코드 품질 비교.md",
+      "beforeSha256": null,
+      "afterSha256": "5ebcbae8593b0142cdf1009d0e37d41ba45f600d3285739f42e054d0d8ef449d"
+    },
+    {
+      "path": "Sources/Source Record — 실제 PR 리뷰 반영 18회 비교 2026-09-09.md",
+      "beforeSha256": null,
+      "afterSha256": "dac967bd3c12877660b7c5c420f74b9f186d533b7ebddea4bedafa33f6f2a615"
+    },
+    {
+      "path": "Wiki/AI 에이전트/GDM 하네스 측정 총정리 - 2026-09.md",
+      "beforeSha256": "813e3ab6e02bef5204a85aef104e91094c721e4bf660341671c32e69e7bd6230",
+      "afterSha256": "9b5bde61c8d033ddd2efd6eff354067e8b86f4cf48d33651390401fab79ab951"
+    },
+    {
+      "path": "Wiki/AI 에이전트/코딩 에이전트 품질 측정 기준.md",
+      "beforeSha256": "9bacfc2673d7ae6c81b30fa1c0afd76b258dafe8ef139c7dc70b33171bfcd088",
+      "afterSha256": "9e717941ceebb3bee18ffc9a1b12632a5ed52c73971f38656fe19bfc5d3a706a"
+    },
+    {
+      "path": "Wiki/AI 에이전트/Terra와 Astra 동일 입력 리뷰 비교.md",
+      "beforeSha256": "6afc442391e613cd729fdd867232fdf6dc99d9adfb7ae1dfdfd6c79bf2fd7879",
+      "afterSha256": "5fa967302691b05440ec6c968e20d15dd3d23bc46fcdbc492a6e7ac14d96d0b5"
+    },
+    {
+      "path": "Wiki/Wiki Index.md",
+      "beforeSha256": "480b28779f9e5332aad3b20eda5fa31542e1072c2b670d6bd54d67c855ef992e",
+      "afterSha256": "f55971430b21c503930d5d6cd66cec87e1fe1ac4b01741e7d4b270e5ff9fee42"
+    },
+    {
+      "path": "Wiki/Wiki Log.md",
+      "beforeSha256": "d0ea3ee1bd7c43f6eb5a8a35f8be976600fa8401bbdedfef845785fc85475c58",
+      "afterSha256": "e894db64e25f6588d3f2f33e4a22d5a14a0164175234b5419b0b4593121642ee"
+    }
+  ],
+  "capturedSources": {
+    "results-2026-09-09.md": "33fa8d7bc748468330afbbdc829e64eb721ce90533f04863ed545d79dabce714",
+    "README.md": "c25a4aaf600e20d274743d34ba4a39dde90761e67d4d60916722de729b9d3663",
+    "methodology-qa.md": "48e6d45478da792bb71f9cfa719a25ae33def610db75fc873d0048f037adc93f",
+    "final-analysis.json": "bcc3ef846e90364063cefed9382f345b1721633c12f943e4321534f82cb6dff2",
+    "supplement.json": "e94b8d8e7dd02ca4b2baafb3d8ee4d45a974e47933833a28b22321a4ec0eaef2",
+    "analysis.json": "8b63cc4bfb37afcade1a12451be2c4f0265b7d3c18f6b8a627a523cff0ef967c",
+    "change-assessment.json": "bcc7279808a4e6b314e9c58c30581c345f0ac2ccad07d88fa77183903093f349",
+    "assessment-lock.json": "b8be7ce8c0e29adb81c898d4afb4883a2ddae1f2bca3c5163163cc53ee776b08",
+    "fixtures-validation.json": "3c45cc7fd0ce0e3befacd1d8e5b6355de6ea6f0b5f841dde15ff6c13e63251c1",
+    "bom-cli-verification.json": "4feb835d4754534b3546b7c4fa9aa4514a2a0f4daf7e60be1b51899051eee8e9",
+    "evidence-cli-verification.json": "c7e0bd0ad9d76a284a403abe544d2a1f77a52dbb9a89a90a784752ad239bfa7f",
+    "exploratory.json": "90e78b5c8198e850b20c825c41b187c2c2d1907612a3d1d981cd64209b3a51c4",
+    "merge-repeat-verification.json": "de06eef701843cc5b132c949791e4623cc1cbee7732322c7311bad7045697c85",
+    "execution-incidents.json": "65aec27e2ca7d6a06547a9f0e904ef9e71cd290fe927f8fed29510b8764553aa",
+    "timing-audit.json": "2b5b149c8d738286087271fed97de36d4e5eabbe6c2b3710321fb3f2e0b33a20",
+    "verify_final.py": "53ef533e059c57520055579c1d9b782b846f3a635c0e468e1ac0b5d3e7ddb77e"
+  },
+  "newWiki": "Wiki/AI 에이전트/실제 PR 리뷰 반영과 최종 코드 품질 비교.md",
+  "newSource": "Sources/Source Record — 실제 PR 리뷰 반영 18회 비교 2026-09-09.md"
+}

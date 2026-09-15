@@ -1,0 +1,25 @@
+bun test v1.3.14 (0d9b296a)
+
+extra.test.ts:
+4 | import {loadPresets} from './cli/src/store.ts';
+5 | test('exploratory: loader rejects non-string-valued JSON',()=>{
+6 |  const cwd=mkdtempSync(join(tmpdir(),'review-loader-'));
+7 |  try {mkdirSync(join(cwd,'.gdm'));
+8 |  writeFileSync(join(cwd,'.gdm/presets.json'),JSON.stringify({bad:123}));
+9 |  expect(()=>loadPresets(cwd)).toThrow();
+                                  ^
+error: expect(received).toThrow()
+
+Received function did not throw
+Received value: {
+  bad: 123,
+}
+
+      at <anonymous> (/private/var/folders/kk/7q8dj3h10mz6yckfddjcqjh40000gn/T/gdm-review-exploratory-8k0ggk3e/work/extra.test.ts:9:31)
+(fail) exploratory: loader rejects non-string-valued JSON [8.50ms]
+(pass) exploratory control: loader accepts valid string-valued JSON [0.63ms]
+
+ 1 pass
+ 1 fail
+ 2 expect() calls
+Ran 2 tests across 1 file. [158.00ms]

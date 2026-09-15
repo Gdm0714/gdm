@@ -1,0 +1,160 @@
+{
+  "assistantTurns": 4,
+  "reportedModels": [
+    "openai-codex/gpt-5.6-terra"
+  ],
+  "mainUsage": {
+    "input": 6990,
+    "output": 335,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "totalTokens": 7325,
+    "reasoning": 23,
+    "apiCostEstimateUSD": 0.018
+  },
+  "totalUsage": {
+    "input": 16279,
+    "output": 1225,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "totalTokens": 17504,
+    "reasoning": 100,
+    "apiCostEstimateUSD": 0.1090348
+  },
+  "usageComplete": true,
+  "children": [
+    {
+      "role": "scout",
+      "model": "openai-codex/gpt-5.6-luna",
+      "thinking": "medium",
+      "elapsedMs": 14562,
+      "ok": true,
+      "exitCode": 0,
+      "assistantTurns": 3,
+      "reportedModels": [
+        "openai-codex/gpt-5.6-luna"
+      ],
+      "usage": {
+        "input": 3296,
+        "output": 288,
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "totalTokens": 3584,
+        "reasoning": 37,
+        "cost": {
+          "input": 0.0006592000000000001,
+          "output": 0.00034559999999999994,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 0.0010048000000000001
+        }
+      },
+      "usageComplete": true,
+      "error": ""
+    },
+    {
+      "role": "design",
+      "model": "openai-codex/gpt-6-astra",
+      "thinking": "medium",
+      "elapsedMs": 20253,
+      "ok": true,
+      "exitCode": 0,
+      "assistantTurns": 3,
+      "reportedModels": [
+        "openai-codex/gpt-6-astra"
+      ],
+      "usage": {
+        "input": 2377,
+        "output": 296,
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "totalTokens": 2673,
+        "reasoning": 0,
+        "cost": {
+          "input": 0.02377,
+          "output": 0.0148,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 0.03857
+        }
+      },
+      "usageComplete": true,
+      "error": ""
+    },
+    {
+      "role": "reviewer",
+      "model": "openai-codex/gpt-6-astra",
+      "thinking": "high",
+      "elapsedMs": 27355,
+      "ok": true,
+      "exitCode": 0,
+      "assistantTurns": 4,
+      "reportedModels": [
+        "openai-codex/gpt-6-astra"
+      ],
+      "usage": {
+        "input": 3616,
+        "output": 306,
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "totalTokens": 3922,
+        "reasoning": 40,
+        "cost": {
+          "input": 0.036160000000000005,
+          "output": 0.015300000000000001,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 0.051460000000000006
+        }
+      },
+      "usageComplete": true,
+      "error": ""
+    }
+  ],
+  "tools": [
+    {
+      "name": "gdm_delegate",
+      "error": false
+    },
+    {
+      "name": "gdm_delegate",
+      "error": false
+    },
+    {
+      "name": "gdm_delegate",
+      "error": false
+    }
+  ],
+  "invalidJsonLines": 0,
+  "agentEnded": true,
+  "stopReason": "stop",
+  "messages": [
+    {
+      "stopReason": "toolUse",
+      "error": null,
+      "model": "gpt-5.6-terra"
+    },
+    {
+      "stopReason": "toolUse",
+      "error": null,
+      "model": "gpt-5.6-terra"
+    },
+    {
+      "stopReason": "toolUse",
+      "error": null,
+      "model": "gpt-5.6-terra"
+    },
+    {
+      "stopReason": "stop",
+      "error": null,
+      "model": "gpt-5.6-terra"
+    }
+  ],
+  "path": "/Users/godongmin/projects/harness-bench-runs/gdm-pi-role-live-m6cppp_s",
+  "exitCode": 0,
+  "timeout": false,
+  "seconds": 76.103,
+  "sourceUnchanged": true,
+  "eventsSha256": "72a18809c9c3369daee0eb6f2af35f8232cc969c6eda0b18dd59a5a15ff2b6b6",
+  "success": true
+}

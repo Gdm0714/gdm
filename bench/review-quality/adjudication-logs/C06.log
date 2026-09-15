@@ -1,0 +1,1 @@
+{"bearerTab":{"rawHeuristicMatches":true,"serializedHeuristicMatches":false,"validation":null},"awsShape":{"length":20,"rawHeuristicMatches":true,"validation":"task 1 contains a credential-shaped value"},"whitespace":{"length":1,"validation":"task 1 field scope must be nonempty text"},"validControl":{"validation":null}}

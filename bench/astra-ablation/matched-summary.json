@@ -1,0 +1,152 @@
+{
+  "completedRuns": 18,
+  "successfulCompletions": 15,
+  "measurementValidRuns": 14,
+  "completeGroups": [
+    [
+      "t1",
+      1
+    ],
+    [
+      "t1",
+      2
+    ],
+    [
+      "t2",
+      2
+    ]
+  ],
+  "matchedSummary": {
+    "current": {
+      "n": 3,
+      "successes": 3,
+      "seconds": 264.017,
+      "freshInputTokens": 48020,
+      "commandCount": 25,
+      "checks": 4,
+      "input_tokens": 532372,
+      "cached_input_tokens": 484352,
+      "output_tokens": 5498
+    },
+    "ondemand": {
+      "n": 3,
+      "successes": 3,
+      "seconds": 325.984,
+      "freshInputTokens": 43649,
+      "commandCount": 27,
+      "checks": 5,
+      "input_tokens": 624385,
+      "cached_input_tokens": 580736,
+      "output_tokens": 5878
+    },
+    "calibrated": {
+      "n": 3,
+      "successes": 3,
+      "seconds": 246.576,
+      "freshInputTokens": 40772,
+      "commandCount": 21,
+      "checks": 3,
+      "input_tokens": 488696,
+      "cached_input_tokens": 457216,
+      "output_tokens": 4327
+    }
+  },
+  "contrasts": {
+    "current->ondemand": {
+      "seconds": {
+        "medianPairedPercent": 15.57,
+        "improvedPairs": 1,
+        "pairs": 3,
+        "individualPercent": [
+          24.33,
+          15.57,
+          -1.97
+        ]
+      },
+      "freshInputTokens": {
+        "medianPairedPercent": -9.1,
+        "improvedPairs": 3,
+        "pairs": 3,
+        "individualPercent": [
+          -9.1,
+          -48.51,
+          -5.9
+        ]
+      },
+      "commandCount": {
+        "medianPairedPercent": 8.0,
+        "improvedPairs": 1,
+        "pairs": 3,
+        "individualPercent": [
+          8.0,
+          11.54,
+          -4.35
+        ]
+      }
+    },
+    "ondemand->calibrated": {
+      "seconds": {
+        "medianPairedPercent": -17.3,
+        "improvedPairs": 3,
+        "pairs": 3,
+        "individualPercent": [
+          -24.88,
+          -17.3,
+          -8.82
+        ]
+      },
+      "freshInputTokens": {
+        "medianPairedPercent": -13.08,
+        "improvedPairs": 2,
+        "pairs": 3,
+        "individualPercent": [
+          -27.88,
+          -13.08,
+          52.4
+        ]
+      },
+      "commandCount": {
+        "medianPairedPercent": -18.18,
+        "improvedPairs": 2,
+        "pairs": 3,
+        "individualPercent": [
+          -22.22,
+          0.0,
+          -18.18
+        ]
+      }
+    },
+    "current->calibrated": {
+      "seconds": {
+        "medianPairedPercent": -6.61,
+        "improvedPairs": 3,
+        "pairs": 3,
+        "individualPercent": [
+          -6.61,
+          -4.42,
+          -10.61
+        ]
+      },
+      "freshInputTokens": {
+        "medianPairedPercent": -34.44,
+        "improvedPairs": 2,
+        "pairs": 3,
+        "individualPercent": [
+          -34.44,
+          -55.25,
+          43.41
+        ]
+      },
+      "commandCount": {
+        "medianPairedPercent": -16.0,
+        "improvedPairs": 2,
+        "pairs": 3,
+        "individualPercent": [
+          -16.0,
+          11.54,
+          -21.74
+        ]
+      }
+    }
+  }
+}

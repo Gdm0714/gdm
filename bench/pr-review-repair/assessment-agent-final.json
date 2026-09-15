@@ -1,0 +1,159 @@
+{
+  "schema": "gdm-pr-secondary-assessment/v1",
+  "assessor": "AI secondary assessment; not independent human review",
+  "packetIds": [
+    "B02",
+    "B03",
+    "B07",
+    "B17"
+  ],
+  "scope": "Only the four assigned label-free packets and permitted historical 732 parent/reference sources were read in this batch. No mapping, schedule, raw runs, other packets, model/agent calls, or working-repository modifications.",
+  "assessments": [
+    {
+      "packetId": "B02",
+      "packetSha256": "0dd3b6c6e282845579940510355a5816c43633c2c13f178fb38fda88fb622060",
+      "completionAssessment": {
+        "decisionsPresent": false,
+        "inference": "No claim of a completed deliverable is made from this packet. Root must attach preserved execution/response status; source edits or absence of edits do not establish completion."
+      },
+      "findings": [
+        {
+          "findingId": "R1",
+          "classification": "unresolved",
+          "confidence": "high for validator permissiveness; unresolved for an introduced-PR defect",
+          "evidence": [
+            "The cited Check lacks cmd, expect and manual; the TypeScript Check interface requires them, but existing validateWork checks only id, desc, status and minimal proven evidence.",
+            "cli/src/state.ts is byte-identical between historical 732177b parent and reference: SHA256 51bc0594fb74477c977fcb92a2de859a2e779c824e0eae449a2d1bcf7477bd91. The normal loadWork path already delegates to this permissive validator.",
+            "The new repair function therefore accepts the cited shape, but it did not introduce or weaken the persisted-state validator. The acceptance phrase valid Work could mean full interface shape or the pre-existing runtime/legacy validator contract.",
+            "A recovery-only strict validator might be warranted, but the packet gives no explicit new strict schema/legacy compatibility policy. Broadening all Work/Check/Evidence/audit validation is not automatically in-scope."
+          ],
+          "reproductionNeeded": "Pass the same missing-field JSON to parent and reference validateWork/loadWork, then to reference trailing-NUL recovery, to confirm the old permissiveness versus new entry point. Determine the required legacy schema compatibility before crediting a new-PR defect.",
+          "counting": "Do not count as confirmed_extra or unsupported solely from true acceptance; scope remains unresolved."
+        }
+      ],
+      "sourceChanges": [],
+      "protectedChanges": [],
+      "summary": "One concrete schema-permissiveness observation with unresolved introduced-versus-pre-existing scope. No source edit and no DECISIONS are present; do not interpret that as a completed correct repair."
+    },
+    {
+      "packetId": "B03",
+      "packetSha256": "f451103e5f09fb446f62cb4904fd28447cbdcb2f0776af05880cf6b52493a162",
+      "completionAssessment": {
+        "decisionsPresent": false,
+        "inference": "No claim of a completed deliverable is made from this packet. Root must attach preserved execution/response status; source edits or absence of edits do not establish completion."
+      },
+      "findings": [
+        {
+          "findingId": "R1",
+          "classification": "known_target",
+          "target": "D03",
+          "evidence": "Replacing pr while spreading previous delivery retains CI/approval/merged at the same HEAD, contrary to the explicit predecessor invalidation contract."
+        },
+        {
+          "findingId": "R2",
+          "classification": "known_target",
+          "target": "D04",
+          "evidence": "Replacing ci without clearing approval/merged permits stale approval reuse after a repeated passed observation or failed-then-passed sequence."
+        },
+        {
+          "findingId": "R3",
+          "classification": "unresolved",
+          "evidence": "merged omits current Git position validation, but historical workflow records remote merge SHA after performing the merge. The broad branch/HEAD binding language does not explicitly settle local checkout/HEAD movement before post-merge recording. The proposed extra gate may be intended or may restrict valid reporting."
+        }
+      ],
+      "sourceChanges": [
+        {
+          "file": "cli/src/delivery.ts",
+          "classification": "justified",
+          "targets": [
+            "D03",
+            "D04"
+          ],
+          "evidence": "The saved diff clears exactly the explicitly required downstream fields, retaining immutable returned-state construction."
+        },
+        {
+          "file": "cli/src/delivery-cli.ts",
+          "classification": "unresolved",
+          "findingIds": [
+            "R3"
+          ],
+          "evidence": "The saved diff adds assertCurrentGitPosition before merged recording; appropriateness depends on unresolved post-merge reporting semantics."
+        }
+      ],
+      "protectedChanges": [],
+      "summary": "Snapshot contains D03/D04 fixes and an unresolved merged-position gate. DECISIONS is absent; final delivery completion and validation status must not be inferred from source content."
+    },
+    {
+      "packetId": "B07",
+      "packetSha256": "e77673bc38515011d80fb5de9fc5a19daa7989b44b0f2f835a7fec956d57704a",
+      "completionAssessment": {
+        "decisionsPresent": true,
+        "inference": "Decisions describe intent and claimed tests. Root must apply actual execution status and independent grading; this assessment only judges the provided source change."
+      },
+      "findings": [],
+      "sourceChanges": [
+        {
+          "file": "cli/src/cli.ts",
+          "symbol": "cmdDone mode selection before verifyEvidence",
+          "classification": "introduced_regression",
+          "regressionId": "unaudited-done-overwrites-stale-evidence-before-verification",
+          "confidence": "high from control flow and explicit documented invariant; uniform full-CLI probe remains with root",
+          "evidence": [
+            "Historical parent cmdDone calls runRecheck without a mode; that implementation always refreshes the evidence file and saved evidence before verifyEvidence. Therefore the claimed parent-compatibility restoration is descriptively accurate.",
+            "The frozen candidate/reference explicitly uses validate mode for every done, preserving existing evidence before verifyEvidence checks its existence and hash. B07 changes unaudited done back to refresh before verifyEvidence.",
+            "For an unaudited automatic proven check with its saved output subsequently deleted or altered, B07 buildAutoEvidence recreates/overwrites the output and refreshEvidence substitutes the hash before the stale-evidence check; the candidate would detect the missing/mismatched original evidence.",
+            "Historical DESIGN.md:70 explicitly states that post-pass deleted or modified evidence cannot complete. The replay goal also names completion/audit evidence integrity. Reintroducing the parent behavior does not preserve this documented gate.",
+            "Ordinary output refresh can be preserved after first validating existing evidence. Thus the useful compatibility intent does not require bypassing the existing evidence integrity check."
+          ],
+          "historicalScope": "The behavior also existed in the historical parent, but was absent in the frozen starting candidate. It is newly introduced by this repair relative to that candidate, not a novel defect first appearing in the historical PR.",
+          "reproductionNeeded": [
+            "Create an unaudited work with one automatic check whose command still exits zero, then pass it and save original checks.json/evidence metadata.",
+            "On separate equivalent copies, delete the saved observed evidence file or change its contents without changing the recorded hash. Invoke done.",
+            "Expected from control flow: frozen candidate rejects evidence_stale and reopens the check; B07 recreates/overwrites the evidence and completes. Confirm exit, done state, evidence_stale journal events, and regenerated output.",
+            "Use a separate ordinary-result-change scenario with intact evidence to show the intended refresh behavior. Keep this successful compatibility case separate from stale-evidence detection."
+          ],
+          "verificationStatus": "No full CLI probe was run by this assessor; root is performing uniform posthoc probes. If observed behavior differs, revise this source-grounded classification using those preserved results."
+        },
+        {
+          "file": "cli/src/cli.ts",
+          "symbol": "runRecheck success journal shape",
+          "classification": "unresolved",
+          "evidence": [
+            "The historical parent success event has no mode property; 732177b adds mode on both refresh and validate. The change omits it again for refresh while retaining validate.",
+            "This restores the parent JSON shape, but the packet supplies no consumer, exact schema contract, or concrete break caused by the additive refresh mode field. Conversely no consumer requiring the new field is shown.",
+            "The compatibility motive is plausible but neither a confirmed required fix nor a demonstrated unnecessary/incorrect change from the available evidence."
+          ],
+          "reproductionNeeded": "Compare refresh and validate journal records across parent, frozen candidate and final snapshot. A real schema/consumer requirement is needed to classify the shape change as necessary or defective."
+        }
+      ],
+      "testChanges": [
+        {
+          "file": "cli/test/completion-evidence.test.ts",
+          "classification": "justified",
+          "evidence": "New allowed test file verifies the claimed ordinary refreshed-output behavior. It does not cover deleted/tampered saved evidence, so its passing does not refute the introduced-regression trigger."
+        }
+      ],
+      "protectedChanges": [],
+      "summary": "No external findings. Parent-compatible unaudited refresh has a concrete candidate-relative stale-evidence integrity regression; omission of the refresh journal mode remains unresolved. Record compatibility benefits, regression and incomplete probing separately."
+    },
+    {
+      "packetId": "B17",
+      "packetSha256": "0de8dbf3a052390a534ab833762e8a68043e387de9ee06ea6cded26732218b45",
+      "completionAssessment": {
+        "decisionsPresent": false,
+        "inference": "No claim of a completed deliverable is made from this packet. Root must attach preserved execution/response status; source edits or absence of edits do not establish completion."
+      },
+      "findings": [],
+      "sourceChanges": [],
+      "protectedChanges": [],
+      "summary": "The supplied review payload says external review was unavailable; findings, source edits and DECISIONS are absent. This is an unmodified snapshot with no completed repair demonstrated, not a successful no-change decision or proof that no defects exist."
+    }
+  ],
+  "countingRules": [
+    "Missing DECISIONS, unavailable review, or no edits never establish a completed deliverable. Root must apply actual transport and execution status.",
+    "B03 known target fixes can be present in an interrupted snapshot; record artifact quality and completion separately.",
+    "B02 validator permissiveness is pre-existing; the additional recovery entry point does not by itself settle whether strict schema hardening is an introduced-PR requirement.",
+    "B07 regression is candidate-relative and documentation-backed, while the parent compatibility description is also true; retain both facts and attach uniform probe evidence.",
+    "Keep all additional findings and regressions outside the original D01-D04 primary denominator."
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "manifestSha256": "e55c1305f6d2036592e9757a2581c91d684c2cb8fd1a457f6005c3335d936047",
+  "files": {
+    "assessment-agent-final.json": "a26f98e8bc51c87e6038b416cc9ec2fcb6d9ef923204650ea371d9160da8082e",
+    "assessment-agent-round2.json": "2c5fec5b9259f8a8edc7f0817f3614a6c8ace4e0cd5fed69a5179a2a8a25a1f1",
+    "assessment-agent-round3.json": "38fee869b0cbcb0c6c5d8bd61eaf623ab9e95d8221fe92bab8626fa539ca972d",
+    "assessment-agent.json": "d92220404c1bf39c8f3c9b7e6b6acf01fc8b1a0cce8f9d72282c34e49dc2a306",
+    "assessment-root.json": "738afd0a4d5a03aa7edbce60c2f8b22d263a591f7b64226977b7587c7125d4ba"
+  },
+  "packets": {
+    "B02": "0dd3b6c6e282845579940510355a5816c43633c2c13f178fb38fda88fb622060",
+    "B03": "f451103e5f09fb446f62cb4904fd28447cbdcb2f0776af05880cf6b52493a162",
+    "B07": "e77673bc38515011d80fb5de9fc5a19daa7989b44b0f2f835a7fec956d57704a",
+    "B17": "0de8dbf3a052390a534ab833762e8a68043e387de9ee06ea6cded26732218b45",
+    "B05": "9fc8ffb1d61e27945fb46ebe0428d3748579ac89c560d9d9dd034be2a6bfd764",
+    "B09": "a32f4c1245c72c81e141facfa9df76952f715d2c0e61be86caf0b1d11c2acb9e",
+    "B01": "d629fbb3c73ed02f8de7cb7d21fa33251292fb90d75baa730cc230aa319192ab",
+    "B06": "9da39d3c6e8112708c3a3bad42559fe4661fcf0bc097bfe7cd74479389e1e8de",
+    "B08": "05c5f0718dd0b754b6c449ac205edca94837b5e25642160c7d3e82edadce7e15",
+    "B10": "4d95f90ecf0ab32ab596b2e488461574c88100a307f5d3a7b3b0f478b215693d",
+    "B11": "de1953d8d4b76cccca55e5b5c133f6ab34a6d0e6138053807a1f716ae91ffe6e",
+    "B12": "6e6ca0927aed960842fcaf03c3e1c2336881a1492c7562c35559e2a68ae78d6c",
+    "B13": "8a08a8c9d66668ea92b11240509a053b388cf43e57aa0d7e60fcce7c850425f5",
+    "B14": "9fda7c39e2f4d927e0089f08b5afd047b94f6399593e258279e117eaa6bca8b3",
+    "B16": "2e412a9445d3160a106ac9bf460df46e1c1ae7650ee10c782c1c4863a9b34d30",
+    "B18": "3db412c7b785b9f21df9c04e14fd83d3e02f3628f1fa3f560d84f4a45538aa99",
+    "B04": "fdbc2609c82c7e6d03f48ba1f07f4ba984d3449e926e61da6fe13c2a1756c480",
+    "B15": "1f5e4a7e9f5479586606cf92fa8e71f445a4d3c65438907cc08b1c0c9450354e"
+  },
+  "note": "All 18 AI assessments locked before opening packet-to-run map; supplemental deterministic probes may corroborate classifications separately."
+}

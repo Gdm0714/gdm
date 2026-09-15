@@ -1,0 +1,42 @@
+{
+  "purpose": "Reproduction of observed benign contract-description rejection; expectedAccepted is the proposed behavior, not the current contract.",
+  "results": [
+    {
+      "id": "ordinary_export_description",
+      "expectedAccepted": true,
+      "accepted": false,
+      "sensitiveRaw": true,
+      "error": "privacyPolicyVersion=1 field=require count=1"
+    },
+    {
+      "id": "ordinary_function_description",
+      "expectedAccepted": true,
+      "accepted": false,
+      "sensitiveRaw": true,
+      "error": "privacyPolicyVersion=1 field=require count=1"
+    },
+    {
+      "id": "ordinary_slash_description",
+      "expectedAccepted": true,
+      "accepted": false,
+      "sensitiveRaw": false,
+      "error": "privacyPolicyVersion=1 field=require count=1 — 허용되지 않는 문자 \"/\" (13번째) — 허용: 한글·영문·숫자·공백과 .,:;!?()[]_- · 여러 조건은 --require/--forbid 플래그를 반복해 전달하세요"
+    },
+    {
+      "id": "ordinary_requirement",
+      "expectedAccepted": true,
+      "accepted": true,
+      "sensitiveRaw": false,
+      "error": null
+    },
+    {
+      "id": "synthetic_credential_control",
+      "expectedAccepted": false,
+      "accepted": false,
+      "sensitiveRaw": true,
+      "error": "privacyPolicyVersion=1 field=require count=1"
+    }
+  ],
+  "benignRejections": 3,
+  "credentialControlRejected": true
+}
