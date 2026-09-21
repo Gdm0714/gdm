@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "device": {
+    "id": "11111111-2222-3333-4444-555555555555",
+    "udid": "00008120-001234567890001E",
+    "name": "My iPhone"
+  },
+  "bundleID": "com.example.app",
+  "project": "App.xcodeproj",
+  "scheme": "App",
+  "derivedDataPath": ".build/Device",
+  "appPath": ".build/Device/Build/Products/Debug-iphoneos/App.app",
+  "testTargets": ["AppTests/ExampleTests"],
+  "capture": {
+    "isolationArgument": "-capturePhysicalEvidence",
+    "cases": [
+      {"name": "dark", "arguments": ["-visualAppearance", "dark"]},
+      {"name": "light", "arguments": ["-visualAppearance", "light"]}
+    ]
+  }
+}

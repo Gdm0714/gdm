@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import { spawnSync } from "node:child_process";
+import { cmdDevice } from "./device-cli.ts";
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
@@ -108,6 +109,8 @@ function commandTimeoutMs(): number | undefined {
 const USAGE = `gdm ${VERSION} — 작업 증거가 다음 습관을 바꾸는 개인 AI 워크플로우
 
 흐름: 약속 → 증명 → 관찰 → 습관 → 비교
+
+  gdm device <list|doctor|build|install|test|capture> [--config <JSON>] [--case <장면>] [--json]
 
 사용법:
   gdm plan init --slug <슬러그> (--brief <설명> | --brief-file <파일>) [--audit] [--risk <low|medium|high>] [--verification <deterministic|inspectable|opaque>] [--simplify] (--require <약속> | --forbid <금지>)...
@@ -1771,6 +1774,9 @@ async function main(): Promise<void> {
   try {
     if (mutating) releaseLock = acquireRepositoryLock(cwd);
     switch (command) {
+      case "device":
+        await cmdDevice(cwd, rest);
+        break;
       case "plan": {
         const [sub, ...planArgs] = rest;
         if (sub === "init") cmdPlanInit(cwd, planArgs);
