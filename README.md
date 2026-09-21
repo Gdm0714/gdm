@@ -257,3 +257,8 @@ bun run verify
 ## 라이선스
 
 [MIT](./LICENSE)
+
+## iOS 실기기 검증
+
+`gdm device`로 기기 확인, 개발 빌드, 설치, XCTest, 격리 화면 캡처를 실행합니다.
+[gid 연결과 프로젝트 설정](integrations/device/README.md)을 참고하세요.
