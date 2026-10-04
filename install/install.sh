@@ -99,7 +99,7 @@ stage_generated_skills() {
   }
   stage="$(mktemp -d "$root/.gdm-stage.XXXXXX")"
   printf -v "$output_variable" '%s' "$stage"
-  bun "$REPO/install/render-skills.ts" \
+  "$BUILD_TMP" render-skills \
     --target "$target" \
     --source-root "$REPO/skills" \
     --agents-root "$REPO/agents" \
@@ -139,7 +139,7 @@ apply_skill_swap() {
 
 echo "[1/5] gdm 바이너리 빌드·설치 사전검증"
 trap cleanup EXIT
-cd "$REPO/cli"
+cd "$REPO"
 mkdir -p "$BIN_DIR"
 if { [ -e "$BIN_DIR/gdm" ] || [ -L "$BIN_DIR/gdm" ]; } &&
   [ ! -f "$BIN_DIR/gdm" ] && [ ! -L "$BIN_DIR/gdm" ]; then
@@ -152,7 +152,8 @@ if { [ -e "$BIN_DIR/gdm-pi" ] || [ -L "$BIN_DIR/gdm-pi" ]; } &&
   exit 1
 fi
 BUILD_TMP="$(mktemp "$BIN_DIR/.gdm.tmp.XXXXXX")"
-bun build src/cli.ts --compile --outfile "$BUILD_TMP" >/dev/null
+cargo build --manifest-path "$REPO/Cargo.toml" --locked --release
+cp "${CARGO_TARGET_DIR:-$REPO/target}/release/gdm" "$BUILD_TMP"
 chmod 755 "$BUILD_TMP"
 CODEX_HOME="$CODEX_HOME_DIR" "$BUILD_TMP" agent hook-install \
   --binary "$BUILD_TMP" --dry-run
@@ -161,76 +162,8 @@ echo "[2/5] 스킬 대상 사전검증·staging"
 stage_generated_skills "$HOME/.claude/skills" claude CLAUDE_STAGE
 stage_generated_skills "$CODEX_HOME_DIR/skills" codex CODEX_STAGE
 stage_generated_skills "$PI_AGENT_DIR/skills" pi PI_STAGE
-bun -e '
-  import { createHash } from "node:crypto";
-  import { lstatSync, readFileSync } from "node:fs";
-  import { dirname, join } from "node:path";
-  const [claudePath, codexPath, piPath] = process.argv.slice(1);
-  const claude = JSON.parse(readFileSync(claudePath, "utf8"));
-  const codex = JSON.parse(readFileSync(codexPath, "utf8"));
-  const pi = JSON.parse(readFileSync(piPath, "utf8"));
-  const hash = (path) => createHash("sha256").update(readFileSync(path)).digest("hex");
-  const exactKeys = (value, expected, label) => {
-    if (Object.keys(value).sort().join("\0") !== [...expected].sort().join("\0")) {
-      throw new Error(`${label} key set mismatch`);
-    }
-  };
-  const validate = (manifestPath, value, target) => {
-    exactKeys(value, ["schemaVersion", "target", "adapterVersion", "canonicalSourceSha256", "sourceSha256", "capabilityProfile", "hook", "runner", "skills"], `${target} manifest`);
-    exactKeys(value.runner, ["contract", "path", "sha256", "adapters"], `${target} runner`);
-    exactKeys(value.runner.adapters, ["codex", "claude", "pi"], `${target} adapters`);
-    const expectedProfile = { id: "gdm-read-only-specialist/v1", filesystem: "read-only", delegation: "disabled", mcp: "disabled", shell: "unsupported", browser: "unsupported", network: "unsupported" };
-    const expectedHook = target === "codex"
-      ? { id: "gdm-agent-gate-v1", status: "supported", requiredForTarget: true }
-      : { id: null, status: "not-required", requiredForTarget: false };
-    if (JSON.stringify(value.capabilityProfile) !== JSON.stringify(expectedProfile) ||
-        JSON.stringify(value.hook) !== JSON.stringify(expectedHook) ||
-        value.adapterVersion !== "gdm-target-adapter/v1" ||
-        !/^[0-9a-f]{64}$/.test(value.canonicalSourceSha256) ||
-        !/^[0-9a-f]{64}$/.test(value.sourceSha256)) {
-      throw new Error(`${target} manifest capability/hook/hash mismatch`);
-    }
-    const root = dirname(manifestPath);
-    for (const [label, item] of [["runner", value.runner], ...Object.entries(value.runner.adapters)]) {
-      exactKeys(item, label === "runner" ? ["contract", "path", "sha256", "adapters"] : ["path", "sha256"], `${target} ${label}`);
-      const path = join(root, item.path);
-      const stat = lstatSync(path);
-      if (!stat.isFile() || stat.isSymbolicLink() || (stat.mode & 0o111) === 0 || hash(path) !== item.sha256) {
-        throw new Error(`${target} ${label} bytes/mode mismatch`);
-      }
-    }
-    const names = value.skills.map((skill) => skill.name);
-    if (new Set(names).size !== names.length || names.join("\0") !== [...names].sort().join("\0")) {
-      throw new Error(`${target} skill manifest order/identity mismatch`);
-    }
-    for (const skill of value.skills) {
-      exactKeys(skill, ["name", "sourcePath", "sourceSha256", "renderedSha256"], `${target} skill`);
-      const path = join(root, skill.name, "SKILL.md");
-      const stat = lstatSync(path);
-      if (!stat.isFile() || stat.isSymbolicLink() || hash(path) !== skill.renderedSha256) {
-        throw new Error(`${target} rendered skill mismatch: ${skill.name}`);
-      }
-    }
-  };
-  if (claude.schemaVersion !== "gdm-target-skill-manifest/v1" || claude.target !== "claude" ||
-      codex.schemaVersion !== "gdm-target-skill-manifest/v1" || codex.target !== "codex" ||
-      pi.schemaVersion !== "gdm-target-skill-manifest/v1" || pi.target !== "pi" ||
-      claude.canonicalSourceSha256 !== codex.canonicalSourceSha256 ||
-      claude.canonicalSourceSha256 !== pi.canonicalSourceSha256 ||
-      claude.sourceSha256 !== codex.sourceSha256 ||
-      claude.sourceSha256 !== pi.sourceSha256 ||
-      claude.capabilityProfile?.id !== "gdm-read-only-specialist/v1" ||
-      codex.capabilityProfile?.id !== "gdm-read-only-specialist/v1" ||
-      pi.capabilityProfile?.id !== "gdm-read-only-specialist/v1" ||
-      JSON.stringify(claude.runner) !== JSON.stringify(codex.runner) ||
-      JSON.stringify(claude.runner) !== JSON.stringify(pi.runner)) {
-    throw new Error("generated target skill manifest parity failed");
-  }
-  validate(claudePath, claude, "claude");
-  validate(codexPath, codex, "codex");
-  validate(piPath, pi, "pi");
-' "$CLAUDE_STAGE/gdm-target-manifest.json" "$CODEX_STAGE/gdm-target-manifest.json" \
-  "$PI_STAGE/gdm-target-manifest.json"
+"$BUILD_TMP" verify-manifests "$CLAUDE_STAGE/gdm-target-manifest.json" \
+  "$CODEX_STAGE/gdm-target-manifest.json" "$PI_STAGE/gdm-target-manifest.json"
 
 PI_LAUNCHER_TMP="$(mktemp "$BIN_DIR/.gdm-pi.tmp.XXXXXX")"
 cp "$PI_STAGE/gdm-agents/pi/gdm-pi" "$PI_LAUNCHER_TMP"
