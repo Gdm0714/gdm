@@ -1,0 +1,556 @@
+{
+  "schemaVersion": "gdm-computer-use-jev-reuse/v1",
+  "started_at": "2026-09-21T03:22:45.186Z",
+  "runtime": "rust",
+  "mode": "live-vm",
+  "model_requested": "sonnet",
+  "completed": true,
+  "credential_included": false,
+  "fixture_source_sha256": "d985524c4fca476b555ea9e32ce95a00c5a41d24b735dfc1d95eb579494f4911",
+  "runtime_source_sha256": "86657081912069b3a08f5f5762da5d94768dfcf6bda1b1dd2491f95167dd0dd1",
+  "fixture_binary_sha256": "079ba6494db2557b6f3f137fbfae14fc0eb0d4cb3aecda71cbfc613ba255d36f",
+  "max_regenerations_per_attempt": 1,
+  "samples": [
+    {
+      "repeat": 0,
+      "arm": "model_each_step",
+      "success": false,
+      "run_id": "6323ed1b-bc42-4635-9f5b-079d4cd04788",
+      "expected": [
+        "Test User 1",
+        "Seoul",
+        "1",
+        "CONFIRM"
+      ],
+      "fixture": "owned-rust-four-field-form",
+      "model_requested": "sonnet",
+      "attempt_wall_ms": 10755,
+      "end_to_end_ms": 10755,
+      "error_code": "computer_use_stale",
+      "error_detail": "state or screen changed outside the last verified action; reobserve and regenerate",
+      "model_calls": 1,
+      "jev_calls": 0,
+      "regenerations": 0,
+      "events": [
+        {
+          "kind": "model",
+          "stage": 0,
+          "elapsed_ms": 5318,
+          "ok": true,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 9961,
+            "cache_read_input_tokens": 0,
+            "output_tokens": 244,
+            "output_tokens_details": {
+              "thinking_tokens": 0
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 9961,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "not_available",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 244,
+                "cache_read_input_tokens": 0,
+                "cache_creation_input_tokens": 9961,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 9961
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "models_reported_by_cli": [
+            "claude-sonnet-5"
+          ],
+          "response": {
+            "candidates": [
+              {
+                "id": "name",
+                "description": "Fill Name field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 1\n"
+                }
+              },
+              {
+                "id": "city",
+                "description": "Fill City field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Seoul\n"
+                }
+              },
+              {
+                "id": "seats",
+                "description": "Fill Seats field",
+                "action": {
+                  "action": "type_text",
+                  "text": "1\n"
+                }
+              },
+              {
+                "id": "confirm",
+                "description": "Fill Confirmation field",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ],
+            "selected_id": "name"
+          },
+          "proposal": {
+            "goal": "Fill Name with 'Test User 1', City with 'Seoul', Seats with '1', then Confirmation with exactly 'CONFIRM'. Complete the four-field form.",
+            "observation": "{\"run_id\":\"6323ed1b-bc42-4635-9f5b-079d4cd04788\",\"stage\":0,\"fields\":[\"Name\",\"City\",\"Seats\",\"Confirmation\"],\"values\":[]}",
+            "observation_sha256": "3a732deded3dc6c8cbef4812aecdc7b688ea5e8b85b4843faa094560f3077c77",
+            "candidates": [
+              {
+                "id": "name",
+                "description": "Fill Name field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 1\n"
+                }
+              },
+              {
+                "id": "city",
+                "description": "Fill City field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Seoul\n"
+                }
+              },
+              {
+                "id": "seats",
+                "description": "Fill Seats field",
+                "action": {
+                  "action": "type_text",
+                  "text": "1\n"
+                }
+              },
+              {
+                "id": "confirm",
+                "description": "Fill Confirmation field",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ]
+          },
+          "plan": [
+            "name"
+          ]
+        }
+      ],
+      "steps": []
+    },
+    {
+      "repeat": 0,
+      "arm": "model_batch",
+      "success": true,
+      "run_id": "8d593b7f-6cbd-4ff9-bfed-72e7b7d893b2",
+      "expected": [
+        "Test User 1",
+        "Seoul",
+        "1",
+        "CONFIRM"
+      ],
+      "fixture": "owned-rust-four-field-form",
+      "model_requested": "sonnet",
+      "end_to_end_ms": 32325,
+      "verification_ms": 524,
+      "final_state": {
+        "run_id": "8d593b7f-6cbd-4ff9-bfed-72e7b7d893b2",
+        "stage": 4,
+        "fields": [
+          "Name",
+          "City",
+          "Seats",
+          "Confirmation"
+        ],
+        "values": [
+          "Test User 1",
+          "Seoul",
+          "1",
+          "CONFIRM"
+        ]
+      },
+      "attempt_wall_ms": 32849,
+      "model_calls": 1,
+      "jev_calls": 0,
+      "regenerations": 0,
+      "events": [
+        {
+          "kind": "model",
+          "stage": 0,
+          "elapsed_ms": 7347,
+          "ok": true,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 9977,
+            "cache_read_input_tokens": 0,
+            "output_tokens": 250,
+            "output_tokens_details": {
+              "thinking_tokens": 0
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 9977,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "not_available",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 250,
+                "cache_read_input_tokens": 0,
+                "cache_creation_input_tokens": 9977,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 9977
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "models_reported_by_cli": [
+            "claude-sonnet-5"
+          ],
+          "response": {
+            "candidates": [
+              {
+                "id": "name",
+                "description": "Type Name field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 1\n"
+                }
+              },
+              {
+                "id": "city",
+                "description": "Type City field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Seoul\n"
+                }
+              },
+              {
+                "id": "seats",
+                "description": "Type Seats field",
+                "action": {
+                  "action": "type_text",
+                  "text": "1\n"
+                }
+              },
+              {
+                "id": "confirm",
+                "description": "Type Confirmation field",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ],
+            "plan": [
+              "name",
+              "city",
+              "seats",
+              "confirm"
+            ]
+          },
+          "proposal": {
+            "goal": "Fill Name with 'Test User 1', City with 'Seoul', Seats with '1', then Confirmation with exactly 'CONFIRM'. Complete the four-field form.",
+            "observation": "{\"run_id\":\"8d593b7f-6cbd-4ff9-bfed-72e7b7d893b2\",\"stage\":0,\"fields\":[\"Name\",\"City\",\"Seats\",\"Confirmation\"],\"values\":[]}",
+            "observation_sha256": "86ff2663efd88480cb303c862b5664cb863d7647480c1224898c7bea22761f1d",
+            "candidates": [
+              {
+                "id": "name",
+                "description": "Type Name field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 1\n"
+                }
+              },
+              {
+                "id": "city",
+                "description": "Type City field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Seoul\n"
+                }
+              },
+              {
+                "id": "seats",
+                "description": "Type Seats field",
+                "action": {
+                  "action": "type_text",
+                  "text": "1\n"
+                }
+              },
+              {
+                "id": "confirm",
+                "description": "Type Confirmation field",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ]
+          },
+          "plan": [
+            "name",
+            "city",
+            "seats",
+            "confirm"
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "stage": 0,
+          "action": {
+            "action": "type_text",
+            "text": "Test User 1\n"
+          },
+          "execution_and_observation_ms": 2798,
+          "state_after": {
+            "run_id": "8d593b7f-6cbd-4ff9-bfed-72e7b7d893b2",
+            "stage": 1,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 1"
+            ]
+          },
+          "screen_after": "490117163806d2ade2c64fbcf0e1182eec79d6a3b08dd44b88ba6b3257ef2a1a"
+        },
+        {
+          "stage": 1,
+          "action": {
+            "action": "type_text",
+            "text": "Seoul\n"
+          },
+          "execution_and_observation_ms": 1754,
+          "state_after": {
+            "run_id": "8d593b7f-6cbd-4ff9-bfed-72e7b7d893b2",
+            "stage": 2,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 1",
+              "Seoul"
+            ]
+          },
+          "screen_after": "e8e711cbc826131c1bb6f3335f5252087728c5e3c13b653c419b08fae29bfa97"
+        },
+        {
+          "stage": 2,
+          "action": {
+            "action": "type_text",
+            "text": "1\n"
+          },
+          "execution_and_observation_ms": 2796,
+          "state_after": {
+            "run_id": "8d593b7f-6cbd-4ff9-bfed-72e7b7d893b2",
+            "stage": 3,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 1",
+              "Seoul",
+              "1"
+            ]
+          },
+          "screen_after": "283cc7d17fa7bf5c55dd47d6b401b41eceb597f25398c93a8f0d45053c6fa5e3"
+        },
+        {
+          "stage": 3,
+          "action": {
+            "action": "type_text",
+            "text": "CONFIRM\n"
+          },
+          "execution_and_observation_ms": 2651,
+          "state_after": {
+            "run_id": "8d593b7f-6cbd-4ff9-bfed-72e7b7d893b2",
+            "stage": 4,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 1",
+              "Seoul",
+              "1",
+              "CONFIRM"
+            ]
+          },
+          "screen_after": "775235eebf253e267c1c0f2048a95afeb8b38cefb0ec982cb0ad1d24ed1c68a9"
+        }
+      ]
+    },
+    {
+      "repeat": 0,
+      "arm": "model_reuse_jev",
+      "success": false,
+      "run_id": "fe45fd1e-0390-4110-80d4-6a92c175ed73",
+      "expected": [
+        "Test User 1",
+        "Seoul",
+        "1",
+        "CONFIRM"
+      ],
+      "fixture": "owned-rust-four-field-form",
+      "model_requested": "sonnet",
+      "attempt_wall_ms": 5795,
+      "end_to_end_ms": 5795,
+      "error_code": "reuse_scope",
+      "error_detail": "candidate text is outside the task's literal values",
+      "model_calls": 1,
+      "jev_calls": 0,
+      "regenerations": 0,
+      "events": [
+        {
+          "kind": "model",
+          "stage": 0,
+          "elapsed_ms": 4673,
+          "ok": true,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 9913,
+            "cache_read_input_tokens": 0,
+            "output_tokens": 213,
+            "output_tokens_details": {
+              "thinking_tokens": 0
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 9913,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "not_available",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 213,
+                "cache_read_input_tokens": 0,
+                "cache_creation_input_tokens": 9913,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 9913
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "models_reported_by_cli": [
+            "claude-sonnet-5"
+          ],
+          "response": {
+            "candidates": [
+              {
+                "id": "name",
+                "description": "Fill Name field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 1"
+                }
+              },
+              {
+                "id": "city",
+                "description": "Fill City field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Seoul"
+                }
+              },
+              {
+                "id": "seats",
+                "description": "Fill Seats field",
+                "action": {
+                  "action": "type_text",
+                  "text": "1"
+                }
+              },
+              {
+                "id": "confirmation",
+                "description": "Fill Confirmation field",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "steps": []
+    }
+  ],
+  "limitations": "Controlled, instrumented Rust form in a dedicated macOS VM; not arbitrary application automation. Models receive synthetic screenshots and structured fixture observations. A fresh official CLI process is used for every model call. All arms use identical guards and literal one-line input bounds. Small rotating-order pilot, not statistical proof. Includes observation, model, selection, GUI execution and regeneration costs. Excludes VM preparation, fixture reset and final independent state-file verification. Batch model is included to distinguish batching gains from Jev-specific gains.",
+  "summary": {
+    "all_attempts_succeeded": false,
+    "speedup_vs_each_step": null,
+    "speedup_vs_batch": null,
+    "arms": {
+      "model_each_step": {
+        "attempts": 1,
+        "succeeded": 0,
+        "p50_ms": 10755.0,
+        "model_calls": 1,
+        "jev_calls": 0
+      },
+      "model_batch": {
+        "attempts": 1,
+        "succeeded": 1,
+        "p50_ms": 32325.0,
+        "model_calls": 1,
+        "jev_calls": 0
+      },
+      "model_reuse_jev": {
+        "attempts": 1,
+        "succeeded": 0,
+        "p50_ms": 5795.0,
+        "model_calls": 1,
+        "jev_calls": 0
+      }
+    }
+  },
+  "finished_at": "2026-09-21T03:24:27.296Z",
+  "error_code": null
+}

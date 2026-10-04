@@ -1,0 +1,159 @@
+{
+  "schemaVersion": "gdm-computer-use-jev-benchmark/v2",
+  "started_at": "2026-09-21T01:37:37.012Z",
+  "finished_at": "2026-09-21T01:39:44.337Z",
+  "runtime": "rust",
+  "mode": "live-vm",
+  "proposer": "official Claude Code CLI, tools disabled",
+  "jev_role": "select only among model-proposed actions",
+  "credential_included": false,
+  "completed": true,
+  "error_code": null,
+  "samples": [
+    {
+      "repeat": 0,
+      "arm": "model_direct",
+      "model_requested": "sonnet",
+      "success": false,
+      "selection_ms": 0,
+      "fixture": "selected-textedit-single-action",
+      "screen_sha256": "4aeab8fe3af8755b6d507a3bae3fc83079395a7bc46352d0fdc63c50aac37899",
+      "generation_ms": 17356,
+      "generation_usage": {
+        "input_tokens": 4,
+        "cache_creation_input_tokens": 5253,
+        "cache_read_input_tokens": 15120,
+        "output_tokens": 863,
+        "output_tokens_details": {
+          "thinking_tokens": 26
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 5253,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 377,
+            "cache_read_input_tokens": 9901,
+            "cache_creation_input_tokens": 571,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 571
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      },
+      "models_reported_by_cli": [
+        "claude-sonnet-5"
+      ],
+      "candidate_count": 3,
+      "screen_change": {
+        "changed_pixels": 189,
+        "bounds": [
+          158,
+          18,
+          1965,
+          987
+        ]
+      },
+      "attempt_wall_ms": 29539,
+      "end_to_end_ms": 29539,
+      "error_code": "computer_use_stale"
+    },
+    {
+      "repeat": 0,
+      "arm": "model_candidates_jev",
+      "model_requested": "sonnet",
+      "success": false,
+      "selection_ms": 1644,
+      "fixture": "selected-textedit-single-action",
+      "screen_sha256": "8161b2442abd9e1af7d23ed70d66d50240d5233879dee5166e12ec4ba1ac08ae",
+      "generation_ms": 12991,
+      "generation_usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 4694,
+        "cache_read_input_tokens": 5213,
+        "output_tokens": 335,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 4694,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 335,
+            "cache_read_input_tokens": 5213,
+            "cache_creation_input_tokens": 4694,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 4694
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      },
+      "models_reported_by_cli": [
+        "claude-sonnet-5"
+      ],
+      "candidate_count": 3,
+      "jev_model": "jev-1.13.0",
+      "jev_usage": {
+        "input_tokens": 691,
+        "output_tokens": 54
+      },
+      "confidence": 0.99,
+      "screen_change": {
+        "changed_pixels": 18,
+        "bounds": [
+          1347,
+          1505,
+          1674,
+          1508
+        ]
+      },
+      "attempt_wall_ms": 23193,
+      "end_to_end_ms": 23193,
+      "error_code": "computer_use_stale"
+    }
+  ],
+  "summary": {
+    "arms": {
+      "model_direct": {
+        "attempts": 1,
+        "succeeded": 0,
+        "success_rate": 0.0,
+        "p50_ms": 29539.0,
+        "p95_ms": 29539.0
+      },
+      "model_candidates_jev": {
+        "attempts": 1,
+        "succeeded": 0,
+        "success_rate": 0.0,
+        "p50_ms": 23193.0,
+        "p95_ms": 23193.0
+      }
+    },
+    "equal_observed_success_rate": false,
+    "observed_p50_speedup": null,
+    "interpretation": "Small paired pilot, not statistical proof. Task latency includes candidate generation, selection and GUI execution. Independent file verification is reported separately. Includes a new official CLI process per proposal. Persistent gid sessions can have different overhead. Candidate generation is included. Jev is text-only; observations are produced by the existing vision model."
+  }
+}
