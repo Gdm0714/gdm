@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { once } from "node:events";
 import { createConnection, createServer, type Socket } from "node:net";
-import { encodeAppleVncPassword, vncChallengeResponse } from "../../agents/pi/gdm-computer-use/auth.ts";
-import { encodePng } from "../../agents/pi/gdm-computer-use/png.ts";
-import { RfbClient } from "../../agents/pi/gdm-computer-use/rfb.ts";
-import { createSessionPassword } from "../../agents/pi/gdm-computer-use/vm.ts";
+import { encodeAppleVncPassword, vncChallengeResponse } from "../../tests/legacy/pi/gdm-computer-use/auth.ts";
+import { encodePng } from "../../tests/legacy/pi/gdm-computer-use/png.ts";
+import { RfbClient } from "../../tests/legacy/pi/gdm-computer-use/rfb.ts";
+import { createSessionPassword } from "../../tests/legacy/pi/gdm-computer-use/vm.ts";
 
 class Reader {
   constructor(private readonly socket: Socket) {}

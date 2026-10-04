@@ -20,9 +20,9 @@ mock.module("@earendil-works/pi-ai", () => ({
 
 const extensionUrl = pathToFileURL(join(import.meta.dir, "..", "..", "agents", "pi", "gdm-computer-use", "index.ts")).href;
 const { installGdmComputerUse } = await import(extensionUrl);
-const { RfbClient } = await import("../../agents/pi/gdm-computer-use/rfb.ts");
-const { vncChallengeResponse } = await import("../../agents/pi/gdm-computer-use/auth.ts");
-const { TartVmManager } = await import("../../agents/pi/gdm-computer-use/vm.ts");
+const { RfbClient } = await import("../../tests/legacy/pi/gdm-computer-use/rfb.ts");
+const { vncChallengeResponse } = await import("../../tests/legacy/pi/gdm-computer-use/auth.ts");
+const { TartVmManager } = await import("../../tests/legacy/pi/gdm-computer-use/vm.ts");
 
 const roots: string[] = [];
 const oldTartPath = process.env.GDM_TART_PATH;
