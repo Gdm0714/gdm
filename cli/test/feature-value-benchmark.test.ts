@@ -6,7 +6,7 @@ import {
   createRememberEvent,
   renderMemoryBlock,
   selectMemories,
-} from "../../agents/pi/gdm-memory/core.ts";
+} from "../../tests/legacy/pi/gdm-memory/core.ts";
 import {
   CHILD_SCHEMA,
   MANIFEST_SCHEMA,

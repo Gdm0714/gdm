@@ -9,7 +9,7 @@ import {
   tokenize,
   type MemoryEntry,
   type MemoryScope,
-} from "../../agents/pi/gdm-memory/core.ts";
+} from "../../tests/legacy/pi/gdm-memory/core.ts";
 
 function entry(
   scope: MemoryScope,

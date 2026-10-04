@@ -7,5 +7,8 @@ cli/dist/
 .omo/
 __pycache__/
 *.py[cod]
+/target/
+.env
+.env.*
 /bench/context-pack-e2e/audit-input.md
 /bench/context-pack-pilot/audit-input.md

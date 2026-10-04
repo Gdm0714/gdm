@@ -1,15 +1,7 @@
-import { isAbsolute } from "node:path";
+import { randomUUID } from "node:crypto";
+import { nativeRpc } from "./native.ts";
 import { Type } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import {
-  DelegateBudget,
-  DEFAULT_MODEL,
-  DEFAULT_THINKING,
-  childTimeout,
-  resolveChildConfiguration,
-  validateDelegationRequest,
-} from "./delegate-policy.mjs";
-import { runBoundedChild } from "./delegate-runner.mjs";
 import { installGdmPresentation } from "./presentation.mjs";
 import { installGdmCommands } from "./ax.mjs";
 
@@ -46,7 +38,6 @@ async function runChild(
   cwd: string,
   model: string,
   thinking: string,
-  timeoutMs: number,
   task: DelegatedTask,
   signal: AbortSignal | undefined,
 ): Promise<ChildResult> {
@@ -57,23 +48,27 @@ async function runChild(
     `Deliverable: ${task.deliverable}`,
     `Verification requested from coordinator: ${task.verify}`,
   ].join("\n");
-  const result = await runBoundedChild({
+  try {
+  const result = await nativeRpc("delegate", {
+    action: "run",
     executable,
     cwd,
     model,
     thinking,
     systemPrompt: childSystemPrompt,
     taskText,
-    timeoutMs,
-    ...(signal === undefined ? {} : { signal }),
     metadata: { role: task.role, scope: task.scope },
-  });
+  }, cwd, signal, 16 * 60 * 1000);
   return {
     ...result,
     transportOk: result.ok,
     ok: result.ok && result.output.trim().length > 0,
     error: result.error || (result.output.trim().length === 0 ? "Specialist returned no substantive output" : ""),
   };
+  } catch (error) {
+    return { role: task.role, scope: task.scope, ok: false, transportOk: false, spawned: false,
+      exitCode: null, output: "", error: (error as Error).message };
+  }
 }
 
 function rejection(text: string, attempted: number | null, stage: string, budget?: unknown): Record<string, unknown> {
@@ -87,9 +82,9 @@ function rejection(text: string, attempted: number | null, stage: string, budget
 export default function gdmDelegateExtension(pi: ExtensionAPI): void {
   installGdmPresentation(pi);
   installGdmCommands(pi);
-  const globals = globalThis as typeof globalThis & { __gdmPiDelegateBudgetV1?: DelegateBudget };
-  const budget = globals.__gdmPiDelegateBudgetV1 ?? new DelegateBudget();
-  globals.__gdmPiDelegateBudgetV1 = budget;
+  const globals = globalThis as typeof globalThis & { __gdmPiDelegateSessionV2?: string };
+  const sessionId = globals.__gdmPiDelegateSessionV2 ??= randomUUID();
+  const budget = async (cwd: string, operation: string, count = 0) => await nativeRpc("delegate", { action: "budget", sessionId, operation, count }, cwd);
   // Pi's custom execute result can retain nested isError without setting the outer
   // event flag. Patch the documented tool_result event so rejection is observable.
   pi.on("tool_result", async (event) => {
@@ -99,8 +94,8 @@ export default function gdmDelegateExtension(pi: ExtensionAPI): void {
       return { isError: true };
     }
   });
-  const pinnedModel = process.env.GDM_PI_MODEL ?? DEFAULT_MODEL;
-  const pinnedThinking = (process.env.GDM_PI_THINKING ?? DEFAULT_THINKING) as ThinkingLevel;
+  const pinnedModel = process.env.GDM_PI_MODEL ?? "openai-codex/gpt-5.6-terra";
+  const pinnedThinking = (process.env.GDM_PI_THINKING ?? "high") as ThinkingLevel;
   let restoringModel = false;
   let restoringThinking = false;
 
@@ -154,7 +149,7 @@ export default function gdmDelegateExtension(pi: ExtensionAPI): void {
   pi.registerCommand("gdm-delegate-status", {
     description: "Show the bounded GDM Pi delegation budget",
     handler: async (_args, ctx) => {
-      const current = budget.snapshot();
+      const current = await budget(ctx.cwd, "snapshot");
       ctx.ui.notify(`GDM Pi delegates: ${current.active} active, ${current.total}/8 used`, "info");
     },
   });
@@ -180,35 +175,24 @@ export default function gdmDelegateExtension(pi: ExtensionAPI): void {
       }, { additionalProperties: false }), { minItems: 1, maxItems: 3 }),
     }, { additionalProperties: false }),
     async execute(_toolCallId, params, signal, onUpdate, ctx) {
-      const validation = validateDelegationRequest(params);
       const attempted = Array.isArray(params?.tasks) ? params.tasks.length : null;
-      if (validation !== null) return rejection(`GDM_PI_DELEGATION_REJECTED: ${validation}`, attempted, "validation");
-
+      try { await nativeRpc("delegate", { action: "validate", request: params }, ctx.cwd, signal); }
+      catch (error) { return rejection(`GDM_PI_DELEGATION_REJECTED: ${(error as Error).message}`, attempted, "validation"); }
       const tasks = params.tasks as DelegatedTask[];
-      const reservation = budget.reserve(tasks.length);
-      if (reservation !== null) return rejection(`GDM_PI_DELEGATION_REJECTED: ${reservation}`, tasks.length, "budget", budget.snapshot());
-
+      let currentBudget: unknown;
+      try { currentBudget = await budget(ctx.cwd, "reserve", tasks.length); }
+      catch (error) { return rejection(`GDM_PI_DELEGATION_REJECTED: ${(error as Error).message}`, tasks.length, "budget"); }
       const executable = process.env.GDM_PI_EXECUTABLE ?? "";
-      if (!isAbsolute(executable)) {
-        budget.release(tasks.length);
-        return rejection("GDM_PI_DELEGATION_REJECTED: launch through gdm-pi so the Pi executable is identity-bound", tasks.length, "configuration");
-      }
-      let configurations: ReturnType<typeof resolveChildConfiguration>[];
-      try {
-        configurations = tasks.map((task) => resolveChildConfiguration(task.role, process.env, task.thinking));
-      } catch (error) {
-        budget.release(tasks.length);
-        return rejection(`GDM_PI_DELEGATION_REJECTED: ${error instanceof Error ? error.message : "invalid child configuration"}`, tasks.length, "configuration");
-      }
-
+      let configurations: { model: string; thinking: string }[];
+      try { configurations = await Promise.all(tasks.map(task => nativeRpc("delegate", { action: "configure", role: task.role, thinking: task.thinking }, ctx.cwd, signal))); }
+      catch (error) { await budget(ctx.cwd, "release", tasks.length); return rejection(`GDM_PI_DELEGATION_REJECTED: ${(error as Error).message}`, tasks.length, "configuration"); }
       onUpdate?.({
         content: [{ type: "text", text: `GDM Pi delegates: 0/${tasks.length} complete` }],
-        details: budget.snapshot(),
+        details: currentBudget,
       });
       try {
-        const timeoutMs = childTimeout(process.env.GDM_PI_CHILD_TIMEOUT_MS);
         const results = await Promise.all(tasks.map((task, index) =>
-          runChild(executable, ctx.cwd, configurations[index]!.model, configurations[index]!.thinking, timeoutMs, task, signal)
+          runChild(executable, ctx.cwd, configurations[index]!.model, configurations[index]!.thinking, task, signal)
         ));
         const succeeded = results.filter((result) => result.ok).length;
         const text = results.map((result, index) => {
@@ -217,7 +201,7 @@ export default function gdmDelegateExtension(pi: ExtensionAPI): void {
         }).join("\n\n---\n\n");
         return {
           content: [{ type: "text", text: `GDM Pi delegates: ${succeeded}/${results.length} succeeded\n\n${text}` }],
-          details: { results, budget: budget.snapshot(), delegation: {
+          details: { results, budget: await budget(ctx.cwd, "snapshot"), delegation: {
             status: succeeded === results.length ? "completed" : "failed", stage: "children",
             attempted: tasks.length, launched: results.filter((result) => result.spawned).length,
             succeeded, failed: results.length - succeeded, rejected: 0,
@@ -225,7 +209,7 @@ export default function gdmDelegateExtension(pi: ExtensionAPI): void {
           ...(succeeded === results.length ? {} : { isError: true }),
         };
       } finally {
-        budget.release(tasks.length);
+        await budget(ctx.cwd, "release", tasks.length);
       }
     },
   });

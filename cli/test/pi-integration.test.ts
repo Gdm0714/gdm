@@ -22,8 +22,8 @@ import {
   childTimeout,
   resolveChildConfiguration,
   validateDelegationRequest,
-} from "../../agents/pi/delegate-policy.mjs";
-import { runBoundedChild } from "../../agents/pi/delegate-runner.mjs";
+} from "../../tests/legacy/pi/delegate-policy.mjs";
+import { runBoundedChild } from "../../tests/legacy/pi/delegate-runner.mjs";
 
 const ROOT = join(import.meta.dir, "..", "..");
 const RENDERER = join(ROOT, "install", "render-skills.ts");

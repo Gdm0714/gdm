@@ -6,12 +6,12 @@ import { pathToFileURL } from "node:url";
 import {
   createRememberEvent,
   type RememberEvent,
-} from "../../agents/pi/gdm-memory/core.ts";
+} from "../../tests/legacy/pi/gdm-memory/core.ts";
 import {
   MemoryStoreError,
   appendMemoryEvent,
   readMemoryStore,
-} from "../../agents/pi/gdm-memory/store.ts";
+} from "../../tests/legacy/pi/gdm-memory/store.ts";
 
 const roots: string[] = [];
 const STORE_MODULE = pathToFileURL(join(import.meta.dir, "..", "..", "agents", "pi", "gdm-memory", "store.ts")).href;

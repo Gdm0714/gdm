@@ -1,28 +1,8 @@
-import { isAbsolute } from "node:path";
-import { lstat, realpath } from "node:fs/promises";
 import { Type } from "@earendil-works/pi-ai";
-import {
-  withFileMutationQueue,
-  type ExtensionAPI,
-  type ExtensionContext,
-} from "@earendil-works/pi-coding-agent";
-import {
-  type MemoryEntry,
-  type MemoryScope,
-  createForgetEvent,
-  createRememberEvent,
-  renderMemoryBlock,
-  resolveEntryPrefix,
-  selectMemories,
-} from "./core.ts";
-import {
-  MemoryStoreError,
-  appendMemoryEvent,
-  globalStorePath,
-  inspectMemoryStore,
-  projectStorePath,
-  readMemoryStore,
-} from "./store.ts";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { nativeRpc } from "../native.ts";
+type MemoryScope = "global" | "project";
+type MemoryEntry = { id: string; text: string; scope: MemoryScope };
 
 type StoreTarget = {
   readonly scope: MemoryScope;
@@ -70,110 +50,30 @@ function parseListScope(args: readonly string[]): MemoryScope | undefined {
 export default function installGdmMemory(pi: ExtensionAPI): void {
   const agentDir = process.env.GDM_PI_AGENT_DIR ?? "";
   const warned = new Set<string>();
-  let disabledReason: string | undefined;
-
-  if (!isAbsolute(agentDir)) disabledReason = "GDM_PI_AGENT_DIR is missing or not absolute";
-
   const notifyOnce = (ctx: ExtensionContext, key: string, message: string) => {
     if (warned.has(key) || !ctx.hasUI) return;
-    warned.add(key);
-    ctx.ui.notify(message, "warning");
+    warned.add(key); ctx.ui.notify(message, "warning");
   };
-
-  const ensureAgentDir = async (): Promise<void> => {
-    if (disabledReason) throw new Error(disabledReason);
-    try {
-      const info = await lstat(agentDir);
-      if (!info.isDirectory() || info.isSymbolicLink()) throw new Error("not a regular directory");
-    } catch (error) {
-      disabledReason = `GDM_PI_AGENT_DIR is unavailable: ${(error as Error).message}`;
-      throw new Error(disabledReason);
-    }
-  };
-
-  const targetsFor = async (ctx: ExtensionContext): Promise<readonly StoreTarget[]> => {
-    await ensureAgentDir();
-    const targets: StoreTarget[] = [{ scope: "global", path: globalStorePath(agentDir) }];
-    if (ctx.isProjectTrusted()) {
-      const projectRealpath = await realpath(ctx.cwd);
-      targets.push({
-        scope: "project",
-        path: projectStorePath(agentDir, projectRealpath),
-        projectRealpath,
-      });
-    }
-    return targets;
-  };
-
+  const rpc = (ctx: ExtensionContext, request: object, signal?: AbortSignal) =>
+    nativeRpc("memory", { agentDir, projectTrusted: ctx.isProjectTrusted(), ...request }, ctx.cwd, signal);
   const loadMemory = async (ctx: ExtensionContext): Promise<LoadedMemory> => {
-    let targets: readonly StoreTarget[];
-    try {
-      targets = await targetsFor(ctx);
-    } catch (error) {
-      notifyOnce(ctx, "agent-dir", `GDM memory disabled: ${(error as Error).message}`);
-      return { global: [], project: [], targets: [] };
+    const scopes: MemoryScope[] = ctx.isProjectTrusted() ? ["global", "project"] : ["global"];
+    const entries: Record<MemoryScope, MemoryEntry[]> = { global: [], project: [] };
+    const targets: StoreTarget[] = [];
+    for (const scope of scopes) {
+      try { const snap = await rpc(ctx, { action: "snapshot", scope }); entries[scope] = snap.entries; targets.push({ scope, path: snap.path, projectRealpath: snap.projectRealpath }); }
+      catch (error) { notifyOnce(ctx, scope, `GDM memory store ignored: ${(error as Error).message}. Inspect with /memory doctor.`); }
     }
-    const loaded: { global: MemoryEntry[]; project: MemoryEntry[] } = { global: [], project: [] };
-    for (const target of targets) {
-      try {
-        const snapshot = await readMemoryStore(target);
-        loaded[target.scope] = [...snapshot.entries];
-      } catch (error) {
-        const message = error instanceof MemoryStoreError ? error.message : (error as Error).message;
-        notifyOnce(ctx, `store:${target.path}`, `GDM memory store ignored: ${message}. Inspect it with /memory doctor; it was not modified.`);
-      }
-    }
-    return { ...loaded, targets };
+    return { ...entries, targets };
   };
-
-  const targetForScope = async (ctx: ExtensionContext, requested?: MemoryScope): Promise<StoreTarget> => {
-    const targets = await targetsFor(ctx);
-    const scope = requested ?? (targets.some((target) => target.scope === "project") ? "project" : "global");
-    const target = targets.find((candidate) => candidate.scope === scope);
-    if (!target) throw new Error("Project memory requires a trusted project");
-    return target;
+  const remember = async (ctx: ExtensionContext, input: { scope?: MemoryScope; text: string; reason?: string; source: "slash-command" | "tool-auto" }, signal?: AbortSignal) => {
+    const saved = await rpc(ctx, { action: "remember", ...input, scope: input.scope ?? (ctx.isProjectTrusted() ? "project" : "global") }, signal);
+    return { ...saved, target: saved.snapshot };
   };
-
-  const appendToTarget = async (target: StoreTarget, event: ReturnType<typeof createRememberEvent> | ReturnType<typeof createForgetEvent>) => {
-    const stored = await withFileMutationQueue(target.path, () => appendMemoryEvent({ ...target, event }));
-    return stored.appended;
-  };
-
-  const remember = async (
-    ctx: ExtensionContext,
-    input: { readonly scope?: MemoryScope; readonly text: string; readonly reason?: string; readonly source: "slash-command" | "tool-auto" },
-  ) => {
-    const target = await targetForScope(ctx, input.scope);
-    const event = createRememberEvent({
-      scope: target.scope,
-      text: input.text,
-      reason: input.reason,
-      source: input.source,
-      now: new Date(),
-      projectRealpath: target.projectRealpath,
-    });
-    const appended = await appendToTarget(target, event);
-    return { target, event, appended };
-  };
-
-  const findEntry = async (ctx: ExtensionContext, id: string, scope?: MemoryScope) => {
-    const loaded = await loadMemory(ctx);
-    const candidates = [
-      ...(scope === "global" ? [] : loaded.project),
-      ...(scope === "project" ? [] : loaded.global),
-    ];
-    const entry = resolveEntryPrefix(candidates, id);
-    const target = loaded.targets.find((candidate) => candidate.scope === entry.scope);
-    if (!target) throw new Error(`Memory scope is unavailable: ${entry.scope}`);
-    return { entry, target };
-  };
-
-  const forget = async (ctx: ExtensionContext, id: string, scope?: MemoryScope) => {
-    const found = await findEntry(ctx, id, scope);
-    const event = createForgetEvent(found.entry, new Date());
-    await appendToTarget(found.target, event);
-    return found;
-  };
+  const forget = async (ctx: ExtensionContext, id: string, scope?: MemoryScope, signal?: AbortSignal) =>
+    await rpc(ctx, { action: "forget-any", id, ...(scope ? { scope } : {}) }, signal);
+  const select = async (ctx: ExtensionContext, prompt: string, loaded: LoadedMemory, scope?: MemoryScope) =>
+    await rpc(ctx, { action: "select", prompt, global: scope === "project" ? [] : loaded.global, project: scope === "global" ? [] : loaded.project });
 
   pi.on("session_start", () => {
     warned.clear();
@@ -181,11 +81,7 @@ export default function installGdmMemory(pi: ExtensionAPI): void {
 
   pi.on("before_agent_start", async (event, ctx) => {
     const loaded = await loadMemory(ctx);
-    const block = renderMemoryBlock(selectMemories({
-      prompt: event.prompt,
-      global: loaded.global,
-      project: loaded.project,
-    }));
+    const { block } = await select(ctx, event.prompt, loaded);
     if (!block) return;
     return { systemPrompt: `${event.systemPrompt}\n\n${block}` };
   });
@@ -219,8 +115,9 @@ export default function installGdmMemory(pi: ExtensionAPI): void {
       try {
         if (action === "doctor") {
           if (rest.length > 0) throw new Error("Usage: /memory doctor");
-          const targets = await targetsFor(ctx);
-          ctx.ui.notify((await Promise.all(targets.map(inspectMemoryStore))).join("\n"), "info");
+          const scopes = ctx.isProjectTrusted() ? ["global", "project"] : ["global"];
+          const lines = await Promise.all(scopes.map(async scope => { try { const value = await rpc(ctx, { action: "doctor", scope }); return `${scope}: ok · ${value.entries.length} entries · ${value.path}`; } catch (error) { return `${scope}: ${(error as Error).message}`; } }));
+          ctx.ui.notify(lines.join("\n"), "info");
           return;
         }
         if (action === "forget") {
@@ -272,11 +169,7 @@ export default function installGdmMemory(pi: ExtensionAPI): void {
       try {
         if (params.action === "recall") {
           const loaded = await loadMemory(ctx);
-          const selected = selectMemories({
-            prompt: params.query ?? "",
-            global: params.scope === "project" ? [] : loaded.global,
-            project: params.scope === "global" ? [] : loaded.project,
-          });
+          const { selected } = await select(ctx, params.query ?? "", loaded, params.scope);
           const entries = [...selected.project, ...selected.global];
           return result(
             entries.length > 0
@@ -295,7 +188,7 @@ export default function installGdmMemory(pi: ExtensionAPI): void {
             text: params.text,
             reason: params.reason,
             source: "tool-auto",
-          });
+          }, signal);
           return result(
             `${saved.appended ? "Remembered" : "Already remembered"} ${saved.event.id} (${saved.target.scope})`,
             { id: saved.event.id, scope: saved.target.scope, path: saved.target.path },
@@ -303,7 +196,7 @@ export default function installGdmMemory(pi: ExtensionAPI): void {
         }
 
         if (!params.id) return result("Memory not forgotten: id is required");
-        const found = await forget(ctx, params.id, params.scope);
+        const found = await forget(ctx, params.id, params.scope, signal);
         return result(`Forgot ${found.entry.id}`, { id: found.entry.id });
       } catch (error) {
         return result(`GDM memory request failed: ${(error as Error).message}`);

@@ -1,0 +1,74 @@
+gdm {VERSION} — 작업 증거가 다음 습관을 바꾸는 개인 AI 워크플로우
+
+흐름: 약속 → 증명 → 관찰 → 습관 → 비교
+
+사용법:
+  gdm plan init --slug <슬러그> (--brief <설명> | --brief-file <파일>) [--audit] [--risk <low|medium|high>] [--verification <deterministic|inspectable|opaque>] [--simplify] (--require <약속> | --forbid <금지>)...
+                [--assume <가정>]... [--uncertain <불확실성>]... [--allow-path <경로>]... [--forbid-path <경로>]... [--stop-if <중단 조건>]...
+                [--bottleneck <병목> --desired-outcome <원하는 결과> --baseline <기준값> --target <목표값> --unit <단위> --intervene-if <사람 개입 조건>]  # 선언한 outcome (GDM 미측정), 여섯 값은 전부 함께 사용
+  gdm plan contract [--slug <슬러그>] (--require <약속> | --forbid <금지>)...
+  gdm plan contract [--slug <슬러그>] (--allow-path <경로> | --forbid-path <경로> | --remove-allow-path <경로> | --remove-forbid-path <경로>)... --reason <사유>
+  gdm plan contract [--slug <슬러그>] --commit <forbidden|explicitly-approved> --reason <사유>
+  gdm plan contract [--slug <슬러그>] --check-commit
+  gdm plan contract --slug <슬러그> --activate-habit <habit-id>@<version>
+  gdm attempt fail --slug <슬러그> --attempt-id <id> (--command <id> | --capability <id>) --target <id> --error-code <id> --hypothesis <가설>
+  gdm attempt retry --slug <슬러그> --attempt-id <id> --fingerprint <id> [--changed <종류> --evidence <파일>]
+  gdm habit observe --pattern <id> --taxonomy <유형> --source-token <id> --source-group <id> --source-kind <incident|principle>
+  gdm habit import --file <observation-jsonl>
+  gdm habit propose --pattern <id> --statement <규칙> --source-event <event-id> --source-event <event-id> [--habit <habit-id>]
+  gdm habit adopt <habit-id>@<version> --rule-ref <상대 파일> --reason <사유>
+  gdm habit retire <habit-id>@<version> --reason <사유>
+  gdm habit evaluate <habit-id>@<version> --work <슬러그> --outcome <ineligible|skipped|clean|recurred> [--correct <event-id> --reason <사유>]
+  gdm habit status [--json]
+  gdm habit harvest [--json]
+  gdm plan add  --desc <항목> --cmd <검증 명령> --expect <기대> [--kind <regression|behavior|edge|static>] [--slug <슬러그>]
+  gdm plan add  --desc <항목> --expect <기대> --manual [--expert] [--slug <슬러그>]
+  gdm plan add  --from-brief [--dry-run] [--slug <슬러그>]   # brief의 "## 검증 항목" 초안 일괄 등록
+  gdm plan list [--json] [--slug <슬러그>]
+  gdm plan edit --check <id> [--desc ..] [--cmd ..] [--expect ..] [--kind ..] --reason <사유> [--slug <슬러그>]
+  gdm plan source --fingerprint <sha256> [--slug <슬러그>]
+  gdm pass <id> --red [--note <메모>] [--slug <슬러그>] [--expected-plan-fingerprint <sha256>]     # regression 항목의 수정 전 실패 증거
+  gdm pass <id> [--note <메모>] [--slug <슬러그>] [--expected-plan-fingerprint <sha256>]           # 자동 항목: cmd를 직접 실행해 판정
+  gdm pass <id> --manual --observed <확인 기록 파일> [--reviewer <검토자>] [...]   # 수동 항목
+  gdm recheck [--check <id>] [--slug <슬러그>] [--expected-plan-fingerprint <sha256>]              # 통과한 자동 항목 재실행 (회귀 검출)
+  gdm audit brief [--json] [--slug <슬러그>]                # 검수자에게 줄 브리핑 패키지 출력
+  gdm audit verdict (--pass | --fail) --report <검수보고 파일> --implementation-model <모델> --audit-model <모델> [--slug <슬러그>]
+  gdm done [--slug <슬러그>] [--expected-plan-fingerprint <sha256>]
+  gdm protocol export [--slug <슬러그>] [--expected-plan-fingerprint <sha256>] [--expected-state-fingerprint <sha256>] [--expected-source-fingerprint <sha256>]
+  gdm protocol handoff --slug <슬러그> --handoff-id <id> --from-role <id> --to-role <id> --intent <설명> [--from-provider <id>] [--to-provider <id>] [--artifact <저장소 상대 파일>] [--expected-plan-fingerprint <sha256>] [--expected-state-fingerprint <sha256>] [--expected-source-fingerprint <sha256>]
+  gdm protocol offer --slug <슬러그> --handoff-id <id> --from-role <id> --to-role <id> --intent <설명> --expected-plan-fingerprint <sha256> --expected-state-fingerprint <sha256> --expected-source-fingerprint <sha256> [--from-provider <id>] [--to-provider <id>] [--artifact <저장소 상대 파일>]
+  gdm protocol claim --slug <슬러그> --handoff-event-id <id> --claim-id <id> --receiver-role <id> [--receiver-provider <id>] --capability-profile gdm-read-only-specialist/v1 [--model-requested <id>] [--model-view]
+  gdm protocol finish --slug <슬러그> --claim-id <id> --exit-code <0..255> --output-artifact <저장소 상대 파일> --provider-target <id> --adapter-version <id> --executable <절대경로> --executable-sha256 <sha256> --executable-version <설명> --argv-policy-id <id> [--model-requested <id>] [--failure-code <id>]
+  gdm protocol adopt --slug <슬러그> --claim-id <id>
+  gdm protocol recover --slug <슬러그> --claim-id <id> --reason <사유>
+  gdm protocol status [--slug <슬러그>]
+  gdm workspace fingerprint --json
+  gdm context query                                      # trusted Git root의 bounded Context Pack JSON을 stdin request로 조회
+  gdm context status                                     # one-shot provider capability 조회
+  gdm status [--json] [--checks]                            # 현재 디렉토리 전체 작업 현황 (--checks: 항목 상세)
+  gdm resume [--json] [--slug <슬러그>]
+  gdm retro [--all] [--json] [--slug <슬러그>]              # 회고 (--all: 전체 작업 횡단 + 개선 제안)
+  gdm feedback --value good [--reason <사유>] [--source <id>] [--slug <슬러그>] [--json]
+  gdm feedback --value bad --reason <사유> [--source <id>] [--slug <슬러그>] [--json]
+  gdm miss --desc <내용> [--type <유형>] [--check <id>] [--slug <슬러그>]  # 게이트 통과 후 발견된 결함 기록
+  gdm repair state --slug <슬러그> --trailing-nul               # 끝의 NUL 손상만 명시적으로 복구
+  gdm delivery prepare --slug <슬러그> --issue <id> --branch <브랜치> --head <sha>
+  gdm delivery pr --slug <슬러그> --number <id> --head <sha>
+  gdm delivery ci --slug <슬러그> --status <passed|failed> --head <sha> --run <id>
+  gdm delivery approve-merge --slug <슬러그> --head <sha> --reason <승인 근거>
+  gdm delivery check-merge --slug <슬러그> --head <sha>
+  gdm delivery merged --slug <슬러그> --head <sha> --merge-sha <sha>
+  gdm agent hook-install --binary <절대경로> [--dry-run] [--json] # 기존 hooks.json을 보존해 런타임 게이트 설치
+  gdm agent hook-status [--json]                            # 설치·원장 상태 조회
+  gdm agent hook [--handler-id gdm-agent-gate-v1]           # Codex lifecycle hook 내부 진입점
+  gdm preset set <이름> <명령> | list | rm <이름>            # 프로젝트 표준 명령 등록
+  gdm doctor
+
+프리셋: plan add/edit의 --cmd에 "@이름"을 쓰면 등록된 명령으로 치환됩니다
+  (예: gdm preset set test "./gradlew test" → gdm plan add --cmd @test ...)
+
+규칙:
+  - 자동 항목의 증거는 gdm이 직접 만듭니다: pass가 cmd를 실행해 출력을 저장·해시하고,
+    exit 0일 때만 통과시킵니다 (cmd는 기대가 충족될 때만 성공하도록 작성하세요)
+  - done은 모든 항목 통과 + 증거 파일 현존·해시 일치를 재검증한 뒤에만 성공합니다
+  - 상태 파일(.gdm/)은 gdm 명령으로만 수정하세요

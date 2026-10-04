@@ -1,0 +1,209 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  local status="${1:-64}"
+  cat >&2 <<'EOF'
+usage: gdm-pi [auto|go|full] [pi arguments or initial prompt]
+       gdm-pi --raw [pi arguments]
+
+Profiles:
+  auto                    discover all installed GDM skills and route by request (default)
+  go                      expose only the daily gdm-go execution loop
+  full                    expose only the independently reviewed gdm-full loop
+  --raw                   run the real Pi CLI without the GDM harness
+
+Environment:
+  GDM_PI_MODEL          coordinator model (default: openai-codex/gpt-5.6-terra)
+  GDM_PI_THINKING       off|minimal|low|medium|high|xhigh|max (default: high)
+  GDM_PI_SCOUT_MODEL    read-only investigation (default: openai-codex/gpt-5.6-luna)
+  GDM_PI_DESIGN_MODEL   read-only design (default: openai-codex/gpt-6-astra)
+  GDM_PI_REVIEW_MODEL   advisory review (default: openai-codex/gpt-6-astra)
+  GDM_PI_{SCOUT,DESIGN,REVIEW}_THINKING  role effort (default: medium)
+  GDM_PI_CHILD_MODEL / GDM_PI_CHILD_THINKING  legacy fallback for all child roles
+                       precedence: role override > legacy child override > role default
+  GDM_PI_AUDIT_MODEL    different-model full audit (default: openai-codex/gpt-6-astra:medium)
+  GDM_PI_EXECUTABLE     absolute Pi executable override
+EOF
+  exit "$status"
+}
+
+profile="auto"
+raw_mode=0
+case "${1:-}" in
+  auto|go|full)
+    profile="$1"
+    shift
+    ;;
+  --raw)
+    raw_mode=1
+    shift
+    ;;
+  -h|--help)
+    usage 0
+    ;;
+  -v|--version|install|remove|uninstall|update|list|config|auth)
+    raw_mode=1
+    ;;
+esac
+
+launcher_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+if [ -f "$launcher_dir/gdm" ] && [ -x "$launcher_dir/gdm" ] && [ ! -L "$launcher_dir/gdm" ]; then
+  PATH="$launcher_dir:$PATH"
+  export PATH
+fi
+
+pi_executable="${GDM_PI_EXECUTABLE:-}"
+[ -n "$pi_executable" ] || pi_executable="$(command -v pi 2>/dev/null || true)"
+case "$pi_executable" in /*) ;; *) echo "gdm-pi: Pi executable not found" >&2; exit 69 ;; esac
+pi_executable="$(realpath "$pi_executable" 2>/dev/null || true)"
+[ -n "$pi_executable" ] && [ -f "$pi_executable" ] && [ -x "$pi_executable" ] || {
+  echo "gdm-pi: Pi executable is not a regular executable" >&2
+  exit 69
+}
+launcher_executable="$(realpath "${BASH_SOURCE[0]}" 2>/dev/null || true)"
+if [ "$pi_executable" = "$launcher_executable" ]; then
+  echo "gdm-pi: Pi executable resolves back to the harness; set GDM_PI_EXECUTABLE to the real Pi binary" >&2
+  exit 69
+fi
+if [ "$raw_mode" = "1" ]; then
+  exec "$pi_executable" "$@"
+fi
+
+for argument in "$@"; do
+  case "$argument" in
+    --provider|--provider=*|--model|--model=*|--models|--models=*|--thinking|--thinking=*|--api-key|--api-key=*)
+      echo "gdm-pi: reserved Pi option is managed by the harness: $argument" >&2
+      usage
+      ;;
+    --extension|--extension=*|-e|--skill|--skill=*|--no-extensions|--no-skills)
+      echo "gdm-pi: reserved Pi option is managed by the harness: $argument" >&2
+      usage
+      ;;
+    --tools|--tools=*|-t|--exclude-tools|--exclude-tools=*|-xt|--no-tools|-nt|--no-builtin-tools|-nbt)
+      echo "gdm-pi: reserved Pi option is managed by the harness: $argument" >&2
+      usage
+      ;;
+    --system-prompt|--system-prompt=*|--append-system-prompt|--append-system-prompt=*)
+      echo "gdm-pi: reserved Pi option is managed by the harness: $argument" >&2
+      usage
+      ;;
+  esac
+done
+
+gdm_executable="$(command -v gdm 2>/dev/null || true)"
+case "$gdm_executable" in /*) ;; *) echo "gdm-pi: GDM executable not found" >&2; exit 69 ;; esac
+gdm_executable="$(realpath "$gdm_executable" 2>/dev/null || true)"
+[ -n "$gdm_executable" ] && [ -f "$gdm_executable" ] && [ -x "$gdm_executable" ] || {
+  echo "gdm-pi: GDM executable is not a regular executable" >&2
+  exit 69
+}
+
+model="${GDM_PI_MODEL-openai-codex/gpt-5.6-terra}"
+if [[ ! "$model" =~ ^[A-Za-z0-9._+-]+/[A-Za-z0-9._+-]+$ ]] || [ "${#model}" -gt 160 ]; then
+  echo "gdm-pi: invalid GDM_PI_MODEL; expected provider/model" >&2
+  exit 64
+fi
+thinking="${GDM_PI_THINKING-high}"
+case "$thinking" in off|minimal|low|medium|high|xhigh|max) ;; *)
+  echo "gdm-pi: invalid GDM_PI_THINKING" >&2
+  exit 64
+;; esac
+audit_model="${GDM_PI_AUDIT_MODEL-openai-codex/gpt-6-astra:medium}"
+if [[ ! "$audit_model" =~ ^[A-Za-z0-9._+-]+/[A-Za-z0-9._+-]+:(off|minimal|low|medium|high|xhigh|max)$ ]] ||
+  [ "${#audit_model}" -gt 176 ]; then
+  echo "gdm-pi: invalid GDM_PI_AUDIT_MODEL; expected provider/model:thinking" >&2
+  exit 64
+fi
+
+# Validate every supplied override even when a more specific role takes precedence.
+for key in GDM_PI_CHILD_MODEL GDM_PI_SCOUT_MODEL GDM_PI_DESIGN_MODEL GDM_PI_REVIEW_MODEL; do
+  if [ "${!key+x}" = "x" ]; then
+    value="${!key}"
+    if [[ ! "$value" =~ ^[A-Za-z0-9._+-]+/[A-Za-z0-9._+-]+$ ]] || [ "${#value}" -gt 160 ]; then
+      echo "gdm-pi: invalid $key; expected provider/model" >&2
+      exit 64
+    fi
+  fi
+done
+for key in GDM_PI_CHILD_THINKING GDM_PI_SCOUT_THINKING GDM_PI_DESIGN_THINKING GDM_PI_REVIEW_THINKING; do
+  if [ "${!key+x}" = "x" ]; then
+    case "${!key}" in off|minimal|low|medium|high|xhigh|max) ;; *)
+      echo "gdm-pi: invalid $key" >&2
+      exit 64
+    ;; esac
+  fi
+done
+audit_model_identity="${audit_model%:*}"
+if [ "$profile" != "go" ] && [ "$audit_model_identity" = "$model" ]; then
+  echo "gdm-pi: full audit model identity must differ from the implementation model" >&2
+  exit 64
+fi
+
+install_cwd="$PWD"
+case "${PI_CODING_AGENT_DIR:-}" in
+  "") pi_agent_dir="$HOME/.pi/agent" ;;
+  /*) pi_agent_dir="$PI_CODING_AGENT_DIR" ;;
+  *) pi_agent_dir="$install_cwd/$PI_CODING_AGENT_DIR" ;;
+esac
+skill_root="$pi_agent_dir/skills"
+asset_root="$skill_root/gdm-agents/pi"
+extension="$asset_root/gdm-delegate.ts"
+memory_extension="$asset_root/gdm-memory/index.ts"
+computer_use_extension="$asset_root/gdm-computer-use/index.ts"
+presentation="$asset_root/presentation.mjs"
+ax="$asset_root/ax.mjs"
+coordinator_prompt="$asset_root/coordinator.md"
+skill_arguments=(--no-skills)
+required_assets=("$extension" "$memory_extension" "$computer_use_extension" "$presentation" "$ax" "$coordinator_prompt")
+
+if [ "$profile" = "auto" ]; then
+  gdm_skill_names=(analyze db design document email full go plan pr reflect research review ui)
+  for skill_name in "${gdm_skill_names[@]}"; do
+    skill_path="$skill_root/gdm-$skill_name"
+    required_assets+=("$skill_path/SKILL.md")
+    skill_arguments+=(--skill "$skill_path")
+  done
+else
+  selected_skill="$skill_root/gdm-$profile"
+  required_assets+=("$selected_skill/SKILL.md")
+  skill_arguments+=(--skill "$selected_skill")
+fi
+
+for required in "${required_assets[@]}"; do
+  [ -f "$required" ] && [ ! -L "$required" ] || {
+    echo "gdm-pi: installed harness asset missing or unsafe: $required" >&2
+    exit 69
+  }
+done
+
+export GDM_PI_EXECUTABLE="$pi_executable"
+export GDM_PI_AGENT_DIR="$pi_agent_dir"
+export GDM_EXECUTABLE="$gdm_executable"
+export GDM_PI_PROFILE="$profile"
+export GDM_PI_MODEL="$model"
+export GDM_PI_THINKING="$thinking"
+export GDM_PI_SCOUT_MODEL="${GDM_PI_SCOUT_MODEL-${GDM_PI_CHILD_MODEL-openai-codex/gpt-5.6-luna}}"
+export GDM_PI_DESIGN_MODEL="${GDM_PI_DESIGN_MODEL-${GDM_PI_CHILD_MODEL-openai-codex/gpt-6-astra}}"
+export GDM_PI_REVIEW_MODEL="${GDM_PI_REVIEW_MODEL-${GDM_PI_CHILD_MODEL-openai-codex/gpt-6-astra}}"
+export GDM_PI_SCOUT_THINKING="${GDM_PI_SCOUT_THINKING-${GDM_PI_CHILD_THINKING-medium}}"
+export GDM_PI_DESIGN_THINKING="${GDM_PI_DESIGN_THINKING-${GDM_PI_CHILD_THINKING-medium}}"
+export GDM_PI_REVIEW_THINKING="${GDM_PI_REVIEW_THINKING-${GDM_PI_CHILD_THINKING-medium}}"
+export GDM_PI_IMPLEMENTATION_MODEL="$model:$thinking"
+export GDM_PI_AUDIT_MODEL="$audit_model"
+
+exec "$pi_executable" \
+  --model "$model" \
+  --models "$model:$thinking" \
+  --thinking "$thinking" \
+  --no-extensions \
+  --extension "$extension" \
+  --extension "$memory_extension" \
+  --extension "$computer_use_extension" \
+  "${skill_arguments[@]}" \
+  --no-prompt-templates \
+  --append-system-prompt "$coordinator_prompt" \
+  --append-system-prompt "GDM Pi active profile: $profile. Implementation model metadata: $model:$thinking. Full audit model when required: $audit_model." \
+  --append-system-prompt "GDM delegate routing: scout=$GDM_PI_SCOUT_MODEL:$GDM_PI_SCOUT_THINKING; design=$GDM_PI_DESIGN_MODEL:$GDM_PI_DESIGN_THINKING; reviewer=$GDM_PI_REVIEW_MODEL:$GDM_PI_REVIEW_THINKING. Delegation is optional; reviewer output is advisory and does not satisfy full audit." \
+  --tools read,bash,edit,write,grep,find,ls,gdm_delegate,gdm_memory,gdm_computer_use \
+  "$@"
