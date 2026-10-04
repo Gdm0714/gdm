@@ -8,6 +8,7 @@ fn main() {
             Ok(())
         }
         Some("computer-use") => gdm::computer_use::run(&cwd, &args[1..]),
+        Some("device") => gdm::device::run(&cwd, &args[1..]),
         Some(
             "agent" | "memory" | "render-skills" | "verify-manifests" | "context" | "graph"
             | "delegate" | "role-run" | "provider-run" | "pi-launch" | "pi-commands",
@@ -37,7 +38,7 @@ fn main() {
                 include_str!("usage.txt").replace("{VERSION}", env!("CARGO_PKG_VERSION"))
             );
             eprintln!(
-                "  gdm computer-use status|serve|mcp|select|benchmark\n  gdm memory rpc\n  gdm render-skills --target codex|claude|pi --output DIR"
+                "  gdm computer-use status|serve|mcp|select|benchmark\n  gdm device list|doctor|build|install|test|capture\n  gdm memory rpc\n  gdm render-skills --target codex|claude|pi --output DIR"
             );
             Ok(())
         }
