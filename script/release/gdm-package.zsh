@@ -5,9 +5,11 @@ ROOT=${0:A:h:h:h}
 BIN_DIR=""
 OUT=""
 VERSION=""
+HOST_ONLY=0
 
 while (( $# > 0 )); do
   case "$1" in
+    --host-only) HOST_ONLY=1; shift ;;
     --bin-dir) BIN_DIR="$2"; shift 2 ;;
     --out) OUT="$2"; shift 2 ;;
     --version) VERSION="$2"; shift 2 ;;
@@ -16,10 +18,10 @@ while (( $# > 0 )); do
 done
 
 [[ -n "$BIN_DIR" && -n "$OUT" && "$VERSION" == <->.<->.<-> ]] || {
-  print -u2 -- "usage: $0 --bin-dir DIR --out DIR --version X.Y.Z"
+  print -u2 -- "usage: $0 --bin-dir DIR --out DIR --version X.Y.Z [--host-only]"
   exit 2
 }
-for command_name in bun install mktemp python3; do
+for command_name in install mktemp python3; do
   command -v "$command_name" >/dev/null 2>&1 || {
     print -u2 -- "missing release dependency: $command_name"
     exit 1
@@ -34,12 +36,22 @@ epoch=${SOURCE_DATE_EPOCH:-0}
   exit 2
 }
 
+case "$(uname -s):$(uname -m)" in
+  Darwin:arm64) host_asset=gdm-darwin-arm64 ;;
+  Darwin:x86_64) host_asset=gdm-darwin-x64 ;;
+  Linux:aarch64) host_asset=gdm-linux-arm64 ;;
+  Linux:x86_64) host_asset=gdm-linux-x64 ;;
+  *) print -u2 -- "unsupported release host"; exit 1 ;;
+esac
 assets=(
   gdm-darwin-arm64
   gdm-darwin-x64
   gdm-linux-arm64
   gdm-linux-x64
 )
+if (( HOST_ONLY )); then
+  assets=("$host_asset")
+fi
 for asset in $assets; do
   [[ -f "$BIN_DIR/$asset" && -x "$BIN_DIR/$asset" ]] || {
     print -u2 -- "missing executable release input: $BIN_DIR/$asset"
@@ -66,31 +78,16 @@ done
 
 mkdir -p "$render_root/targets"
 for target in codex claude pi; do
-  bun "$ROOT/install/render-skills.ts" \
+  "$BIN_DIR/$host_asset" render-skills \
     --target "$target" \
     --source-root "$ROOT/skills" \
     --agents-root "$ROOT/agents" \
     --output "$render_root/targets/$target" >/dev/null
 done
-python3 - "$render_root/targets/codex/gdm-target-manifest.json" \
+"$BIN_DIR/$host_asset" verify-manifests \
+  "$render_root/targets/codex/gdm-target-manifest.json" \
   "$render_root/targets/claude/gdm-target-manifest.json" \
-  "$render_root/targets/pi/gdm-target-manifest.json" <<'PY'
-import json
-import sys
-
-with open(sys.argv[1], encoding="utf-8") as source:
-    codex = json.load(source)
-with open(sys.argv[2], encoding="utf-8") as source:
-    claude = json.load(source)
-with open(sys.argv[3], encoding="utf-8") as source:
-    pi = json.load(source)
-if (codex.get("target") != "codex" or claude.get("target") != "claude" or
-        pi.get("target") != "pi"):
-    raise SystemExit("generated target manifest identity mismatch")
-for field in ("canonicalSourceSha256", "sourceSha256", "capabilityProfile", "runner"):
-    if codex.get(field) != claude.get(field) or codex.get(field) != pi.get(field):
-        raise SystemExit(f"generated target manifest parity mismatch: {field}")
-PY
+  "$render_root/targets/pi/gdm-target-manifest.json"
 
 python3 - "$render_root" "$stage/gdm-skills.tar.gz" "$epoch" <<'PY'
 from pathlib import Path

@@ -1,15 +1,14 @@
 {
   "name": "gdm",
-  "version": "0.12.2",
+  "version": "0.13.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun test",
+    "test": "python3 ../script/qa/rust-parity.py",
     "typecheck": "bunx --bun tsc --noEmit",
-    "coverage": "bun test --coverage",
-    "build": "bun build src/cli.ts --compile --outfile dist/gdm",
-    "smoke": "./dist/gdm --version",
-    "verify": "bun run typecheck && bun run coverage && bun run build && bun run smoke"
+    "build": "cargo build --manifest-path ../Cargo.toml --locked --release",
+    "smoke": "../target/release/gdm --version",
+    "verify": "cargo test --manifest-path ../Cargo.toml --locked && bun run test"
   },
   "devDependencies": {
     "@types/bun": "^1.3.14"

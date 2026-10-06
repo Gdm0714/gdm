@@ -61,7 +61,9 @@ function testGdmLauncher(directory: string): string {
   const launcher = join(directory, "gdm-test-launcher");
   writeFileSync(
     launcher,
-    `#!/bin/sh\nexec ${shellQuote(process.execPath)} ${shellQuote(CLI)} "$@"\n`,
+    process.env.GDM_NATIVE_TEST_BINARY
+      ? `#!/bin/sh\nexec ${shellQuote(process.env.GDM_NATIVE_TEST_BINARY)} "$@"\n`
+      : `#!/bin/sh\nexec ${shellQuote(process.execPath)} ${shellQuote(CLI)} "$@"\n`,
   );
   chmodSync(launcher, 0o755);
   // Separate cold executable startup from the production 3-second hook probe.
@@ -95,7 +97,7 @@ function writeCodexAgentGateAt(
   mkdirSync(codex, { recursive: true });
   const handler = (): AgentGateHandlerFixture => ({
     type: "command",
-    command: `'${process.execPath}' agent hook --handler-id gdm-agent-gate-v1`,
+    command: `'${process.env.GDM_NATIVE_TEST_BINARY ?? process.execPath}' agent hook --handler-id gdm-agent-gate-v1`,
     timeout: 10,
   });
   const fixture: AgentGateFixture = {

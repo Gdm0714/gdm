@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
 import { existsSync } from "node:fs";
-import { encodePng } from "../../agents/pi/gdm-computer-use/png.ts";
-import { delay } from "../../agents/pi/gdm-computer-use/rfb.ts";
-import { TartVmManager } from "../../agents/pi/gdm-computer-use/vm.ts";
+import { encodePng } from "../../tests/legacy/pi/gdm-computer-use/png.ts";
+import { delay } from "../../tests/legacy/pi/gdm-computer-use/rfb.ts";
+import { TartVmManager } from "../../tests/legacy/pi/gdm-computer-use/vm.ts";
 
 const live = process.env.GDM_CU_LIVE === "1" ? test : test.skip;
 

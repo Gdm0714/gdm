@@ -1,0 +1,3958 @@
+{
+  "schemaVersion": "gdm-computer-use-jev-reuse/v1",
+  "started_at": "2026-09-21T03:34:08.590Z",
+  "runtime": "rust",
+  "mode": "live-vm",
+  "model_requested": "sonnet",
+  "completed": false,
+  "credential_included": false,
+  "fixture_source_sha256": "d985524c4fca476b555ea9e32ce95a00c5a41d24b735dfc1d95eb579494f4911",
+  "runtime_source_sha256": "e56913c616932aca9b986058858a55ed195f8e0d3f118b86cc033a9ecfed1efc",
+  "fixture_binary_sha256": "82c5aa690d426ab2f6a4fa43b48b8a34a4f0788925ab94097a38ee34190c2d9d",
+  "max_regenerations_per_attempt": 1,
+  "samples": [
+    {
+      "repeat": 0,
+      "arm": "model_each_step",
+      "success": true,
+      "run_id": "fffe39f0-83b1-49b5-8806-6b041f2ae516",
+      "expected": [
+        "Test User 1",
+        "Seoul",
+        "1",
+        "CONFIRM"
+      ],
+      "fixture": "owned-rust-four-field-form",
+      "model_requested": "sonnet",
+      "end_to_end_ms": 50216,
+      "verification_ms": 505,
+      "final_state": {
+        "run_id": "fffe39f0-83b1-49b5-8806-6b041f2ae516",
+        "stage": 4,
+        "fields": [
+          "Name",
+          "City",
+          "Seats",
+          "Confirmation"
+        ],
+        "values": [
+          "Test User 1",
+          "Seoul",
+          "1",
+          "CONFIRM"
+        ]
+      },
+      "attempt_wall_ms": 50722,
+      "model_calls": 4,
+      "jev_calls": 0,
+      "regenerations": 0,
+      "events": [
+        {
+          "kind": "model",
+          "stage": 0,
+          "elapsed_ms": 5175,
+          "ok": true,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 10003,
+            "cache_read_input_tokens": 0,
+            "output_tokens": 209,
+            "output_tokens_details": {
+              "thinking_tokens": 0
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 10003,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "not_available",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 209,
+                "cache_read_input_tokens": 0,
+                "cache_creation_input_tokens": 10003,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 10003
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "models_reported_by_cli": [
+            "claude-sonnet-5"
+          ],
+          "response": {
+            "candidates": [
+              {
+                "description": "Name field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 1\n"
+                }
+              },
+              {
+                "description": "City field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Seoul\n"
+                }
+              },
+              {
+                "description": "Seats field",
+                "action": {
+                  "action": "type_text",
+                  "text": "1\n"
+                }
+              },
+              {
+                "description": "Confirmation field",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ],
+            "selected_index": 0
+          },
+          "proposal": {
+            "goal": "Fill Name with 'Test User 1', City with 'Seoul', Seats with '1', then Confirmation with exactly 'CONFIRM'. Complete the four-field form.",
+            "observation": "{\"run_id\":\"fffe39f0-83b1-49b5-8806-6b041f2ae516\",\"stage\":0,\"fields\":[\"Name\",\"City\",\"Seats\",\"Confirmation\"],\"values\":[]}",
+            "observation_sha256": "86ff2663efd88480cb303c862b5664cb863d7647480c1224898c7bea22761f1d",
+            "candidates": [
+              {
+                "id": "candidate_0",
+                "description": "Name field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 1\n"
+                }
+              },
+              {
+                "id": "candidate_1",
+                "description": "City field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Seoul\n"
+                }
+              },
+              {
+                "id": "candidate_2",
+                "description": "Seats field",
+                "action": {
+                  "action": "type_text",
+                  "text": "1\n"
+                }
+              },
+              {
+                "id": "candidate_3",
+                "description": "Confirmation field",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ]
+          },
+          "plan": [
+            "candidate_0"
+          ]
+        },
+        {
+          "kind": "model",
+          "stage": 1,
+          "elapsed_ms": 5256,
+          "ok": true,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 4806,
+            "cache_read_input_tokens": 5202,
+            "output_tokens": 193,
+            "output_tokens_details": {
+              "thinking_tokens": 0
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 4806,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "not_available",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 193,
+                "cache_read_input_tokens": 5202,
+                "cache_creation_input_tokens": 4806,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 4806
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "models_reported_by_cli": [
+            "claude-sonnet-5"
+          ],
+          "response": {
+            "candidates": [
+              {
+                "description": "Fill City field with Seoul",
+                "action": {
+                  "action": "type_text",
+                  "text": "Seoul\n"
+                }
+              },
+              {
+                "description": "Fill Seats field with 1",
+                "action": {
+                  "action": "type_text",
+                  "text": "1\n"
+                }
+              },
+              {
+                "description": "Fill Confirmation field",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ],
+            "selected_index": 0
+          },
+          "proposal": {
+            "goal": "Fill Name with 'Test User 1', City with 'Seoul', Seats with '1', then Confirmation with exactly 'CONFIRM'. Complete the four-field form.",
+            "observation": "{\"run_id\":\"fffe39f0-83b1-49b5-8806-6b041f2ae516\",\"stage\":1,\"fields\":[\"Name\",\"City\",\"Seats\",\"Confirmation\"],\"values\":[\"Test User 1\"]}",
+            "observation_sha256": "8beef3a5d069f99cf7adcce17119c43554234216dc527908d4f65afc78473362",
+            "candidates": [
+              {
+                "id": "candidate_0",
+                "description": "Fill City field with Seoul",
+                "action": {
+                  "action": "type_text",
+                  "text": "Seoul\n"
+                }
+              },
+              {
+                "id": "candidate_1",
+                "description": "Fill Seats field with 1",
+                "action": {
+                  "action": "type_text",
+                  "text": "1\n"
+                }
+              },
+              {
+                "id": "candidate_2",
+                "description": "Fill Confirmation field",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ]
+          },
+          "plan": [
+            "candidate_0"
+          ]
+        },
+        {
+          "kind": "model",
+          "stage": 2,
+          "elapsed_ms": 4664,
+          "ok": true,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 4813,
+            "cache_read_input_tokens": 5202,
+            "output_tokens": 113,
+            "output_tokens_details": {
+              "thinking_tokens": 0
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 4813,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "not_available",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 113,
+                "cache_read_input_tokens": 5202,
+                "cache_creation_input_tokens": 4813,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 4813
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "models_reported_by_cli": [
+            "claude-sonnet-5"
+          ],
+          "response": {
+            "candidates": [
+              {
+                "description": "Enter Seats value 1",
+                "action": {
+                  "action": "type_text",
+                  "text": "1\n"
+                }
+              }
+            ],
+            "selected_index": 0
+          },
+          "proposal": {
+            "goal": "Fill Name with 'Test User 1', City with 'Seoul', Seats with '1', then Confirmation with exactly 'CONFIRM'. Complete the four-field form.",
+            "observation": "{\"run_id\":\"fffe39f0-83b1-49b5-8806-6b041f2ae516\",\"stage\":2,\"fields\":[\"Name\",\"City\",\"Seats\",\"Confirmation\"],\"values\":[\"Test User 1\",\"Seoul\"]}",
+            "observation_sha256": "cd538add2f828e7a10e06bba0367c9e05e64cd4f3e514af235090e62cf3874eb",
+            "candidates": [
+              {
+                "id": "candidate_0",
+                "description": "Enter Seats value 1",
+                "action": {
+                  "action": "type_text",
+                  "text": "1\n"
+                }
+              }
+            ]
+          },
+          "plan": [
+            "candidate_0"
+          ]
+        },
+        {
+          "kind": "model",
+          "stage": 3,
+          "elapsed_ms": 4124,
+          "ok": true,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 4813,
+            "cache_read_input_tokens": 5202,
+            "output_tokens": 115,
+            "output_tokens_details": {
+              "thinking_tokens": 0
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 4813,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "not_available",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 115,
+                "cache_read_input_tokens": 5202,
+                "cache_creation_input_tokens": 4813,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 4813
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "models_reported_by_cli": [
+            "claude-sonnet-5"
+          ],
+          "response": {
+            "candidates": [
+              {
+                "description": "Confirm the form",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ],
+            "selected_index": 0
+          },
+          "proposal": {
+            "goal": "Fill Name with 'Test User 1', City with 'Seoul', Seats with '1', then Confirmation with exactly 'CONFIRM'. Complete the four-field form.",
+            "observation": "{\"run_id\":\"fffe39f0-83b1-49b5-8806-6b041f2ae516\",\"stage\":3,\"fields\":[\"Name\",\"City\",\"Seats\",\"Confirmation\"],\"values\":[\"Test User 1\",\"Seoul\",\"1\"]}",
+            "observation_sha256": "69edf1aebd23cf37f6b41043c84fdb2aab1cbc84f0d7d491443d29d3ad67ac03",
+            "candidates": [
+              {
+                "id": "candidate_0",
+                "description": "Confirm the form",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ]
+          },
+          "plan": [
+            "candidate_0"
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "stage": 0,
+          "action": {
+            "action": "type_text",
+            "text": "Test User 1\n"
+          },
+          "execution_and_observation_ms": 2748,
+          "state_after": {
+            "run_id": "fffe39f0-83b1-49b5-8806-6b041f2ae516",
+            "stage": 1,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 1"
+            ]
+          },
+          "screen_after": "8beef3a5d069f99cf7adcce17119c43554234216dc527908d4f65afc78473362"
+        },
+        {
+          "stage": 1,
+          "action": {
+            "action": "type_text",
+            "text": "Seoul\n"
+          },
+          "execution_and_observation_ms": 2942,
+          "state_after": {
+            "run_id": "fffe39f0-83b1-49b5-8806-6b041f2ae516",
+            "stage": 2,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 1",
+              "Seoul"
+            ]
+          },
+          "screen_after": "cd538add2f828e7a10e06bba0367c9e05e64cd4f3e514af235090e62cf3874eb"
+        },
+        {
+          "stage": 2,
+          "action": {
+            "action": "type_text",
+            "text": "1\n"
+          },
+          "execution_and_observation_ms": 1834,
+          "state_after": {
+            "run_id": "fffe39f0-83b1-49b5-8806-6b041f2ae516",
+            "stage": 3,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 1",
+              "Seoul",
+              "1"
+            ]
+          },
+          "screen_after": "69edf1aebd23cf37f6b41043c84fdb2aab1cbc84f0d7d491443d29d3ad67ac03"
+        },
+        {
+          "stage": 3,
+          "action": {
+            "action": "type_text",
+            "text": "CONFIRM\n"
+          },
+          "execution_and_observation_ms": 1851,
+          "state_after": {
+            "run_id": "fffe39f0-83b1-49b5-8806-6b041f2ae516",
+            "stage": 4,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 1",
+              "Seoul",
+              "1",
+              "CONFIRM"
+            ]
+          },
+          "screen_after": "c27e3488f496fb27b3af95e39eec1103ed9eb99d28c85bf0f6da2f9e8604b9c9"
+        }
+      ]
+    },
+    {
+      "repeat": 0,
+      "arm": "model_batch",
+      "success": true,
+      "run_id": "3ed32278-6ebb-4c9a-a67b-84564212de5d",
+      "expected": [
+        "Test User 1",
+        "Seoul",
+        "1",
+        "CONFIRM"
+      ],
+      "fixture": "owned-rust-four-field-form",
+      "model_requested": "sonnet",
+      "end_to_end_ms": 34269,
+      "verification_ms": 415,
+      "final_state": {
+        "run_id": "3ed32278-6ebb-4c9a-a67b-84564212de5d",
+        "stage": 4,
+        "fields": [
+          "Name",
+          "City",
+          "Seats",
+          "Confirmation"
+        ],
+        "values": [
+          "Test User 1",
+          "Seoul",
+          "1",
+          "CONFIRM"
+        ]
+      },
+      "attempt_wall_ms": 34685,
+      "model_calls": 1,
+      "jev_calls": 0,
+      "regenerations": 0,
+      "events": [
+        {
+          "kind": "model",
+          "stage": 0,
+          "elapsed_ms": 4623,
+          "ok": true,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 10012,
+            "cache_read_input_tokens": 0,
+            "output_tokens": 245,
+            "output_tokens_details": {
+              "thinking_tokens": 0
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 10012,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "not_available",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 245,
+                "cache_read_input_tokens": 0,
+                "cache_creation_input_tokens": 10012,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 10012
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "models_reported_by_cli": [
+            "claude-sonnet-5"
+          ],
+          "response": {
+            "candidates": [
+              {
+                "description": "Name field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 1\n"
+                }
+              },
+              {
+                "description": "City field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Seoul\n"
+                }
+              },
+              {
+                "description": "Seats field",
+                "action": {
+                  "action": "type_text",
+                  "text": "1\n"
+                }
+              },
+              {
+                "description": "Confirmation field",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ],
+            "plan": [
+              0,
+              1,
+              2,
+              3
+            ]
+          },
+          "proposal": {
+            "goal": "Fill Name with 'Test User 1', City with 'Seoul', Seats with '1', then Confirmation with exactly 'CONFIRM'. Complete the four-field form.",
+            "observation": "{\"run_id\":\"3ed32278-6ebb-4c9a-a67b-84564212de5d\",\"stage\":0,\"fields\":[\"Name\",\"City\",\"Seats\",\"Confirmation\"],\"values\":[]}",
+            "observation_sha256": "c27e3488f496fb27b3af95e39eec1103ed9eb99d28c85bf0f6da2f9e8604b9c9",
+            "candidates": [
+              {
+                "id": "candidate_0",
+                "description": "Name field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 1\n"
+                }
+              },
+              {
+                "id": "candidate_1",
+                "description": "City field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Seoul\n"
+                }
+              },
+              {
+                "id": "candidate_2",
+                "description": "Seats field",
+                "action": {
+                  "action": "type_text",
+                  "text": "1\n"
+                }
+              },
+              {
+                "id": "candidate_3",
+                "description": "Confirmation field",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ]
+          },
+          "plan": [
+            "candidate_0",
+            "candidate_1",
+            "candidate_2",
+            "candidate_3"
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "stage": 0,
+          "action": {
+            "action": "type_text",
+            "text": "Test User 1\n"
+          },
+          "execution_and_observation_ms": 2841,
+          "state_after": {
+            "run_id": "3ed32278-6ebb-4c9a-a67b-84564212de5d",
+            "stage": 1,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 1"
+            ]
+          },
+          "screen_after": "58fa0a0b9aa47ecbf32409115674c25148e139ad898f21cace93b90c9ab66d89"
+        },
+        {
+          "stage": 1,
+          "action": {
+            "action": "type_text",
+            "text": "Seoul\n"
+          },
+          "execution_and_observation_ms": 1829,
+          "state_after": {
+            "run_id": "3ed32278-6ebb-4c9a-a67b-84564212de5d",
+            "stage": 2,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 1",
+              "Seoul"
+            ]
+          },
+          "screen_after": "79b7f93f910045a3bcbeb8805bbfb32511e209a6ffe40f1cd68c289949ca2aff"
+        },
+        {
+          "stage": 2,
+          "action": {
+            "action": "type_text",
+            "text": "1\n"
+          },
+          "execution_and_observation_ms": 1815,
+          "state_after": {
+            "run_id": "3ed32278-6ebb-4c9a-a67b-84564212de5d",
+            "stage": 3,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 1",
+              "Seoul",
+              "1"
+            ]
+          },
+          "screen_after": "cb2225c0f9e44e5ca4542ee2f9986803abd32df159fa3f1bc85dde51a5a9d2a5"
+        },
+        {
+          "stage": 3,
+          "action": {
+            "action": "type_text",
+            "text": "CONFIRM\n"
+          },
+          "execution_and_observation_ms": 2863,
+          "state_after": {
+            "run_id": "3ed32278-6ebb-4c9a-a67b-84564212de5d",
+            "stage": 4,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 1",
+              "Seoul",
+              "1",
+              "CONFIRM"
+            ]
+          },
+          "screen_after": "9620e462f4112608d674314ded0afdaeace794287acfacb883b879f229a1ee11"
+        }
+      ]
+    },
+    {
+      "repeat": 0,
+      "arm": "model_reuse_jev",
+      "success": true,
+      "run_id": "1e74e7be-6afe-4976-a3fc-0fd61beffcf6",
+      "expected": [
+        "Test User 1",
+        "Seoul",
+        "1",
+        "CONFIRM"
+      ],
+      "fixture": "owned-rust-four-field-form",
+      "model_requested": "sonnet",
+      "end_to_end_ms": 39261,
+      "verification_ms": 514,
+      "final_state": {
+        "run_id": "1e74e7be-6afe-4976-a3fc-0fd61beffcf6",
+        "stage": 4,
+        "fields": [
+          "Name",
+          "City",
+          "Seats",
+          "Confirmation"
+        ],
+        "values": [
+          "Test User 1",
+          "Seoul",
+          "1",
+          "CONFIRM"
+        ]
+      },
+      "attempt_wall_ms": 39776,
+      "model_calls": 1,
+      "jev_calls": 4,
+      "regenerations": 0,
+      "events": [
+        {
+          "kind": "model",
+          "stage": 0,
+          "elapsed_ms": 4972,
+          "ok": true,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 9936,
+            "cache_read_input_tokens": 0,
+            "output_tokens": 189,
+            "output_tokens_details": {
+              "thinking_tokens": 0
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 9936,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "not_available",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 189,
+                "cache_read_input_tokens": 0,
+                "cache_creation_input_tokens": 9936,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 9936
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "models_reported_by_cli": [
+            "claude-sonnet-5"
+          ],
+          "response": {
+            "candidates": [
+              {
+                "description": "Name field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 1\n"
+                }
+              },
+              {
+                "description": "City field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "Seoul\n"
+                }
+              },
+              {
+                "description": "Seats field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "1\n"
+                }
+              },
+              {
+                "description": "Confirmation field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ]
+          },
+          "proposal": {
+            "goal": "Fill Name with 'Test User 1', City with 'Seoul', Seats with '1', then Confirmation with exactly 'CONFIRM'. Complete the four-field form.",
+            "observation": "{\"run_id\":\"1e74e7be-6afe-4976-a3fc-0fd61beffcf6\",\"stage\":0,\"fields\":[\"Name\",\"City\",\"Seats\",\"Confirmation\"],\"values\":[]}",
+            "observation_sha256": "9620e462f4112608d674314ded0afdaeace794287acfacb883b879f229a1ee11",
+            "candidates": [
+              {
+                "id": "candidate_0",
+                "description": "Name field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 1\n"
+                }
+              },
+              {
+                "id": "candidate_1",
+                "description": "City field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "Seoul\n"
+                }
+              },
+              {
+                "id": "candidate_2",
+                "description": "Seats field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "1\n"
+                }
+              },
+              {
+                "id": "candidate_3",
+                "description": "Confirmation field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ]
+          },
+          "plan": []
+        },
+        {
+          "kind": "jev",
+          "stage": 0,
+          "elapsed_ms": 583,
+          "ok": true,
+          "selection": {
+            "status": "selected",
+            "candidate_id": "candidate_0",
+            "candidate_fingerprint": "341c1889aa22a0622dc29bed227ec2f74c329eb863a6fd0ee0947868b67ae568",
+            "observation_sha256": "9620e462f4112608d674314ded0afdaeace794287acfacb883b879f229a1ee11",
+            "model": "jev-1.13.0",
+            "confidence": 0.99,
+            "probability": 0.99,
+            "probabilities": {
+              "candidate_0": 0.99,
+              "candidate_3": 0.0,
+              "candidate_2": 0.0,
+              "abstain": 0.01,
+              "candidate_1": 0.0
+            },
+            "elapsed_ms": 575,
+            "usage": {
+              "input_tokens": 694,
+              "output_tokens": 65
+            }
+          }
+        },
+        {
+          "kind": "jev",
+          "stage": 1,
+          "elapsed_ms": 563,
+          "ok": true,
+          "selection": {
+            "status": "selected",
+            "candidate_id": "candidate_1",
+            "candidate_fingerprint": "dda2fd2b579d297ab2844ccc121f9d004673a33d90dde7701695e60b9fa283d9",
+            "observation_sha256": "978afaf1bbaadbf513c44fdca89a43d937ee4f30bddaf9a6b1485fb55c164e44",
+            "model": "jev-1.13.0",
+            "confidence": 0.99,
+            "probability": 0.99,
+            "probabilities": {
+              "candidate_2": 0.0,
+              "candidate_1": 0.99,
+              "candidate_0": 0.0,
+              "candidate_3": 0.0,
+              "abstain": 0.01
+            },
+            "elapsed_ms": 562,
+            "usage": {
+              "input_tokens": 699,
+              "output_tokens": 65
+            }
+          }
+        },
+        {
+          "kind": "jev",
+          "stage": 2,
+          "elapsed_ms": 534,
+          "ok": true,
+          "selection": {
+            "status": "selected",
+            "candidate_id": "candidate_2",
+            "candidate_fingerprint": "033b9ed0e92aae35e60ffeb2456afbc8b0528ededaa57626e4e8252f635b58fd",
+            "observation_sha256": "1294fcc0044ed672510077dbb33ddb88eab52416f81a33d61efa424ec5e17311",
+            "model": "jev-1.13.0",
+            "confidence": 0.98,
+            "probability": 0.98,
+            "probabilities": {
+              "abstain": 0.01,
+              "candidate_3": 0.01,
+              "candidate_2": 0.98,
+              "candidate_1": 0.0,
+              "candidate_0": 0.0
+            },
+            "elapsed_ms": 533,
+            "usage": {
+              "input_tokens": 702,
+              "output_tokens": 65
+            }
+          }
+        },
+        {
+          "kind": "jev",
+          "stage": 3,
+          "elapsed_ms": 486,
+          "ok": true,
+          "selection": {
+            "status": "selected",
+            "candidate_id": "candidate_3",
+            "candidate_fingerprint": "7285a7ecacfb084e4196b3e6f621558d74e26e0477936d8bef9563b612fe2a7e",
+            "observation_sha256": "4c64b57df260cc67760868dff8b5079fdc343df5f1f19b8268749337aedb2a1d",
+            "model": "jev-1.13.0",
+            "confidence": 1.0,
+            "probability": 1.0,
+            "probabilities": {
+              "candidate_3": 1.0,
+              "candidate_0": 0.0,
+              "candidate_1": 0.0,
+              "abstain": 0.0,
+              "candidate_2": 0.0
+            },
+            "elapsed_ms": 485,
+            "usage": {
+              "input_tokens": 704,
+              "output_tokens": 65
+            }
+          }
+        }
+      ],
+      "steps": [
+        {
+          "stage": 0,
+          "action": {
+            "action": "type_text",
+            "text": "Test User 1\n"
+          },
+          "execution_and_observation_ms": 2751,
+          "state_after": {
+            "run_id": "1e74e7be-6afe-4976-a3fc-0fd61beffcf6",
+            "stage": 1,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 1"
+            ]
+          },
+          "screen_after": "978afaf1bbaadbf513c44fdca89a43d937ee4f30bddaf9a6b1485fb55c164e44"
+        },
+        {
+          "stage": 1,
+          "action": {
+            "action": "type_text",
+            "text": "Seoul\n"
+          },
+          "execution_and_observation_ms": 2712,
+          "state_after": {
+            "run_id": "1e74e7be-6afe-4976-a3fc-0fd61beffcf6",
+            "stage": 2,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 1",
+              "Seoul"
+            ]
+          },
+          "screen_after": "1294fcc0044ed672510077dbb33ddb88eab52416f81a33d61efa424ec5e17311"
+        },
+        {
+          "stage": 2,
+          "action": {
+            "action": "type_text",
+            "text": "1\n"
+          },
+          "execution_and_observation_ms": 2567,
+          "state_after": {
+            "run_id": "1e74e7be-6afe-4976-a3fc-0fd61beffcf6",
+            "stage": 3,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 1",
+              "Seoul",
+              "1"
+            ]
+          },
+          "screen_after": "4c64b57df260cc67760868dff8b5079fdc343df5f1f19b8268749337aedb2a1d"
+        },
+        {
+          "stage": 3,
+          "action": {
+            "action": "type_text",
+            "text": "CONFIRM\n"
+          },
+          "execution_and_observation_ms": 1713,
+          "state_after": {
+            "run_id": "1e74e7be-6afe-4976-a3fc-0fd61beffcf6",
+            "stage": 4,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 1",
+              "Seoul",
+              "1",
+              "CONFIRM"
+            ]
+          },
+          "screen_after": "10666f8def9d173b1e1a8609b07487847012848b8f3f89f7aa334de2b3fd9efe"
+        }
+      ]
+    },
+    {
+      "repeat": 1,
+      "arm": "model_batch",
+      "success": true,
+      "run_id": "25b8fc95-105e-4c93-b76d-cd0bacc6924f",
+      "expected": [
+        "Test User 2",
+        "Busan",
+        "2",
+        "CONFIRM"
+      ],
+      "fixture": "owned-rust-four-field-form",
+      "model_requested": "sonnet",
+      "end_to_end_ms": 34336,
+      "verification_ms": 486,
+      "final_state": {
+        "run_id": "25b8fc95-105e-4c93-b76d-cd0bacc6924f",
+        "stage": 4,
+        "fields": [
+          "Name",
+          "City",
+          "Seats",
+          "Confirmation"
+        ],
+        "values": [
+          "Test User 2",
+          "Busan",
+          "2",
+          "CONFIRM"
+        ]
+      },
+      "attempt_wall_ms": 34823,
+      "model_calls": 1,
+      "jev_calls": 0,
+      "regenerations": 0,
+      "events": [
+        {
+          "kind": "model",
+          "stage": 0,
+          "elapsed_ms": 4605,
+          "ok": true,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 10011,
+            "cache_read_input_tokens": 0,
+            "output_tokens": 210,
+            "output_tokens_details": {
+              "thinking_tokens": 0
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 10011,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "not_available",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 210,
+                "cache_read_input_tokens": 0,
+                "cache_creation_input_tokens": 10011,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 10011
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "models_reported_by_cli": [
+            "claude-sonnet-5"
+          ],
+          "response": {
+            "candidates": [
+              {
+                "description": "Name",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 2\n"
+                }
+              },
+              {
+                "description": "City",
+                "action": {
+                  "action": "type_text",
+                  "text": "Busan\n"
+                }
+              },
+              {
+                "description": "Seats",
+                "action": {
+                  "action": "type_text",
+                  "text": "2\n"
+                }
+              },
+              {
+                "description": "Confirmation",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ],
+            "plan": [
+              0,
+              1,
+              2,
+              3
+            ]
+          },
+          "proposal": {
+            "goal": "Fill Name with 'Test User 2', City with 'Busan', Seats with '2', then Confirmation with exactly 'CONFIRM'. Complete the four-field form.",
+            "observation": "{\"run_id\":\"25b8fc95-105e-4c93-b76d-cd0bacc6924f\",\"stage\":0,\"fields\":[\"Name\",\"City\",\"Seats\",\"Confirmation\"],\"values\":[]}",
+            "observation_sha256": "10666f8def9d173b1e1a8609b07487847012848b8f3f89f7aa334de2b3fd9efe",
+            "candidates": [
+              {
+                "id": "candidate_0",
+                "description": "Name",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 2\n"
+                }
+              },
+              {
+                "id": "candidate_1",
+                "description": "City",
+                "action": {
+                  "action": "type_text",
+                  "text": "Busan\n"
+                }
+              },
+              {
+                "id": "candidate_2",
+                "description": "Seats",
+                "action": {
+                  "action": "type_text",
+                  "text": "2\n"
+                }
+              },
+              {
+                "id": "candidate_3",
+                "description": "Confirmation",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ]
+          },
+          "plan": [
+            "candidate_0",
+            "candidate_1",
+            "candidate_2",
+            "candidate_3"
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "stage": 0,
+          "action": {
+            "action": "type_text",
+            "text": "Test User 2\n"
+          },
+          "execution_and_observation_ms": 2802,
+          "state_after": {
+            "run_id": "25b8fc95-105e-4c93-b76d-cd0bacc6924f",
+            "stage": 1,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 2"
+            ]
+          },
+          "screen_after": "de6160c89351a0af1af51d9ddd93749c9cf53e9a087c103b258c59800ba895ca"
+        },
+        {
+          "stage": 1,
+          "action": {
+            "action": "type_text",
+            "text": "Busan\n"
+          },
+          "execution_and_observation_ms": 1969,
+          "state_after": {
+            "run_id": "25b8fc95-105e-4c93-b76d-cd0bacc6924f",
+            "stage": 2,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 2",
+              "Busan"
+            ]
+          },
+          "screen_after": "0b98ddf817be70d38407810da4d7a633238ce1fff7b382c21b158fc3f651aff7"
+        },
+        {
+          "stage": 2,
+          "action": {
+            "action": "type_text",
+            "text": "2\n"
+          },
+          "execution_and_observation_ms": 1758,
+          "state_after": {
+            "run_id": "25b8fc95-105e-4c93-b76d-cd0bacc6924f",
+            "stage": 3,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 2",
+              "Busan",
+              "2"
+            ]
+          },
+          "screen_after": "6fca19120d1ba8f58ba83f421ba2f5b188fa93cefd6a685490a5c85c1b455f43"
+        },
+        {
+          "stage": 3,
+          "action": {
+            "action": "type_text",
+            "text": "CONFIRM\n"
+          },
+          "execution_and_observation_ms": 2764,
+          "state_after": {
+            "run_id": "25b8fc95-105e-4c93-b76d-cd0bacc6924f",
+            "stage": 4,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 2",
+              "Busan",
+              "2",
+              "CONFIRM"
+            ]
+          },
+          "screen_after": "93346c23b6bca972232aaf11ccad1e1fa98e98948c0fdd77467e100ede1967d4"
+        }
+      ]
+    },
+    {
+      "repeat": 1,
+      "arm": "model_reuse_jev",
+      "success": true,
+      "run_id": "304ddc02-3d8c-44b1-bf0a-04cd26b82019",
+      "expected": [
+        "Test User 2",
+        "Busan",
+        "2",
+        "CONFIRM"
+      ],
+      "fixture": "owned-rust-four-field-form",
+      "model_requested": "sonnet",
+      "end_to_end_ms": 39617,
+      "verification_ms": 458,
+      "final_state": {
+        "run_id": "304ddc02-3d8c-44b1-bf0a-04cd26b82019",
+        "stage": 4,
+        "fields": [
+          "Name",
+          "City",
+          "Seats",
+          "Confirmation"
+        ],
+        "values": [
+          "Test User 2",
+          "Busan",
+          "2",
+          "CONFIRM"
+        ]
+      },
+      "attempt_wall_ms": 40076,
+      "model_calls": 1,
+      "jev_calls": 4,
+      "regenerations": 0,
+      "events": [
+        {
+          "kind": "model",
+          "stage": 0,
+          "elapsed_ms": 4763,
+          "ok": true,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 9933,
+            "cache_read_input_tokens": 0,
+            "output_tokens": 196,
+            "output_tokens_details": {
+              "thinking_tokens": 0
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 9933,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "not_available",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 196,
+                "cache_read_input_tokens": 0,
+                "cache_creation_input_tokens": 9933,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 9933
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "models_reported_by_cli": [
+            "claude-sonnet-5"
+          ],
+          "response": {
+            "candidates": [
+              {
+                "description": "Fill Name field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 2\n"
+                }
+              },
+              {
+                "description": "Fill City field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Busan\n"
+                }
+              },
+              {
+                "description": "Fill Seats field",
+                "action": {
+                  "action": "type_text",
+                  "text": "2\n"
+                }
+              },
+              {
+                "description": "Fill Confirmation field",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ]
+          },
+          "proposal": {
+            "goal": "Fill Name with 'Test User 2', City with 'Busan', Seats with '2', then Confirmation with exactly 'CONFIRM'. Complete the four-field form.",
+            "observation": "{\"run_id\":\"304ddc02-3d8c-44b1-bf0a-04cd26b82019\",\"stage\":0,\"fields\":[\"Name\",\"City\",\"Seats\",\"Confirmation\"],\"values\":[]}",
+            "observation_sha256": "32e5b09c0047adec9095fe710bab1d6da4a2d67a2c39671e2b7cd04223d42e14",
+            "candidates": [
+              {
+                "id": "candidate_0",
+                "description": "Fill Name field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 2\n"
+                }
+              },
+              {
+                "id": "candidate_1",
+                "description": "Fill City field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Busan\n"
+                }
+              },
+              {
+                "id": "candidate_2",
+                "description": "Fill Seats field",
+                "action": {
+                  "action": "type_text",
+                  "text": "2\n"
+                }
+              },
+              {
+                "id": "candidate_3",
+                "description": "Fill Confirmation field",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ]
+          },
+          "plan": []
+        },
+        {
+          "kind": "jev",
+          "stage": 0,
+          "elapsed_ms": 529,
+          "ok": true,
+          "selection": {
+            "status": "selected",
+            "candidate_id": "candidate_0",
+            "candidate_fingerprint": "27f7ae7a7351b543742934709e684fb94e5bc5cecae0cee0f8e28b09ed74ebdb",
+            "observation_sha256": "32e5b09c0047adec9095fe710bab1d6da4a2d67a2c39671e2b7cd04223d42e14",
+            "model": "jev-1.13.0",
+            "confidence": 1.0,
+            "probability": 1.0,
+            "probabilities": {
+              "candidate_1": 0.0,
+              "candidate_2": 0.0,
+              "candidate_3": 0.0,
+              "abstain": 0.0,
+              "candidate_0": 1.0
+            },
+            "elapsed_ms": 528,
+            "usage": {
+              "input_tokens": 700,
+              "output_tokens": 65
+            }
+          }
+        },
+        {
+          "kind": "jev",
+          "stage": 1,
+          "elapsed_ms": 521,
+          "ok": true,
+          "selection": {
+            "status": "selected",
+            "candidate_id": "candidate_1",
+            "candidate_fingerprint": "25d0f911f7e8c7108fb55a3b59ba8f169d0f4cd997ecf4cd825fc3bc369d0b26",
+            "observation_sha256": "3af4db0a58fe7c9a994551d367fb0afb6dc2bb96ba550fea86e8d5a03476e61c",
+            "model": "jev-1.13.0",
+            "confidence": 0.99,
+            "probability": 0.99,
+            "probabilities": {
+              "candidate_2": 0.0,
+              "candidate_3": 0.0,
+              "candidate_1": 0.99,
+              "candidate_0": 0.0,
+              "abstain": 0.01
+            },
+            "elapsed_ms": 520,
+            "usage": {
+              "input_tokens": 705,
+              "output_tokens": 65
+            }
+          }
+        },
+        {
+          "kind": "jev",
+          "stage": 2,
+          "elapsed_ms": 492,
+          "ok": true,
+          "selection": {
+            "status": "selected",
+            "candidate_id": "candidate_2",
+            "candidate_fingerprint": "9a0651bce574c05498bea79980e48059b119691e760eef0035398b877e3757c4",
+            "observation_sha256": "143075430ed2251e4552ac8a210a8292881c8e4a7e4ecec128fdd8ae2abf0378",
+            "model": "jev-1.13.0",
+            "confidence": 0.98,
+            "probability": 0.98,
+            "probabilities": {
+              "candidate_3": 0.01,
+              "candidate_0": 0.0,
+              "candidate_1": 0.0,
+              "candidate_2": 0.98,
+              "abstain": 0.01
+            },
+            "elapsed_ms": 491,
+            "usage": {
+              "input_tokens": 708,
+              "output_tokens": 65
+            }
+          }
+        },
+        {
+          "kind": "jev",
+          "stage": 3,
+          "elapsed_ms": 549,
+          "ok": true,
+          "selection": {
+            "status": "selected",
+            "candidate_id": "candidate_3",
+            "candidate_fingerprint": "57b5b8aa3df2514a92dfd154cb2c4f7f1b3982897d38c6e91098ad62d1e89555",
+            "observation_sha256": "55443b4346adf673635f6fcf9152d1db4f8e12719103018ed046d45f44667937",
+            "model": "jev-1.13.0",
+            "confidence": 1.0,
+            "probability": 1.0,
+            "probabilities": {
+              "candidate_2": 0.0,
+              "candidate_3": 1.0,
+              "candidate_0": 0.0,
+              "candidate_1": 0.0,
+              "abstain": 0.0
+            },
+            "elapsed_ms": 548,
+            "usage": {
+              "input_tokens": 710,
+              "output_tokens": 65
+            }
+          }
+        }
+      ],
+      "steps": [
+        {
+          "stage": 0,
+          "action": {
+            "action": "type_text",
+            "text": "Test User 2\n"
+          },
+          "execution_and_observation_ms": 1826,
+          "state_after": {
+            "run_id": "304ddc02-3d8c-44b1-bf0a-04cd26b82019",
+            "stage": 1,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 2"
+            ]
+          },
+          "screen_after": "3af4db0a58fe7c9a994551d367fb0afb6dc2bb96ba550fea86e8d5a03476e61c"
+        },
+        {
+          "stage": 1,
+          "action": {
+            "action": "type_text",
+            "text": "Busan\n"
+          },
+          "execution_and_observation_ms": 2691,
+          "state_after": {
+            "run_id": "304ddc02-3d8c-44b1-bf0a-04cd26b82019",
+            "stage": 2,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 2",
+              "Busan"
+            ]
+          },
+          "screen_after": "143075430ed2251e4552ac8a210a8292881c8e4a7e4ecec128fdd8ae2abf0378"
+        },
+        {
+          "stage": 2,
+          "action": {
+            "action": "type_text",
+            "text": "2\n"
+          },
+          "execution_and_observation_ms": 2557,
+          "state_after": {
+            "run_id": "304ddc02-3d8c-44b1-bf0a-04cd26b82019",
+            "stage": 3,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 2",
+              "Busan",
+              "2"
+            ]
+          },
+          "screen_after": "55443b4346adf673635f6fcf9152d1db4f8e12719103018ed046d45f44667937"
+        },
+        {
+          "stage": 3,
+          "action": {
+            "action": "type_text",
+            "text": "CONFIRM\n"
+          },
+          "execution_and_observation_ms": 1898,
+          "state_after": {
+            "run_id": "304ddc02-3d8c-44b1-bf0a-04cd26b82019",
+            "stage": 4,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 2",
+              "Busan",
+              "2",
+              "CONFIRM"
+            ]
+          },
+          "screen_after": "2acc86b24701fc4a33428cc211d9e803f41474c841c8102ea4f0004dd61dd284"
+        }
+      ]
+    },
+    {
+      "repeat": 1,
+      "arm": "model_each_step",
+      "success": false,
+      "run_id": "c13cd81e-50f5-4c36-b868-b0d59258a8cf",
+      "expected": [
+        "Test User 2",
+        "Busan",
+        "2",
+        "CONFIRM"
+      ],
+      "fixture": "owned-rust-four-field-form",
+      "model_requested": "sonnet",
+      "end_to_end_ms": 49854,
+      "verification_ms": 536,
+      "final_state": {
+        "run_id": "c13cd81e-50f5-4c36-b868-b0d59258a8cf",
+        "stage": 4,
+        "fields": [
+          "Name",
+          "City",
+          "Seats",
+          "Confirmation"
+        ],
+        "values": [
+          "CONFIRM",
+          "Busan",
+          "2",
+          "CONFIRM"
+        ]
+      },
+      "attempt_wall_ms": 50390,
+      "model_calls": 4,
+      "jev_calls": 0,
+      "regenerations": 0,
+      "events": [
+        {
+          "kind": "model",
+          "stage": 0,
+          "elapsed_ms": 5328,
+          "ok": true,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 10002,
+            "cache_read_input_tokens": 0,
+            "output_tokens": 138,
+            "output_tokens_details": {
+              "thinking_tokens": 0
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 10002,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "not_available",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 138,
+                "cache_read_input_tokens": 0,
+                "cache_creation_input_tokens": 10002,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 10002
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "models_reported_by_cli": [
+            "claude-sonnet-5"
+          ],
+          "response": {
+            "candidates": [
+              {
+                "description": "Form already finished; no further input needed",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ],
+            "selected_index": 0
+          },
+          "proposal": {
+            "goal": "Fill Name with 'Test User 2', City with 'Busan', Seats with '2', then Confirmation with exactly 'CONFIRM'. Complete the four-field form.",
+            "observation": "{\"run_id\":\"c13cd81e-50f5-4c36-b868-b0d59258a8cf\",\"stage\":0,\"fields\":[\"Name\",\"City\",\"Seats\",\"Confirmation\"],\"values\":[]}",
+            "observation_sha256": "2acc86b24701fc4a33428cc211d9e803f41474c841c8102ea4f0004dd61dd284",
+            "candidates": [
+              {
+                "id": "candidate_0",
+                "description": "Form already finished; no further input needed",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ]
+          },
+          "plan": [
+            "candidate_0"
+          ]
+        },
+        {
+          "kind": "model",
+          "stage": 1,
+          "elapsed_ms": 6260,
+          "ok": true,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 4807,
+            "cache_read_input_tokens": 5201,
+            "output_tokens": 249,
+            "output_tokens_details": {
+              "thinking_tokens": 0
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 4807,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "not_available",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 249,
+                "cache_read_input_tokens": 5201,
+                "cache_creation_input_tokens": 4807,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 4807
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "models_reported_by_cli": [
+            "claude-sonnet-5"
+          ],
+          "response": {
+            "candidates": [
+              {
+                "description": "Enter City as Busan",
+                "action": {
+                  "action": "type_text",
+                  "text": "Busan\n"
+                }
+              },
+              {
+                "description": "Enter Seats as 2",
+                "action": {
+                  "action": "type_text",
+                  "text": "2\n"
+                }
+              },
+              {
+                "description": "Enter Confirmation",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ],
+            "selected_index": 0
+          },
+          "proposal": {
+            "goal": "Fill Name with 'Test User 2', City with 'Busan', Seats with '2', then Confirmation with exactly 'CONFIRM'. Complete the four-field form.",
+            "observation": "{\"run_id\":\"c13cd81e-50f5-4c36-b868-b0d59258a8cf\",\"stage\":1,\"fields\":[\"Name\",\"City\",\"Seats\",\"Confirmation\"],\"values\":[\"CONFIRM\"]}",
+            "observation_sha256": "cd4c5fd936f7ab5f9ef9cd91000e18a04918dfba7cab65d2f7191e1ccd41b22e",
+            "candidates": [
+              {
+                "id": "candidate_0",
+                "description": "Enter City as Busan",
+                "action": {
+                  "action": "type_text",
+                  "text": "Busan\n"
+                }
+              },
+              {
+                "id": "candidate_1",
+                "description": "Enter Seats as 2",
+                "action": {
+                  "action": "type_text",
+                  "text": "2\n"
+                }
+              },
+              {
+                "id": "candidate_2",
+                "description": "Enter Confirmation",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ]
+          },
+          "plan": [
+            "candidate_0"
+          ]
+        },
+        {
+          "kind": "model",
+          "stage": 2,
+          "elapsed_ms": 4169,
+          "ok": true,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 4812,
+            "cache_read_input_tokens": 5201,
+            "output_tokens": 185,
+            "output_tokens_details": {
+              "thinking_tokens": 0
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 4812,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "not_available",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 185,
+                "cache_read_input_tokens": 5201,
+                "cache_creation_input_tokens": 4812,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 4812
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "models_reported_by_cli": [
+            "claude-sonnet-5"
+          ],
+          "response": {
+            "candidates": [
+              {
+                "description": "Enter Seats value",
+                "action": {
+                  "action": "type_text",
+                  "text": "2\n"
+                }
+              },
+              {
+                "description": "Enter Confirmation value",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ],
+            "selected_index": 0
+          },
+          "proposal": {
+            "goal": "Fill Name with 'Test User 2', City with 'Busan', Seats with '2', then Confirmation with exactly 'CONFIRM'. Complete the four-field form.",
+            "observation": "{\"run_id\":\"c13cd81e-50f5-4c36-b868-b0d59258a8cf\",\"stage\":2,\"fields\":[\"Name\",\"City\",\"Seats\",\"Confirmation\"],\"values\":[\"CONFIRM\",\"Busan\"]}",
+            "observation_sha256": "c86e0bdcf139bb06f199bea6dbc7f3f736a1fb4d63ae8e393bc1f2e77218c91e",
+            "candidates": [
+              {
+                "id": "candidate_0",
+                "description": "Enter Seats value",
+                "action": {
+                  "action": "type_text",
+                  "text": "2\n"
+                }
+              },
+              {
+                "id": "candidate_1",
+                "description": "Enter Confirmation value",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ]
+          },
+          "plan": [
+            "candidate_0"
+          ]
+        },
+        {
+          "kind": "model",
+          "stage": 3,
+          "elapsed_ms": 5117,
+          "ok": true,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 4813,
+            "cache_read_input_tokens": 5201,
+            "output_tokens": 175,
+            "output_tokens_details": {
+              "thinking_tokens": 51
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 4813,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "not_available",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 175,
+                "cache_read_input_tokens": 5201,
+                "cache_creation_input_tokens": 4813,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 4813
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "models_reported_by_cli": [
+            "claude-sonnet-5"
+          ],
+          "response": {
+            "candidates": [
+              {
+                "description": "Type CONFIRM into Confirmation field",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ],
+            "selected_index": 0
+          },
+          "proposal": {
+            "goal": "Fill Name with 'Test User 2', City with 'Busan', Seats with '2', then Confirmation with exactly 'CONFIRM'. Complete the four-field form.",
+            "observation": "{\"run_id\":\"c13cd81e-50f5-4c36-b868-b0d59258a8cf\",\"stage\":3,\"fields\":[\"Name\",\"City\",\"Seats\",\"Confirmation\"],\"values\":[\"CONFIRM\",\"Busan\",\"2\"]}",
+            "observation_sha256": "68ea9285f4eede6fc51ea51256556e31b549e944055916cd31cc7d02876d5652",
+            "candidates": [
+              {
+                "id": "candidate_0",
+                "description": "Type CONFIRM into Confirmation field",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ]
+          },
+          "plan": [
+            "candidate_0"
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "stage": 0,
+          "action": {
+            "action": "type_text",
+            "text": "CONFIRM\n"
+          },
+          "execution_and_observation_ms": 1754,
+          "state_after": {
+            "run_id": "c13cd81e-50f5-4c36-b868-b0d59258a8cf",
+            "stage": 1,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "CONFIRM"
+            ]
+          },
+          "screen_after": "cd4c5fd936f7ab5f9ef9cd91000e18a04918dfba7cab65d2f7191e1ccd41b22e"
+        },
+        {
+          "stage": 1,
+          "action": {
+            "action": "type_text",
+            "text": "Busan\n"
+          },
+          "execution_and_observation_ms": 1848,
+          "state_after": {
+            "run_id": "c13cd81e-50f5-4c36-b868-b0d59258a8cf",
+            "stage": 2,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "CONFIRM",
+              "Busan"
+            ]
+          },
+          "screen_after": "c86e0bdcf139bb06f199bea6dbc7f3f736a1fb4d63ae8e393bc1f2e77218c91e"
+        },
+        {
+          "stage": 2,
+          "action": {
+            "action": "type_text",
+            "text": "2\n"
+          },
+          "execution_and_observation_ms": 1795,
+          "state_after": {
+            "run_id": "c13cd81e-50f5-4c36-b868-b0d59258a8cf",
+            "stage": 3,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "CONFIRM",
+              "Busan",
+              "2"
+            ]
+          },
+          "screen_after": "68ea9285f4eede6fc51ea51256556e31b549e944055916cd31cc7d02876d5652"
+        },
+        {
+          "stage": 3,
+          "action": {
+            "action": "type_text",
+            "text": "CONFIRM\n"
+          },
+          "execution_and_observation_ms": 1787,
+          "state_after": {
+            "run_id": "c13cd81e-50f5-4c36-b868-b0d59258a8cf",
+            "stage": 4,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "CONFIRM",
+              "Busan",
+              "2",
+              "CONFIRM"
+            ]
+          },
+          "screen_after": "68cc94bc234fcf717977966181478670780035ee95afe20fbfcc00f7115d868c"
+        }
+      ]
+    },
+    {
+      "repeat": 2,
+      "arm": "model_reuse_jev",
+      "success": true,
+      "run_id": "500c5de7-fafc-4e3e-b53b-076a541896b4",
+      "expected": [
+        "Test User 3",
+        "Seoul",
+        "3",
+        "CONFIRM"
+      ],
+      "fixture": "owned-rust-four-field-form",
+      "model_requested": "sonnet",
+      "end_to_end_ms": 44585,
+      "verification_ms": 533,
+      "final_state": {
+        "run_id": "500c5de7-fafc-4e3e-b53b-076a541896b4",
+        "stage": 4,
+        "fields": [
+          "Name",
+          "City",
+          "Seats",
+          "Confirmation"
+        ],
+        "values": [
+          "Test User 3",
+          "Seoul",
+          "3",
+          "CONFIRM"
+        ]
+      },
+      "attempt_wall_ms": 45119,
+      "model_calls": 1,
+      "jev_calls": 4,
+      "regenerations": 0,
+      "events": [
+        {
+          "kind": "model",
+          "stage": 0,
+          "elapsed_ms": 4859,
+          "ok": true,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 9934,
+            "cache_read_input_tokens": 0,
+            "output_tokens": 189,
+            "output_tokens_details": {
+              "thinking_tokens": 0
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 9934,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "not_available",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 189,
+                "cache_read_input_tokens": 0,
+                "cache_creation_input_tokens": 9934,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 9934
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "models_reported_by_cli": [
+            "claude-sonnet-5"
+          ],
+          "response": {
+            "candidates": [
+              {
+                "description": "Name field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 3\n"
+                }
+              },
+              {
+                "description": "City field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "Seoul\n"
+                }
+              },
+              {
+                "description": "Seats field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "3\n"
+                }
+              },
+              {
+                "description": "Confirmation field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ]
+          },
+          "proposal": {
+            "goal": "Fill Name with 'Test User 3', City with 'Seoul', Seats with '3', then Confirmation with exactly 'CONFIRM'. Complete the four-field form.",
+            "observation": "{\"run_id\":\"500c5de7-fafc-4e3e-b53b-076a541896b4\",\"stage\":0,\"fields\":[\"Name\",\"City\",\"Seats\",\"Confirmation\"],\"values\":[]}",
+            "observation_sha256": "68cc94bc234fcf717977966181478670780035ee95afe20fbfcc00f7115d868c",
+            "candidates": [
+              {
+                "id": "candidate_0",
+                "description": "Name field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 3\n"
+                }
+              },
+              {
+                "id": "candidate_1",
+                "description": "City field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "Seoul\n"
+                }
+              },
+              {
+                "id": "candidate_2",
+                "description": "Seats field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "3\n"
+                }
+              },
+              {
+                "id": "candidate_3",
+                "description": "Confirmation field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ]
+          },
+          "plan": []
+        },
+        {
+          "kind": "jev",
+          "stage": 0,
+          "elapsed_ms": 565,
+          "ok": true,
+          "selection": {
+            "status": "selected",
+            "candidate_id": "candidate_0",
+            "candidate_fingerprint": "cfdbb298a436e34375360f5f5305d5da91077a4384646a325e277e982b0aa59d",
+            "observation_sha256": "68cc94bc234fcf717977966181478670780035ee95afe20fbfcc00f7115d868c",
+            "model": "jev-1.13.0",
+            "confidence": 0.99,
+            "probability": 1.0,
+            "probabilities": {
+              "candidate_2": 0.0,
+              "candidate_0": 1.0,
+              "abstain": 0.0,
+              "candidate_1": 0.0,
+              "candidate_3": 0.0
+            },
+            "elapsed_ms": 565,
+            "usage": {
+              "input_tokens": 699,
+              "output_tokens": 65
+            }
+          }
+        },
+        {
+          "kind": "jev",
+          "stage": 1,
+          "elapsed_ms": 488,
+          "ok": true,
+          "selection": {
+            "status": "selected",
+            "candidate_id": "candidate_1",
+            "candidate_fingerprint": "3c3812b3a47ad11ca99c0fc4a73cd8b0e25be16e818a7a9e2289d038656f7055",
+            "observation_sha256": "ae0336dad7cc8b628bfd6a420f4367af6e516c5c4850b7e5e4338f4aa8e32586",
+            "model": "jev-1.13.0",
+            "confidence": 0.99,
+            "probability": 0.99,
+            "probabilities": {
+              "candidate_3": 0.0,
+              "candidate_2": 0.0,
+              "candidate_0": 0.0,
+              "candidate_1": 0.99,
+              "abstain": 0.01
+            },
+            "elapsed_ms": 487,
+            "usage": {
+              "input_tokens": 704,
+              "output_tokens": 65
+            }
+          }
+        },
+        {
+          "kind": "jev",
+          "stage": 2,
+          "elapsed_ms": 557,
+          "ok": true,
+          "selection": {
+            "status": "selected",
+            "candidate_id": "candidate_2",
+            "candidate_fingerprint": "0e19368a0dc72200269b606de410b7d2dad51681bc6f65fd6449f1d3bfedcce2",
+            "observation_sha256": "5cea2a9a4a1691aabf87f281186a22e04a1f9a34643248a55789af65f6390bde",
+            "model": "jev-1.13.0",
+            "confidence": 0.98,
+            "probability": 0.98,
+            "probabilities": {
+              "candidate_3": 0.01,
+              "candidate_0": 0.0,
+              "candidate_2": 0.98,
+              "candidate_1": 0.0,
+              "abstain": 0.01
+            },
+            "elapsed_ms": 557,
+            "usage": {
+              "input_tokens": 707,
+              "output_tokens": 65
+            }
+          }
+        },
+        {
+          "kind": "jev",
+          "stage": 3,
+          "elapsed_ms": 552,
+          "ok": true,
+          "selection": {
+            "status": "selected",
+            "candidate_id": "candidate_3",
+            "candidate_fingerprint": "6ec829aa95c51defd3016b10cf53dd78c3e9c3fa89b0f61fdc595759a19e1c67",
+            "observation_sha256": "f4baed6a338600c94f2b110803260055de07904ad5feee8ff2f4b983d500fae3",
+            "model": "jev-1.13.0",
+            "confidence": 1.0,
+            "probability": 1.0,
+            "probabilities": {
+              "candidate_2": 0.0,
+              "candidate_3": 1.0,
+              "candidate_1": 0.0,
+              "candidate_0": 0.0,
+              "abstain": 0.0
+            },
+            "elapsed_ms": 547,
+            "usage": {
+              "input_tokens": 709,
+              "output_tokens": 65
+            }
+          }
+        }
+      ],
+      "steps": [
+        {
+          "stage": 0,
+          "action": {
+            "action": "type_text",
+            "text": "Test User 3\n"
+          },
+          "execution_and_observation_ms": 1839,
+          "state_after": {
+            "run_id": "500c5de7-fafc-4e3e-b53b-076a541896b4",
+            "stage": 1,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 3"
+            ]
+          },
+          "screen_after": "ae0336dad7cc8b628bfd6a420f4367af6e516c5c4850b7e5e4338f4aa8e32586"
+        },
+        {
+          "stage": 1,
+          "action": {
+            "action": "type_text",
+            "text": "Seoul\n"
+          },
+          "execution_and_observation_ms": 3198,
+          "state_after": {
+            "run_id": "500c5de7-fafc-4e3e-b53b-076a541896b4",
+            "stage": 2,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 3",
+              "Seoul"
+            ]
+          },
+          "screen_after": "5cea2a9a4a1691aabf87f281186a22e04a1f9a34643248a55789af65f6390bde"
+        },
+        {
+          "stage": 2,
+          "action": {
+            "action": "type_text",
+            "text": "3\n"
+          },
+          "execution_and_observation_ms": 3539,
+          "state_after": {
+            "run_id": "500c5de7-fafc-4e3e-b53b-076a541896b4",
+            "stage": 3,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 3",
+              "Seoul",
+              "3"
+            ]
+          },
+          "screen_after": "f4baed6a338600c94f2b110803260055de07904ad5feee8ff2f4b983d500fae3"
+        },
+        {
+          "stage": 3,
+          "action": {
+            "action": "type_text",
+            "text": "CONFIRM\n"
+          },
+          "execution_and_observation_ms": 1781,
+          "state_after": {
+            "run_id": "500c5de7-fafc-4e3e-b53b-076a541896b4",
+            "stage": 4,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 3",
+              "Seoul",
+              "3",
+              "CONFIRM"
+            ]
+          },
+          "screen_after": "b8eb767c609ddc92fb507ac7817aac0c95dc88b1bb75c1091efcc05cea659ded"
+        }
+      ]
+    },
+    {
+      "repeat": 2,
+      "arm": "model_each_step",
+      "success": false,
+      "run_id": "790ce0e1-46cf-4dae-a706-ec2366fba276",
+      "expected": [
+        "Test User 3",
+        "Seoul",
+        "3",
+        "CONFIRM"
+      ],
+      "fixture": "owned-rust-four-field-form",
+      "model_requested": "sonnet",
+      "end_to_end_ms": 58130,
+      "verification_ms": 450,
+      "final_state": {
+        "run_id": "790ce0e1-46cf-4dae-a706-ec2366fba276",
+        "stage": 4,
+        "fields": [
+          "Name",
+          "City",
+          "Seats",
+          "Confirmation"
+        ],
+        "values": [
+          "CONFIRM",
+          "Seoul",
+          "3",
+          "CONFIRM"
+        ]
+      },
+      "attempt_wall_ms": 58581,
+      "model_calls": 4,
+      "jev_calls": 0,
+      "regenerations": 0,
+      "events": [
+        {
+          "kind": "model",
+          "stage": 0,
+          "elapsed_ms": 5750,
+          "ok": true,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 10002,
+            "cache_read_input_tokens": 0,
+            "output_tokens": 127,
+            "output_tokens_details": {
+              "thinking_tokens": 0
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 10002,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "not_available",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 127,
+                "cache_read_input_tokens": 0,
+                "cache_creation_input_tokens": 10002,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 10002
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "models_reported_by_cli": [
+            "claude-sonnet-5"
+          ],
+          "response": {
+            "candidates": [
+              {
+                "description": "Form already finished; no further input needed",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ],
+            "selected_index": 0
+          },
+          "proposal": {
+            "goal": "Fill Name with 'Test User 3', City with 'Seoul', Seats with '3', then Confirmation with exactly 'CONFIRM'. Complete the four-field form.",
+            "observation": "{\"run_id\":\"790ce0e1-46cf-4dae-a706-ec2366fba276\",\"stage\":0,\"fields\":[\"Name\",\"City\",\"Seats\",\"Confirmation\"],\"values\":[]}",
+            "observation_sha256": "b8eb767c609ddc92fb507ac7817aac0c95dc88b1bb75c1091efcc05cea659ded",
+            "candidates": [
+              {
+                "id": "candidate_0",
+                "description": "Form already finished; no further input needed",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ]
+          },
+          "plan": [
+            "candidate_0"
+          ]
+        },
+        {
+          "kind": "model",
+          "stage": 1,
+          "elapsed_ms": 4539,
+          "ok": true,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 4807,
+            "cache_read_input_tokens": 5202,
+            "output_tokens": 242,
+            "output_tokens_details": {
+              "thinking_tokens": 45
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 4807,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "not_available",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 242,
+                "cache_read_input_tokens": 5202,
+                "cache_creation_input_tokens": 4807,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 4807
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "models_reported_by_cli": [
+            "claude-sonnet-5"
+          ],
+          "response": {
+            "candidates": [
+              {
+                "description": "Enter City as Seoul",
+                "action": {
+                  "action": "type_text",
+                  "text": "Seoul\n"
+                }
+              },
+              {
+                "description": "Enter Seats as 3",
+                "action": {
+                  "action": "type_text",
+                  "text": "3\n"
+                }
+              },
+              {
+                "description": "Enter Confirmation as CONFIRM",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ],
+            "selected_index": 0
+          },
+          "proposal": {
+            "goal": "Fill Name with 'Test User 3', City with 'Seoul', Seats with '3', then Confirmation with exactly 'CONFIRM'. Complete the four-field form.",
+            "observation": "{\"run_id\":\"790ce0e1-46cf-4dae-a706-ec2366fba276\",\"stage\":1,\"fields\":[\"Name\",\"City\",\"Seats\",\"Confirmation\"],\"values\":[\"CONFIRM\"]}",
+            "observation_sha256": "51a1b9a0767747a969356e74046617734da42e4945def8891ab2f6ff2d368442",
+            "candidates": [
+              {
+                "id": "candidate_0",
+                "description": "Enter City as Seoul",
+                "action": {
+                  "action": "type_text",
+                  "text": "Seoul\n"
+                }
+              },
+              {
+                "id": "candidate_1",
+                "description": "Enter Seats as 3",
+                "action": {
+                  "action": "type_text",
+                  "text": "3\n"
+                }
+              },
+              {
+                "id": "candidate_2",
+                "description": "Enter Confirmation as CONFIRM",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ]
+          },
+          "plan": [
+            "candidate_0"
+          ]
+        },
+        {
+          "kind": "model",
+          "stage": 2,
+          "elapsed_ms": 5264,
+          "ok": true,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 4811,
+            "cache_read_input_tokens": 5202,
+            "output_tokens": 243,
+            "output_tokens_details": {
+              "thinking_tokens": 0
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 4811,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "not_available",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 243,
+                "cache_read_input_tokens": 5202,
+                "cache_creation_input_tokens": 4811,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 4811
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "models_reported_by_cli": [
+            "claude-sonnet-5"
+          ],
+          "response": {
+            "candidates": [
+              {
+                "description": "Seats field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "3\n"
+                }
+              },
+              {
+                "description": "Confirmation field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              },
+              {
+                "description": "Name field value (if needed later)",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 3\n"
+                }
+              }
+            ],
+            "selected_index": 0
+          },
+          "proposal": {
+            "goal": "Fill Name with 'Test User 3', City with 'Seoul', Seats with '3', then Confirmation with exactly 'CONFIRM'. Complete the four-field form.",
+            "observation": "{\"run_id\":\"790ce0e1-46cf-4dae-a706-ec2366fba276\",\"stage\":2,\"fields\":[\"Name\",\"City\",\"Seats\",\"Confirmation\"],\"values\":[\"CONFIRM\",\"Seoul\"]}",
+            "observation_sha256": "d119d8f122bffc6adcca73708b99b35e113217961b79d51a418d70490c94dcdf",
+            "candidates": [
+              {
+                "id": "candidate_0",
+                "description": "Seats field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "3\n"
+                }
+              },
+              {
+                "id": "candidate_1",
+                "description": "Confirmation field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              },
+              {
+                "id": "candidate_2",
+                "description": "Name field value (if needed later)",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 3\n"
+                }
+              }
+            ]
+          },
+          "plan": [
+            "candidate_0"
+          ]
+        },
+        {
+          "kind": "model",
+          "stage": 3,
+          "elapsed_ms": 10199,
+          "ok": true,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 4814,
+            "cache_read_input_tokens": 5202,
+            "output_tokens": 165,
+            "output_tokens_details": {
+              "thinking_tokens": 0
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 4814,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "not_available",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 165,
+                "cache_read_input_tokens": 5202,
+                "cache_creation_input_tokens": 4814,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 4814
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "models_reported_by_cli": [
+            "claude-sonnet-5"
+          ],
+          "response": {
+            "candidates": [
+              {
+                "description": "Type CONFIRM into Confirmation field",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ],
+            "selected_index": 0
+          },
+          "proposal": {
+            "goal": "Fill Name with 'Test User 3', City with 'Seoul', Seats with '3', then Confirmation with exactly 'CONFIRM'. Complete the four-field form.",
+            "observation": "{\"run_id\":\"790ce0e1-46cf-4dae-a706-ec2366fba276\",\"stage\":3,\"fields\":[\"Name\",\"City\",\"Seats\",\"Confirmation\"],\"values\":[\"CONFIRM\",\"Seoul\",\"3\"]}",
+            "observation_sha256": "25263cf2cd004b8df5eb6e6b352c33b5411b2166a153abb622715e12db52a756",
+            "candidates": [
+              {
+                "id": "candidate_0",
+                "description": "Type CONFIRM into Confirmation field",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ]
+          },
+          "plan": [
+            "candidate_0"
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "stage": 0,
+          "action": {
+            "action": "type_text",
+            "text": "CONFIRM\n"
+          },
+          "execution_and_observation_ms": 1791,
+          "state_after": {
+            "run_id": "790ce0e1-46cf-4dae-a706-ec2366fba276",
+            "stage": 1,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "CONFIRM"
+            ]
+          },
+          "screen_after": "51a1b9a0767747a969356e74046617734da42e4945def8891ab2f6ff2d368442"
+        },
+        {
+          "stage": 1,
+          "action": {
+            "action": "type_text",
+            "text": "Seoul\n"
+          },
+          "execution_and_observation_ms": 1881,
+          "state_after": {
+            "run_id": "790ce0e1-46cf-4dae-a706-ec2366fba276",
+            "stage": 2,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "CONFIRM",
+              "Seoul"
+            ]
+          },
+          "screen_after": "d119d8f122bffc6adcca73708b99b35e113217961b79d51a418d70490c94dcdf"
+        },
+        {
+          "stage": 2,
+          "action": {
+            "action": "type_text",
+            "text": "3\n"
+          },
+          "execution_and_observation_ms": 2422,
+          "state_after": {
+            "run_id": "790ce0e1-46cf-4dae-a706-ec2366fba276",
+            "stage": 3,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "CONFIRM",
+              "Seoul",
+              "3"
+            ]
+          },
+          "screen_after": "25263cf2cd004b8df5eb6e6b352c33b5411b2166a153abb622715e12db52a756"
+        },
+        {
+          "stage": 3,
+          "action": {
+            "action": "type_text",
+            "text": "CONFIRM\n"
+          },
+          "execution_and_observation_ms": 2797,
+          "state_after": {
+            "run_id": "790ce0e1-46cf-4dae-a706-ec2366fba276",
+            "stage": 4,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "CONFIRM",
+              "Seoul",
+              "3",
+              "CONFIRM"
+            ]
+          },
+          "screen_after": "6fa9f56ae615e865e24f963c10efe1a37dfd2aa05b2e7825d75a43b3165b9f03"
+        }
+      ]
+    },
+    {
+      "repeat": 2,
+      "arm": "model_batch",
+      "success": true,
+      "run_id": "d9e6c8e4-a4a7-4ede-86ba-691c6c714097",
+      "expected": [
+        "Test User 3",
+        "Seoul",
+        "3",
+        "CONFIRM"
+      ],
+      "fixture": "owned-rust-four-field-form",
+      "model_requested": "sonnet",
+      "end_to_end_ms": 38627,
+      "verification_ms": 374,
+      "final_state": {
+        "run_id": "d9e6c8e4-a4a7-4ede-86ba-691c6c714097",
+        "stage": 4,
+        "fields": [
+          "Name",
+          "City",
+          "Seats",
+          "Confirmation"
+        ],
+        "values": [
+          "Test User 3",
+          "Seoul",
+          "3",
+          "CONFIRM"
+        ]
+      },
+      "attempt_wall_ms": 39002,
+      "model_calls": 1,
+      "jev_calls": 0,
+      "regenerations": 0,
+      "events": [
+        {
+          "kind": "model",
+          "stage": 0,
+          "elapsed_ms": 5168,
+          "ok": true,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 10015,
+            "cache_read_input_tokens": 0,
+            "output_tokens": 243,
+            "output_tokens_details": {
+              "thinking_tokens": 0
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 10015,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "not_available",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 243,
+                "cache_read_input_tokens": 0,
+                "cache_creation_input_tokens": 10015,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 10015
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "models_reported_by_cli": [
+            "claude-sonnet-5"
+          ],
+          "response": {
+            "candidates": [
+              {
+                "description": "Name field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 3\n"
+                }
+              },
+              {
+                "description": "City field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Seoul\n"
+                }
+              },
+              {
+                "description": "Seats field",
+                "action": {
+                  "action": "type_text",
+                  "text": "3\n"
+                }
+              },
+              {
+                "description": "Confirmation field",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ],
+            "plan": [
+              0,
+              1,
+              2,
+              3
+            ]
+          },
+          "proposal": {
+            "goal": "Fill Name with 'Test User 3', City with 'Seoul', Seats with '3', then Confirmation with exactly 'CONFIRM'. Complete the four-field form.",
+            "observation": "{\"run_id\":\"d9e6c8e4-a4a7-4ede-86ba-691c6c714097\",\"stage\":0,\"fields\":[\"Name\",\"City\",\"Seats\",\"Confirmation\"],\"values\":[]}",
+            "observation_sha256": "6fa9f56ae615e865e24f963c10efe1a37dfd2aa05b2e7825d75a43b3165b9f03",
+            "candidates": [
+              {
+                "id": "candidate_0",
+                "description": "Name field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 3\n"
+                }
+              },
+              {
+                "id": "candidate_1",
+                "description": "City field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Seoul\n"
+                }
+              },
+              {
+                "id": "candidate_2",
+                "description": "Seats field",
+                "action": {
+                  "action": "type_text",
+                  "text": "3\n"
+                }
+              },
+              {
+                "id": "candidate_3",
+                "description": "Confirmation field",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ]
+          },
+          "plan": [
+            "candidate_0",
+            "candidate_1",
+            "candidate_2",
+            "candidate_3"
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "stage": 0,
+          "action": {
+            "action": "type_text",
+            "text": "Test User 3\n"
+          },
+          "execution_and_observation_ms": 2778,
+          "state_after": {
+            "run_id": "d9e6c8e4-a4a7-4ede-86ba-691c6c714097",
+            "stage": 1,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 3"
+            ]
+          },
+          "screen_after": "61825746338c10397c94c9f8587e6d94b7a5a2556ba4104977bd2218b20b6f4e"
+        },
+        {
+          "stage": 1,
+          "action": {
+            "action": "type_text",
+            "text": "Seoul\n"
+          },
+          "execution_and_observation_ms": 1857,
+          "state_after": {
+            "run_id": "d9e6c8e4-a4a7-4ede-86ba-691c6c714097",
+            "stage": 2,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 3",
+              "Seoul"
+            ]
+          },
+          "screen_after": "22b4e3fefe4b7ed2b32a95619bd8814bb86713bc059c310a95f5587186ac3e88"
+        },
+        {
+          "stage": 2,
+          "action": {
+            "action": "type_text",
+            "text": "3\n"
+          },
+          "execution_and_observation_ms": 2559,
+          "state_after": {
+            "run_id": "d9e6c8e4-a4a7-4ede-86ba-691c6c714097",
+            "stage": 3,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 3",
+              "Seoul",
+              "3"
+            ]
+          },
+          "screen_after": "ced3f8f29821a544b726acd8cc2cce80f1cd0b62f2080954a6103dcad2e4114a"
+        },
+        {
+          "stage": 3,
+          "action": {
+            "action": "type_text",
+            "text": "CONFIRM\n"
+          },
+          "execution_and_observation_ms": 2752,
+          "state_after": {
+            "run_id": "d9e6c8e4-a4a7-4ede-86ba-691c6c714097",
+            "stage": 4,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 3",
+              "Seoul",
+              "3",
+              "CONFIRM"
+            ]
+          },
+          "screen_after": "8d4a9242f68b8125778ac4258db370396d7746040e0d72ca1055c6da77dd789a"
+        }
+      ]
+    },
+    {
+      "repeat": 3,
+      "arm": "model_each_step",
+      "success": false,
+      "run_id": "82260f09-5efa-4145-8cfb-298fc340e989",
+      "expected": [
+        "Test User 4",
+        "Busan",
+        "4",
+        "CONFIRM"
+      ],
+      "fixture": "owned-rust-four-field-form",
+      "model_requested": "sonnet",
+      "attempt_wall_ms": 12661,
+      "end_to_end_ms": 12661,
+      "error_code": "computer_use_stale",
+      "error_detail": "state or screen changed outside the last verified action; reobserve and regenerate",
+      "model_calls": 1,
+      "jev_calls": 0,
+      "regenerations": 0,
+      "events": [
+        {
+          "kind": "model",
+          "stage": 0,
+          "elapsed_ms": 7183,
+          "ok": true,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 9997,
+            "cache_read_input_tokens": 0,
+            "output_tokens": 288,
+            "output_tokens_details": {
+              "thinking_tokens": 0
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 9997,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "not_available",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 288,
+                "cache_read_input_tokens": 0,
+                "cache_creation_input_tokens": 9997,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 9997
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "models_reported_by_cli": [
+            "claude-sonnet-5"
+          ],
+          "response": {
+            "candidates": [
+              {
+                "description": "Fill Name field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 4\n"
+                }
+              },
+              {
+                "description": "Fill City field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Busan\n"
+                }
+              },
+              {
+                "description": "Fill Seats field",
+                "action": {
+                  "action": "type_text",
+                  "text": "4\n"
+                }
+              },
+              {
+                "description": "Fill Confirmation field",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ],
+            "selected_index": 0
+          },
+          "proposal": {
+            "goal": "Fill Name with 'Test User 4', City with 'Busan', Seats with '4', then Confirmation with exactly 'CONFIRM'. Complete the four-field form.",
+            "observation": "{\"run_id\":\"82260f09-5efa-4145-8cfb-298fc340e989\",\"stage\":0,\"fields\":[\"Name\",\"City\",\"Seats\",\"Confirmation\"],\"values\":[]}",
+            "observation_sha256": "8d4a9242f68b8125778ac4258db370396d7746040e0d72ca1055c6da77dd789a",
+            "candidates": [
+              {
+                "id": "candidate_0",
+                "description": "Fill Name field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 4\n"
+                }
+              },
+              {
+                "id": "candidate_1",
+                "description": "Fill City field",
+                "action": {
+                  "action": "type_text",
+                  "text": "Busan\n"
+                }
+              },
+              {
+                "id": "candidate_2",
+                "description": "Fill Seats field",
+                "action": {
+                  "action": "type_text",
+                  "text": "4\n"
+                }
+              },
+              {
+                "id": "candidate_3",
+                "description": "Fill Confirmation field",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ]
+          },
+          "plan": [
+            "candidate_0"
+          ]
+        },
+        {
+          "kind": "screen_changed",
+          "stage": 0,
+          "before": "8d4a9242f68b8125778ac4258db370396d7746040e0d72ca1055c6da77dd789a",
+          "after": "ef3cac2ce6f823838def593c881145795c49ff7c49eb2dd27df735bae2f0e8c3"
+        }
+      ],
+      "steps": []
+    },
+    {
+      "repeat": 3,
+      "arm": "model_batch",
+      "success": true,
+      "run_id": "aab29201-32aa-466d-8318-a6299a9820ee",
+      "expected": [
+        "Test User 4",
+        "Busan",
+        "4",
+        "CONFIRM"
+      ],
+      "fixture": "owned-rust-four-field-form",
+      "model_requested": "sonnet",
+      "end_to_end_ms": 43753,
+      "verification_ms": 509,
+      "final_state": {
+        "run_id": "aab29201-32aa-466d-8318-a6299a9820ee",
+        "stage": 4,
+        "fields": [
+          "Name",
+          "City",
+          "Seats",
+          "Confirmation"
+        ],
+        "values": [
+          "Test User 4",
+          "Busan",
+          "4",
+          "CONFIRM"
+        ]
+      },
+      "attempt_wall_ms": 44263,
+      "model_calls": 1,
+      "jev_calls": 0,
+      "regenerations": 0,
+      "events": [
+        {
+          "kind": "model",
+          "stage": 0,
+          "elapsed_ms": 8382,
+          "ok": true,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 10007,
+            "cache_read_input_tokens": 0,
+            "output_tokens": 210,
+            "output_tokens_details": {
+              "thinking_tokens": 0
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 10007,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "not_available",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 210,
+                "cache_read_input_tokens": 0,
+                "cache_creation_input_tokens": 10007,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 10007
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "models_reported_by_cli": [
+            "claude-sonnet-5"
+          ],
+          "response": {
+            "candidates": [
+              {
+                "description": "Name",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 4\n"
+                }
+              },
+              {
+                "description": "City",
+                "action": {
+                  "action": "type_text",
+                  "text": "Busan\n"
+                }
+              },
+              {
+                "description": "Seats",
+                "action": {
+                  "action": "type_text",
+                  "text": "4\n"
+                }
+              },
+              {
+                "description": "Confirmation",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ],
+            "plan": [
+              0,
+              1,
+              2,
+              3
+            ]
+          },
+          "proposal": {
+            "goal": "Fill Name with 'Test User 4', City with 'Busan', Seats with '4', then Confirmation with exactly 'CONFIRM'. Complete the four-field form.",
+            "observation": "{\"run_id\":\"aab29201-32aa-466d-8318-a6299a9820ee\",\"stage\":0,\"fields\":[\"Name\",\"City\",\"Seats\",\"Confirmation\"],\"values\":[]}",
+            "observation_sha256": "ef3cac2ce6f823838def593c881145795c49ff7c49eb2dd27df735bae2f0e8c3",
+            "candidates": [
+              {
+                "id": "candidate_0",
+                "description": "Name",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 4\n"
+                }
+              },
+              {
+                "id": "candidate_1",
+                "description": "City",
+                "action": {
+                  "action": "type_text",
+                  "text": "Busan\n"
+                }
+              },
+              {
+                "id": "candidate_2",
+                "description": "Seats",
+                "action": {
+                  "action": "type_text",
+                  "text": "4\n"
+                }
+              },
+              {
+                "id": "candidate_3",
+                "description": "Confirmation",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ]
+          },
+          "plan": [
+            "candidate_0",
+            "candidate_1",
+            "candidate_2",
+            "candidate_3"
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "stage": 0,
+          "action": {
+            "action": "type_text",
+            "text": "Test User 4\n"
+          },
+          "execution_and_observation_ms": 2781,
+          "state_after": {
+            "run_id": "aab29201-32aa-466d-8318-a6299a9820ee",
+            "stage": 1,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 4"
+            ]
+          },
+          "screen_after": "f6b892b0f6b1e379283345ac1f9a8f03a1ee40a56b14625de4aa30afc2bb3ba6"
+        },
+        {
+          "stage": 1,
+          "action": {
+            "action": "type_text",
+            "text": "Busan\n"
+          },
+          "execution_and_observation_ms": 2784,
+          "state_after": {
+            "run_id": "aab29201-32aa-466d-8318-a6299a9820ee",
+            "stage": 2,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 4",
+              "Busan"
+            ]
+          },
+          "screen_after": "6982244448167570e62fbd9f3c0a9edfd2ded29c4de9545c3a5b8d61c3773bd7"
+        },
+        {
+          "stage": 2,
+          "action": {
+            "action": "type_text",
+            "text": "4\n"
+          },
+          "execution_and_observation_ms": 1810,
+          "state_after": {
+            "run_id": "aab29201-32aa-466d-8318-a6299a9820ee",
+            "stage": 3,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 4",
+              "Busan",
+              "4"
+            ]
+          },
+          "screen_after": "c97c7e549f12daafba0afa5232c1483f068bd4fded031a52d60ca9dccc0277da"
+        },
+        {
+          "stage": 3,
+          "action": {
+            "action": "type_text",
+            "text": "CONFIRM\n"
+          },
+          "execution_and_observation_ms": 2685,
+          "state_after": {
+            "run_id": "aab29201-32aa-466d-8318-a6299a9820ee",
+            "stage": 4,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 4",
+              "Busan",
+              "4",
+              "CONFIRM"
+            ]
+          },
+          "screen_after": "cfce331bcb2e6cfeb615d1754d19f02bcaaae95cbcc08fe6b121ce8a51256f14"
+        }
+      ]
+    },
+    {
+      "repeat": 3,
+      "arm": "model_reuse_jev",
+      "success": false,
+      "run_id": "68eeb35b-a622-4d11-88d6-020db3c9d6eb",
+      "expected": [
+        "Test User 4",
+        "Busan",
+        "4",
+        "CONFIRM"
+      ],
+      "fixture": "owned-rust-four-field-form",
+      "model_requested": "sonnet",
+      "attempt_wall_ms": 16099,
+      "end_to_end_ms": 16099,
+      "error_code": "cancelled",
+      "error_detail": "subprocess cancelled",
+      "model_calls": 1,
+      "jev_calls": 2,
+      "regenerations": 0,
+      "events": [
+        {
+          "kind": "model",
+          "stage": 0,
+          "elapsed_ms": 4532,
+          "ok": true,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 9934,
+            "cache_read_input_tokens": 0,
+            "output_tokens": 188,
+            "output_tokens_details": {
+              "thinking_tokens": 0
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 9934,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "not_available",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 188,
+                "cache_read_input_tokens": 0,
+                "cache_creation_input_tokens": 9934,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 9934
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "models_reported_by_cli": [
+            "claude-sonnet-5"
+          ],
+          "response": {
+            "candidates": [
+              {
+                "description": "Name field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 4\n"
+                }
+              },
+              {
+                "description": "City field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "Busan\n"
+                }
+              },
+              {
+                "description": "Seats field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "4\n"
+                }
+              },
+              {
+                "description": "Confirmation field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ]
+          },
+          "proposal": {
+            "goal": "Fill Name with 'Test User 4', City with 'Busan', Seats with '4', then Confirmation with exactly 'CONFIRM'. Complete the four-field form.",
+            "observation": "{\"run_id\":\"68eeb35b-a622-4d11-88d6-020db3c9d6eb\",\"stage\":0,\"fields\":[\"Name\",\"City\",\"Seats\",\"Confirmation\"],\"values\":[]}",
+            "observation_sha256": "cfce331bcb2e6cfeb615d1754d19f02bcaaae95cbcc08fe6b121ce8a51256f14",
+            "candidates": [
+              {
+                "id": "candidate_0",
+                "description": "Name field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "Test User 4\n"
+                }
+              },
+              {
+                "id": "candidate_1",
+                "description": "City field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "Busan\n"
+                }
+              },
+              {
+                "id": "candidate_2",
+                "description": "Seats field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "4\n"
+                }
+              },
+              {
+                "id": "candidate_3",
+                "description": "Confirmation field value",
+                "action": {
+                  "action": "type_text",
+                  "text": "CONFIRM\n"
+                }
+              }
+            ]
+          },
+          "plan": []
+        },
+        {
+          "kind": "jev",
+          "stage": 0,
+          "elapsed_ms": 475,
+          "ok": true,
+          "selection": {
+            "status": "selected",
+            "candidate_id": "candidate_0",
+            "candidate_fingerprint": "4692b948a3dc8ac30424eec50d363a739f051f2b503005d923dce781be4370e1",
+            "observation_sha256": "cfce331bcb2e6cfeb615d1754d19f02bcaaae95cbcc08fe6b121ce8a51256f14",
+            "model": "jev-1.13.0",
+            "confidence": 1.0,
+            "probability": 1.0,
+            "probabilities": {
+              "candidate_3": 0.0,
+              "candidate_0": 1.0,
+              "candidate_2": 0.0,
+              "abstain": 0.0,
+              "candidate_1": 0.0
+            },
+            "elapsed_ms": 468,
+            "usage": {
+              "input_tokens": 699,
+              "output_tokens": 65
+            }
+          }
+        },
+        {
+          "kind": "jev",
+          "stage": 1,
+          "elapsed_ms": 455,
+          "ok": true,
+          "selection": {
+            "status": "selected",
+            "candidate_id": "candidate_1",
+            "candidate_fingerprint": "7e045d96576d1fca6c4f2477aac7970fb30ac446050586ad217f1c10b54dcad8",
+            "observation_sha256": "f6b892b0f6b1e379283345ac1f9a8f03a1ee40a56b14625de4aa30afc2bb3ba6",
+            "model": "jev-1.13.0",
+            "confidence": 0.99,
+            "probability": 0.99,
+            "probabilities": {
+              "candidate_2": 0.0,
+              "candidate_0": 0.0,
+              "candidate_3": 0.0,
+              "candidate_1": 0.99,
+              "abstain": 0.01
+            },
+            "elapsed_ms": 455,
+            "usage": {
+              "input_tokens": 704,
+              "output_tokens": 65
+            }
+          }
+        }
+      ],
+      "steps": [
+        {
+          "stage": 0,
+          "action": {
+            "action": "type_text",
+            "text": "Test User 4\n"
+          },
+          "execution_and_observation_ms": 1987,
+          "state_after": {
+            "run_id": "68eeb35b-a622-4d11-88d6-020db3c9d6eb",
+            "stage": 1,
+            "fields": [
+              "Name",
+              "City",
+              "Seats",
+              "Confirmation"
+            ],
+            "values": [
+              "Test User 4"
+            ]
+          },
+          "screen_after": "f6b892b0f6b1e379283345ac1f9a8f03a1ee40a56b14625de4aa30afc2bb3ba6"
+        }
+      ]
+    }
+  ],
+  "limitations": "Controlled, instrumented Rust form in a dedicated macOS VM; not arbitrary application automation. Models receive synthetic screenshots and structured fixture observations. A fresh official CLI process is used for every model call. All arms use identical guards and literal one-line input bounds. Small rotating-order pilot, not statistical proof. Includes observation, model, selection, GUI execution and regeneration costs. Excludes VM preparation, fixture reset and final independent state-file verification. Batch model is included to distinguish batching gains from Jev-specific gains.",
+  "summary": {
+    "all_attempts_succeeded": false,
+    "speedup_vs_each_step": null,
+    "speedup_vs_batch": null,
+    "arms": {
+      "model_each_step": {
+        "attempts": 4,
+        "succeeded": 1,
+        "p50_ms": 50035.0,
+        "model_calls": 13,
+        "jev_calls": 0
+      },
+      "model_batch": {
+        "attempts": 4,
+        "succeeded": 4,
+        "p50_ms": 36481.5,
+        "model_calls": 4,
+        "jev_calls": 0
+      },
+      "model_reuse_jev": {
+        "attempts": 4,
+        "succeeded": 3,
+        "p50_ms": 39439.0,
+        "model_calls": 4,
+        "jev_calls": 14
+      }
+    }
+  },
+  "finished_at": "2026-09-21T03:43:15.587Z",
+  "error_code": "cancelled"
+}

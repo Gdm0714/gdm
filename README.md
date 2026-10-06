@@ -23,17 +23,28 @@
 | **스킬팩** | 구현·검수·분석·UI·DB·문서·PR 등 작업별 실행 프로토콜 | Codex·Claude·Pi 대상 생성 |
 | **gdm-pi** | 요청에 맞는 스킬을 선택하고 구현 모델과 독립 검수 모델을 고정 | Pi 0.84.1 기준 검증 |
 | **gdm-memory** | 세션 간 선호·결정 회상과 로컬 메모리 저장 | Pi 하네스 확장 |
-| **gdm-computer-use** | 격리 VM에서 화면 확인과 입력 자동화 | Pi 하네스 확장 |
+| **gdm-computer-use** | 격리 VM 입력, 후보 중 Jev 선택 실험 | Rust CLI·stdio MCP·Pi 어댑터 |
 | **Context Pack** | 코드·문서·작업 관계를 제한된 크기의 탐색 힌트로 반환 | one-shot 실험 단계 |
 
-> 현재 원격 release asset은 아직 게시되지 않았다. 아래 **소스 설치**가 현재 코드를 사용하는
-> 권장 경로이며, `curl ... | bash` 설치기는 첫 GitHub Release 게시 후 사용할 수 있다.
+## 실행 파일로 설치
+
+소스 저장소는 private으로 유지하며, macOS 13 이상의 Apple Silicon·Intel용 서명·공증된 실행 파일을 배포합니다. Rust·Bun·GitHub 로그인 없이 설치할 수 있습니다.
+
+```sh
+curl -fL https://gdmux.pages.dev/install.sh -o /tmp/gdm-tools-install.sh
+zsh /tmp/gdm-tools-install.sh --tool gdm --with-skills
+```
+
+`gdm` 실행 파일은 기본적으로 `~/.local/bin`에 설치됩니다. 설치 후 PATH 안내가 나오면 해당 폴더를 셸의 명령 검색 경로에 추가하세요.
+`--with-skills`는 Codex·Claude·Pi 스킬, Pi 실행기와 Codex hook을 설치합니다. CLI만 필요하면 옵션을 빼세요.
+Linux용 사전 빌드 파일은 이번 프리뷰에 포함되지 않습니다.
+[설치·첫 실행·업데이트 안내](https://gdmux.pages.dev/downloads/QUICKSTART.md)
 
 ## 빠른 시작
 
 ### 1. 소스에서 설치
 
-요구사항: [Bun](https://bun.sh), Git, 대화형 실행 주체인 Claude Code, Codex 또는 Pi.
+요구사항: Rust 1.97 이상과 Cargo, Git, 대화형 실행 주체인 Claude Code, Codex 또는 Pi.
 
 ```bash
 git clone https://github.com/Gdm0714/gdm.git
@@ -152,11 +163,15 @@ gdm done --slug fix-login
 기본 설치 경로에서 한 번만 준비한다. pinned Tart 2.36.0과 최소 60 GiB의 여유 공간이 필요하다.
 
 ```bash
-~/.pi/agent/skills/gdm-agents/pi/gdm-computer-use/setup.sh
+gdm computer-use setup --check
+gdm computer-use setup
 ```
 
 VM 입력은 guest loopback RFB로 전달되며 host TCP listener와 host focus 변경을 허용하지 않는다.
 세션이 끝나면 실행기가 소유한 VM만 종료한다.
+
+기존 모델이 후보를 만들고 Jev는 후보 중에서만 선택하는 실험 경로를 제공한다.
+설정·동작·실측 방법은 [Computer Use와 Jev](docs/computer-use-jev.md)를 참조한다.
 
 ### bounded Context Pack
 
@@ -215,7 +230,7 @@ headless 테스트나 텍스트 리뷰로 폴백한다.
 | 용도 | 요구사항 |
 |---|---|
 | gdm CLI | macOS 또는 Linux, arm64 또는 x64 |
-| 소스 설치·개발 | Bun |
+| 소스 설치·개발 | Rust 1.97+, Cargo, Git (이전 구현 비교 테스트만 Bun 필요) |
 | gdm-pi | Pi 0.84.1, `openai-codex` 로그인 |
 | 선택형 Claude 기술 설계 | Claude Code CLI 로그인 |
 | full 독립 검수 | 구현 모델과 다른 검수 모델을 실행할 수 있는 provider 로그인 |
@@ -224,7 +239,9 @@ headless 테스트나 텍스트 리뷰로 폴백한다.
 ## 저장소 구조
 
 ```text
-cli/      결정적 상태·증거 게이트와 gdm 바이너리
+src/      Rust CLI, 상태·증거 게이트, 통합과 Computer Use
+tests/    Rust 검증과 이전 구현 비교 기준
+cli/      이전 CLI와 호환성 테스트 (운영 경로에서 사용하지 않음)
 skills/   target 중립 GDM 스킬 source
 agents/   역할 실행기, provider adapter, Pi 확장 (memory·computer-use 포함)
 install/  스킬 renderer와 transactional 설치기
@@ -242,12 +259,16 @@ Gidem Native 앱과 디자인 자산은 별도 `gidem-native` 저장소에서 �
 CLI 전체 검증은 clean tree에서 binary를 먼저 만든 뒤 실행한다.
 
 ```bash
-cd cli
-bun run build
-bun run verify
+cargo build --locked
+cargo test --locked
+python3 script/qa/rust-parity.py
+python3 script/qa/rust-native-check.py
 ```
 
 ## 문서
+
+- [Rust 전환과 코드 읽는 순서](docs/rust-runtime.md)
+- [Computer Use와 Jev 실험](docs/computer-use-jev.md)
 
 - [`DESIGN.md`](./DESIGN.md) — gdm 상태 머신, Work Protocol, trust boundary
 - [`INVARIANTS.md`](./INVARIANTS.md) — 바뀌지 않아야 하는 안전·검증 불변식

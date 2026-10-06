@@ -1,0 +1,353 @@
+{
+  "schemaVersion": "gdm-computer-use-jev-benchmark/v2",
+  "started_at": "2026-09-21T01:21:46.692Z",
+  "finished_at": "2026-09-21T01:25:06.865Z",
+  "runtime": "rust",
+  "mode": "live-vm",
+  "proposer": "official Claude Code CLI, tools disabled",
+  "jev_role": "select only among model-proposed actions",
+  "credential_included": false,
+  "completed": true,
+  "error_code": null,
+  "samples": [
+    {
+      "repeat": 0,
+      "arm": "model_direct",
+      "model_requested": "sonnet",
+      "success": false,
+      "selection_ms": 0,
+      "fixture": "empty-textedit-single-action",
+      "screen_sha256": "6b931fdb52a4911580789c1c91b42fe649057795246da0739dda6aa81f21091d",
+      "generation_ms": 20790,
+      "generation_usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 4675,
+        "cache_read_input_tokens": 5219,
+        "output_tokens": 301,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 4675,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 301,
+            "cache_read_input_tokens": 5219,
+            "cache_creation_input_tokens": 4675,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 4675
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      },
+      "models_reported_by_cli": [
+        "claude-sonnet-5"
+      ],
+      "candidate_count": 3,
+      "attempt_wall_ms": 27347,
+      "end_to_end_ms": 27347,
+      "error_code": "computer_use_stale"
+    },
+    {
+      "repeat": 0,
+      "arm": "model_candidates_jev",
+      "model_requested": "sonnet",
+      "success": false,
+      "selection_ms": 545,
+      "fixture": "empty-textedit-single-action",
+      "screen_sha256": "155b7e0db7f9016986ae496ad5d7959b183066f88306b323ffa6be15de2eec2a",
+      "generation_ms": 12351,
+      "generation_usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 4687,
+        "cache_read_input_tokens": 5213,
+        "output_tokens": 287,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 4687,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 287,
+            "cache_read_input_tokens": 5213,
+            "cache_creation_input_tokens": 4687,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 4687
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      },
+      "models_reported_by_cli": [
+        "claude-sonnet-5"
+      ],
+      "candidate_count": 3,
+      "jev_model": "jev-1.13.0",
+      "jev_usage": {
+        "input_tokens": 648,
+        "output_tokens": 54
+      },
+      "confidence": 1.0,
+      "attempt_wall_ms": 15128,
+      "end_to_end_ms": 15128,
+      "error_code": "computer_use_stale"
+    },
+    {
+      "repeat": 1,
+      "arm": "model_candidates_jev",
+      "model_requested": "sonnet",
+      "success": false,
+      "selection_ms": 522,
+      "fixture": "empty-textedit-single-action",
+      "screen_sha256": "7347f53f214b0b410bb1eec19de1546790acc1810525a01471b2fa9be6cf52cf",
+      "generation_ms": 12578,
+      "generation_usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 4687,
+        "cache_read_input_tokens": 5213,
+        "output_tokens": 319,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 4687,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 319,
+            "cache_read_input_tokens": 5213,
+            "cache_creation_input_tokens": 4687,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 4687
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      },
+      "models_reported_by_cli": [
+        "claude-sonnet-5"
+      ],
+      "candidate_count": 3,
+      "jev_model": "jev-1.13.0",
+      "jev_usage": {
+        "input_tokens": 696,
+        "output_tokens": 55
+      },
+      "confidence": 0.99,
+      "attempt_wall_ms": 15437,
+      "end_to_end_ms": 15437,
+      "error_code": "computer_use_stale"
+    },
+    {
+      "repeat": 1,
+      "arm": "model_direct",
+      "model_requested": "sonnet",
+      "success": false,
+      "selection_ms": 0,
+      "fixture": "empty-textedit-single-action",
+      "screen_sha256": "f4cc62305ba6307a5ffd33d456126e55d3e31b85d61ca43935a5cd759a1738db",
+      "generation_ms": 12879,
+      "generation_usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 4675,
+        "cache_read_input_tokens": 5219,
+        "output_tokens": 323,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 4675,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 323,
+            "cache_read_input_tokens": 5219,
+            "cache_creation_input_tokens": 4675,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 4675
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      },
+      "models_reported_by_cli": [
+        "claude-sonnet-5"
+      ],
+      "candidate_count": 3,
+      "attempt_wall_ms": 15315,
+      "end_to_end_ms": 15315,
+      "error_code": "computer_use_stale"
+    },
+    {
+      "repeat": 2,
+      "arm": "model_direct",
+      "model_requested": "sonnet",
+      "success": false,
+      "selection_ms": 0,
+      "fixture": "empty-textedit-single-action",
+      "screen_sha256": "67cfe1c0fff2c6592af17f71801da4dbf9bf4592385e62aab18810608ca63768",
+      "generation_ms": 9941,
+      "generation_usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 4675,
+        "cache_read_input_tokens": 5219,
+        "output_tokens": 308,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 4675,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 308,
+            "cache_read_input_tokens": 5219,
+            "cache_creation_input_tokens": 4675,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 4675
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      },
+      "models_reported_by_cli": [
+        "claude-sonnet-5"
+      ],
+      "candidate_count": 3,
+      "attempt_wall_ms": 11641,
+      "end_to_end_ms": 11641,
+      "error_code": "computer_use_stale"
+    },
+    {
+      "repeat": 2,
+      "arm": "model_candidates_jev",
+      "model_requested": "sonnet",
+      "success": false,
+      "selection_ms": 763,
+      "fixture": "empty-textedit-single-action",
+      "screen_sha256": "ffda1451323f0011142bd1ecdb610edca95bd109f4d8d64195bfbeda521ebe8a",
+      "generation_ms": 10758,
+      "generation_usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 4687,
+        "cache_read_input_tokens": 5213,
+        "output_tokens": 347,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 4687,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 347,
+            "cache_read_input_tokens": 5213,
+            "cache_creation_input_tokens": 4687,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 4687
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      },
+      "models_reported_by_cli": [
+        "claude-sonnet-5"
+      ],
+      "candidate_count": 3,
+      "jev_model": "jev-1.13.0",
+      "jev_usage": {
+        "input_tokens": 689,
+        "output_tokens": 60
+      },
+      "confidence": 1.0,
+      "attempt_wall_ms": 13243,
+      "end_to_end_ms": 13243,
+      "error_code": "computer_use_stale"
+    }
+  ],
+  "summary": {
+    "arms": {
+      "model_direct": {
+        "attempts": 3,
+        "succeeded": 0,
+        "success_rate": 0.0,
+        "p50_ms": 15315.0,
+        "p95_ms": 27347.0
+      },
+      "model_candidates_jev": {
+        "attempts": 3,
+        "succeeded": 0,
+        "success_rate": 0.0,
+        "p50_ms": 15128.0,
+        "p95_ms": 15437.0
+      }
+    },
+    "equal_observed_success_rate": false,
+    "observed_p50_speedup": null,
+    "interpretation": "Small paired pilot, not statistical proof. Task latency includes candidate generation, selection and GUI execution. Independent file verification is reported separately. Includes a new official CLI process per proposal. Persistent gid sessions can have different overhead. Candidate generation is included. Jev is text-only; observations are produced by the existing vision model."
+  }
+}

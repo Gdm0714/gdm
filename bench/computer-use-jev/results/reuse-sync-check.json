@@ -1,0 +1,203 @@
+{
+  "schemaVersion": "gdm-computer-use-jev-reuse/v1",
+  "started_at": "2026-09-21T03:59:51.002Z",
+  "runtime": "rust",
+  "mode": "live-vm",
+  "model_requested": "sonnet",
+  "completed": true,
+  "credential_included": false,
+  "fixture_source_sha256": "ddf0f783c7a02254dfcc6385003349aa9e9dfa7fb56f2a4121d3c67dd4e2e443",
+  "runtime_source_sha256": "bc9994e2b1f8f4dfb77676d3b0194015a10f53b9d45e32e7d944759fdbc2d768",
+  "fixture_binary_sha256": "518f018bf2db43093faa4959ddbc16655a321575a9cda9117e0d37a7274db3e0",
+  "max_regenerations_per_attempt": 1,
+  "samples": [],
+  "limitations": "Controlled, instrumented Rust form in a dedicated macOS VM; not arbitrary application automation. Models receive synthetic screenshots and structured fixture observations. A fresh official CLI process is used for every model call. All arms use identical guards and literal one-line input bounds. Small rotating-order pilot, not statistical proof. Includes observation, model, selection, GUI execution and regeneration costs. Excludes VM preparation, fixture reset and final independent state-file verification. Batch model is included to distinguish batching gains from Jev-specific gains.",
+  "fixture_check_pending_state": {
+    "run_id": "1abefdf8-f2fc-4091-bf08-a2f1b02c37ea",
+    "stage": 4,
+    "fields": [
+      "Name",
+      "City",
+      "Seats",
+      "Confirmation"
+    ],
+    "values": [
+      "Test User",
+      "Seoul",
+      "2",
+      "CONFIRM"
+    ]
+  },
+  "fixture_check": [
+    {
+      "state": {
+        "run_id": "fe7b9431-9e51-40ad-8c03-44889673eebc",
+        "stage": 1,
+        "fields": [
+          "Name",
+          "City",
+          "Seats",
+          "Confirmation"
+        ],
+        "values": [
+          "Test User"
+        ]
+      },
+      "visual_sync": true
+    },
+    {
+      "state": {
+        "run_id": "fe7b9431-9e51-40ad-8c03-44889673eebc",
+        "stage": 2,
+        "fields": [
+          "Name",
+          "City",
+          "Seats",
+          "Confirmation"
+        ],
+        "values": [
+          "Test User",
+          "Seoul"
+        ]
+      },
+      "visual_sync": true
+    },
+    {
+      "state": {
+        "run_id": "fe7b9431-9e51-40ad-8c03-44889673eebc",
+        "stage": 3,
+        "fields": [
+          "Name",
+          "City",
+          "Seats",
+          "Confirmation"
+        ],
+        "values": [
+          "Test User",
+          "Seoul",
+          "2"
+        ]
+      },
+      "visual_sync": true
+    },
+    {
+      "state": {
+        "run_id": "fe7b9431-9e51-40ad-8c03-44889673eebc",
+        "stage": 4,
+        "fields": [
+          "Name",
+          "City",
+          "Seats",
+          "Confirmation"
+        ],
+        "values": [
+          "Test User",
+          "Seoul",
+          "2",
+          "CONFIRM"
+        ]
+      },
+      "visual_sync": true
+    },
+    {
+      "state": {
+        "run_id": "1abefdf8-f2fc-4091-bf08-a2f1b02c37ea",
+        "stage": 1,
+        "fields": [
+          "Name",
+          "City",
+          "Seats",
+          "Confirmation"
+        ],
+        "values": [
+          "Test User"
+        ]
+      },
+      "visual_sync": true
+    },
+    {
+      "state": {
+        "run_id": "1abefdf8-f2fc-4091-bf08-a2f1b02c37ea",
+        "stage": 2,
+        "fields": [
+          "Name",
+          "City",
+          "Seats",
+          "Confirmation"
+        ],
+        "values": [
+          "Test User",
+          "Seoul"
+        ]
+      },
+      "visual_sync": true
+    },
+    {
+      "state": {
+        "run_id": "1abefdf8-f2fc-4091-bf08-a2f1b02c37ea",
+        "stage": 3,
+        "fields": [
+          "Name",
+          "City",
+          "Seats",
+          "Confirmation"
+        ],
+        "values": [
+          "Test User",
+          "Seoul",
+          "2"
+        ]
+      },
+      "visual_sync": true
+    },
+    {
+      "state": {
+        "run_id": "1abefdf8-f2fc-4091-bf08-a2f1b02c37ea",
+        "stage": 4,
+        "fields": [
+          "Name",
+          "City",
+          "Seats",
+          "Confirmation"
+        ],
+        "values": [
+          "Test User",
+          "Seoul",
+          "2",
+          "CONFIRM"
+        ]
+      },
+      "visual_sync": true
+    }
+  ],
+  "finished_at": "2026-09-21T04:01:55.124Z",
+  "error_code": null,
+  "summary": {
+    "all_attempts_succeeded": false,
+    "speedup_vs_each_step": null,
+    "speedup_vs_batch": null,
+    "arms": {
+      "model_each_step": {
+        "attempts": 0,
+        "succeeded": 0,
+        "p50_ms": null,
+        "model_calls": 0,
+        "jev_calls": 0
+      },
+      "model_batch": {
+        "attempts": 0,
+        "succeeded": 0,
+        "p50_ms": null,
+        "model_calls": 0,
+        "jev_calls": 0
+      },
+      "model_reuse_jev": {
+        "attempts": 0,
+        "succeeded": 0,
+        "p50_ms": null,
+        "model_calls": 0,
+        "jev_calls": 0
+      }
+    }
+  }
+}

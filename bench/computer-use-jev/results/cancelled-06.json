@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "gdm-computer-use-jev-benchmark/v2",
+  "started_at": "2026-09-21T01:41:43.286Z",
+  "finished_at": "2026-09-21T01:42:02.898Z",
+  "runtime": "rust",
+  "mode": "live-vm",
+  "proposer": "official Claude Code CLI, tools disabled",
+  "jev_role": "select only among model-proposed actions",
+  "credential_included": false,
+  "completed": false,
+  "error_code": "cancelled",
+  "samples": [],
+  "summary": {
+    "arms": {
+      "model_direct": {
+        "attempts": 0,
+        "succeeded": 0,
+        "success_rate": 0.0,
+        "p50_ms": null,
+        "p95_ms": null
+      },
+      "model_candidates_jev": {
+        "attempts": 0,
+        "succeeded": 0,
+        "success_rate": 0.0,
+        "p50_ms": null,
+        "p95_ms": null
+      }
+    },
+    "equal_observed_success_rate": false,
+    "observed_p50_speedup": null,
+    "interpretation": "Small paired pilot, not statistical proof. Task latency includes candidate generation, selection and GUI execution. Independent file verification is reported separately. Includes a new official CLI process per proposal. Persistent gid sessions can have different overhead. Candidate generation is included. Jev is text-only; observations are produced by the existing vision model."
+  }
+}

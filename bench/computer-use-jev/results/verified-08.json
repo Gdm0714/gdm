@@ -1,0 +1,389 @@
+{
+  "schemaVersion": "gdm-computer-use-jev-benchmark/v2",
+  "started_at": "2026-09-21T01:47:30.903Z",
+  "finished_at": "2026-09-21T01:50:25.655Z",
+  "runtime": "rust",
+  "mode": "live-vm",
+  "proposer": "official Claude Code CLI, tools disabled",
+  "jev_role": "select only among model-proposed actions",
+  "credential_included": false,
+  "completed": true,
+  "error_code": null,
+  "samples": [
+    {
+      "repeat": 0,
+      "arm": "model_direct",
+      "model_requested": "sonnet",
+      "success": true,
+      "selection_ms": 0,
+      "fixture": "fullscreen-selected-textedit-single-action",
+      "screen_sha256": "947c8997feb88b4ab3f5292e42ab2529a9b9250837593377101bcbec27c18482",
+      "generation_ms": 7962,
+      "generation_usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 4682,
+        "cache_read_input_tokens": 5219,
+        "output_tokens": 306,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 4682,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 306,
+            "cache_read_input_tokens": 5219,
+            "cache_creation_input_tokens": 4682,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 4682
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      },
+      "models_reported_by_cli": [
+        "claude-sonnet-5"
+      ],
+      "candidate_count": 3,
+      "execution_ms": 4723,
+      "selected_action": {
+        "action": "type_text",
+        "text": "GDM experiment 01"
+      },
+      "end_to_end_ms": 13263,
+      "verification_ms": 1580,
+      "verification": "exact saved guest TextEdit fixture file",
+      "attempt_wall_ms": 14844
+    },
+    {
+      "repeat": 0,
+      "arm": "model_candidates_jev",
+      "model_requested": "sonnet",
+      "success": true,
+      "selection_ms": 670,
+      "fixture": "fullscreen-selected-textedit-single-action",
+      "screen_sha256": "947c8997feb88b4ab3f5292e42ab2529a9b9250837593377101bcbec27c18482",
+      "generation_ms": 6814,
+      "generation_usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 4691,
+        "cache_read_input_tokens": 5213,
+        "output_tokens": 307,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 4691,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 307,
+            "cache_read_input_tokens": 5213,
+            "cache_creation_input_tokens": 4691,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 4691
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      },
+      "models_reported_by_cli": [
+        "claude-sonnet-5"
+      ],
+      "candidate_count": 3,
+      "jev_model": "jev-1.13.0",
+      "jev_usage": {
+        "input_tokens": 645,
+        "output_tokens": 54
+      },
+      "confidence": 0.99,
+      "execution_ms": 3404,
+      "selected_action": {
+        "action": "type_text",
+        "text": "GDM experiment 01"
+      },
+      "end_to_end_ms": 11498,
+      "verification_ms": 1374,
+      "verification": "exact saved guest TextEdit fixture file",
+      "attempt_wall_ms": 12872
+    },
+    {
+      "repeat": 1,
+      "arm": "model_candidates_jev",
+      "model_requested": "sonnet",
+      "success": true,
+      "selection_ms": 616,
+      "fixture": "fullscreen-selected-textedit-single-action",
+      "screen_sha256": "947c8997feb88b4ab3f5292e42ab2529a9b9250837593377101bcbec27c18482",
+      "generation_ms": 5462,
+      "generation_usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 4694,
+        "cache_read_input_tokens": 5213,
+        "output_tokens": 262,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 4694,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 262,
+            "cache_read_input_tokens": 5213,
+            "cache_creation_input_tokens": 4694,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 4694
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      },
+      "models_reported_by_cli": [
+        "claude-sonnet-5"
+      ],
+      "candidate_count": 3,
+      "jev_model": "jev-1.13.0",
+      "jev_usage": {
+        "input_tokens": 619,
+        "output_tokens": 53
+      },
+      "confidence": 0.99,
+      "execution_ms": 2315,
+      "selected_action": {
+        "action": "type_text",
+        "text": "GDM experiment 02"
+      },
+      "end_to_end_ms": 8954,
+      "verification_ms": 1516,
+      "verification": "exact saved guest TextEdit fixture file",
+      "attempt_wall_ms": 10471
+    },
+    {
+      "repeat": 1,
+      "arm": "model_direct",
+      "model_requested": "sonnet",
+      "success": true,
+      "selection_ms": 0,
+      "fixture": "fullscreen-selected-textedit-single-action",
+      "screen_sha256": "947c8997feb88b4ab3f5292e42ab2529a9b9250837593377101bcbec27c18482",
+      "generation_ms": 6055,
+      "generation_usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 4682,
+        "cache_read_input_tokens": 5219,
+        "output_tokens": 306,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 4682,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 306,
+            "cache_read_input_tokens": 5219,
+            "cache_creation_input_tokens": 4682,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 4682
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      },
+      "models_reported_by_cli": [
+        "claude-sonnet-5"
+      ],
+      "candidate_count": 3,
+      "execution_ms": 2567,
+      "selected_action": {
+        "action": "type_text",
+        "text": "GDM experiment 02"
+      },
+      "end_to_end_ms": 9155,
+      "verification_ms": 1272,
+      "verification": "exact saved guest TextEdit fixture file",
+      "attempt_wall_ms": 10427
+    },
+    {
+      "repeat": 2,
+      "arm": "model_direct",
+      "model_requested": "sonnet",
+      "success": true,
+      "selection_ms": 0,
+      "fixture": "fullscreen-selected-textedit-single-action",
+      "screen_sha256": "947c8997feb88b4ab3f5292e42ab2529a9b9250837593377101bcbec27c18482",
+      "generation_ms": 6197,
+      "generation_usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 4682,
+        "cache_read_input_tokens": 5219,
+        "output_tokens": 309,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 4682,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 309,
+            "cache_read_input_tokens": 5219,
+            "cache_creation_input_tokens": 4682,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 4682
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      },
+      "models_reported_by_cli": [
+        "claude-sonnet-5"
+      ],
+      "candidate_count": 3,
+      "execution_ms": 2271,
+      "selected_action": {
+        "action": "type_text",
+        "text": "GDM experiment 03"
+      },
+      "end_to_end_ms": 8934,
+      "verification_ms": 1585,
+      "verification": "exact saved guest TextEdit fixture file",
+      "attempt_wall_ms": 10520
+    },
+    {
+      "repeat": 2,
+      "arm": "model_candidates_jev",
+      "model_requested": "sonnet",
+      "success": true,
+      "selection_ms": 539,
+      "fixture": "fullscreen-selected-textedit-single-action",
+      "screen_sha256": "947c8997feb88b4ab3f5292e42ab2529a9b9250837593377101bcbec27c18482",
+      "generation_ms": 6410,
+      "generation_usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 4692,
+        "cache_read_input_tokens": 5213,
+        "output_tokens": 317,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 4692,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 317,
+            "cache_read_input_tokens": 5213,
+            "cache_creation_input_tokens": 4692,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 4692
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      },
+      "models_reported_by_cli": [
+        "claude-sonnet-5"
+      ],
+      "candidate_count": 3,
+      "jev_model": "jev-1.13.0",
+      "jev_usage": {
+        "input_tokens": 651,
+        "output_tokens": 54
+      },
+      "confidence": 0.99,
+      "execution_ms": 2396,
+      "selected_action": {
+        "action": "type_text",
+        "text": "GDM experiment 03"
+      },
+      "end_to_end_ms": 9852,
+      "verification_ms": 791,
+      "verification": "exact saved guest TextEdit fixture file",
+      "attempt_wall_ms": 10644
+    }
+  ],
+  "summary": {
+    "arms": {
+      "model_direct": {
+        "attempts": 3,
+        "succeeded": 3,
+        "success_rate": 1.0,
+        "p50_ms": 9155.0,
+        "p95_ms": 13263.0
+      },
+      "model_candidates_jev": {
+        "attempts": 3,
+        "succeeded": 3,
+        "success_rate": 1.0,
+        "p50_ms": 9852.0,
+        "p95_ms": 11498.0
+      }
+    },
+    "equal_observed_success_rate": true,
+    "observed_p50_speedup": 0.9292529435647584,
+    "interpretation": "Small paired pilot, not statistical proof. Task latency includes candidate generation, selection and GUI execution. Independent file verification is reported separately. Includes a new official CLI process per proposal. Persistent gid sessions can have different overhead. Candidate generation is included. Jev is text-only; observations are produced by the existing vision model."
+  }
+}
