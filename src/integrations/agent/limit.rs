@@ -9,7 +9,12 @@ use std::{
 };
 use toml_edit::{DocumentMut, Item, TableLike};
 pub const RECOMMENDED_CONCURRENT_LIMIT: u64 = 4;
-const NOTE: &str = "  → 현재 세션 유효값은 CLI·프로필·프로젝트 설정이 덮을 수 있으므로 /debug-config에서 확인하세요";
+fn note() -> &'static str {
+    crate::i18n::text(
+        "  → 현재 세션 유효값은 CLI·프로필·프로젝트 설정이 덮을 수 있으므로 /debug-config에서 확인하세요",
+        "  → CLI, profile and project settings may override this value; inspect /debug-config for the current session",
+    )
+}
 fn invalid(kind: &str, message: impl Into<String>) -> Value {
     json!({"exists":true,"invalid":true,"invalidKind":kind,"invalidMessage":message.into()})
 }
@@ -40,7 +45,10 @@ fn parse(source: &str) -> Value {
         Err(_) => {
             return invalid(
                 "parse",
-                "config.toml TOML 문법이 올바르지 않습니다: invalid TOML syntax",
+                crate::i18n::text(
+                    "config.toml TOML 문법이 올바르지 않습니다: invalid TOML syntax",
+                    "Invalid config.toml TOML syntax",
+                ),
             );
         }
     };
@@ -76,8 +84,10 @@ fn parse(source: &str) -> Value {
     out["invalid"] = json!(bad);
     if bad {
         out["invalidKind"] = json!("shape");
-        out["invalidMessage"] =
-            json!("동시성 상한 또는 관련 TOML 테이블의 형식이 올바르지 않습니다");
+        out["invalidMessage"] = json!(crate::i18n::text(
+            "동시성 상한 또는 관련 TOML 테이블의 형식이 올바르지 않습니다",
+            "Invalid concurrency limit or related TOML table type"
+        ));
     }
     out
 }
@@ -88,10 +98,24 @@ fn read_at(home: &Path) -> Value {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
             return json!({"exists":false,"invalid":false});
         }
-        Err(e) => return invalid("read", format!("config.toml 상태를 읽을 수 없습니다: {e}")),
+        Err(e) => {
+            return invalid(
+                "read",
+                crate::lfmt!(
+                    "config.toml 상태를 읽을 수 없습니다: {e}",
+                    "Cannot inspect config.toml: {e}"
+                ),
+            );
+        }
     };
     if !stat.is_file() || stat.is_symlink() {
-        return invalid("path", "config.toml 경로가 일반 파일이 아닙니다");
+        return invalid(
+            "path",
+            crate::i18n::text(
+                "config.toml 경로가 일반 파일이 아닙니다",
+                "config.toml is not a regular file",
+            ),
+        );
     }
     // Read a bounded regular file without following a replaced final symlink.
     let read = (|| -> std::io::Result<String> {
@@ -111,7 +135,13 @@ fn read_at(home: &Path) -> Value {
     })();
     match read {
         Ok(source) => parse(&source),
-        Err(e) => invalid("read", format!("config.toml을 읽을 수 없습니다: {e}")),
+        Err(e) => invalid(
+            "read",
+            crate::lfmt!(
+                "config.toml을 읽을 수 없습니다: {e}",
+                "Cannot read config.toml: {e}"
+            ),
+        ),
     }
 }
 pub fn read_config(cwd: &Path) -> Result<Value> {
@@ -121,21 +151,25 @@ fn lines(config: &Value, path: &Path) -> Vec<String> {
     let mut out = Vec::new();
     if config["exists"] == false {
         out.push(
-            "  Codex 서브에이전트 사용자 설정: config.toml 없음 (현재 세션 유효값 미확인)".into(),
+            crate::i18n::text("  Codex 서브에이전트 사용자 설정: config.toml 없음 (현재 세션 유효값 미확인)", "  Codex subagent user settings: no config.toml (effective session value unverified)").into(),
         );
     } else if config["invalid"] == true {
         let label = match config["invalidKind"].as_str() {
-            Some("parse") => "TOML 문법 오류",
-            Some("path") => "config.toml 경로 오류",
-            Some("read") => "config.toml 읽기 오류",
-            _ => "상한 설정 오류",
+            Some("parse") => crate::i18n::text("TOML 문법 오류", "Invalid TOML syntax"),
+            Some("path") => crate::i18n::text("config.toml 경로 오류", "Invalid config.toml path"),
+            Some("read") => crate::i18n::text("config.toml 읽기 오류", "Cannot read config.toml"),
+            _ => crate::i18n::text("상한 설정 오류", "Invalid limit configuration"),
         };
-        out.push(format!("  Codex 서브에이전트 사용자 설정: {label}"));
+        out.push(crate::lfmt!(
+            "  Codex 서브에이전트 사용자 설정: {label}",
+            "  Codex subagent user settings: {label}"
+        ));
         if let Some(message) = config["invalidMessage"].as_str() {
             out.push(format!("  → {message}"));
         }
-        out.push(format!(
+        out.push(crate::lfmt!(
             "  → {}의 [agents] max_concurrent_threads_per_session = 4를 확인하세요",
+            "  → Check [agents] max_concurrent_threads_per_session = 4 in {}",
             path.display()
         ));
     } else {
@@ -145,49 +179,55 @@ fn lines(config: &Value, path: &Path) -> Vec<String> {
             .or_else(|| config["legacyAgents"].as_u64());
         if let Some(effective) = official.or(legacy) {
             let prefix = if official.is_none() {
-                "legacy 동시 활성"
+                crate::i18n::text("legacy 동시 활성", "Legacy concurrency")
             } else {
-                "동시 활성"
+                crate::i18n::text("동시 활성", "Concurrent agents")
             };
             let class = if effective <= 4 {
-                "권장 범위"
+                crate::i18n::text("권장 범위", "Recommended range")
             } else if effective <= 8 {
-                "고병렬 설정 — 메모리 압력 확인"
+                crate::i18n::text(
+                    "고병렬 설정 — 메모리 압력 확인",
+                    "High parallelism — check memory pressure",
+                )
             } else {
-                "위험 — 8개 초과"
+                crate::i18n::text("위험 — 8개 초과", "Risk — exceeds 8")
             };
-            out.push(format!(
-                "  Codex 서브에이전트 사용자 설정: {prefix} {effective}개 ({class})"
+            out.push(crate::lfmt!(
+                "  Codex 서브에이전트 사용자 설정: {prefix} {effective}개 ({class})",
+                "  Codex subagent user settings: {prefix} {effective} ({class})"
             ));
             if legacy.is_some() {
-                out.push("  → 구형 상한 설정을 제거하고 [agents] max_concurrent_threads_per_session = 4만 유지하세요".into());
+                out.push(crate::i18n::text("  → 구형 상한 설정을 제거하고 [agents] max_concurrent_threads_per_session = 4만 유지하세요", "  → Remove legacy limits and keep only [agents] max_concurrent_threads_per_session = 4").into());
             } else if effective > 8 {
-                out.push(format!(
+                out.push(crate::lfmt!(
                     "  → {}의 [agents] max_concurrent_threads_per_session = 4로 낮추세요",
+                    "  → Lower [agents] max_concurrent_threads_per_session to 4 in {}",
                     path.display()
                 ));
             }
         } else {
             out.push(
-                "  Codex 서브에이전트 사용자 설정: 명시 상한 없음 (현재 세션 유효값 미확인)".into(),
+                crate::i18n::text("  Codex 서브에이전트 사용자 설정: 명시 상한 없음 (현재 세션 유효값 미확인)", "  Codex subagent user settings: no explicit limit (effective session value unverified)").into(),
             );
             out.push(
-                "  → 16GB급 장비 권장: [agents] max_concurrent_threads_per_session = 4".into(),
+                crate::i18n::text("  → 16GB급 장비 권장: [agents] max_concurrent_threads_per_session = 4", "  → Recommended for 16 GB machines: [agents] max_concurrent_threads_per_session = 4").into(),
             );
         }
     }
-    out.push(NOTE.into());
+    out.push(note().into());
     out
 }
 pub fn doctor_lines(cwd: &Path) -> Vec<String> {
     match super::ledger::home(cwd) {
         Ok(home) => lines(&read_at(&home), &home.join("config.toml")),
         Err(e) => vec![
-            format!(
+            crate::lfmt!(
                 "  Codex 서브에이전트 사용자 설정: 경로 오류 — {}",
+                "  Codex subagent user settings: invalid path — {}",
                 e.message
             ),
-            NOTE.into(),
+            note().into(),
         ],
     }
 }

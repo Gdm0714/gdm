@@ -1,0 +1,76 @@
+gdm {VERSION} — An evidence-driven workflow for AI-assisted work
+
+Workflow: contract → evidence → observations → habits → comparison
+
+Usage:
+  gdm [--language auto|ko|en] <command> [options]
+  gdm language auto|ko|en                 # Save the language for future launches
+  gdm plan init --slug <slug> (--brief <description> | --brief-file <file>) [--audit] [--risk <low|medium|high>] [--verification <deterministic|inspectable|opaque>] [--simplify] (--require <requirement> | --forbid <restriction>)...
+                [--assume <assumption>]... [--uncertain <uncertainty>]... [--allow-path <path>]... [--forbid-path <path>]... [--stop-if <stop-condition>]...
+                [--bottleneck <bottleneck> --desired-outcome <desired-outcome> --baseline <baseline> --target <target> --unit <unit> --intervene-if <intervention-condition>]  # Declared outcome (not measured by GDM); provide all six values together
+  gdm plan contract [--slug <slug>] (--require <requirement> | --forbid <restriction>)...
+  gdm plan contract [--slug <slug>] (--allow-path <path> | --forbid-path <path> | --remove-allow-path <path> | --remove-forbid-path <path>)... --reason <reason>
+  gdm plan contract [--slug <slug>] --commit <forbidden|explicitly-approved> --reason <reason>
+  gdm plan contract [--slug <slug>] --check-commit
+  gdm plan contract --slug <slug> --activate-habit <habit-id>@<version>
+  gdm attempt fail --slug <slug> --attempt-id <id> (--command <id> | --capability <id>) --target <id> --error-code <id> --hypothesis <hypothesis>
+  gdm attempt retry --slug <slug> --attempt-id <id> --fingerprint <id> [--changed <kind> --evidence <file>]
+  gdm habit observe --pattern <id> --taxonomy <type> --source-token <id> --source-group <id> --source-kind <incident|principle>
+  gdm habit import --file <observation-jsonl>
+  gdm habit propose --pattern <id> --statement <rule> --source-event <event-id> --source-event <event-id> [--habit <habit-id>]
+  gdm habit adopt <habit-id>@<version> --rule-ref <relative-file> --reason <reason>
+  gdm habit retire <habit-id>@<version> --reason <reason>
+  gdm habit evaluate <habit-id>@<version> --work <slug> --outcome <ineligible|skipped|clean|recurred> [--correct <event-id> --reason <reason>]
+  gdm habit status [--json]
+  gdm habit harvest [--json]
+  gdm plan add  --desc <check> --cmd <command> --expect <expected> [--kind <regression|behavior|edge|static>] [--slug <slug>]
+  gdm plan add  --desc <check> --expect <expected> --manual [--expert] [--slug <slug>]
+  gdm plan add  --from-brief [--dry-run] [--slug <slug>]   # Import draft checks from the brief section "## Verification checks" (Korean heading also supported)
+  gdm plan list [--json] [--slug <slug>]
+  gdm plan edit --check <id> [--desc ..] [--cmd ..] [--expect ..] [--kind ..] --reason <reason> [--slug <slug>]
+  gdm plan source --fingerprint <sha256> [--slug <slug>]
+  gdm pass <id> --red [--note <note>] [--slug <slug>] [--expected-plan-fingerprint <sha256>]     # Record the pre-fix failure for a regression check
+  gdm pass <id> [--note <note>] [--slug <slug>] [--expected-plan-fingerprint <sha256>]           # Automatic check: run cmd and evaluate its exit code
+  gdm pass <id> --manual --observed <evidence-file> [--reviewer <reviewer>] [...]   # Manual check
+  gdm recheck [--check <id>] [--slug <slug>] [--expected-plan-fingerprint <sha256>]              # Rerun proven automatic checks to detect regressions
+  gdm audit brief [--json] [--slug <slug>]                # Print the briefing package for an independent auditor
+  gdm audit verdict (--pass | --fail) --report <audit-report> --implementation-model <model> --audit-model <model> [--slug <slug>]
+  gdm done [--slug <slug>] [--expected-plan-fingerprint <sha256>]
+  gdm protocol export [--slug <slug>] [--expected-plan-fingerprint <sha256>] [--expected-state-fingerprint <sha256>] [--expected-source-fingerprint <sha256>]
+  gdm protocol handoff --slug <slug> --handoff-id <id> --from-role <id> --to-role <id> --intent <description> [--from-provider <id>] [--to-provider <id>] [--artifact <repository-relative-file>] [--expected-plan-fingerprint <sha256>] [--expected-state-fingerprint <sha256>] [--expected-source-fingerprint <sha256>]
+  gdm protocol offer --slug <slug> --handoff-id <id> --from-role <id> --to-role <id> --intent <description> --expected-plan-fingerprint <sha256> --expected-state-fingerprint <sha256> --expected-source-fingerprint <sha256> [--from-provider <id>] [--to-provider <id>] [--artifact <repository-relative-file>]
+  gdm protocol claim --slug <slug> --handoff-event-id <id> --claim-id <id> --receiver-role <id> [--receiver-provider <id>] --capability-profile gdm-read-only-specialist/v1 [--model-requested <id>] [--model-view]
+  gdm protocol finish --slug <slug> --claim-id <id> --exit-code <0..255> --output-artifact <repository-relative-file> --provider-target <id> --adapter-version <id> --executable <absolute-path> --executable-sha256 <sha256> --executable-version <description> --argv-policy-id <id> [--model-requested <id>] [--failure-code <id>]
+  gdm protocol adopt --slug <slug> --claim-id <id>
+  gdm protocol recover --slug <slug> --claim-id <id> --reason <reason>
+  gdm protocol status [--slug <slug>]
+  gdm workspace fingerprint --json
+  gdm context query                                      # Query a bounded Context Pack in a trusted Git root with a stdin JSON request
+  gdm context status                                     # Query provider capabilities once
+  gdm status [--json] [--checks]                            # List work in the current directory (--checks: check details)
+  gdm resume [--json] [--slug <slug>]
+  gdm retro [--all] [--json] [--slug <slug>]              # Retrospective (--all: across all work, with suggestions)
+  gdm feedback --value good [--reason <reason>] [--source <id>] [--slug <slug>] [--json]
+  gdm feedback --value bad --reason <reason> [--source <id>] [--slug <slug>] [--json]
+  gdm miss --desc <description> [--type <type>] [--check <id>] [--slug <slug>]  # Record a defect discovered after a gate passed
+  gdm repair state --slug <slug> --trailing-nul               # Explicitly repair trailing NUL corruption only
+  gdm delivery prepare --slug <slug> --issue <id> --branch <branch> --head <sha>
+  gdm delivery pr --slug <slug> --number <id> --head <sha>
+  gdm delivery ci --slug <slug> --status <passed|failed> --head <sha> --run <id>
+  gdm delivery approve-merge --slug <slug> --head <sha> --reason <approval-reason>
+  gdm delivery check-merge --slug <slug> --head <sha>
+  gdm delivery merged --slug <slug> --head <sha> --merge-sha <sha>
+  gdm agent hook-install --binary <absolute-path> [--dry-run] [--json] # Install the runtime gate while preserving existing hooks.json entries
+  gdm agent hook-status [--json]                            # Inspect installation and ledger status
+  gdm agent hook [--handler-id gdm-agent-gate-v1]           # Internal Codex lifecycle hook entry point
+  gdm preset set <name> <command> | list | rm <name>            # Register standard project commands
+  gdm doctor
+
+Presets: use "@name" as --cmd in plan add/edit to expand a registered command
+  (Example: gdm preset set test "./gradlew test" → gdm plan add --cmd @test ...)
+
+Rules:
+  - GDM produces automatic evidence: pass runs cmd and stores and hashes its output.
+    A check passes only on exit 0. Design commands to succeed only when expectations are met.
+  - done succeeds only after revalidating every check and evidence file and hash.
+  - Modify state files (.gdm/) only through gdm commands.

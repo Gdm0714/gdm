@@ -101,7 +101,7 @@ impl Error {
 }
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "오류({}): {}", self.code, self.message)
+        crate::lwrite!(f, "오류({}): {}", "Error({}): {}", self.code, self.message)
     }
 }
 impl std::error::Error for Error {}
@@ -133,7 +133,12 @@ pub fn read_flag(args: &[String], name: &str) -> Result<Option<String>> {
             .filter(|v| !v.starts_with("--"))
             .cloned()
             .map(Some)
-            .ok_or_else(|| Error::new("usage", format!("{flag} 값이 필요합니다")));
+            .ok_or_else(|| {
+                Error::new(
+                    "usage",
+                    crate::lfmt!("{flag} 값이 필요합니다", "A value is required for {flag}"),
+                )
+            });
     }
     let prefix = format!("{flag}=");
     Ok(args
@@ -141,7 +146,15 @@ pub fn read_flag(args: &[String], name: &str) -> Result<Option<String>> {
         .find_map(|a| a.strip_prefix(&prefix).map(str::to_owned)))
 }
 pub fn required_flag(args: &[String], name: &str) -> Result<String> {
-    read_flag(args, name)?.ok_or_else(|| Error::new("usage", format!("--{name} 값이 필요합니다")))
+    read_flag(args, name)?.ok_or_else(|| {
+        Error::new(
+            "usage",
+            crate::lfmt!(
+                "--{name} 값이 필요합니다",
+                "A value is required for --{name}"
+            ),
+        )
+    })
 }
 pub fn read_flags(args: &[String], name: &str) -> Result<Vec<String>> {
     let mut values = Vec::new();
@@ -155,7 +168,15 @@ pub fn read_flags(args: &[String], name: &str) -> Result<Vec<String>> {
                 args.get(i)
                     .filter(|v| !v.starts_with("--"))
                     .cloned()
-                    .ok_or_else(|| Error::new("usage", format!("{flag} 값이 필요합니다")))?,
+                    .ok_or_else(|| {
+                        Error::new(
+                            "usage",
+                            crate::lfmt!(
+                                "{flag} 값이 필요합니다",
+                                "A value is required for {flag}"
+                            ),
+                        )
+                    })?,
             );
         } else if let Some(v) = args[i].strip_prefix(&prefix) {
             values.push(v.to_owned());
@@ -179,11 +200,17 @@ pub fn ensure_flags(args: &[String], valued: &[&str], boolean: &[&str]) -> Resul
                 if value.is_some() {
                     return Err(Error::new(
                         "usage",
-                        format!("--{name}는 값을 받지 않습니다"),
+                        crate::lfmt!(
+                            "--{name}는 값을 받지 않습니다",
+                            "--{name} does not take a value"
+                        ),
                     ));
                 }
             } else {
-                return Err(Error::new("usage", format!("알 수 없는 플래그: --{name}")));
+                return Err(Error::new(
+                    "usage",
+                    crate::lfmt!("알 수 없는 플래그: --{name}", "Unknown flag: --{name}"),
+                ));
             }
         }
         i += 1;

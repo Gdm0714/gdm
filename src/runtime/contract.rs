@@ -43,10 +43,11 @@ pub fn safe_text(v: &str, field: &str, max: usize) -> Result<String> {
     assert_no_sensitive(v, field)?;
     let v = v.trim();
     let detail = if v.is_empty() {
-        Some("값이 비어 있습니다".to_owned())
+        Some(crate::i18n::text("값이 비어 있습니다", "The value is empty").to_owned())
     } else if v.encode_utf16().count() > max {
-        Some(format!(
+        Some(crate::lfmt!(
             "{max}자 제한 초과 ({}자)",
+            "Exceeds the {max}-character limit ({} characters)",
             v.encode_utf16().count()
         ))
     } else if let Some((index, ch)) = v
@@ -55,12 +56,16 @@ pub fn safe_text(v: &str, field: &str, max: usize) -> Result<String> {
         .find(|(_, ch)| !re(r"^[\p{L}\p{N}\p{M} .,:;!?()\[\]_-]$", &ch.to_string()))
     {
         let hint = if field == "require" || field == "forbid" {
-            " · 여러 조건은 --require/--forbid 플래그를 반복해 전달하세요"
+            crate::i18n::text(
+                " · 여러 조건은 --require/--forbid 플래그를 반복해 전달하세요",
+                " · Repeat --require or --forbid to pass multiple conditions",
+            )
         } else {
             ""
         };
-        Some(format!(
+        Some(crate::lfmt!(
             "허용되지 않는 문자 \"{ch}\" ({}번째) — 허용: 한글·영문·숫자·공백과 .,:;!?()[]_-{hint}",
+            "Unsupported character \"{ch}\" at position {} — allowed: letters, numbers, spaces and .,:;!?()[]_-{hint}",
             index + 1
         ))
     } else {
@@ -79,7 +84,10 @@ pub fn opaque_id(v: &str, field: &str) -> Result<String> {
     if !re(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$", v) {
         return Err(Error::new(
             "usage",
-            format!("field={field} opaque identifier 형식이 잘못됐습니다"),
+            crate::lfmt!(
+                "field={field} opaque identifier 형식이 잘못됐습니다",
+                "field={field} has an invalid opaque identifier format"
+            ),
         ));
     }
     Ok(v.into())
@@ -94,7 +102,10 @@ pub fn path(v: &str, field: &str) -> Result<String> {
     {
         return Err(Error::new(
             "path_rejected",
-            format!("{field}는 저장소 상대 경로여야 합니다"),
+            crate::lfmt!(
+                "{field}는 저장소 상대 경로여야 합니다",
+                "{field} must be a repository-relative path"
+            ),
         ));
     }
     let parts = x
@@ -109,7 +120,10 @@ pub fn path(v: &str, field: &str) -> Result<String> {
     if n == ".gdm" || n.starts_with(".gdm/") {
         return Err(Error::new(
             "path_rejected",
-            "gdm 내부 상태 경로(.gdm)를 쓸 수 없습니다",
+            crate::i18n::text(
+                "gdm 내부 상태 경로(.gdm)를 쓸 수 없습니다",
+                "Internal gdm state paths (.gdm) cannot be used",
+            ),
         ));
     }
     assert_no_sensitive(v, field)?;
@@ -123,12 +137,20 @@ pub fn default_contract() -> Value {
 }
 fn strings(v: &Value) -> Result<Vec<String>> {
     v.as_array()
-        .ok_or_else(|| Error::new("state_corrupt", "contract 목록 오류"))?
+        .ok_or_else(|| {
+            Error::new(
+                "state_corrupt",
+                crate::i18n::text("contract 목록 오류", "Invalid contract list"),
+            )
+        })?
         .iter()
         .map(|x| {
-            x.as_str()
-                .map(str::to_owned)
-                .ok_or_else(|| Error::new("state_corrupt", "contract 문자열 오류"))
+            x.as_str().map(str::to_owned).ok_or_else(|| {
+                Error::new(
+                    "state_corrupt",
+                    crate::i18n::text("contract 문자열 오류", "Invalid contract string"),
+                )
+            })
         })
         .collect()
 }
@@ -146,7 +168,10 @@ pub fn normalize(value: Option<&Value>) -> Result<Value> {
         return Ok(default_contract());
     };
     if !value.is_object() {
-        return Err(Error::new("state_corrupt", "contract 객체 오류"));
+        return Err(Error::new(
+            "state_corrupt",
+            crate::i18n::text("contract 객체 오류", "Invalid contract object"),
+        ));
     }
     let mut v = value.clone();
     for k in ["required", "forbidden"] {
@@ -155,7 +180,13 @@ pub fn normalize(value: Option<&Value>) -> Result<Value> {
     if !v["activeHabits"].is_array()
         || !["forbidden", "explicitly-approved"].contains(&s(&v["commit"]))
     {
-        return Err(Error::new("state_corrupt", "contract 필수 필드 오류"));
+        return Err(Error::new(
+            "state_corrupt",
+            crate::i18n::text(
+                "contract 필수 필드 오류",
+                "Invalid required contract fields",
+            ),
+        ));
     }
     let default = default_contract();
     for (k, val) in default.as_object().unwrap() {
@@ -171,14 +202,22 @@ pub fn normalize(value: Option<&Value>) -> Result<Value> {
             .iter()
             .map(|x| path(x, k))
             .collect::<Result<Vec<_>>>()
-            .map_err(|_| Error::new("state_corrupt", "contract 경로 오류"))?;
+            .map_err(|_| {
+                Error::new(
+                    "state_corrupt",
+                    crate::i18n::text("contract 경로 오류", "Invalid contract path"),
+                )
+            })?;
         v[k] = json!(dedup(p));
     }
     if !["low", "medium", "high"].contains(&s(&v["risk"]))
         || !["deterministic", "inspectable", "opaque"].contains(&s(&v["verification"]))
         || !v["simplificationRequired"].is_boolean()
     {
-        return Err(Error::new("state_corrupt", "contract 정책 오류"));
+        return Err(Error::new(
+            "state_corrupt",
+            crate::i18n::text("contract 정책 오류", "Invalid contract policy"),
+        ));
     }
     for h in v["activeHabits"].as_array().unwrap() {
         if h.as_object().map(|o| o.len()) != Some(5)
@@ -190,16 +229,24 @@ pub fn normalize(value: Option<&Value>) -> Result<Value> {
             || !canonical_timestamp(s(&h["activatedAt"]))
             || !safe_rule_ref(s(&h["ruleRef"]))
         {
-            return Err(Error::new("state_corrupt", "activeHabit 오류"));
+            return Err(Error::new(
+                "state_corrupt",
+                crate::i18n::text("activeHabit 오류", "Invalid activeHabit"),
+            ));
         }
     }
     let mut amendments = vec![];
-    for a in v["scopeAmendments"]
-        .as_array()
-        .ok_or_else(|| Error::new("state_corrupt", "scopeAmendments 오류"))?
-    {
+    for a in v["scopeAmendments"].as_array().ok_or_else(|| {
+        Error::new(
+            "state_corrupt",
+            crate::i18n::text("scopeAmendments 오류", "Invalid scopeAmendments"),
+        )
+    })? {
         if s(&a["reason"]).trim().is_empty() || !canonical_timestamp(s(&a["at"])) {
-            return Err(Error::new("state_corrupt", "scope amendment 오류"));
+            return Err(Error::new(
+                "state_corrupt",
+                crate::i18n::text("scope amendment 오류", "Invalid scope amendment"),
+            ));
         }
         let mut amendment = json!({});
         for k in [
@@ -216,7 +263,15 @@ pub fn normalize(value: Option<&Value>) -> Result<Value> {
                 .iter()
                 .map(|p| path(p, k))
                 .collect::<Result<Vec<_>>>()
-                .map_err(|_| Error::new("state_corrupt", "scope amendment 경로 오류"))?;
+                .map_err(|_| {
+                    Error::new(
+                        "state_corrupt",
+                        crate::i18n::text(
+                            "scope amendment 경로 오류",
+                            "Invalid scope amendment path",
+                        ),
+                    )
+                })?;
             amendment[k] = json!(dedup(paths));
         }
         amendment["reason"] = a["reason"].clone();
@@ -234,10 +289,18 @@ pub fn normalize(value: Option<&Value>) -> Result<Value> {
             || !t["at"].is_string()
             || (!t["predecessorEventId"].is_null() && !t["predecessorEventId"].is_string()))
     {
-        return Err(Error::new("state_corrupt", "commit transition 오류"));
+        return Err(Error::new(
+            "state_corrupt",
+            crate::i18n::text("commit transition 오류", "Invalid commit transition"),
+        ));
     }
     if let Some(o) = v.get("outcome") {
-        validate_outcome(o).map_err(|_| Error::new("state_corrupt", "outcome 오류"))?;
+        validate_outcome(o).map_err(|_| {
+            Error::new(
+                "state_corrupt",
+                crate::i18n::text("outcome 오류", "Invalid outcome"),
+            )
+        })?;
         let mut normalized = json!({});
         for key in [
             "bottleneck",
@@ -247,10 +310,10 @@ pub fn normalize(value: Option<&Value>) -> Result<Value> {
             "unit",
             "interveneIf",
         ] {
-            normalized[key] = json!(
-                safe_text(s(&o[key]), key, 240)
-                    .map_err(|_| Error::new("state_corrupt", "outcome 오류"))?
-            );
+            normalized[key] = json!(safe_text(s(&o[key]), key, 240).map_err(|_| Error::new(
+                "state_corrupt",
+                crate::i18n::text("outcome 오류", "Invalid outcome")
+            ))?);
         }
         v["outcome"] = normalized;
     }
@@ -300,7 +363,13 @@ fn validate_outcome(o: &Value) -> Result<()> {
         "interveneIf",
     ];
     if o.as_object().map(|o| o.len()) != Some(6) {
-        return Err(Error::new("usage", "outcome 여섯 값 필요"));
+        return Err(Error::new(
+            "usage",
+            crate::i18n::text(
+                "outcome 여섯 값 필요",
+                "All six outcome values are required",
+            ),
+        ));
     }
     for k in keys {
         safe_text(s(&o[k]), k, 240)?;
@@ -323,7 +392,10 @@ pub fn constraints(args: &[String]) -> Result<(Vec<String>, Vec<String>)> {
     if req.iter().any(|x| forbid.contains(x)) {
         return Err(Error::new(
             "contract_conflict",
-            "동일 제약은 필수와 금지에 함께 둘 수 없음",
+            crate::i18n::text(
+                "동일 제약은 필수와 금지에 함께 둘 수 없음",
+                "The same constraint cannot be both required and forbidden",
+            ),
         ));
     }
     Ok((req, forbid))
@@ -333,7 +405,10 @@ pub fn create(args: &[String]) -> Result<Value> {
     if req.is_empty() && forbid.is_empty() {
         return Err(Error::new(
             "constraint_required",
-            "--require 또는 --forbid가 필요합니다",
+            crate::i18n::text(
+                "--require 또는 --forbid가 필요합니다",
+                "--require or --forbid is required",
+            ),
         ));
     }
     let mut v = default_contract();
@@ -392,7 +467,10 @@ pub fn assert_commit(work: &Value) -> Result<()> {
     if work["contract"]["commit"] == "forbidden" {
         Err(Error::new(
             "commit_forbidden",
-            "명시적 승인 전에는 커밋할 수 없습니다",
+            crate::i18n::text(
+                "명시적 승인 전에는 커밋할 수 없습니다",
+                "Commits require explicit approval",
+            ),
         ))
     } else {
         Ok(())
@@ -417,7 +495,13 @@ pub fn mutate(work: &mut Value, args: &[String]) -> Result<Option<Value>> {
         + usize::from(check)
         + usize::from(commit.is_some());
     if modes != 1 || ((check || has_constraints) && reason.is_some()) {
-        return Err(Error::new("usage", "plan contract 동작 정확히 하나 필요"));
+        return Err(Error::new(
+            "usage",
+            crate::i18n::text(
+                "plan contract 동작 정확히 하나 필요",
+                "Provide exactly one plan contract operation",
+            ),
+        ));
     }
     if check {
         assert_commit(work)?;
@@ -430,13 +514,25 @@ pub fn mutate(work: &mut Value, args: &[String]) -> Result<Option<Value>> {
         let next_req = dedup([old_req.clone(), req].concat());
         let next_forbid = dedup([old_forbid.clone(), forbid].concat());
         if next_req.iter().any(|v| next_forbid.contains(v)) {
-            return Err(Error::new("contract_conflict", "필수와 금지 충돌"));
+            return Err(Error::new(
+                "contract_conflict",
+                crate::i18n::text(
+                    "필수와 금지 충돌",
+                    "Required and forbidden constraints conflict",
+                ),
+            ));
         }
         if next_req == old_req && next_forbid == old_forbid {
             return Ok(None);
         }
         if b(&work["done"]) || super::state::proven_count(work) > 0 {
-            return Err(Error::new("contract_locked", "첫 통과 후 제약 추가 불가"));
+            return Err(Error::new(
+                "contract_locked",
+                crate::i18n::text(
+                    "첫 통과 후 제약 추가 불가",
+                    "Constraints cannot be added after the first check passes",
+                ),
+            ));
         }
         let event = json!({"ts":at,"event":"contract.constraints","required":next_req[old_req.len()..],"forbidden":next_forbid[old_forbid.len()..]});
         work["contract"]["required"] = json!(next_req);
@@ -451,7 +547,7 @@ pub fn mutate(work: &mut Value, args: &[String]) -> Result<Option<Value>> {
                 } else {
                     "reason_required"
                 },
-                "--reason 필요",
+                crate::i18n::text("--reason 필요", "--reason is required"),
             )
         })?,
         "reason",
@@ -459,7 +555,10 @@ pub fn mutate(work: &mut Value, args: &[String]) -> Result<Option<Value>> {
     )?;
     if let Some(to) = commit {
         if !["forbidden", "explicitly-approved"].contains(&to.as_str()) {
-            return Err(Error::new("usage", "commit 값 오류"));
+            return Err(Error::new(
+                "usage",
+                crate::i18n::text("commit 값 오류", "Invalid commit value"),
+            ));
         }
         let c = &work["contract"];
         if c["commit"] == to {
@@ -468,7 +567,10 @@ pub fn mutate(work: &mut Value, args: &[String]) -> Result<Option<Value>> {
             {
                 return Ok(None);
             }
-            return Err(Error::new("commit_transition_conflict", "현재 상태와 충돌"));
+            return Err(Error::new(
+                "commit_transition_conflict",
+                crate::i18n::text("현재 상태와 충돌", "Conflicts with the current state"),
+            ));
         }
         let revision = c["latestCommitTransition"]["transitionRevision"]
             .as_u64()
@@ -490,10 +592,22 @@ pub fn mutate(work: &mut Value, args: &[String]) -> Result<Option<Value>> {
         return Ok(Some(e));
     }
     if b(&work["done"]) {
-        return Err(Error::new("work_done", "완료 작업 범위 변경 불가"));
+        return Err(Error::new(
+            "work_done",
+            crate::i18n::text(
+                "완료 작업 범위 변경 불가",
+                "Scope cannot change for completed work",
+            ),
+        ));
     }
     if work.get("audit").is_some() {
-        return Err(Error::new("scope_locked", "검수 후 범위 변경 불가"));
+        return Err(Error::new(
+            "scope_locked",
+            crate::i18n::text(
+                "검수 후 범위 변경 불가",
+                "Scope cannot change after the audit",
+            ),
+        ));
     }
     let mut amendment = json!({"reason":reason,"at":at});
     let mut changed = false;
@@ -526,7 +640,13 @@ pub fn mutate(work: &mut Value, args: &[String]) -> Result<Option<Value>> {
                 .collect::<Result<_>>()?,
         );
         if plus.iter().any(|v| minus.contains(v)) {
-            return Err(Error::new("contract_conflict", "동일 경로 추가 제거 충돌"));
+            return Err(Error::new(
+                "contract_conflict",
+                crate::i18n::text(
+                    "동일 경로 추가 제거 충돌",
+                    "Cannot add and remove the same path",
+                ),
+            ));
         }
         let old = strings(&work["contract"][key])?;
         let actual_minus = old
@@ -549,7 +669,10 @@ pub fn mutate(work: &mut Value, args: &[String]) -> Result<Option<Value>> {
         work["contract"][key] = json!(next);
     }
     if !changed {
-        return Err(Error::new("no_changes", "바뀐 범위 없음"));
+        return Err(Error::new(
+            "no_changes",
+            crate::i18n::text("바뀐 범위 없음", "No scope changes"),
+        ));
     }
     work["contract"]["scopeAmendments"]
         .as_array_mut()

@@ -33,18 +33,33 @@ pub fn latest(journal: &[Value]) -> Result<Vec<Value>> {
             ]
             .contains(&s(&e["decision"]))
         {
-            return Err(Error::new("state_corrupt", "attempt journal 형식 오류"));
+            return Err(Error::new(
+                "state_corrupt",
+                crate::i18n::text(
+                    "attempt journal 형식 오류",
+                    "Invalid attempt journal format",
+                ),
+            ));
         }
         out.insert(s(&e["fingerprint"]).to_owned(), e.clone());
     }
     Ok(out.values().cloned().collect())
 }
 pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
-    let (sub, args) = args
-        .split_first()
-        .ok_or_else(|| Error::new("usage", "attempt 하위 명령 필요"))?;
+    let (sub, args) = args.split_first().ok_or_else(|| {
+        Error::new(
+            "usage",
+            crate::i18n::text(
+                "attempt 하위 명령 필요",
+                "An attempt subcommand is required",
+            ),
+        )
+    })?;
     if !["fail", "retry"].contains(&sub.as_str()) {
-        return Err(Error::new("usage", "attempt fail 또는 retry"));
+        return Err(Error::new(
+            "usage",
+            crate::i18n::text("attempt fail 또는 retry", "Use attempt fail or retry"),
+        ));
     }
     ensure_flags(
         args,
@@ -70,13 +85,22 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
         if changed.is_some() != evidence.is_some() {
             return Err(Error::new(
                 "usage",
-                "--changed와 --evidence는 함께 필요합니다",
+                crate::i18n::text(
+                    "--changed와 --evidence는 함께 필요합니다",
+                    "--changed and --evidence must be provided together",
+                ),
             ));
         }
     }
     let w = store::resolve(cwd, read_flag(args, "slug")?.as_deref(), false)?;
     if b(&w["done"]) {
-        return Err(Error::new("attempt_transition", "완료 작업 시도 추가 불가"));
+        return Err(Error::new(
+            "attempt_transition",
+            crate::i18n::text(
+                "완료 작업 시도 추가 불가",
+                "Cannot add attempts to completed work",
+            ),
+        ));
     }
     let journal = store::read_journal(cwd, s(&w["slug"]))?;
     latest(&journal)?;
@@ -91,7 +115,13 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
         let command = read_flag(args, "command")?;
         let capability = read_flag(args, "capability")?;
         if command.is_some() == capability.is_some() {
-            return Err(Error::new("usage", "command 또는 capability 정확히 하나"));
+            return Err(Error::new(
+                "usage",
+                crate::i18n::text(
+                    "command 또는 capability 정확히 하나",
+                    "Provide exactly one of command or capability",
+                ),
+            ));
         }
         let kind = if command.is_some() {
             "command"
@@ -133,7 +163,10 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
                 println!("{} · epoch {} · {}", fp, e["epoch"], s(&e["decision"]));
                 return Ok(());
             }
-            return Err(Error::new("attempt_id_conflict", "attempt-id 재사용 충돌"));
+            return Err(Error::new(
+                "attempt_id_conflict",
+                crate::i18n::text("attempt-id 재사용 충돌", "Conflicting reuse of attempt-id"),
+            ));
         }
         let last = events.iter().rev().find(|e| e["fingerprint"] == fp);
         if let Some(e) = last
@@ -145,7 +178,10 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
         {
             return Err(Error::new(
                 "attempt_transition",
-                "현재 상태에서 동일 실패 기록 불가",
+                crate::i18n::text(
+                    "현재 상태에서 동일 실패 기록 불가",
+                    "Cannot record the same failure in the current state",
+                ),
             ));
         }
         let locked = last.is_some_and(|e| e["decision"] == "confirmation-permitted");
@@ -157,17 +193,29 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
             .unwrap()
             .is_match(&fp)
         {
-            return Err(Error::new("usage", "fingerprint 형식 오류"));
+            return Err(Error::new(
+                "usage",
+                crate::i18n::text("fingerprint 형식 오류", "Invalid fingerprint format"),
+            ));
         }
         let changed = read_flag(args, "changed")?;
         let evidence = read_flag(args, "evidence")?;
         if changed.is_some() != evidence.is_some() {
-            return Err(Error::new("usage", "changed와 evidence 함께 필요"));
+            return Err(Error::new(
+                "usage",
+                crate::i18n::text(
+                    "changed와 evidence 함께 필요",
+                    "changed and evidence are required together",
+                ),
+            ));
         }
         if let Some(c) = &changed
             && !["dependency", "input", "code", "environment", "permission"].contains(&c.as_str())
         {
-            return Err(Error::new("usage", "changed 종류 오류"));
+            return Err(Error::new(
+                "usage",
+                crate::i18n::text("changed 종류 오류", "Invalid changed kind"),
+            ));
         }
         let digest = evidence
             .as_ref()
@@ -183,25 +231,39 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
                 println!("{fp} · epoch {} · {}", e["epoch"], s(&e["decision"]));
                 return Ok(());
             }
-            return Err(Error::new("attempt_id_conflict", "attempt-id 충돌"));
+            return Err(Error::new(
+                "attempt_id_conflict",
+                crate::i18n::text("attempt-id 충돌", "attempt-id conflict"),
+            ));
         }
         let last = events
             .iter()
             .rev()
             .find(|e| e["fingerprint"] == fp)
-            .ok_or_else(|| Error::new("attempt_not_found", "해당 실패 없음"))?;
+            .ok_or_else(|| {
+                Error::new(
+                    "attempt_not_found",
+                    crate::i18n::text("해당 실패 없음", "Failure not found"),
+                )
+            })?;
         if changed.is_none() {
             if last["decision"] == "locked" {
                 return Err(Error::new("unchanged_retry", "unchanged_retry"));
             }
             if last["decision"] != "awaiting-confirmation" {
-                return Err(Error::new("attempt_transition", "확인 재시도 불가"));
+                return Err(Error::new(
+                    "attempt_transition",
+                    crate::i18n::text("확인 재시도 불가", "Confirmation retry is not available"),
+                ));
             }
         } else {
             if last["decision"] != "locked" {
                 return Err(Error::new(
                     "attempt_transition",
-                    "변경 재시도는 잠금 뒤에만 가능",
+                    crate::i18n::text(
+                        "변경 재시도는 잠금 뒤에만 가능",
+                        "A changed retry is available only after the retry is locked",
+                    ),
                 ));
             }
             if events.iter().any(|e| {

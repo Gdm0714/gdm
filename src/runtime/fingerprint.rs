@@ -281,25 +281,67 @@ pub fn scope_problems(w: &Value, current: &Value) -> Vec<Value> {
 pub fn audit_problems(cwd: &Path, a: &Value) -> Result<Vec<String>> {
     let mut errors = vec![];
     if s(&a["reportSha256"]).is_empty() {
-        errors.push("검수보고 해시가 없습니다".into())
+        errors.push(
+            crate::i18n::text(
+                "검수보고 해시가 없습니다",
+                "The audit report hash is missing",
+            )
+            .into(),
+        )
     } else {
         match store::contained(cwd, s(&a["report"]), "report", usize::MAX / 2) {
             Ok(v) if sha256(&v) == s(&a["reportSha256"]) => {}
-            Ok(_) => errors.push("검수보고가 판정 후 변경됐습니다".into()),
-            Err(_) => errors.push("검수보고를 안전하게 읽을 수 없습니다".into()),
+            Ok(_) => errors.push(
+                crate::i18n::text(
+                    "검수보고가 판정 후 변경됐습니다",
+                    "The audit report changed after the verdict",
+                )
+                .into(),
+            ),
+            Err(_) => errors.push(
+                crate::i18n::text(
+                    "검수보고를 안전하게 읽을 수 없습니다",
+                    "The audit report cannot be read safely",
+                )
+                .into(),
+            ),
         }
     }
     if s(&a["implementationModel"]).is_empty() || s(&a["auditModel"]).is_empty() {
-        errors.push("구현 모델 또는 검수 모델 기록이 없습니다".into())
+        errors.push(
+            crate::i18n::text(
+                "구현 모델 또는 검수 모델 기록이 없습니다",
+                "The implementation or audit model is not recorded",
+            )
+            .into(),
+        )
     } else if s(&a["implementationModel"]).to_lowercase() == s(&a["auditModel"]).to_lowercase() {
-        errors.push("구현 모델과 검수 모델이 같습니다".into())
+        errors.push(
+            crate::i18n::text(
+                "구현 모델과 검수 모델이 같습니다",
+                "The implementation and audit models are the same",
+            )
+            .into(),
+        )
     }
     match a.get("workspace") {
-        None => errors.push("검수 시점 워크트리 지문이 없습니다".into()),
+        None => errors.push(
+            crate::i18n::text(
+                "검수 시점 워크트리 지문이 없습니다",
+                "The worktree fingerprint at audit time is missing",
+            )
+            .into(),
+        ),
         Some(v) if !v.is_null() => {
             let current = capture_workspace(cwd)?;
             if current.is_null() || current["sha256"] != v["sha256"] {
-                errors.push("검수 후 워크트리 내용이 변경됐습니다".into())
+                errors.push(
+                    crate::i18n::text(
+                        "검수 후 워크트리 내용이 변경됐습니다",
+                        "The worktree changed after the audit",
+                    )
+                    .into(),
+                )
             }
         }
         _ => {}
@@ -311,15 +353,21 @@ pub fn audit_state(cwd: &Path, w: &Value) -> Result<String> {
         return Ok("".into());
     }
     Ok(if w.get("audit").is_none() {
-        "검수: 필요 (미실시)"
+        crate::i18n::text("검수: 필요 (미실시)", "Audit: required (not yet performed)")
     } else if w["audit"]["result"] == "fail" {
-        "검수: 반려"
+        crate::i18n::text("검수: 반려", "Audit: rejected")
     } else if s(&w["audit"]["stateHash"]) != super::state::checks_hash(w) {
-        "검수: 무효 (상태 변경됨, 재검수 필요)"
+        crate::i18n::text(
+            "검수: 무효 (상태 변경됨, 재검수 필요)",
+            "Audit: invalid (state changed; audit again)",
+        )
     } else if audit_problems(cwd, &w["audit"])?.is_empty() {
-        "검수: 통과"
+        crate::i18n::text("검수: 통과", "Audit: passed")
     } else {
-        "검수: 무효 (보고서 또는 워크트리 변경됨, 재검수 필요)"
+        crate::i18n::text(
+            "검수: 무효 (보고서 또는 워크트리 변경됨, 재검수 필요)",
+            "Audit: invalid (report or worktree changed; audit again)",
+        )
     }
     .into())
 }
@@ -332,13 +380,26 @@ pub fn describe_scope(problems: &[Value]) -> String {
         .join(", ");
     let mut recovery = vec![];
     if problems.iter().any(|p| p["reason"] == "outside-allowed") {
-        recovery.push("범위 확장: gdm plan contract --allow-path <경로> --reason <사유>")
+        recovery.push(crate::i18n::text(
+            "범위 확장: gdm plan contract --allow-path <경로> --reason <사유>",
+            "Expand scope: gdm plan contract --allow-path <path> --reason <reason>",
+        ))
     }
     if problems.iter().any(|p| p["reason"] == "forbidden") {
-        recovery.push("금지 해제: gdm plan contract --remove-forbid-path <경로> --reason <사유>")
+        recovery.push(crate::i18n::text(
+            "금지 해제: gdm plan contract --remove-forbid-path <경로> --reason <사유>",
+            "Remove restriction: gdm plan contract --remove-forbid-path <path> --reason <reason>",
+        ))
     }
     if problems.iter().any(|p| p["reason"] == "unverifiable") {
-        recovery.push("Git 저장소에서 다시 plan init하거나 경로 제한을 명시적으로 해제")
+        recovery.push(crate::i18n::text(
+            "Git 저장소에서 다시 plan init하거나 경로 제한을 명시적으로 해제",
+            "Run plan init again in a Git repository or explicitly remove the path restriction",
+        ))
     }
-    format!("변경 범위 계약 위반: {detail}. {}", recovery.join(" · "))
+    crate::lfmt!(
+        "변경 범위 계약 위반: {detail}. {}",
+        "Change scope violates the contract: {detail}. {}",
+        recovery.join(" · ")
+    )
 }

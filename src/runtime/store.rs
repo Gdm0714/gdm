@@ -25,7 +25,11 @@ pub fn inspect(path: &Path, directory: bool) -> Result<bool> {
                 || (directory && !m.is_dir())
                 || (!directory && !m.is_file())
             {
-                return Err(bad(format!("안전하지 않은 상태 경로: {}", path.display())));
+                return Err(bad(crate::lfmt!(
+                    "안전하지 않은 상태 경로: {}",
+                    "Unsafe state path: {}",
+                    path.display()
+                )));
             }
             Ok(true)
         }
@@ -67,7 +71,7 @@ pub fn read_regular(path: &Path, max: u64) -> Result<Vec<u8>> {
     if !inspect(path, false)? {
         return Err(Error::new(
             "file_missing",
-            format!("파일 없음: {}", path.display()),
+            crate::lfmt!("파일 없음: {}", "File not found: {}", path.display()),
         ));
     }
     let mut f = OpenOptions::new()
@@ -76,15 +80,24 @@ pub fn read_regular(path: &Path, max: u64) -> Result<Vec<u8>> {
         .open(path)?;
     let m = f.metadata()?;
     if !m.is_file() || m.len() > max {
-        return Err(bad("파일 크기 또는 유형 오류"));
+        return Err(bad(crate::i18n::text(
+            "파일 크기 또는 유형 오류",
+            "Invalid file size or type",
+        )));
     }
     let mut b = Vec::new();
     (&mut f).take(max.saturating_add(1)).read_to_end(&mut b)?;
     if b.len() as u64 > max {
-        return Err(bad("파일 크기 상한 초과"));
+        return Err(bad(crate::i18n::text(
+            "파일 크기 상한 초과",
+            "File size limit exceeded",
+        )));
     }
     if b.len() as u64 != m.len() {
-        return Err(bad("읽는 동안 파일 길이가 바뀜"));
+        return Err(bad(crate::i18n::text(
+            "읽는 동안 파일 길이가 바뀜",
+            "File length changed while reading",
+        )));
     }
     Ok(b)
 }
@@ -96,11 +109,19 @@ pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
     write_atomic_mode(path, bytes, 0o600)
 }
 pub fn write_atomic_mode(path: &Path, bytes: &[u8], mode: u32) -> Result<()> {
-    let parent = path.parent().ok_or_else(|| bad("부모 경로 없음"))?;
+    let parent = path.parent().ok_or_else(|| {
+        bad(crate::i18n::text(
+            "부모 경로 없음",
+            "Parent path is missing",
+        ))
+    })?;
     inspect(parent, true)?;
     inspect(path, false)?;
     if bytes.len() as u64 > MAX_STATE {
-        return Err(bad("상태 파일 크기 상한 초과"));
+        return Err(bad(crate::i18n::text(
+            "상태 파일 크기 상한 초과",
+            "State file size limit exceeded",
+        )));
     }
     let temp = parent.join(format!(
         ".{}.tmp.{}.{}",
@@ -134,11 +155,17 @@ pub fn write_json_atomic(path: &Path, v: &Value) -> Result<()> {
 pub fn load(cwd: &Path, id: &str) -> Result<Value> {
     let p = work_dir(cwd, id)?.join("checks.json");
     if !inspect(&p, false)? {
-        return Err(Error::new("work_not_found", format!("작업 {id} 없음")));
+        return Err(Error::new(
+            "work_not_found",
+            crate::lfmt!("작업 {id} 없음", "Work {id} not found"),
+        ));
     }
     let v = state::validate_work(read_json(&p)?)?;
     if v["slug"] != id {
-        return Err(bad("디렉토리와 slug 불일치"));
+        return Err(bad(crate::i18n::text(
+            "디렉토리와 slug 불일치",
+            "Directory and slug do not match",
+        )));
     }
     Ok(v)
 }
@@ -164,15 +191,17 @@ pub fn render_work(w: &Value) -> String {
         }
     };
     let status = if b(&w["done"]) {
-        format!(
+        crate::lfmt!(
             "완료 ({}/{}) · {}",
+            "Completed ({}/{}) · {}",
             state::proven_count(w),
             state::checks(w).len(),
             s(&w["doneAt"])
         )
     } else {
-        format!(
+        crate::lfmt!(
             "진행 중 ({}/{}) · 시작 {}",
+            "In progress ({}/{}) · Started {}",
             state::proven_count(w),
             state::checks(w).len(),
             s(&w["createdAt"])
@@ -183,50 +212,91 @@ pub fn render_work(w: &Value) -> String {
         String::new(),
         format!("> {status}"),
         String::new(),
-        "## 목표".into(),
+        crate::i18n::text("## 목표", "## Goal").into(),
         String::new(),
         s(&w["brief"]).into(),
         String::new(),
     ];
     if let Some(o) = c.get("outcome") {
-        lines.extend(["## 선언한 outcome (GDM 미측정)".into(), String::new()]);
+        lines.extend([
+            crate::i18n::text(
+                "## 선언한 outcome (GDM 미측정)",
+                "## Declared outcome (not measured by GDM)",
+            )
+            .into(),
+            String::new(),
+        ]);
         for (key, label) in [
-            ("bottleneck", "병목"),
-            ("desiredOutcome", "원하는 결과"),
-            ("baseline", "기준선"),
-            ("target", "목표"),
-            ("unit", "단위"),
-            ("interveneIf", "개입 조건"),
+            ("bottleneck", crate::i18n::text("병목", "Bottleneck")),
+            (
+                "desiredOutcome",
+                crate::i18n::text("원하는 결과", "Desired outcome"),
+            ),
+            ("baseline", crate::i18n::text("기준선", "Baseline")),
+            ("target", crate::i18n::text("목표", "Target")),
+            ("unit", crate::i18n::text("단위", "Unit")),
+            (
+                "interveneIf",
+                crate::i18n::text("개입 조건", "Intervention condition"),
+            ),
         ] {
             lines.push(format!("- {label}: {}", s(&o[key])));
         }
         lines.push(String::new());
     }
     lines.extend([
-        "## 작업 계약".into(),
+        crate::i18n::text("## 작업 계약", "## Work contract").into(),
         String::new(),
-        format!("- 커밋: {}", s(&c["commit"])),
-        format!("- 위험도: {}", s(&c["risk"])),
-        format!("- 검증 가능성: {}", s(&c["verification"])),
-        format!("- 허용 경로: {}", list(&c["allowedPaths"], ".")),
-        format!("- 금지 경로: {}", list(&c["forbiddenPaths"], "없음")),
-        format!("- 가정: {}", list(&c["assumptions"], "없음")),
-        format!("- 불확실성: {}", list(&c["uncertainties"], "없음")),
-        format!("- 중단 조건: {}", list(&c["stopConditions"], "없음")),
-        format!(
+        crate::lfmt!("- 커밋: {}", "- Commit: {}", s(&c["commit"])),
+        crate::lfmt!("- 위험도: {}", "- Risk: {}", s(&c["risk"])),
+        crate::lfmt!(
+            "- 검증 가능성: {}",
+            "- Verification: {}",
+            s(&c["verification"])
+        ),
+        crate::lfmt!(
+            "- 허용 경로: {}",
+            "- Allowed paths: {}",
+            list(&c["allowedPaths"], ".")
+        ),
+        crate::lfmt!(
+            "- 금지 경로: {}",
+            "- Forbidden paths: {}",
+            list(&c["forbiddenPaths"], crate::i18n::text("없음", "None"))
+        ),
+        crate::lfmt!(
+            "- 가정: {}",
+            "- Assumptions: {}",
+            list(&c["assumptions"], crate::i18n::text("없음", "None"))
+        ),
+        crate::lfmt!(
+            "- 불확실성: {}",
+            "- Uncertainties: {}",
+            list(&c["uncertainties"], crate::i18n::text("없음", "None"))
+        ),
+        crate::lfmt!(
+            "- 중단 조건: {}",
+            "- Stop conditions: {}",
+            list(&c["stopConditions"], crate::i18n::text("없음", "None"))
+        ),
+        crate::lfmt!(
             "- 간소화 증거: {}",
+            "- Simplification evidence: {}",
             if b(&c["simplificationRequired"]) {
-                "필수"
+                crate::i18n::text("필수", "Required")
             } else {
-                "선택"
+                crate::i18n::text("선택", "Optional")
             }
         ),
     ]);
-    for (key, label) in [("required", "필수"), ("forbidden", "금지")] {
+    for (key, label) in [
+        ("required", crate::i18n::text("필수", "Required")),
+        ("forbidden", crate::i18n::text("금지", "Forbidden")),
+    ] {
         lines.push(format!("- {label}:"));
         let values = c[key].as_array().unwrap();
         if values.is_empty() {
-            lines.push("  - 없음".into());
+            lines.push(crate::i18n::text("  - 없음", "  - None").into());
         } else {
             for v in values {
                 lines.push(format!("  - {}", s(v)));
@@ -235,15 +305,16 @@ pub fn render_work(w: &Value) -> String {
     }
     lines.extend([
         String::new(),
-        "## 확인 항목".into(),
+        crate::i18n::text("## 확인 항목", "## Checks").into(),
         String::new(),
-        "| ID | 상태 | 종류 | 항목 | 재현 명령 | 기대 | red 증거 | green 증거 |".into(),
+        crate::i18n::text("| ID | 상태 | 종류 | 항목 | 재현 명령 | 기대 | red 증거 | green 증거 |", "| ID | Status | Kind | Check | Reproduction command | Expected | Red evidence | Green evidence |").into(),
         "|---|---|---|---|---|---|---|---|".into(),
     ]);
     for check in state::checks(w) {
         let how = if b(&check["manual"]) {
-            format!(
+            crate::lfmt!(
                 "(수동 확인{})",
+                "(manual check{})",
                 if b(&check["expert"]) {
                     " · expert"
                 } else {
@@ -271,22 +342,27 @@ pub fn render_work(w: &Value) -> String {
     if let Some(d) = w.get("delivery") {
         lines.extend([
             String::new(),
-            "## 전달".into(),
+            crate::i18n::text("## 전달", "## Delivery").into(),
             String::new(),
-            format!("- 이슈: {}", s(&d["issue"])),
-            format!("- 브랜치: {}", s(&d["branch"])),
+            crate::lfmt!("- 이슈: {}", "- Issue: {}", s(&d["issue"])),
+            crate::lfmt!("- 브랜치: {}", "- Branch: {}", s(&d["branch"])),
             format!("- HEAD: {}", s(&d["head"])),
             format!("- PR: {}", d["pr"]["number"].as_str().unwrap_or("—")),
             format!("- CI: {}", d["ci"]["status"].as_str().unwrap_or("—")),
-            format!(
+            crate::lfmt!(
                 "- 머지 승인: {}",
+                "- Merge approval: {}",
                 if d.get("mergeApproval").is_some() {
-                    "승인"
+                    crate::i18n::text("승인", "Approved")
                 } else {
                     "—"
                 }
             ),
-            format!("- 머지 SHA: {}", d["merged"]["sha"].as_str().unwrap_or("—")),
+            crate::lfmt!(
+                "- 머지 SHA: {}",
+                "- Merge SHA: {}",
+                d["merged"]["sha"].as_str().unwrap_or("—")
+            ),
         ]);
     }
     lines.push(String::new());
@@ -311,7 +387,10 @@ pub fn list(cwd: &Path) -> Result<Vec<Value>> {
         if inspect(&p, true).unwrap_or(false) && p.join("checks.json").exists() {
             match load(cwd, &n) {
                 Ok(v) => out.push(v),
-                Err(e) => eprintln!("경고: 작업 {n} 건너뜀 — {e}"),
+                Err(e) => crate::leprint!(
+                    "경고: 작업 {n} 건너뜀 — {e}",
+                    "Warning: skipping work {n} — {e}"
+                ),
             }
         }
     }
@@ -331,13 +410,19 @@ pub fn resolve(cwd: &Path, id: Option<&str>, read: bool) -> Result<Value> {
         n if n > 1 => {
             return Err(Error::new(
                 "ambiguous_slug",
-                "진행 중인 작업이 여러 개입니다. --slug 지정",
+                crate::i18n::text(
+                    "진행 중인 작업이 여러 개입니다. --slug 지정",
+                    "Multiple active work items. Specify --slug",
+                ),
             ));
         }
         _ => {}
     }
     if !read || works.is_empty() {
-        return Err(Error::new("no_active", "진행 중인 작업이 없습니다"));
+        return Err(Error::new(
+            "no_active",
+            crate::i18n::text("진행 중인 작업이 없습니다", "No active work"),
+        ));
     }
     let mut timed = vec![];
     for w in works {
@@ -362,7 +447,10 @@ fn journal_prefix(cwd: &Path, id: &str) -> Result<(PathBuf, Vec<u8>, Vec<Value>)
     let file = d.join("journal.jsonl");
     let marked = inspect(&marker, false)?;
     if marked && read_regular(&marker, 128)? != FORMAT.as_bytes() {
-        return Err(bad("journal.format 오류"));
+        return Err(bad(crate::i18n::text(
+            "journal.format 오류",
+            "Invalid journal.format",
+        )));
     }
     let a = if inspect(&anchor, false)? {
         Some(serde_json::from_slice::<Value>(&read_regular(
@@ -372,11 +460,17 @@ fn journal_prefix(cwd: &Path, id: &str) -> Result<(PathBuf, Vec<u8>, Vec<Value>)
         None
     };
     if marked && a.is_none() {
-        return Err(bad("journal.anchor 없음"));
+        return Err(bad(crate::i18n::text(
+            "journal.anchor 없음",
+            "journal.anchor is missing",
+        )));
     }
     if !inspect(&file, false)? {
         if a.is_some() {
-            return Err(bad("anchor의 journal 없음"));
+            return Err(bad(crate::i18n::text(
+                "anchor의 journal 없음",
+                "The journal referenced by the anchor is missing",
+            )));
         }
         return Ok((d, vec![], vec![]));
     }
@@ -387,49 +481,81 @@ fn journal_prefix(cwd: &Path, id: &str) -> Result<(PathBuf, Vec<u8>, Vec<Value>)
             || a["lineCount"].as_u64().is_none()
             || !state::valid_hash(state::s(&a["sha256"]))
         {
-            return Err(bad("journal.anchor schema 오류"));
+            return Err(bad(crate::i18n::text(
+                "journal.anchor schema 오류",
+                "Invalid journal.anchor schema",
+            )));
         }
         let n = a["byteLength"].as_u64().unwrap();
         if n > MAX_JOURNAL {
-            return Err(bad("journal committed prefix 크기 상한 초과"));
+            return Err(bad(crate::i18n::text(
+                "journal committed prefix 크기 상한 초과",
+                "Journal committed-prefix size limit exceeded",
+            )));
         }
         let mut handle = OpenOptions::new()
             .read(true)
             .custom_flags(nix::libc::O_NOFOLLOW | nix::libc::O_NONBLOCK)
             .open(&file)?;
         if !handle.metadata()?.is_file() || handle.metadata()?.len() < n {
-            return Err(bad("journal이 anchor보다 짧음"));
+            return Err(bad(crate::i18n::text(
+                "journal이 anchor보다 짧음",
+                "The journal is shorter than its anchor",
+            )));
         }
         let mut bytes = vec![0; n as usize];
-        handle
-            .read_exact(&mut bytes)
-            .map_err(|_| bad("journal prefix를 읽을 수 없음"))?;
+        handle.read_exact(&mut bytes).map_err(|_| {
+            bad(crate::i18n::text(
+                "journal prefix를 읽을 수 없음",
+                "Cannot read the journal prefix",
+            ))
+        })?;
         if sha256(&bytes) != a["sha256"] {
-            return Err(bad("journal 해시 불일치"));
+            return Err(bad(crate::i18n::text(
+                "journal 해시 불일치",
+                "Journal hash mismatch",
+            )));
         }
         bytes
     } else {
         read_regular(&file, MAX_JOURNAL)?
     };
     if !bytes.is_empty() && bytes.last() != Some(&b'\n') {
-        return Err(bad("journal 마지막 행 불완전"));
+        return Err(bad(crate::i18n::text(
+            "journal 마지막 행 불완전",
+            "The last journal line is incomplete",
+        )));
     }
-    let text = std::str::from_utf8(&bytes).map_err(|_| bad("journal UTF-8 오류"))?;
+    let text = std::str::from_utf8(&bytes).map_err(|_| {
+        bad(crate::i18n::text(
+            "journal UTF-8 오류",
+            "Invalid journal UTF-8",
+        ))
+    })?;
     let mut events = vec![];
     for line in text.split_terminator('\n') {
         if line.is_empty() || line.ends_with('\r') {
-            return Err(bad("journal 비정규 행"));
+            return Err(bad(crate::i18n::text(
+                "journal 비정규 행",
+                "Noncanonical journal line",
+            )));
         }
         let v: Value = serde_json::from_str(line)?;
         if !v.is_object() {
-            return Err(bad("journal event가 객체가 아님"));
+            return Err(bad(crate::i18n::text(
+                "journal event가 객체가 아님",
+                "Journal event is not an object",
+            )));
         }
         events.push(v);
     }
     if let Some(a) = a
         && a["lineCount"].as_u64() != Some(events.len() as u64)
     {
-        return Err(bad("journal 행 수 불일치"));
+        return Err(bad(crate::i18n::text(
+            "journal 행 수 불일치",
+            "Journal line count mismatch",
+        )));
     }
     Ok((d, bytes, events))
 }
@@ -467,12 +593,18 @@ pub fn append_journal_batch(cwd: &Path, id: &str, events: &[Value]) -> Result<()
     f.seek(SeekFrom::End(0))?;
     for e in events {
         if !e.is_object() {
-            return Err(bad("journal event 객체 필요"));
+            return Err(bad(crate::i18n::text(
+                "journal event 객체 필요",
+                "A journal event object is required",
+            )));
         }
         let mut line = serde_json::to_vec(e)?;
         line.push(b'\n');
         if bytes.len() + line.len() > MAX_JOURNAL as usize {
-            return Err(bad("journal 크기 상한"));
+            return Err(bad(crate::i18n::text(
+                "journal 크기 상한",
+                "Journal size limit exceeded",
+            )));
         }
         f.write_all(&line)?;
         bytes.extend(line);
@@ -590,7 +722,10 @@ pub fn lock(cwd: &Path) -> Result<Lock> {
                     continue;
                 };
                 if m.file_type().is_symlink() || !m.is_file() {
-                    return Err(Error::new("state_lock_rejected", "잠금 경로 거부"));
+                    return Err(Error::new(
+                        "state_lock_rejected",
+                        crate::i18n::text("잠금 경로 거부", "Lock path rejected"),
+                    ));
                 }
                 let owner = read_regular(&path, 4096)
                     .ok()
@@ -625,7 +760,13 @@ pub fn lock(cwd: &Path) -> Result<Lock> {
             Err(e) => return Err(e.into()),
         }
         if Instant::now() >= deadline {
-            return Err(Error::new("state_busy", "다른 gdm이 상태를 갱신 중"));
+            return Err(Error::new(
+                "state_busy",
+                crate::i18n::text(
+                    "다른 gdm이 상태를 갱신 중",
+                    "Another gdm process is updating the state",
+                ),
+            ));
         }
         std::thread::sleep(Duration::from_millis(25));
     }

@@ -28,7 +28,12 @@ fn resolve_cmd(cwd: &Path, cmd: Option<String>) -> Result<Option<String>> {
             return presets[name]
                 .as_str()
                 .map(|s| Some(s.into()))
-                .ok_or_else(|| Error::new("preset_not_found", format!("프리셋 @{name} 없음")));
+                .ok_or_else(|| {
+                    Error::new(
+                        "preset_not_found",
+                        crate::lfmt!("프리셋 @{name} 없음", "Preset @{name} not found"),
+                    )
+                });
         }
         return Ok(Some(c));
     }
@@ -39,26 +44,31 @@ fn print_work(w: &Value) {
         "{} · {} ({}/{})",
         s(&w["slug"]),
         if b(&w["done"]) {
-            "완료"
+            crate::i18n::text("완료", "Completed")
         } else {
-            "진행 중"
+            crate::i18n::text("진행 중", "In progress")
         },
         state::proven_count(w),
         state::checks(w).len()
     );
     for c in state::checks(w) {
         let detail = if c["status"] == "proven" {
-            format!("증거: {}", s(&c["evidence"]["observed"]))
+            crate::lfmt!("증거: {}", "Evidence: {}", s(&c["evidence"]["observed"]))
         } else {
             let how = if b(&c["manual"]) {
-                format!(
+                crate::lfmt!(
                     "(수동 확인{})",
+                    "(manual check{})",
                     if b(&c["expert"]) { " · expert" } else { "" }
                 )
             } else {
                 s(&c["cmd"]).to_owned()
             };
-            format!("재현: {how} → 기대: {}", s(&c["expect"]))
+            crate::lfmt!(
+                "재현: {how} → 기대: {}",
+                "Reproduce: {how} → Expect: {}",
+                s(&c["expect"])
+            )
         };
         println!(
             "  {} {} {} — {detail}",
@@ -74,9 +84,12 @@ fn print_work(w: &Value) {
 }
 
 pub fn plan(cwd: &Path, args: &[String]) -> Result<()> {
-    let (sub, args) = args
-        .split_first()
-        .ok_or_else(|| Error::new("usage", "plan 하위 명령 필요"))?;
+    let (sub, args) = args.split_first().ok_or_else(|| {
+        Error::new(
+            "usage",
+            crate::i18n::text("plan 하위 명령 필요", "A plan subcommand is required"),
+        )
+    })?;
     match sub.as_str() {
         "init" => {
             ensure_flags(
@@ -112,10 +125,16 @@ pub fn plan(cwd: &Path, args: &[String]) -> Result<()> {
                 required_flag(args, "brief")?
             };
             if brief.trim().is_empty() {
-                return Err(Error::new("empty_brief", "brief가 비어 있습니다"));
+                return Err(Error::new(
+                    "empty_brief",
+                    crate::i18n::text("brief가 비어 있습니다", "The brief is empty"),
+                ));
             }
             if store::work_dir(cwd, &slug)?.join("checks.json").exists() {
-                return Err(Error::new("work_exists", "이미 존재하는 작업"));
+                return Err(Error::new(
+                    "work_exists",
+                    crate::i18n::text("이미 존재하는 작업", "Work already exists"),
+                ));
             }
             let at = now();
             let audit = has_flag(args, "audit") || contract["risk"] == "high";
@@ -127,9 +146,12 @@ pub fn plan(cwd: &Path, args: &[String]) -> Result<()> {
                 &json!({"ts":at,"event":"plan.init","brief":work["brief"],"auditRequired":audit,"contract":contract,"baseline":baseline}),
             )?;
             store::save(cwd, &work)?;
-            println!("작업 시작: {slug}");
+            crate::lprint!("작업 시작: {slug}", "Work started: {slug}");
             if contract["risk"] == "high" && !has_flag(args, "audit") {
-                println!("high risk 정책으로 독립 검수를 자동 요구합니다");
+                crate::lprint!(
+                    "high risk 정책으로 독립 검수를 자동 요구합니다",
+                    "High-risk policy automatically requires an independent audit"
+                );
             }
         }
         "contract" => {
@@ -156,7 +178,13 @@ pub fn plan(cwd: &Path, args: &[String]) -> Result<()> {
                         .iter()
                         .any(|a| a.starts_with("--") && a != "--slug" && a != "--activate-habit")
                 {
-                    return Err(Error::new("usage", "habit 활성화는 단독 동작"));
+                    return Err(Error::new(
+                        "usage",
+                        crate::i18n::text(
+                            "habit 활성화는 단독 동작",
+                            "Habit activation must be a standalone operation",
+                        ),
+                    ));
                 }
                 return super::habit::activate(cwd, &required_flag(args, "slug")?, target);
             }
@@ -165,7 +193,7 @@ pub fn plan(cwd: &Path, args: &[String]) -> Result<()> {
                 store::append_journal(cwd, s(&w["slug"]), &e)?;
                 store::save(cwd, &w)?;
             }
-            println!("계약: {}", s(&w["contract"]["commit"]));
+            crate::lprint!("계약: {}", "Contract: {}", s(&w["contract"]["commit"]));
         }
         "source" => {
             ensure_flags(args, &["slug", "fingerprint"], &[])?;
@@ -173,7 +201,13 @@ pub fn plan(cwd: &Path, args: &[String]) -> Result<()> {
             state::assert_open(&w)?;
             let fp = required_flag(args, "fingerprint")?;
             if !state::valid_hash(&fp) {
-                return Err(Error::new("usage", "--fingerprint 소문자 SHA-256 필요"));
+                return Err(Error::new(
+                    "usage",
+                    crate::i18n::text(
+                        "--fingerprint 소문자 SHA-256 필요",
+                        "--fingerprint requires a lowercase SHA-256",
+                    ),
+                ));
             }
             let path = store::work_dir(cwd, s(&w["slug"]))?.join("checks.json");
             let mut raw = store::read_json(&path)?;
@@ -181,7 +215,10 @@ pub fn plan(cwd: &Path, args: &[String]) -> Result<()> {
             state::validate_work(raw.clone())?;
             let mode = std::os::unix::fs::PermissionsExt::mode(&fs::metadata(&path)?.permissions());
             store::write_json_atomic_mode(&path, &raw, mode)?;
-            println!("source fingerprint 기록됨: {fp}");
+            crate::lprint!(
+                "source fingerprint 기록됨: {fp}",
+                "Source fingerprint recorded: {fp}"
+            );
         }
         "list" => {
             ensure_flags(args, &["slug"], &["json"])?;
@@ -207,12 +244,24 @@ pub fn plan(cwd: &Path, args: &[String]) -> Result<()> {
                     || has_flag(args, "manual")
                     || has_flag(args, "expert")
                 {
-                    return Err(Error::new("usage", "from-brief와 개별 항목 조합 불가"));
+                    return Err(Error::new(
+                        "usage",
+                        crate::i18n::text(
+                            "from-brief와 개별 항목 조합 불가",
+                            "from-brief cannot be combined with individual check options",
+                        ),
+                    ));
                 }
                 parse_brief(s(&w["brief"]))?
             } else {
                 if has_flag(args, "dry-run") {
-                    return Err(Error::new("usage", "dry-run은 from-brief 전용"));
+                    return Err(Error::new(
+                        "usage",
+                        crate::i18n::text(
+                            "dry-run은 from-brief 전용",
+                            "dry-run requires from-brief",
+                        ),
+                    ));
                 }
                 let mut input = json!({"desc":read_flag(args,"desc")?.unwrap_or_default(),"cmd":resolve_cmd(cwd,read_flag(args,"cmd")?)?,"expect":read_flag(args,"expect")?.unwrap_or_default(),"manual":has_flag(args,"manual"),"expert":has_flag(args,"expert")});
                 if let Some(k) = read_flag(args, "kind")? {
@@ -230,8 +279,9 @@ pub fn plan(cwd: &Path, args: &[String]) -> Result<()> {
                 store::save(cwd, &w)?;
             }
             if from && !has_flag(args, "dry-run") {
-                println!(
+                crate::lprint!(
                     "brief에서 {}개 항목 등록 (총 {}개)",
+                    "Registered {} checks from the brief ({} total)",
                     added.len(),
                     state::checks(&w).len()
                 );
@@ -244,7 +294,7 @@ pub fn plan(cwd: &Path, args: &[String]) -> Result<()> {
                     if has_flag(args, "dry-run") {
                         " (dry-run)"
                     } else {
-                        " 추가됨"
+                        crate::i18n::text(" 추가됨", " added")
                     }
                 );
             }
@@ -276,7 +326,7 @@ pub fn plan(cwd: &Path, args: &[String]) -> Result<()> {
                         &json!({"ts":now(),"event":"plan.edit","check":id,"patch":patch,"reason":reason,"reverted":reverted}),
                     )?;
                     store::save(cwd, &w)?;
-                    println!("{id} 수정됨");
+                    crate::lprint!("{id} 수정됨", "{id} updated");
                 }
                 Err(e) => {
                     denied(cwd, &w, "plan.edit", &e, json!({"check":id}))?;
@@ -284,7 +334,12 @@ pub fn plan(cwd: &Path, args: &[String]) -> Result<()> {
                 }
             }
         }
-        _ => return Err(Error::new("usage", "plan 하위 명령 오류")),
+        _ => {
+            return Err(Error::new(
+                "usage",
+                crate::i18n::text("plan 하위 명령 오류", "Invalid plan subcommand"),
+            ));
+        }
     }
     Ok(())
 }
@@ -297,7 +352,7 @@ pub fn parse_brief(brief: &str) -> Result<Vec<Value>> {
         regex::Regex::new(r"\s+\((regression|behavior|edge|static|manual|expert)\)$").unwrap();
     let expect_split = regex::Regex::new(r"\s+/\s+expect:\s*").unwrap();
     let cmd_split = regex::Regex::new(r"\s+/\s+cmd:\s*").unwrap();
-    let section = regex::Regex::new(r"^##\s*검증 항목").unwrap();
+    let section = regex::Regex::new(r"^##\s*(?:검증 항목|Verification checks)").unwrap();
     let heading = regex::Regex::new(r"^##\s").unwrap();
     for (i, line) in brief.lines().enumerate() {
         let line = line.trim();
@@ -355,7 +410,10 @@ pub fn parse_brief(brief: &str) -> Result<Vec<Value>> {
     if !started || out.is_empty() || !issues.is_empty() {
         return Err(Error::new(
             "brief_checks_invalid",
-            format!("검증 항목 초안 파싱 실패: {issues:?}"),
+            crate::lfmt!(
+                "검증 항목 초안 파싱 실패: {issues:?}",
+                "Cannot parse draft verification checks: {issues:?}"
+            ),
         ));
     }
     Ok(out)
@@ -364,7 +422,12 @@ pub fn pass(cwd: &Path, args: &[String]) -> Result<()> {
     let (id, args) = args
         .split_first()
         .filter(|(id, _)| !id.starts_with("--"))
-        .ok_or_else(|| Error::new("usage", "항목 ID 필요"))?;
+        .ok_or_else(|| {
+            Error::new(
+                "usage",
+                crate::i18n::text("항목 ID 필요", "A check ID is required"),
+            )
+        })?;
     ensure_flags(
         args,
         &[
@@ -397,7 +460,10 @@ pub fn pass(cwd: &Path, args: &[String]) -> Result<()> {
             {
                 return Err(Error::new(
                     "red_not_allowed",
-                    "red는 regression 자동 항목 전용",
+                    crate::i18n::text(
+                        "red는 regression 자동 항목 전용",
+                        "red is only available for automatic regression checks",
+                    ),
                 ));
             }
             e = evidence::automatic(cwd, s(&w["slug"]), id, s(&c["cmd"]), true, true)?;
@@ -405,17 +471,31 @@ pub fn pass(cwd: &Path, args: &[String]) -> Result<()> {
             if state::kind(&c) == "regression" && c.get("redEvidence").is_none() {
                 return Err(Error::new(
                     "red_evidence_required",
-                    "먼저 --red로 실패 재현",
+                    crate::i18n::text(
+                        "먼저 --red로 실패 재현",
+                        "First reproduce the failure with --red",
+                    ),
                 ));
             }
             if b(&c["manual"]) {
                 if !manual {
-                    return Err(Error::new("manual_required", "--manual 필요"));
+                    return Err(Error::new(
+                        "manual_required",
+                        crate::i18n::text("--manual 필요", "--manual is required"),
+                    ));
                 }
-                let observed = observed.ok_or_else(|| Error::new("usage", "--observed 필요"))?;
+                let observed = observed.ok_or_else(|| {
+                    Error::new(
+                        "usage",
+                        crate::i18n::text("--observed 필요", "--observed is required"),
+                    )
+                })?;
                 let bytes = store::contained(cwd, &observed, "observed", usize::MAX / 2)?;
                 if bytes.is_empty() {
-                    return Err(Error::new("observed_empty", "증거 파일 비어 있음"));
+                    return Err(Error::new(
+                        "observed_empty",
+                        crate::i18n::text("증거 파일 비어 있음", "The evidence file is empty"),
+                    ));
                 }
                 e = json!({"observed":observed,"sha256":sha256(bytes),"manual":true});
                 if let Some(r) = reviewer {
@@ -423,7 +503,13 @@ pub fn pass(cwd: &Path, args: &[String]) -> Result<()> {
                 }
             } else {
                 if manual || observed.is_some() || reviewer.is_some() {
-                    return Err(Error::new("manual_not_allowed", "자동 항목 수동 증거 거부"));
+                    return Err(Error::new(
+                        "manual_not_allowed",
+                        crate::i18n::text(
+                            "자동 항목 수동 증거 거부",
+                            "Manual evidence is not accepted for automatic checks",
+                        ),
+                    ));
                 }
                 e = evidence::automatic(cwd, s(&w["slug"]), id, s(&c["cmd"]), false, true)?;
             }
@@ -438,7 +524,10 @@ pub fn pass(cwd: &Path, args: &[String]) -> Result<()> {
         if b(&c["expert"]) && (s(&e["note"]).is_empty() || s(&e["reviewer"]).is_empty()) {
             return Err(Error::new(
                 "expert_evidence_required",
-                "전문가와 판단 근거 필요",
+                crate::i18n::text(
+                    "전문가와 판단 근거 필요",
+                    "An expert reviewer and reasoning are required",
+                ),
             ));
         }
         let mut event = json!({"ts":at,"event":if red{"pass.red"}else{"pass"},"check":id});
@@ -455,7 +544,11 @@ pub fn pass(cwd: &Path, args: &[String]) -> Result<()> {
         store::save(cwd, &w)?;
         println!(
             "{id} {} ({}/{})",
-            if red { "red 증거 기록" } else { "통과" },
+            if red {
+                crate::i18n::text("red 증거 기록", "Red evidence recorded")
+            } else {
+                crate::i18n::text("통과", "Passed")
+            },
             state::proven_count(&w),
             state::checks(&w).len()
         );
@@ -475,16 +568,19 @@ pub fn recheck(cwd: &Path, args: &[String]) -> Result<()> {
     if !failed.is_empty() {
         return Err(Error::new(
             "recheck_failed",
-            format!("재검증 실패: {}", failed.join(", ")),
+            crate::lfmt!("재검증 실패: {}", "Recheck failed: {}", failed.join(", ")),
         ));
     }
-    println!("재검증 통과");
+    crate::lprint!("재검증 통과", "Recheck passed");
     Ok(())
 }
 pub fn audit(cwd: &Path, args: &[String]) -> Result<()> {
-    let (sub, args) = args
-        .split_first()
-        .ok_or_else(|| Error::new("usage", "audit 하위 명령 필요"))?;
+    let (sub, args) = args.split_first().ok_or_else(|| {
+        Error::new(
+            "usage",
+            crate::i18n::text("audit 하위 명령 필요", "An audit subcommand is required"),
+        )
+    })?;
     if sub == "brief" {
         ensure_flags(args, &["slug"], &["json"])?;
         let w = resolve(cwd, args, true)?;
@@ -494,29 +590,38 @@ pub fn audit(cwd: &Path, args: &[String]) -> Result<()> {
         }
         print_work(&w);
         if w["contract"].get("outcome").is_some() {
-            println!(
+            crate::lprint!(
                 "## 선언한 outcome (GDM 미측정)\n{}",
+                "## Declared outcome (not measured by GDM)\n{}",
                 w["contract"]["outcome"]
             );
         }
-        println!(
+        crate::lprint!(
             "\n## 원 요청\n{}\n\n## 작업 계약\n{}",
+            "\n## Original request\n{}\n\n## Work contract\n{}",
             s(&w["brief"]),
             w["contract"]
         );
         for c in state::checks(&w) {
-            println!(
+            crate::lprint!(
                 "{} · {} · 증거 {}",
+                "{} · {} · Evidence {}",
                 s(&c["id"]),
                 state::kind(c),
                 c["evidence"]
             )
         }
-        println!("검수보고에 정확한 판정 marker와 implementationModel, auditModel을 기록하세요");
+        crate::lprint!(
+            "검수보고에 정확한 판정 marker와 implementationModel, auditModel을 기록하세요",
+            "Record the exact verdict marker, implementationModel and auditModel in the audit report"
+        );
         return Ok(());
     }
     if sub != "verdict" {
-        return Err(Error::new("usage", "audit 하위 명령 오류"));
+        return Err(Error::new(
+            "usage",
+            crate::i18n::text("audit 하위 명령 오류", "Invalid audit subcommand"),
+        ));
     }
     ensure_flags(
         args,
@@ -525,7 +630,13 @@ pub fn audit(cwd: &Path, args: &[String]) -> Result<()> {
     )?;
     let pass = has_flag(args, "pass");
     if pass == has_flag(args, "fail") {
-        return Err(Error::new("usage", "--pass 또는 --fail 정확히 하나 필요"));
+        return Err(Error::new(
+            "usage",
+            crate::i18n::text(
+                "--pass 또는 --fail 정확히 하나 필요",
+                "Provide exactly one of --pass or --fail",
+            ),
+        ));
     }
     let report = required_flag(args, "report")?;
     let implementation = contract::safe_text(
@@ -537,7 +648,10 @@ pub fn audit(cwd: &Path, args: &[String]) -> Result<()> {
         contract::safe_text(&required_flag(args, "audit-model")?, "audit-model", 240)?;
     let bytes = store::contained(cwd, &report, "report", usize::MAX / 2)?;
     if bytes.is_empty() {
-        return Err(Error::new("report_empty", "보고서 비어 있음"));
+        return Err(Error::new(
+            "report_empty",
+            crate::i18n::text("보고서 비어 있음", "The report is empty"),
+        ));
     }
     let content = String::from_utf8_lossy(&bytes);
     let markers = content
@@ -547,30 +661,48 @@ pub fn audit(cwd: &Path, args: &[String]) -> Result<()> {
     if markers.len() != 1 || !["**판정: 통과**", "**판정: 반려**"].contains(&markers[0]) {
         return Err(Error::new(
             "audit_verdict_invalid",
-            "보고서 판정 marker 정확히 하나 필요",
+            crate::i18n::text(
+                "보고서 판정 marker 정확히 하나 필요",
+                "The report must contain exactly one verdict marker",
+            ),
         ));
     }
     if (markers[0] == "**판정: 통과**") != pass {
         return Err(Error::new(
             "audit_verdict_mismatch",
-            "보고서와 인자 판정 불일치",
+            crate::i18n::text(
+                "보고서와 인자 판정 불일치",
+                "The report verdict does not match the argument",
+            ),
         ));
     }
     if !content.contains(&format!("implementationModel: {implementation}"))
         || !content.contains(&format!("auditModel: {audit_model}"))
     {
-        return Err(Error::new("audit_model_mismatch", "모델 표시 불일치"));
+        return Err(Error::new(
+            "audit_model_mismatch",
+            crate::i18n::text("모델 표시 불일치", "Model labels do not match"),
+        ));
     }
     let mut w = resolve(cwd, args, false)?;
     let result = (|| {
         state::assert_open(&w)?;
         if state::checks(&w).is_empty() || state::proven_count(&w) != state::checks(&w).len() {
-            return Err(Error::new("audit_premature", "모든 항목 통과 후 검수 가능"));
+            return Err(Error::new(
+                "audit_premature",
+                crate::i18n::text(
+                    "모든 항목 통과 후 검수 가능",
+                    "All checks must pass before the audit",
+                ),
+            ));
         }
         if implementation.to_lowercase() == audit_model.to_lowercase() {
             return Err(Error::new(
                 "audit_independence",
-                "구현 모델과 검수 모델은 달라야 합니다",
+                crate::i18n::text(
+                    "구현 모델과 검수 모델은 달라야 합니다",
+                    "The implementation and audit models must differ",
+                ),
             ));
         }
         let at = now();
@@ -584,7 +716,15 @@ pub fn audit(cwd: &Path, args: &[String]) -> Result<()> {
         w["audit"] = a;
         store::append_journal(cwd, s(&w["slug"]), &event)?;
         store::save(cwd, &w)?;
-        println!("검수 {} 기록됨", if pass { "통과" } else { "반려" });
+        crate::lprint!(
+            "검수 {} 기록됨",
+            "Audit {} recorded",
+            if pass {
+                crate::i18n::text("통과", "Passed")
+            } else {
+                crate::i18n::text("반려", "Rejected")
+            }
+        );
         Ok(())
     })();
     if let Err(e) = &result {
@@ -625,7 +765,11 @@ pub fn done(cwd: &Path, args: &[String]) -> Result<()> {
                 store::save(cwd, &w)?;
                 return Err(Error::new(
                     "unproven",
-                    format!("완료 전 재검증 실패: {}", failed.join(", ")),
+                    crate::lfmt!(
+                        "완료 전 재검증 실패: {}",
+                        "Recheck before completion failed: {}",
+                        failed.join(", ")
+                    ),
                 ));
             }
         }
@@ -667,8 +811,9 @@ pub fn done(cwd: &Path, args: &[String]) -> Result<()> {
             &json!({"ts":at,"event":"done","checks":state::checks(&w).len()}),
         )?;
         store::save(cwd, &w)?;
-        println!(
+        crate::lprint!(
             "작업 완료: {} ({}/{})",
+            "Work completed: {} ({}/{})",
             s(&w["slug"]),
             state::checks(&w).len(),
             state::checks(&w).len()
@@ -700,9 +845,9 @@ pub fn status(cwd: &Path, args: &[String]) -> Result<()> {
                 println!(
                     "[{}] {} ({}/{})",
                     if b(&w["done"]) {
-                        "완료  "
+                        crate::i18n::text("완료  ", "Completed  ")
                     } else {
-                        "진행 중"
+                        crate::i18n::text("진행 중", "In progress")
                     },
                     s(&w["slug"]),
                     state::proven_count(&w),
@@ -710,11 +855,17 @@ pub fn status(cwd: &Path, args: &[String]) -> Result<()> {
                 );
             }
             if let Some(last) = journal.last() {
-                println!("  마지막: {} {}", s(&last["ts"]), s(&last["event"]));
+                crate::lprint!(
+                    "  마지막: {} {}",
+                    "  Latest: {} {}",
+                    s(&last["ts"]),
+                    s(&last["event"])
+                );
             }
             if let Some(delivery) = w.get("delivery") {
-                println!(
+                crate::lprint!(
                     "  전달: {} · PR {} · CI {}",
+                    "  Delivery: {} · PR {} · CI {}",
                     s(&delivery["branch"]),
                     delivery["pr"]["number"].as_str().unwrap_or("—"),
                     delivery["ci"]["status"].as_str().unwrap_or("—")
@@ -738,9 +889,18 @@ pub fn resume(cwd: &Path, args: &[String]) -> Result<()> {
     }
     print_work(&w);
     if w["contract"].get("outcome").is_some() {
-        println!("선언한 outcome (GDM 미측정):\n{}", w["contract"]["outcome"]);
+        crate::lprint!(
+            "선언한 outcome (GDM 미측정):\n{}",
+            "Declared outcome (not measured by GDM):\n{}",
+            w["contract"]["outcome"]
+        );
     }
-    println!("목표: {}\n계약: {}", s(&w["brief"]), w["contract"]);
+    crate::lprint!(
+        "목표: {}\n계약: {}",
+        "Goal: {}\nContract: {}",
+        s(&w["brief"]),
+        w["contract"]
+    );
     let audit = fingerprint::audit_state(cwd, &w)?;
     if !audit.is_empty() {
         println!("{audit}");
@@ -749,8 +909,9 @@ pub fn resume(cwd: &Path, args: &[String]) -> Result<()> {
         println!("{} {}", s(&event["ts"]), s(&event["event"]));
     }
     for attempt in super::attempt::latest(&journal)? {
-        println!(
+        crate::lprint!(
             "{} · epoch {} · {} · 가설 {}",
+            "{} · epoch {} · {} · Hypothesis {}",
             s(&attempt["fingerprint"]),
             attempt["epoch"],
             s(&attempt["decision"]),
@@ -758,7 +919,7 @@ pub fn resume(cwd: &Path, args: &[String]) -> Result<()> {
         );
     }
     if w.get("delivery").is_some() {
-        println!("전달: {}", w["delivery"]);
+        crate::lprint!("전달: {}", "Delivery: {}", w["delivery"]);
     }
     Ok(())
 }
@@ -776,14 +937,17 @@ pub fn miss(cwd: &Path, args: &[String]) -> Result<()> {
         }
     }
     store::append_journal(cwd, s(&w["slug"]), &e)?;
-    println!("탈출 결함 기록: {desc}");
+    crate::lprint!("탈출 결함 기록: {desc}", "Escaped defect recorded: {desc}");
     Ok(())
 }
 pub fn feedback(cwd: &Path, args: &[String]) -> Result<()> {
     ensure_flags(args, &["value", "reason", "source", "slug"], &["json"])?;
     let value = required_flag(args, "value")?;
     if !["good", "bad"].contains(&value.as_str()) {
-        return Err(Error::new("usage", "value는 good 또는 bad"));
+        return Err(Error::new(
+            "usage",
+            crate::i18n::text("value는 good 또는 bad", "value must be good or bad"),
+        ));
     }
     let reason = read_flag(args, "reason")?
         .map(|s| contract::safe_text(&s, "reason", 240))
@@ -795,7 +959,10 @@ pub fn feedback(cwd: &Path, args: &[String]) -> Result<()> {
     if value == "bad" && reason.is_none() {
         return Err(Error::new(
             "usage",
-            "--value bad에는 --reason <사유>가 필요합니다",
+            crate::i18n::text(
+                "--value bad에는 --reason <사유>가 필요합니다",
+                "--value bad requires --reason <reason>",
+            ),
         ));
     }
     let w = if let Some(slug) = read_flag(args, "slug")? {
@@ -820,7 +987,7 @@ pub fn feedback(cwd: &Path, args: &[String]) -> Result<()> {
         timed
             .into_iter()
             .next()
-            .ok_or_else(|| Error::new("no_active", "작업 없음"))?
+            .ok_or_else(|| Error::new("no_active", crate::i18n::text("작업 없음", "No work")))?
             .1
     };
     let mut result = json!({"slug":w["slug"],"value":value,"source":source});
@@ -835,7 +1002,11 @@ pub fn feedback(cwd: &Path, args: &[String]) -> Result<()> {
     if has_flag(args, "json") {
         print_json(&result)
     } else {
-        println!("피드백 기록: {} — {value}", s(&w["slug"]));
+        crate::lprint!(
+            "피드백 기록: {} — {value}",
+            "Feedback recorded: {} — {value}",
+            s(&w["slug"])
+        );
         Ok(())
     }
 }
@@ -847,14 +1018,20 @@ fn presets(cwd: &Path) -> Result<Value> {
     }
     let v = store::read_json(&p)?;
     if !v.is_object() || v.as_object().unwrap().values().any(|v| !v.is_string()) {
-        return Err(Error::new("state_corrupt", "presets 객체 오류"));
+        return Err(Error::new(
+            "state_corrupt",
+            crate::i18n::text("presets 객체 오류", "Invalid presets object"),
+        ));
     }
     Ok(v)
 }
 pub fn preset(cwd: &Path, args: &[String]) -> Result<()> {
-    let (sub, rest) = args
-        .split_first()
-        .ok_or_else(|| Error::new("usage", "preset 하위 명령 필요"))?;
+    let (sub, rest) = args.split_first().ok_or_else(|| {
+        Error::new(
+            "usage",
+            crate::i18n::text("preset 하위 명령 필요", "A preset subcommand is required"),
+        )
+    })?;
     let mut v = presets(cwd)?;
     match sub.as_str() {
         "list" => {
@@ -864,43 +1041,69 @@ pub fn preset(cwd: &Path, args: &[String]) -> Result<()> {
             return Ok(());
         }
         "set" => {
-            let name = rest
-                .first()
-                .ok_or_else(|| Error::new("usage", "이름 필요"))?;
+            let name = rest.first().ok_or_else(|| {
+                Error::new(
+                    "usage",
+                    crate::i18n::text("이름 필요", "A name is required"),
+                )
+            })?;
             if !regex::Regex::new(r"^[a-z0-9][a-z0-9-]*$")
                 .unwrap()
                 .is_match(name)
             {
-                return Err(Error::new("usage", "프리셋 이름 오류"));
+                return Err(Error::new(
+                    "usage",
+                    crate::i18n::text("프리셋 이름 오류", "Invalid preset name"),
+                ));
             }
-            let cmd = rest
-                .get(1)
-                .ok_or_else(|| Error::new("usage", "명령 필요"))?;
+            let cmd = rest.get(1).ok_or_else(|| {
+                Error::new(
+                    "usage",
+                    crate::i18n::text("명령 필요", "A command is required"),
+                )
+            })?;
             v[name] = json!(cmd);
             println!("@{name} = {cmd}");
         }
         "rm" => {
-            let name = rest
-                .first()
-                .ok_or_else(|| Error::new("usage", "이름 필요"))?;
+            let name = rest.first().ok_or_else(|| {
+                Error::new(
+                    "usage",
+                    crate::i18n::text("이름 필요", "A name is required"),
+                )
+            })?;
             if v.as_object_mut().unwrap().remove(name).is_none() {
-                return Err(Error::new("preset_not_found", "프리셋 없음"));
+                return Err(Error::new(
+                    "preset_not_found",
+                    crate::i18n::text("프리셋 없음", "Preset not found"),
+                ));
             }
-            println!("@{name} 삭제됨");
+            crate::lprint!("@{name} 삭제됨", "@{name} removed");
         }
-        _ => return Err(Error::new("usage", "preset 하위 명령 오류")),
+        _ => {
+            return Err(Error::new(
+                "usage",
+                crate::i18n::text("preset 하위 명령 오류", "Invalid preset subcommand"),
+            ));
+        }
     }
     store::ensure_dir(&store::root(cwd))?;
     store::write_json_atomic(&store::root(cwd).join("presets.json"), &v)
 }
 pub fn repair(cwd: &Path, args: &[String]) -> Result<()> {
     if args.first().map(String::as_str) != Some("state") {
-        return Err(Error::new("usage", "repair state 필요"));
+        return Err(Error::new(
+            "usage",
+            crate::i18n::text("repair state 필요", "Use repair state"),
+        ));
     }
     let args = &args[1..];
     ensure_flags(args, &["slug"], &["trailing-nul"])?;
     if !has_flag(args, "trailing-nul") {
-        return Err(Error::new("usage", "--trailing-nul 필요"));
+        return Err(Error::new(
+            "usage",
+            crate::i18n::text("--trailing-nul 필요", "--trailing-nul is required"),
+        ));
     }
     let slug = required_flag(args, "slug")?;
     let p = store::work_dir(cwd, &slug)?.join("checks.json");
@@ -911,11 +1114,17 @@ pub fn repair(cwd: &Path, args: &[String]) -> Result<()> {
     }
     let removed = len - bytes.len();
     if removed == 0 {
-        return Err(Error::new("repair_not_applicable", "파일 끝 NUL 없음"));
+        return Err(Error::new(
+            "repair_not_applicable",
+            crate::i18n::text("파일 끝 NUL 없음", "No trailing NUL in the file"),
+        ));
     }
     let w = state::validate_work(serde_json::from_slice(&bytes)?)?;
     if w["slug"] != slug {
-        return Err(Error::new("state_corrupt", "slug 불일치"));
+        return Err(Error::new(
+            "state_corrupt",
+            crate::i18n::text("slug 불일치", "Slug mismatch"),
+        ));
     }
     store::write_atomic(&p, &bytes)?;
     store::append_journal(
@@ -923,6 +1132,9 @@ pub fn repair(cwd: &Path, args: &[String]) -> Result<()> {
         &slug,
         &json!({"ts":now(),"event":"state.repair","kind":"trailing-nul","removedBytes":removed}),
     )?;
-    println!("{slug} 상태 복구 완료: trailing NUL {removed}바이트 제거");
+    crate::lprint!(
+        "{slug} 상태 복구 완료: trailing NUL {removed}바이트 제거",
+        "State repaired for {slug}: removed {removed} trailing NUL bytes"
+    );
     Ok(())
 }

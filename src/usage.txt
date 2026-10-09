@@ -3,6 +3,8 @@ gdm {VERSION} — 작업 증거가 다음 습관을 바꾸는 개인 AI 워크�
 흐름: 약속 → 증명 → 관찰 → 습관 → 비교
 
 사용법:
+  gdm [--language auto|ko|en] <명령> [옵션]
+  gdm language auto|ko|en                 # 다음 실행에 사용할 언어 저장
   gdm plan init --slug <슬러그> (--brief <설명> | --brief-file <파일>) [--audit] [--risk <low|medium|high>] [--verification <deterministic|inspectable|opaque>] [--simplify] (--require <약속> | --forbid <금지>)...
                 [--assume <가정>]... [--uncertain <불확실성>]... [--allow-path <경로>]... [--forbid-path <경로>]... [--stop-if <중단 조건>]...
                 [--bottleneck <병목> --desired-outcome <원하는 결과> --baseline <기준값> --target <목표값> --unit <단위> --intervene-if <사람 개입 조건>]  # 선언한 outcome (GDM 미측정), 여섯 값은 전부 함께 사용

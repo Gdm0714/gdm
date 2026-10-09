@@ -47,7 +47,10 @@ fn text(s: &str, max: usize) -> Result<()> {
     if s.trim().is_empty() || s.chars().count() > max || s.chars().any(|c| c < ' ') {
         return Err(err(
             "device_invalid",
-            "빈 값·제어 문자는 실기기 설정에 사용할 수 없습니다",
+            crate::i18n::text(
+                "빈 값·제어 문자는 실기기 설정에 사용할 수 없습니다",
+                "Empty values and control characters are not allowed in device settings",
+            ),
         ));
     }
     Ok(())
@@ -60,7 +63,13 @@ fn matches(s: &str, pattern: &str) -> bool {
 pub fn local_path(cwd: &Path, part: &str) -> Result<PathBuf> {
     text(part, 1024)?;
     if Path::new(part).is_absolute() {
-        return Err(err("device_invalid", "프로젝트 상대 경로가 필요합니다"));
+        return Err(err(
+            "device_invalid",
+            crate::i18n::text(
+                "프로젝트 상대 경로가 필요합니다",
+                "A project-relative path is required",
+            ),
+        ));
     }
     let mut relative = PathBuf::new();
     for c in Path::new(part).components() {
@@ -69,14 +78,31 @@ pub fn local_path(cwd: &Path, part: &str) -> Result<PathBuf> {
             Component::CurDir => {}
             Component::ParentDir => {
                 if !relative.pop() {
-                    return Err(err("device_invalid", "작업 폴더를 벗어난 경로"));
+                    return Err(err(
+                        "device_invalid",
+                        crate::i18n::text(
+                            "작업 폴더를 벗어난 경로",
+                            "Path is outside the workspace",
+                        ),
+                    ));
                 }
             }
-            _ => return Err(err("device_invalid", "잘못된 경로")),
+            _ => {
+                return Err(err(
+                    "device_invalid",
+                    crate::i18n::text("잘못된 경로", "Invalid path"),
+                ));
+            }
         }
     }
     if relative.as_os_str().is_empty() {
-        return Err(err("device_invalid", "작업 폴더 자체는 사용할 수 없습니다"));
+        return Err(err(
+            "device_invalid",
+            crate::i18n::text(
+                "작업 폴더 자체는 사용할 수 없습니다",
+                "The workspace directory itself cannot be used",
+            ),
+        ));
     }
     Ok(cwd.join(relative))
 }
@@ -85,7 +111,12 @@ pub(super) fn contained(cwd: &Path, part: &str) -> Result<PathBuf> {
     let mut current = cwd.to_owned();
     for segment in p
         .strip_prefix(cwd)
-        .map_err(|_| err("device_invalid", "경로 범위 오류"))?
+        .map_err(|_| {
+            err(
+                "device_invalid",
+                crate::i18n::text("경로 범위 오류", "Invalid path scope"),
+            )
+        })?
         .components()
     {
         current.push(segment);
@@ -93,7 +124,10 @@ pub(super) fn contained(cwd: &Path, part: &str) -> Result<PathBuf> {
             Ok(m) if m.file_type().is_symlink() => {
                 return Err(err(
                     "device_invalid",
-                    "실기기 경로에 심볼릭 링크를 사용할 수 없습니다",
+                    crate::i18n::text(
+                        "실기기 경로에 심볼릭 링크를 사용할 수 없습니다",
+                        "Symbolic links are not allowed in device paths",
+                    ),
                 ));
             }
             Ok(_) => {}
@@ -106,16 +140,35 @@ pub(super) fn contained(cwd: &Path, part: &str) -> Result<PathBuf> {
 pub(super) fn small(path: &Path, max: u64) -> Result<Vec<u8>> {
     let m = fs::symlink_metadata(path)?;
     if !m.is_file() || m.file_type().is_symlink() || m.len() > max {
-        return Err(err("device_invalid", "증거 파일 종류 또는 크기 오류"));
+        return Err(err(
+            "device_invalid",
+            crate::i18n::text(
+                "증거 파일 종류 또는 크기 오류",
+                "Invalid evidence file type or size",
+            ),
+        ));
     }
     Ok(fs::read(path)?)
 }
 pub fn parse_config(value: Value, cwd: &Path) -> Result<Config> {
     if value.get("capture").is_some_and(Value::is_null) {
-        return Err(err("device_invalid", "격리 캡처 설정은 객체여야 합니다"));
+        return Err(err(
+            "device_invalid",
+            crate::i18n::text(
+                "격리 캡처 설정은 객체여야 합니다",
+                "Isolated capture settings must be an object",
+            ),
+        ));
     }
-    let c: Config = serde_json::from_value(value)
-        .map_err(|_| err("device_invalid", "실기기 설정 필드를 확인해 주세요"))?;
+    let c: Config = serde_json::from_value(value).map_err(|_| {
+        err(
+            "device_invalid",
+            crate::i18n::text(
+                "실기기 설정 필드를 확인해 주세요",
+                "Check the device configuration fields",
+            ),
+        )
+    })?;
     if c.version != 1
         || !matches(
             &c.device.id,
@@ -126,7 +179,10 @@ pub fn parse_config(value: Value, cwd: &Path) -> Result<Config> {
     {
         return Err(err(
             "device_invalid",
-            "설정 version, 기기 ID 또는 bundleID 오류",
+            crate::i18n::text(
+                "설정 version, 기기 ID 또는 bundleID 오류",
+                "Invalid configuration version, device ID or bundleID",
+            ),
         ));
     }
     for s in [&c.device.name, &c.scheme, &c.bundle_id] {
@@ -141,13 +197,19 @@ pub fn parse_config(value: Value, cwd: &Path) -> Result<Config> {
     {
         return Err(err(
             "device_invalid",
-            "project, appPath 또는 testTargets 오류",
+            crate::i18n::text(
+                "project, appPath 또는 testTargets 오류",
+                "Invalid project, appPath or testTargets",
+            ),
         ));
     }
     for t in &c.test_targets {
         text(t, 256)?;
         if !matches(t, r"^[A-Za-z0-9_./]+$") {
-            return Err(err("device_invalid", "testTargets 오류"));
+            return Err(err(
+                "device_invalid",
+                crate::i18n::text("testTargets 오류", "Invalid testTargets"),
+            ));
         }
     }
     if let Some(cap) = &c.capture {
@@ -156,7 +218,10 @@ pub fn parse_config(value: Value, cwd: &Path) -> Result<Config> {
             || cap.cases.is_empty()
             || cap.cases.len() > 20
         {
-            return Err(err("device_invalid", "격리 캡처 설정 오류"));
+            return Err(err(
+                "device_invalid",
+                crate::i18n::text("격리 캡처 설정 오류", "Invalid isolated capture settings"),
+            ));
         }
         let mut names = HashSet::new();
         for case in &cap.cases {
@@ -164,12 +229,18 @@ pub fn parse_config(value: Value, cwd: &Path) -> Result<Config> {
                 || !names.insert(&case.name)
                 || case.arguments.len() > 32
             {
-                return Err(err("device_invalid", "캡처 장면 오류"));
+                return Err(err(
+                    "device_invalid",
+                    crate::i18n::text("캡처 장면 오류", "Invalid capture scene"),
+                ));
             }
             for arg in &case.arguments {
                 text(arg, 1024)?;
                 if arg == &cap.isolation_argument {
-                    return Err(err("device_invalid", "격리 인자 중복"));
+                    return Err(err(
+                        "device_invalid",
+                        crate::i18n::text("격리 인자 중복", "Duplicate isolation arguments"),
+                    ));
                 }
             }
         }
@@ -184,7 +255,13 @@ pub fn inspect_device(v: &Value, c: &Config) -> Result<()> {
         || r["hardwareProperties"]["udid"] != c.device.udid
         || r["deviceProperties"]["name"] != c.device.name
     {
-        return Err(err("device_mismatch", "기기 이름·ID·UDID 불일치"));
+        return Err(err(
+            "device_mismatch",
+            crate::i18n::text(
+                "기기 이름·ID·UDID 불일치",
+                "Device name, ID or UDID mismatch",
+            ),
+        ));
     }
     let h = &r["hardwareProperties"];
     let p = &r["deviceProperties"];
@@ -192,7 +269,10 @@ pub fn inspect_device(v: &Value, c: &Config) -> Result<()> {
     if h["reality"] != "physical" || h["platform"] != "iOS" {
         return Err(err(
             "device_not_physical",
-            "iOS 실기기만 사용할 수 있습니다",
+            crate::i18n::text(
+                "iOS 실기기만 사용할 수 있습니다",
+                "Only physical iOS devices are supported",
+            ),
         ));
     }
     if conn["pairingState"] != "paired"
@@ -201,7 +281,13 @@ pub fn inspect_device(v: &Value, c: &Config) -> Result<()> {
         || p["developerModeStatus"] != "enabled"
         || p["ddiServicesAvailable"] != true
     {
-        return Err(err("device_not_ready", "기기 연결·개발자 모드 확인 필요"));
+        return Err(err(
+            "device_not_ready",
+            crate::i18n::text(
+                "기기 연결·개발자 모드 확인 필요",
+                "Check device connection and Developer Mode",
+            ),
+        ));
     }
     Ok(())
 }
@@ -211,12 +297,18 @@ pub fn inspect_unlocked(v: &Value, c: &Config) -> Result<()> {
         .as_str()
         .is_some_and(|s| s.eq_ignore_ascii_case(&c.device.id))
     {
-        return Err(err("device_mismatch", "잠금 검사 대상 불일치"));
+        return Err(err(
+            "device_mismatch",
+            crate::i18n::text("잠금 검사 대상 불일치", "Lock check target mismatch"),
+        ));
     }
     if r["unlockedSinceBoot"] != true || r["passcodeRequired"] != false {
         return Err(err(
             "device_locked",
-            "iPhone 잠금을 풀고 다시 실행해 주세요",
+            crate::i18n::text(
+                "iPhone 잠금을 풀고 다시 실행해 주세요",
+                "Unlock the iPhone and try again",
+            ),
         ));
     }
     Ok(())
@@ -230,7 +322,13 @@ pub fn inspect_summary(s: &Value, c: &Config) -> Result<()> {
         || s["expectedFailures"] != 0
         || !s["testFailures"].as_array().is_some_and(Vec::is_empty)
     {
-        return Err(err("device_test_failed", "0개 또는 실패한 XCTest 결과"));
+        return Err(err(
+            "device_test_failed",
+            crate::i18n::text(
+                "0개 또는 실패한 XCTest 결과",
+                "No XCTest results or tests failed",
+            ),
+        ));
     }
     if !s["devicesAndConfigurations"].as_array().is_some_and(|a| {
         !a.is_empty()
@@ -243,12 +341,23 @@ pub fn inspect_summary(s: &Value, c: &Config) -> Result<()> {
                     && positive(&r["passedTests"])
             })
     }) {
-        return Err(err("device_test_mismatch", "XCTest 실기기 식별 불일치"));
+        return Err(err(
+            "device_test_mismatch",
+            crate::i18n::text(
+                "XCTest 실기기 식별 불일치",
+                "XCTest device identity mismatch",
+            ),
+        ));
     }
     Ok(())
 }
 pub fn inspect_png(b: &[u8]) -> Result<(u32, u32)> {
-    let invalid = || err("device_capture_invalid", "유효한 새 PNG 캡처가 없습니다");
+    let invalid = || {
+        err(
+            "device_capture_invalid",
+            crate::i18n::text("유효한 새 PNG 캡처가 없습니다", "No valid new PNG capture"),
+        )
+    };
     if b.len() < 45 || b.len() > 30 * 1024 * 1024 || b[..8] != [137, 80, 78, 71, 13, 10, 26, 10] {
         return Err(invalid());
     }

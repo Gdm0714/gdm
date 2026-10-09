@@ -158,7 +158,10 @@ fn acquire(dir: &Path) -> Result<Lease> {
         if Instant::now() >= deadline {
             return Err(Error::new(
                 "habit_ledger_busy",
-                "원장이 다른 프로세스에 의해 잠겨 있습니다",
+                crate::i18n::text(
+                    "원장이 다른 프로세스에 의해 잠겨 있습니다",
+                    "The ledger is locked by another process",
+                ),
             ));
         }
         std::thread::sleep(Duration::from_millis(5));

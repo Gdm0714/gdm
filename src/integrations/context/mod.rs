@@ -13,7 +13,10 @@ pub fn run(_cwd: &Path, argv: &[String]) -> Result<()> {
     if argv.len() != 2 {
         return Err(Error::new(
             "usage",
-            format!("사용법: gdm {kind} query 또는 status"),
+            crate::lfmt!(
+                "사용법: gdm {kind} query 또는 status",
+                "Usage: gdm {kind} query or status"
+            ),
         ));
     }
     if kind == "context" && sub == "status" {
@@ -24,10 +27,11 @@ pub fn run(_cwd: &Path, argv: &[String]) -> Result<()> {
     if sub != "query" {
         return Err(Error::new(
             "usage",
-            format!(
+            crate::lfmt!(
                 "{kind} 하위 명령은 query{}만 지원합니다",
+                "{kind} supports only query{} subcommands",
                 if kind == "context" {
-                    " 또는 status"
+                    crate::i18n::text(" 또는 status", " or status")
                 } else {
                     ""
                 }
@@ -41,8 +45,15 @@ pub fn run(_cwd: &Path, argv: &[String]) -> Result<()> {
     if input.len() > 1024 * 1024 {
         return Err(Error::new("usage", "stdin request exceeds 1 MiB"));
     }
-    let raw: Value = serde_json::from_str(&input)
-        .map_err(|_| Error::new("usage", "stdin에는 JSON request 하나가 필요합니다"))?;
+    let raw: Value = serde_json::from_str(&input).map_err(|_| {
+        Error::new(
+            "usage",
+            crate::i18n::text(
+                "stdin에는 JSON request 하나가 필요합니다",
+                "stdin must contain one JSON request",
+            ),
+        )
+    })?;
     let result = if kind == "context" {
         query(
             &raw,
