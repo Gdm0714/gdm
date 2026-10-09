@@ -243,14 +243,17 @@ fn probe(binary: &str) -> Result<()> {
     if !executable(binary) {
         return Err(Error::new(
             "agent_hooks_binary_invalid",
-            "hook 실행 파일을 확인할 수 없거나 실행 권한이 없습니다",
+            crate::i18n::text(
+                "hook 실행 파일을 확인할 수 없거나 실행 권한이 없습니다",
+                "The hook executable is missing or not executable",
+            ),
         ));
     }
     let mut command = Command::new(binary);
     command.args(["agent", "hook", "--handler-id", HANDLER]);
     let output = crate::computer_use::process::capture(command,
         br#"{"session_id":"gdm-hook-install-probe","hook_event_name":"PreToolUse","tool_name":"Read","tool_use_id":"gdm-hook-install-probe","tool_input":{}}"#.to_vec(),
-        Duration::from_secs(3), 64 * 1024).map_err(|e| Error::new("agent_hooks_binary_invalid", format!("hook 실행 파일 프로토콜 검증 실패: {}", e.message)))?;
+        Duration::from_secs(3), 64 * 1024).map_err(|e| Error::new("agent_hooks_binary_invalid", crate::lfmt!("hook 실행 파일 프로토콜 검증 실패: {}", "Hook executable protocol validation failed: {}", e.message)))?;
     let expected =
         json!({"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow"}});
     if output.code != 0
@@ -259,7 +262,10 @@ fn probe(binary: &str) -> Result<()> {
     {
         return Err(Error::new(
             "agent_hooks_binary_invalid",
-            "hook 실행 파일이 gdm agent hook 프로토콜 검증에 실패했습니다",
+            crate::i18n::text(
+                "hook 실행 파일이 gdm agent hook 프로토콜 검증에 실패했습니다",
+                "The hook executable failed gdm agent hook protocol validation",
+            ),
         ));
     }
     Ok(())
@@ -392,11 +398,11 @@ pub fn install(cwd: &Path, args: &[String]) -> Result<()> {
         println!(
             "Codex agent hooks {}: {}",
             if dry {
-                "사전검증 완료"
+                crate::i18n::text("사전검증 완료", "Preflight passed")
             } else if changed {
-                "설치 완료"
+                crate::i18n::text("설치 완료", "Installed")
             } else {
-                "변경 없음"
+                crate::i18n::text("변경 없음", "Unchanged")
             },
             path.display()
         );
@@ -409,7 +415,11 @@ pub fn doctor_lines(cwd: &Path) -> Vec<String> {
         Ok(v) => v,
         Err(e) => {
             return vec![
-                "  Codex 에이전트 게이트: 설정 오류".into(),
+                crate::i18n::text(
+                    "  Codex 에이전트 게이트: 설정 오류",
+                    "  Codex agent gate: invalid settings",
+                )
+                .into(),
                 format!("  → {}", e.message),
             ];
         }
@@ -418,44 +428,80 @@ pub fn doctor_lines(cwd: &Path) -> Vec<String> {
     let feature = &status["feature"];
     let mut lines = if hooks["configured"] != true {
         vec![
-            "  Codex 에이전트 게이트: 미설치 또는 설정 불완전".into(),
-            "  → gdm agent hook-install --binary <gdm 절대경로>".into(),
+            crate::i18n::text(
+                "  Codex 에이전트 게이트: 미설치 또는 설정 불완전",
+                "  Codex agent gate: not installed or incomplete settings",
+            )
+            .into(),
+            crate::i18n::text(
+                "  → gdm agent hook-install --binary <gdm 절대경로>",
+                "  → gdm agent hook-install --binary <absolute-gdm-path>",
+            )
+            .into(),
         ]
     } else if hooks["executable"] != true {
         vec![
-            "  Codex 에이전트 게이트: 설정됨, 실행 파일 사용 불가".into(),
+            crate::i18n::text(
+                "  Codex 에이전트 게이트: 설정됨, 실행 파일 사용 불가",
+                "  Codex agent gate: configured but executable unavailable",
+            )
+            .into(),
             format!("  → {}", s(hooks, "executableError")),
         ]
     } else if hooks["matchesCurrentExecutable"] == false {
         vec![
-            "  Codex 에이전트 게이트: 실행 파일 드리프트".into(),
+            crate::i18n::text(
+                "  Codex 에이전트 게이트: 실행 파일 드리프트",
+                "  Codex agent gate: executable drift",
+            )
+            .into(),
             format!("  → handler: {}", s(hooks, "executablePath")),
-            format!("  → 현재 gdm: {}", s(hooks, "currentExecutablePath")),
-            "  → 현재 gdm으로 hook-install을 다시 실행하세요".into(),
+            crate::lfmt!(
+                "  → 현재 gdm: {}",
+                "  → Current gdm: {}",
+                s(hooks, "currentExecutablePath")
+            ),
+            crate::i18n::text(
+                "  → 현재 gdm으로 hook-install을 다시 실행하세요",
+                "  → Run hook-install again with the current gdm",
+            )
+            .into(),
         ]
     } else if feature["state"] == "disabled" {
         vec![
-            "  Codex 에이전트 게이트: 비활성화".into(),
-            format!(
+            crate::i18n::text(
+                "  Codex 에이전트 게이트: 비활성화",
+                "  Codex agent gate: disabled",
+            )
+            .into(),
+            crate::lfmt!(
                 "  → {}에 [features] hooks = true를 설정하세요",
+                "  → Set [features] hooks = true in {}",
                 s(feature, "configPath")
             ),
         ]
     } else if feature["state"] == "invalid" {
         vec![
-            "  Codex 에이전트 게이트: hooks 기능 설정 오류".into(),
+            crate::i18n::text(
+                "  Codex 에이전트 게이트: hooks 기능 설정 오류",
+                "  Codex agent gate: invalid hooks feature setting",
+            )
+            .into(),
             format!("  → {}", s(feature, "invalidMessage")),
         ]
     } else {
         let desc = if feature["state"] == "enabled" {
-            "사용자 설정 활성"
+            crate::i18n::text("사용자 설정 활성", "Enabled in user settings")
         } else {
-            "명시 설정 없음 · 기본값 활성"
+            crate::i18n::text(
+                "명시 설정 없음 · 기본값 활성",
+                "No explicit setting · Enabled by default",
+            )
         };
-        vec![format!("  Codex 에이전트 게이트: 설치됨 (설정 완료 · 실행 가능 · {desc}, 현재 세션 유효값 미확인)"),"  → profile·project·CLI·requirements override가 가능하므로 /debug-config에서 유효 features.hooks를 확인하세요".into(),"  → Codex /hooks에서 현재 handler를 검토하고 신뢰해야 실제로 실행됩니다".into()]
+        vec![crate::lfmt!("  Codex 에이전트 게이트: 설치됨 (설정 완료 · 실행 가능 · {desc}, 현재 세션 유효값 미확인)", "  Codex agent gate: installed (configured · executable · {desc}; effective session value unverified)"),crate::i18n::text("  → profile·project·CLI·requirements override가 가능하므로 /debug-config에서 유효 features.hooks를 확인하세요", "  → Inspect effective features.hooks in /debug-config; profile, project, CLI or requirements may override it").into(),crate::i18n::text("  → Codex /hooks에서 현재 handler를 검토하고 신뢰해야 실제로 실행됩니다", "  → Review and trust the current handler in Codex /hooks before it can run").into()]
     };
     if hooks["multipleSources"] == true {
-        lines.push("  → 경고: 같은 Codex 설정 계층에 hooks.json과 inline [hooks]가 함께 있어 둘 다 로드됩니다".into());
+        lines.push(crate::i18n::text("  → 경고: 같은 Codex 설정 계층에 hooks.json과 inline [hooks]가 함께 있어 둘 다 로드됩니다", "  → Warning: hooks.json and inline [hooks] coexist in the same Codex configuration layer; both are loaded").into());
     }
     lines
 }

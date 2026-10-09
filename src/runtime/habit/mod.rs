@@ -25,24 +25,39 @@ fn flags(args: &[String], valued: &[&str], booleans: &[&str], repeat: &[&str]) -
     let mut seen = BTreeSet::new();
     let mut i = 0;
     while i < args.len() {
-        let token = args[i]
-            .strip_prefix("--")
-            .ok_or_else(|| Error::new("usage", "예상하지 않은 habit 위치 인자"))?;
+        let token = args[i].strip_prefix("--").ok_or_else(|| {
+            Error::new(
+                "usage",
+                crate::i18n::text(
+                    "예상하지 않은 habit 위치 인자",
+                    "Unexpected positional habit argument",
+                ),
+            )
+        })?;
         let (name, inline) = token
             .split_once('=')
             .map_or((token, None), |(a, b)| (a, Some(b)));
         if !repeat.contains(&name) && !seen.insert(name) {
-            return Err(Error::new("usage", "단일 habit 플래그 중복"));
+            return Err(Error::new(
+                "usage",
+                crate::i18n::text("단일 habit 플래그 중복", "Duplicate singleton habit flag"),
+            ));
         }
         if valued.contains(&name) {
             if inline.is_none() {
                 i += 1;
                 if args.get(i).is_none_or(|v| v.starts_with("--")) {
-                    return Err(Error::new("usage", "habit 플래그 값 필요"));
+                    return Err(Error::new(
+                        "usage",
+                        crate::i18n::text("habit 플래그 값 필요", "A habit flag value is required"),
+                    ));
                 }
             }
         } else if !booleans.contains(&name) || inline.is_some() {
-            return Err(Error::new("usage", "알 수 없는 habit 플래그"));
+            return Err(Error::new(
+                "usage",
+                crate::i18n::text("알 수 없는 habit 플래그", "Unknown habit flag"),
+            ));
         }
         i += 1;
     }
@@ -68,16 +83,27 @@ fn scan_arguments(args: &[String]) -> Result<()> {
 
 fn reference(value: &str) -> Result<(String, u64)> {
     contract::assert_no_sensitive(value, "habit-reference")?;
-    let (id, version) = value
-        .rsplit_once('@')
-        .ok_or_else(|| Error::new("usage", "habit reference는 habit-id@version 형식입니다"))?;
+    let (id, version) = value.rsplit_once('@').ok_or_else(|| {
+        Error::new(
+            "usage",
+            crate::i18n::text(
+                "habit reference는 habit-id@version 형식입니다",
+                "A habit reference uses habit-id@version",
+            ),
+        )
+    })?;
     model::pattern(id, r"^h-[0-9a-f]{16}$")?;
     model::pattern(version, r"^[1-9][0-9]*$")?;
     let version = version
         .parse::<u64>()
         .ok()
         .filter(|n| *n <= 9_007_199_254_740_991)
-        .ok_or_else(|| Error::new("usage", "version 형식 오류"))?;
+        .ok_or_else(|| {
+            Error::new(
+                "usage",
+                crate::i18n::text("version 형식 오류", "Invalid version format"),
+            )
+        })?;
     Ok((id.into(), version))
 }
 
@@ -95,9 +121,20 @@ fn observation(raw: Value, at: &str) -> Result<Value> {
         ],
         &[],
     )
-    .map_err(|_| Error::new("privacy_rejected", "observation 필드 거부"))?;
+    .map_err(|_| {
+        Error::new(
+            "privacy_rejected",
+            crate::i18n::text("observation 필드 거부", "Observation field rejected"),
+        )
+    })?;
     if raw["schemaVersion"] != 1 {
-        return Err(Error::new("usage", "observation schemaVersion 오류"));
+        return Err(Error::new(
+            "usage",
+            crate::i18n::text(
+                "observation schemaVersion 오류",
+                "Invalid observation schemaVersion",
+            ),
+        ));
     }
     let mut value = json!({"schemaVersion":1,"eventId":"","at":at,"kind":"observation"});
     for key in [
@@ -120,16 +157,23 @@ fn append(cwd: &Path, event: Value) -> Result<()> {
         "{}: {}{}",
         model::s(&event, "kind"),
         model::s(&event, "eventId"),
-        if count == 0 { " (변경 없음)" } else { "" }
+        if count == 0 {
+            crate::i18n::text(" (변경 없음)", " (unchanged)")
+        } else {
+            ""
+        }
     );
     Ok(())
 }
 
 pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
     scan_arguments(args)?;
-    let (command, rest) = args
-        .split_first()
-        .ok_or_else(|| Error::new("usage", "habit 하위 명령 필요"))?;
+    let (command, rest) = args.split_first().ok_or_else(|| {
+        Error::new(
+            "usage",
+            crate::i18n::text("habit 하위 명령 필요", "A habit subcommand is required"),
+        )
+    })?;
     let at = now();
     match command.as_str() {
         "observe" => {
@@ -156,30 +200,48 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
                 "observation-file",
                 16 * 1024 * 1024,
             )?;
-            let text = std::str::from_utf8(&bytes)
-                .map_err(|_| Error::new("privacy_rejected", "observation 인코딩 오류"))?;
+            let text = std::str::from_utf8(&bytes).map_err(|_| {
+                Error::new(
+                    "privacy_rejected",
+                    crate::i18n::text("observation 인코딩 오류", "Invalid observation encoding"),
+                )
+            })?;
             let lines: Vec<_> = text.split_terminator('\n').collect();
             if lines.is_empty() {
-                return Err(Error::new("usage", "observation file이 비어 있습니다"));
+                return Err(Error::new(
+                    "usage",
+                    crate::i18n::text(
+                        "observation file이 비어 있습니다",
+                        "The observation file is empty",
+                    ),
+                ));
             }
             // Scan every raw token before decoding any record. Duplicate keys cannot hide private values.
             for line in &lines {
                 if line.is_empty() || line.len() >= 2048 {
                     return Err(Error::new(
                         "privacy_rejected",
-                        "observation import 크기 오류",
+                        crate::i18n::text(
+                            "observation import 크기 오류",
+                            "Invalid observation import size",
+                        ),
                     ));
                 }
                 model::scan_tokens(line)?;
             }
             let mut events = Vec::new();
             for line in lines {
-                let raw = serde_json::from_str(line)
-                    .map_err(|_| Error::new("privacy_rejected", "observation JSON 오류"))?;
+                let raw = serde_json::from_str(line).map_err(|_| {
+                    Error::new(
+                        "privacy_rejected",
+                        crate::i18n::text("observation JSON 오류", "Invalid observation JSON"),
+                    )
+                })?;
                 events.push(observation(raw, &at)?);
             }
-            println!(
+            crate::lprint!(
                 "observation import: {}개 추가",
+                "Observation import: {} added",
                 ledger::append(cwd, &events)?
             );
             Ok(())
@@ -205,7 +267,15 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
                     .values()
                     .filter(|v| v.proposal["habitId"] == id)
                     .max_by_key(|v| v.proposal["version"].as_u64().unwrap_or(0))
-                    .ok_or_else(|| Error::new("habit_transition", "habit lineage가 없습니다"))?;
+                    .ok_or_else(|| {
+                        Error::new(
+                            "habit_transition",
+                            crate::i18n::text(
+                                "habit lineage가 없습니다",
+                                "Habit lineage not found",
+                            ),
+                        )
+                    })?;
                 (
                     id,
                     latest.proposal["version"].as_u64().unwrap_or(0)
@@ -222,9 +292,12 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
             append(cwd, event)
         }
         "adopt" | "retire" | "evaluate" => {
-            let (target, args) = rest
-                .split_first()
-                .ok_or_else(|| Error::new("usage", "habit reference 필요"))?;
+            let (target, args) = rest.split_first().ok_or_else(|| {
+                Error::new(
+                    "usage",
+                    crate::i18n::text("habit reference 필요", "A habit reference is required"),
+                )
+            })?;
             let (id, version) = reference(target)?;
             if command == "evaluate" {
                 return evaluate(cwd, args, &id, version, &at);
@@ -282,14 +355,20 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
             if rest.iter().any(|a| a == "--json") {
                 print_json(&value)
             } else {
-                println!(
+                crate::lprint!(
                     "habit 수확: {}개 추가 · {}개 재사용 · {}개 안전 제외",
-                    value["appended"], value["replayed"], value["skippedUnsafe"]
+                    "Habit harvest: {} added · {} reused · {} safely excluded",
+                    value["appended"],
+                    value["replayed"],
+                    value["skippedUnsafe"]
                 );
                 Ok(())
             }
         }
-        _ => Err(Error::new("usage", "habit 명령이 잘못됐습니다")),
+        _ => Err(Error::new(
+            "usage",
+            crate::i18n::text("habit 명령이 잘못됐습니다", "Invalid habit command"),
+        )),
     }
 }
 
@@ -300,14 +379,20 @@ fn evaluate(cwd: &Path, args: &[String], id: &str, version: u64, at: &str) -> Re
     if correct.is_some() != reason.is_some() {
         return Err(Error::new(
             "usage",
-            "correction에는 --correct와 --reason이 함께 필요합니다",
+            crate::i18n::text(
+                "correction에는 --correct와 --reason이 함께 필요합니다",
+                "Corrections require both --correct and --reason",
+            ),
         ));
     }
     let slug = required_flag(args, "work")?;
     model::pattern(&slug, r"^[a-z0-9][a-z0-9-]{1,50}$")?;
     let outcome = required_flag(args, "outcome")?;
     if !["ineligible", "skipped", "clean", "recurred"].contains(&outcome.as_str()) {
-        return Err(Error::new("usage", "outcome 값 오류"));
+        return Err(Error::new(
+            "usage",
+            crate::i18n::text("outcome 값 오류", "Invalid outcome value"),
+        ));
     }
     let work = store::load(cwd, &slug)?;
     let state = reduce(&ledger::read(cwd)?)?;
@@ -318,14 +403,20 @@ fn evaluate(cwd: &Path, args: &[String], id: &str, version: u64, at: &str) -> Re
         .ok_or_else(|| {
             Error::new(
                 "habit_transition",
-                "현재 adopted habit만 평가할 수 있습니다",
+                crate::i18n::text(
+                    "현재 adopted habit만 평가할 수 있습니다",
+                    "Only currently adopted habits can be evaluated",
+                ),
             )
         })?;
     let adoption = lifecycle.adoption.as_ref().unwrap();
     if work["done"] != true {
         return Err(Error::new(
             "habit_transition",
-            "완료된 work만 평가할 수 있습니다",
+            crate::i18n::text(
+                "완료된 work만 평가할 수 있습니다",
+                "Only completed work can be evaluated",
+            ),
         ));
     }
     let active: Vec<_> = work["contract"]["activeHabits"]
@@ -342,14 +433,20 @@ fn evaluate(cwd: &Path, args: &[String], id: &str, version: u64, at: &str) -> Re
     {
         return Err(Error::new(
             "evaluation_activation_mismatch",
-            "evaluation outcome과 work activation이 일치하지 않습니다",
+            crate::i18n::text(
+                "evaluation outcome과 work activation이 일치하지 않습니다",
+                "Evaluation outcome does not match work activation",
+            ),
         ));
     }
     if let Some(active) = exact {
         if active["ruleRef"] != adoption["ruleRef"] || active["ruleHash"] != adoption["ruleHash"] {
             return Err(Error::new(
                 "evaluation_activation_mismatch",
-                "work activation과 habit adoption이 일치하지 않습니다",
+                crate::i18n::text(
+                    "work activation과 habit adoption이 일치하지 않습니다",
+                    "Work activation does not match habit adoption",
+                ),
             ));
         }
         let bytes = store::contained(
@@ -361,7 +458,10 @@ fn evaluate(cwd: &Path, args: &[String], id: &str, version: u64, at: &str) -> Re
         if active["ruleHash"] != sha256(bytes) {
             return Err(Error::new(
                 "habit_rule_changed",
-                "활성화 뒤 rule 파일이 바뀌었습니다",
+                crate::i18n::text(
+                    "활성화 뒤 rule 파일이 바뀌었습니다",
+                    "The rule file changed after activation",
+                ),
             ));
         }
     }
@@ -372,7 +472,10 @@ fn evaluate(cwd: &Path, args: &[String], id: &str, version: u64, at: &str) -> Re
     {
         return Err(Error::new(
             "habit_transition",
-            "채택 이전 완료 작업은 ineligible만 기록 가능합니다",
+            crate::i18n::text(
+                "채택 이전 완료 작업은 ineligible만 기록 가능합니다",
+                "Work completed before adoption can only be recorded as ineligible",
+            ),
         ));
     }
     let current = state.evaluations.get(&format!("{id}@{version}@{slug}"));
@@ -382,7 +485,10 @@ fn evaluate(cwd: &Path, args: &[String], id: &str, version: u64, at: &str) -> Re
             if correct.is_some() {
                 return Err(Error::new(
                     "stale_correction",
-                    "첫 평가는 correction을 받을 수 없습니다",
+                    crate::i18n::text(
+                        "첫 평가는 correction을 받을 수 없습니다",
+                        "The first evaluation cannot be a correction",
+                    ),
                 ));
             }
         }
@@ -399,13 +505,19 @@ fn evaluate(cwd: &Path, args: &[String], id: &str, version: u64, at: &str) -> Re
                 if current["eventId"] != correct {
                     return Err(Error::new(
                         "stale_correction",
-                        "최신 evaluation만 수정할 수 있습니다",
+                        crate::i18n::text(
+                            "최신 evaluation만 수정할 수 있습니다",
+                            "Only the latest evaluation can be corrected",
+                        ),
                     ));
                 }
                 if current["outcome"] == outcome {
                     return Err(Error::new(
                         "usage",
-                        "evaluation outcome이 바뀌지 않았습니다",
+                        crate::i18n::text(
+                            "evaluation outcome이 바뀌지 않았습니다",
+                            "The evaluation outcome did not change",
+                        ),
                     ));
                 }
                 event["revision"] = (current["revision"].as_u64().unwrap_or(0) + 1).into();
@@ -416,7 +528,10 @@ fn evaluate(cwd: &Path, args: &[String], id: &str, version: u64, at: &str) -> Re
             } else {
                 return Err(Error::new(
                     "stale_correction",
-                    "기존 평가는 --correct와 --reason으로 수정해야 합니다",
+                    crate::i18n::text(
+                        "기존 평가는 --correct와 --reason으로 수정해야 합니다",
+                        "Correct an existing evaluation with --correct and --reason",
+                    ),
                 ));
             }
         }
@@ -435,7 +550,10 @@ pub fn activate(cwd: &Path, slug: &str, target: &str) -> Result<()> {
         .ok_or_else(|| {
             Error::new(
                 "habit_transition",
-                "현재 adopted habit만 활성화할 수 있습니다",
+                crate::i18n::text(
+                    "현재 adopted habit만 활성화할 수 있습니다",
+                    "Only currently adopted habits can be activated",
+                ),
             )
         })?;
     let adoption = lifecycle.adoption.as_ref().unwrap();
@@ -448,7 +566,10 @@ pub fn activate(cwd: &Path, slug: &str, target: &str) -> Result<()> {
     if adoption["ruleHash"] != sha256(bytes) {
         return Err(Error::new(
             "habit_rule_changed",
-            "채택 뒤 rule 파일이 바뀌었습니다",
+            crate::i18n::text(
+                "채택 뒤 rule 파일이 바뀌었습니다",
+                "The rule file changed after adoption",
+            ),
         ));
     }
     let mut work = store::load(cwd, slug)?;
@@ -463,12 +584,18 @@ pub fn activate(cwd: &Path, slug: &str, target: &str) -> Result<()> {
         if existing["ruleRef"] == adoption["ruleRef"]
             && existing["ruleHash"] == adoption["ruleHash"]
         {
-            println!("habit 활성화 변경 없음: {target}");
+            crate::lprint!(
+                "habit 활성화 변경 없음: {target}",
+                "Habit activation unchanged: {target}"
+            );
             return Ok(());
         }
         return Err(Error::new(
             "habit_activation_conflict",
-            "같은 habit version의 다른 활성화가 이미 있습니다",
+            crate::i18n::text(
+                "같은 habit version의 다른 활성화가 이미 있습니다",
+                "A different activation of this habit version already exists",
+            ),
         ));
     }
     if work["done"] == true
@@ -483,7 +610,10 @@ pub fn activate(cwd: &Path, slug: &str, target: &str) -> Result<()> {
     {
         return Err(Error::new(
             "habit_activation_locked",
-            "첫 확인 항목 통과 뒤에는 habit을 활성화할 수 없습니다",
+            crate::i18n::text(
+                "첫 확인 항목 통과 뒤에는 habit을 활성화할 수 없습니다",
+                "Habits cannot be activated after the first check passes",
+            ),
         ));
     }
     let at = now();
@@ -496,7 +626,7 @@ pub fn activate(cwd: &Path, slug: &str, target: &str) -> Result<()> {
     event["event"] = "contract.habit-activated".into();
     store::append_journal(cwd, slug, &event)?;
     store::save(cwd, &work)?;
-    println!("habit 활성화: {target}");
+    crate::lprint!("habit 활성화: {target}", "Habit activated: {target}");
     Ok(())
 }
 

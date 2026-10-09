@@ -36,13 +36,21 @@ impl Options {
         let mut it = args[1..].iter();
         while let Some(flag) = it.next() {
             if !seen.insert(flag) {
-                return Err(err("usage", "중복 인자"));
+                return Err(err(
+                    "usage",
+                    crate::i18n::text("중복 인자", "Duplicate argument"),
+                ));
             }
             match flag.as_str() {
                 "--json" => o.json = true,
                 "--config" if action != "list" => o.config = argument(&mut it)?,
                 "--case" if action == "capture" => o.case_name = Some(argument(&mut it)?),
-                _ => return Err(err("usage", "지원하지 않는 인자")),
+                _ => {
+                    return Err(err(
+                        "usage",
+                        crate::i18n::text("지원하지 않는 인자", "Unsupported argument"),
+                    ));
+                }
             }
         }
         Ok(o)
@@ -52,7 +60,12 @@ fn argument(it: &mut std::slice::Iter<'_, String>) -> Result<String> {
     it.next()
         .filter(|s| !s.is_empty() && !s.starts_with('-'))
         .cloned()
-        .ok_or_else(|| err("usage", "인자 값이 필요합니다"))
+        .ok_or_else(|| {
+            err(
+                "usage",
+                crate::i18n::text("인자 값이 필요합니다", "An argument value is required"),
+            )
+        })
 }
 pub struct DeviceCommand {
     pub executable: String,
@@ -121,7 +134,13 @@ impl Runner for ProcessRunner {
                 .any(|p| fs::metadata(p).is_ok_and(|m| m.len() > 64 * 1024 * 1024))
             {
                 child.stop();
-                return Err(err("device_output_limit", "실기기 로그 크기 상한 초과"));
+                return Err(err(
+                    "device_output_limit",
+                    crate::i18n::text(
+                        "실기기 로그 크기 상한 초과",
+                        "Device log size limit exceeded",
+                    ),
+                ));
             }
             if let Some(code) = child.exit_code()? {
                 child.stop();
@@ -151,8 +170,12 @@ fn write_new(p: &Path, data: &[u8]) -> Result<()> {
     Ok(())
 }
 fn read_json(p: &Path) -> Result<Value> {
-    serde_json::from_slice(&small(p, 4 * 1024 * 1024)?)
-        .map_err(|_| err("device_invalid", "증거 JSON 오류"))
+    serde_json::from_slice(&small(p, 4 * 1024 * 1024)?).map_err(|_| {
+        err(
+            "device_invalid",
+            crate::i18n::text("증거 JSON 오류", "Invalid evidence JSON"),
+        )
+    })
 }
 fn error_value(e: &Error) -> Value {
     json!({"code":e.code,"message":e.message})
@@ -166,7 +189,10 @@ struct Run<'a> {
 impl Run<'_> {
     fn check(&self) -> Result<()> {
         if self.runner.cancelled() {
-            Err(err("device_cancelled", "실기기 작업을 중단했습니다"))
+            Err(err(
+                "device_cancelled",
+                crate::i18n::text("실기기 작업을 중단했습니다", "Device operation cancelled"),
+            ))
         } else {
             Ok(())
         }
@@ -205,7 +231,11 @@ impl Run<'_> {
                 } else {
                     "device_command_failed"
                 },
-                format!("{name} 실패. 로그: {}", stderr.display()),
+                crate::lfmt!(
+                    "{name} 실패. 로그: {}",
+                    "{name} failed. Log: {}",
+                    stderr.display()
+                ),
             ));
         }
         Ok(out)
@@ -227,7 +257,10 @@ impl Run<'_> {
         self.step(name, "xcrun", argv, 25, cleanup)?;
         let value = read_json(&path)?;
         if value["info"]["outcome"] != "success" {
-            return Err(err("device_invalid", "devicectl 성공 결과 없음"));
+            return Err(err(
+                "device_invalid",
+                crate::i18n::text("devicectl 성공 결과 없음", "No successful devicectl result"),
+            ));
         }
         Ok(value)
     }
@@ -246,8 +279,12 @@ pub fn execute(
         None
     } else {
         Some(parse_config(
-            serde_json::from_slice(&small(&cwd.join(&o.config), 128 * 1024)?)
-                .map_err(|_| err("device_invalid", "실기기 설정 JSON 오류"))?,
+            serde_json::from_slice(&small(&cwd.join(&o.config), 128 * 1024)?).map_err(|_| {
+                err(
+                    "device_invalid",
+                    crate::i18n::text("실기기 설정 JSON 오류", "Invalid device configuration JSON"),
+                )
+            })?,
             &cwd,
         )?)
     };
@@ -264,10 +301,22 @@ pub fn execute(
         })
         .cloned();
     if o.action == "capture" && case.is_none() {
-        return Err(err("device_invalid", "등록된 격리 캡처 장면이 필요합니다"));
+        return Err(err(
+            "device_invalid",
+            crate::i18n::text(
+                "등록된 격리 캡처 장면이 필요합니다",
+                "A registered isolated capture scene is required",
+            ),
+        ));
     }
     if o.action == "test" && config.as_ref().is_none_or(|c| c.test_targets.is_empty()) {
-        return Err(err("device_invalid", "격리 testTargets가 필요합니다"));
+        return Err(err(
+            "device_invalid",
+            crate::i18n::text(
+                "격리 testTargets가 필요합니다",
+                "Isolated testTargets are required",
+            ),
+        ));
     }
     let root = contained(&cwd, ".gdm-artifacts/device")?;
     mkdir(&root, true)?;
@@ -301,13 +350,23 @@ pub fn execute(
                 || m.file_type().is_symlink()
                 || m.uid() != nix::unistd::getuid().as_raw()
             {
-                return Err(err("device_invalid", "실기기 잠금 폴더 소유자 오류"));
+                return Err(err(
+                    "device_invalid",
+                    crate::i18n::text(
+                        "실기기 잠금 폴더 소유자 오류",
+                        "Invalid owner of the device lock directory",
+                    ),
+                ));
             }
             let path = root.join(c.device.id.to_lowercase());
             mkdir(&path, false).map_err(|_| {
                 Error::new(
                     "device_busy",
-                    format!("실기기 잠금이 남아 있습니다: {}", path.display()),
+                    crate::lfmt!(
+                        "실기기 잠금이 남아 있습니다: {}",
+                        "A device lock remains: {}",
+                        path.display()
+                    ),
                 )
             })?;
             lock = Some(path.clone());
@@ -336,9 +395,12 @@ pub fn execute(
         }
         if o.action == "list" {
             let value = r.ctl("list", strings(&["list", "devices"]), false)?;
-            let rows = value["result"]["devices"]
-                .as_array()
-                .ok_or_else(|| err("device_invalid", "기기 목록 JSON 오류"))?;
+            let rows = value["result"]["devices"].as_array().ok_or_else(|| {
+                err(
+                    "device_invalid",
+                    crate::i18n::text("기기 목록 JSON 오류", "Invalid device list JSON"),
+                )
+            })?;
             r.receipt["devices"]=json!(rows.iter().map(|d|json!({"id":d["identifier"],"udid":d["hardwareProperties"]["udid"],"name":d["deviceProperties"]["name"],"platform":d["hardwareProperties"]["platform"],"reality":d["hardwareProperties"]["reality"],"connection":d["connectionProperties"]["tunnelState"]})).collect::<Vec<_>>());
         } else {
             let c = config.as_ref().expect("config validated");
@@ -401,7 +463,13 @@ pub fn execute(
                 "install" => {
                     let app = contained(&cwd, &c.app_path)?;
                     if !fs::symlink_metadata(&app)?.is_dir() {
-                        return Err(err("device_invalid", ".app 폴더가 없습니다"));
+                        return Err(err(
+                            "device_invalid",
+                            crate::i18n::text(
+                                ".app 폴더가 없습니다",
+                                "The .app directory is missing",
+                            ),
+                        ));
                     }
                     let path = r.step(
                         "bundle-id",
@@ -417,7 +485,13 @@ pub fn execute(
                     if String::from_utf8_lossy(&small(&path, 4 * 1024 * 1024)?).trim()
                         != c.bundle_id
                     {
-                        return Err(err("device_mismatch", "설치 앱 bundleID 불일치"));
+                        return Err(err(
+                            "device_mismatch",
+                            crate::i18n::text(
+                                "설치 앱 bundleID 불일치",
+                                "Installed app bundleID mismatch",
+                            ),
+                        ));
                     }
                     r.step(
                         "codesign",
@@ -492,8 +566,12 @@ pub fn execute(
                             }
                         }
                     }
-                    let path =
-                        path.ok_or_else(|| err("device_capture_invalid", "새 캡처가 없습니다"))?;
+                    let path = path.ok_or_else(|| {
+                        err(
+                            "device_capture_invalid",
+                            crate::i18n::text("새 캡처가 없습니다", "No new capture"),
+                        )
+                    })?;
                     let bytes = small(&path, 30 * 1024 * 1024)?;
                     let (width, height) = inspect_png(&bytes)?;
                     r.receipt["capture"] = json!({"path":path,"sha256":hex::encode(Sha256::digest(bytes)),"width":width,"height":height,"case":case.name});
@@ -528,8 +606,13 @@ pub fn execute(
                 r.receipt["restore"] = json!({"success":false,"error":e.message});
                 r.receipt["success"] = json!(false);
                 if r.receipt.get("error").is_none() {
-                    r.receipt["error"] =
-                        error_value(&err("device_restore_failed", "앱 정상 실행 복원 실패"));
+                    r.receipt["error"] = error_value(&err(
+                        "device_restore_failed",
+                        crate::i18n::text(
+                            "앱 정상 실행 복원 실패",
+                            "Could not restore normal app launch",
+                        ),
+                    ));
                 }
             }
         }

@@ -34,7 +34,10 @@ pub fn validate_slug(v: &str) -> Result<()> {
     {
         return Err(Error::new(
             "bad_slug",
-            "슬러그는 소문자 영문/숫자/하이픈 2~51자여야 합니다",
+            crate::i18n::text(
+                "슬러그는 소문자 영문/숫자/하이픈 2~51자여야 합니다",
+                "Slug must contain 2–51 lowercase ASCII letters, digits or hyphens",
+            ),
         ));
     }
     Ok(())
@@ -117,27 +120,38 @@ pub fn assert_plan(w: &Value, expected: Option<&str>) -> Result<()> {
         if !valid_hash(fp) {
             return Err(Error::new(
                 "usage",
-                "--expected-plan-fingerprint는 소문자 64자리 SHA-256이어야 합니다",
+                crate::i18n::text(
+                    "--expected-plan-fingerprint는 소문자 64자리 SHA-256이어야 합니다",
+                    "--expected-plan-fingerprint must be a 64-character lowercase SHA-256",
+                ),
             ));
         }
         if verification_plan_fingerprint(w) != fp {
             return Err(Error::new(
                 "plan_fingerprint_mismatch",
-                "승인된 검증 계획이 바뀌었습니다",
+                crate::i18n::text(
+                    "승인된 검증 계획이 바뀌었습니다",
+                    "The approved verification plan changed",
+                ),
             ));
         }
     }
     Ok(())
 }
 pub fn check_index(w: &Value, id: &str) -> Result<usize> {
-    checks(w)
-        .iter()
-        .position(|c| c["id"] == id)
-        .ok_or_else(|| Error::new("check_not_found", format!("항목 {id} 없음")))
+    checks(w).iter().position(|c| c["id"] == id).ok_or_else(|| {
+        Error::new(
+            "check_not_found",
+            crate::lfmt!("항목 {id} 없음", "Check {id} not found"),
+        )
+    })
 }
 pub fn assert_open(w: &Value) -> Result<()> {
     if b(&w["done"]) {
-        return Err(Error::new("work_done", "이미 완료된 작업입니다"));
+        return Err(Error::new(
+            "work_done",
+            crate::i18n::text("이미 완료된 작업입니다", "This work is already completed"),
+        ));
     }
     Ok(())
 }
@@ -145,7 +159,10 @@ pub fn passable(w: &Value, id: &str) -> Result<usize> {
     assert_open(w)?;
     let i = check_index(w, id)?;
     if w["checks"][i]["status"] == "proven" {
-        return Err(Error::new("already_proven", format!("{id} 이미 통과")));
+        return Err(Error::new(
+            "already_proven",
+            crate::lfmt!("{id} 이미 통과", "{id} already passed"),
+        ));
     }
     Ok(i)
 }
@@ -153,7 +170,13 @@ pub fn add_check(w: &mut Value, input: &Value) -> Result<Value> {
     assert_open(w)?;
     let desc = s(&input["desc"]).trim();
     if desc.is_empty() {
-        return Err(Error::new("empty_desc", "항목 설명이 비어 있습니다"));
+        return Err(Error::new(
+            "empty_desc",
+            crate::i18n::text(
+                "항목 설명이 비어 있습니다",
+                "The check description is empty",
+            ),
+        ));
     }
     let manual = b(&input["manual"]);
     let expert = b(&input["expert"]);
@@ -164,15 +187,27 @@ pub fn add_check(w: &mut Value, input: &Value) -> Result<Value> {
         || manual != (kind == "manual")
         || expert && !manual
     {
-        return Err(Error::new("usage", "kind/manual/expert 조합 오류"));
+        return Err(Error::new(
+            "usage",
+            crate::i18n::text(
+                "kind/manual/expert 조합 오류",
+                "Invalid kind/manual/expert combination",
+            ),
+        ));
     }
     let cmd = s(&input["cmd"]).trim();
     if !manual && cmd.is_empty() {
-        return Err(Error::new("cmd_required", "자동 항목에는 --cmd 필요"));
+        return Err(Error::new(
+            "cmd_required",
+            crate::i18n::text("자동 항목에는 --cmd 필요", "Automatic checks require --cmd"),
+        ));
     }
     let expect = s(&input["expect"]).trim();
     if expect.is_empty() {
-        return Err(Error::new("expect_required", "--expect 필요"));
+        return Err(Error::new(
+            "expect_required",
+            crate::i18n::text("--expect 필요", "--expect is required"),
+        ));
     }
     let n = checks(w)
         .iter()
@@ -193,7 +228,13 @@ pub fn add_check(w: &mut Value, input: &Value) -> Result<Value> {
 pub fn edit(w: &mut Value, id: &str, patch: &Value, reason: &str) -> Result<bool> {
     assert_open(w)?;
     if reason.trim().is_empty() {
-        return Err(Error::new("reason_required", "항목 수정에는 사유 필수"));
+        return Err(Error::new(
+            "reason_required",
+            crate::i18n::text(
+                "항목 수정에는 사유 필수",
+                "A reason is required to edit a check",
+            ),
+        ));
     }
     let i = check_index(w, id)?;
     let mut next = w["checks"][i].clone();
@@ -218,21 +259,36 @@ pub fn edit(w: &mut Value, id: &str, patch: &Value, reason: &str) -> Result<bool
         }
     }
     if !changed {
-        return Err(Error::new("no_changes", "바뀐 내용 없음"));
+        return Err(Error::new(
+            "no_changes",
+            crate::i18n::text("바뀐 내용 없음", "No changes"),
+        ));
     }
     if s(&next["desc"]).is_empty() {
-        return Err(Error::new("empty_desc", "설명 비울 수 없음"));
+        return Err(Error::new(
+            "empty_desc",
+            crate::i18n::text("설명 비울 수 없음", "The description cannot be empty"),
+        ));
     }
     if !b(&next["manual"]) && next["cmd"].is_null() {
-        return Err(Error::new("cmd_required", "cmd 비울 수 없음"));
+        return Err(Error::new(
+            "cmd_required",
+            crate::i18n::text("cmd 비울 수 없음", "cmd cannot be empty"),
+        ));
     }
     if s(&next["expect"]).is_empty() {
-        return Err(Error::new("expect_required", "expect 비울 수 없음"));
+        return Err(Error::new(
+            "expect_required",
+            crate::i18n::text("expect 비울 수 없음", "expect cannot be empty"),
+        ));
     }
     if !["regression", "behavior", "edge", "static", "manual"].contains(&kind(&next))
         || b(&next["manual"]) != (kind(&next) == "manual")
     {
-        return Err(Error::new("usage", "kind 불일치"));
+        return Err(Error::new(
+            "usage",
+            crate::i18n::text("kind 불일치", "Kind mismatch"),
+        ));
     }
     let reverted = next["status"] == "proven";
     next["status"] = json!("open");
@@ -251,7 +307,11 @@ pub fn completion_blockers(w: &Value) -> Vec<Value> {
     if c.is_empty() {
         push(
             "no_checks",
-            "확인 항목이 하나도 없습니다. gdm plan add로 항목부터 세우세요".into(),
+            crate::i18n::text(
+                "확인 항목이 하나도 없습니다. gdm plan add로 항목부터 세우세요",
+                "No checks exist. Add a check with gdm plan add first",
+            )
+            .into(),
         )
     }
     let open = c
@@ -261,8 +321,9 @@ pub fn completion_blockers(w: &Value) -> Vec<Value> {
     if !open.is_empty() {
         push(
             "unproven",
-            format!(
+            crate::lfmt!(
                 "미통과 항목 {}개: {}",
+                "{} checks have not passed: {}",
                 open.len(),
                 open.iter()
                     .map(|c| format!("{}({})", s(&c["id"]), s(&c["desc"])))
@@ -276,7 +337,7 @@ pub fn completion_blockers(w: &Value) -> Vec<Value> {
             .iter()
             .any(|c| c["status"] == "proven" && kind(c) == "static")
     {
-        push("simplification_required","간소화 확인이 필요합니다. --kind static 항목을 추가하고 불필요한 복잡성이 없음을 증명하세요".into())
+        push("simplification_required",crate::i18n::text("간소화 확인이 필요합니다. --kind static 항목을 추가하고 불필요한 복잡성이 없음을 증명하세요", "Simplification verification is required. Add a --kind static check proving unnecessary complexity is absent").into())
     }
     if w["contract"]["risk"] == "high"
         && w["contract"]["verification"] == "opaque"
@@ -288,23 +349,31 @@ pub fn completion_blockers(w: &Value) -> Vec<Value> {
                 && !s(&c["evidence"]["note"]).trim().is_empty()
         })
     {
-        push("expert_review_required","high+opaque 작업은 전문가 확인이 필요합니다. --manual --expert 항목과 reviewer·판단 근거를 제출하세요".into())
+        push("expert_review_required",crate::i18n::text("high+opaque 작업은 전문가 확인이 필요합니다. --manual --expert 항목과 reviewer·판단 근거를 제출하세요", "High-risk opaque work requires expert review. Provide a --manual --expert check with reviewer and reasoning").into())
     }
     if b(&w["auditRequired"]) || w["contract"]["risk"] == "high" {
         if w.get("audit").is_none() {
             push(
                 "audit_required",
-                "검수가 필요한 작업입니다. gdm audit brief → 검수자 → gdm audit verdict".into(),
+                crate::i18n::text("검수가 필요한 작업입니다. gdm audit brief → 검수자 → gdm audit verdict", "An audit is required. Run gdm audit brief, obtain an independent audit, then gdm audit verdict").into(),
             )
         } else if w["audit"]["result"] != "pass" {
             push(
                 "audit_failed",
-                "검수가 반려됐습니다. 반려 사유를 해결하고 재검수하세요".into(),
+                crate::i18n::text(
+                    "검수가 반려됐습니다. 반려 사유를 해결하고 재검수하세요",
+                    "The audit was rejected. Resolve the findings and obtain another audit",
+                )
+                .into(),
             )
         } else if s(&w["audit"]["stateHash"]) != checks_hash(w) {
             push(
                 "audit_stale",
-                "검수 이후 항목 상태가 바뀌었습니다. 재검수가 필요합니다".into(),
+                crate::i18n::text(
+                    "검수 이후 항목 상태가 바뀌었습니다. 재검수가 필요합니다",
+                    "Check state changed after the audit. A new audit is required",
+                )
+                .into(),
             )
         }
     }
@@ -355,14 +424,25 @@ fn fingerprint_valid(v: &Value) -> bool {
     true
 }
 pub fn validate_work(mut w: Value) -> Result<Value> {
-    let bad = |why: &str| Error::new("state_corrupt", format!("상태 파일이 손상됐습니다: {why}"));
+    let bad = |why: &str| {
+        Error::new(
+            "state_corrupt",
+            crate::lfmt!(
+                "상태 파일이 손상됐습니다: {why}",
+                "State file is corrupt: {why}"
+            ),
+        )
+    };
     if !w.is_object()
         || !w["slug"].is_string()
         || !w["brief"].is_string()
         || !w["done"].is_boolean()
         || !w["checks"].is_array()
     {
-        return Err(bad("work 필수 필드"));
+        return Err(bad(crate::i18n::text(
+            "work 필수 필드",
+            "Required work fields",
+        )));
     }
     validate_slug(s(&w["slug"])).map_err(|_| bad("slug"))?;
     if !contract::canonical_timestamp(s(&w["createdAt"]))
@@ -372,7 +452,10 @@ pub fn validate_work(mut w: Value) -> Result<Value> {
         || b(&w["done"]) != w.get("doneAt").is_some()
         || w.get("doneAt").is_some_and(|v| s(v) < s(&w["createdAt"]))
     {
-        return Err(bad("work 시간 및 완료 상태"));
+        return Err(bad(crate::i18n::text(
+            "work 시간 및 완료 상태",
+            "Work timestamps and completion state",
+        )));
     }
     if w.get("verificationPlanSourceFingerprint")
         .is_some_and(|v| !valid_hash(s(v)))
@@ -467,7 +550,10 @@ pub fn validate_work(mut w: Value) -> Result<Value> {
         candidate["done"] = json!(false);
         let blockers = completion_blockers(&candidate);
         if !blockers.is_empty() {
-            return Err(bad("완료 상태와 선행 조건 불일치"));
+            return Err(bad(crate::i18n::text(
+                "완료 상태와 선행 조건 불일치",
+                "Completion state does not match prerequisites",
+            )));
         }
     }
     Ok(w)

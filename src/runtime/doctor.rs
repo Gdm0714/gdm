@@ -230,10 +230,14 @@ pub fn run(cwd: &Path) -> Result<()> {
         && let Some(version) = v["version"].as_str()
     {
         if version == env!("CARGO_PKG_VERSION") {
-            println!("  저장소: {version} (바이너리와 일치)");
+            crate::lprint!(
+                "  저장소: {version} (바이너리와 일치)",
+                "  Repository: {version} (matches binary)"
+            );
         } else {
-            println!(
+            crate::lprint!(
                 "  저장소: {version} — 바이너리({})와 다릅니다 → {} 재실행",
+                "  Repository: {version} — differs from binary ({}) → rerun {}",
                 env!("CARGO_PKG_VERSION"),
                 root.join("install/install.sh").display()
             );
@@ -271,21 +275,25 @@ pub fn run(cwd: &Path) -> Result<()> {
             if root.join("skills").join(format!("gdm-{skill}")).exists() {
                 "OK"
             } else {
-                "없음"
+                crate::i18n::text("없음", "None")
             }
         };
         let a = mark(&home.join(".claude"));
         let c = mark(&codex);
         let p = mark(&pi);
-        missing |= [a, c, p].contains(&"없음");
+        missing |= [a, c, p].contains(&crate::i18n::text("없음", "None"));
         println!("  gdm-{skill}: claude[{a}] codex[{c}] pi[{p}]");
     }
     if missing {
-        println!("  → 누락 스킬은 재설치로 채웁니다: install/install.sh");
+        crate::lprint!(
+            "  → 누락 스킬은 재설치로 채웁니다: install/install.sh",
+            "  → Reinstall missing skills: install/install.sh"
+        );
     }
     let works = store::list(cwd)?;
-    println!(
+    crate::lprint!(
         "  현재 디렉토리 작업: {}개 (진행 중 {}개)",
+        "  Work in the current directory: {} ({} active)",
         works.len(),
         works.iter().filter(|w| !b(&w["done"])).count()
     );

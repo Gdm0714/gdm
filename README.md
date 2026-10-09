@@ -7,6 +7,17 @@
 이 저장소는 검증 CLI, 스킬, 실행 어댑터와 하네스 확장을 담는다.
 `gdm-memory`와 `gdm-computer-use`도 하네스 구성에 포함된다.
 
+## Language / 언어
+
+The CLI supports Korean and English. It follows `LC_ALL`, `LC_MESSAGES`, then `LANG`, with the macOS system language as a fallback. Other languages use English.
+
+```sh
+gdm --language en --help   # Override this invocation
+gdm language en            # Persist English; use ko or auto to change it
+```
+
+Priority: `--language` before the command, `GDM_LANGUAGE`, saved choice, system language. The choice is stored in `~/.config/gdm/language` (`GDM_CONFIG_DIR` or `XDG_CONFIG_HOME` can relocate it). Commands, JSON keys, user text and evidence stay unchanged. [English installation guide](https://gdmux.pages.dev/downloads/QUICKSTART.en.md).
+
 ## 무엇을 해결하나
 
 - 작업 시작 전에 필수 조건·금지 조건·검증 명령을 고정한다.

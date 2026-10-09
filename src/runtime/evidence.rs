@@ -93,19 +93,25 @@ pub fn execute(cwd: &Path, cmd: &str) -> Result<Execution> {
             let ms = s.trim().parse::<u64>().map_err(|_| {
                 Error::new(
                     "usage",
-                    "GDM_COMMAND_TIMEOUT_MS는 밀리초 단위 정수여야 합니다",
+                    crate::i18n::text(
+                        "GDM_COMMAND_TIMEOUT_MS는 밀리초 단위 정수여야 합니다",
+                        "GDM_COMMAND_TIMEOUT_MS must be an integer in milliseconds",
+                    ),
                 )
             })?;
             if !(100..=3_600_000).contains(&ms) {
                 return Err(Error::new(
                     "usage",
-                    "GDM_COMMAND_TIMEOUT_MS는 100~3600000 범위여야 합니다",
+                    crate::i18n::text(
+                        "GDM_COMMAND_TIMEOUT_MS는 100~3600000 범위여야 합니다",
+                        "GDM_COMMAND_TIMEOUT_MS must be between 100 and 3600000",
+                    ),
                 ));
             }
             Some(Duration::from_millis(ms))
         }
     };
-    println!("실행: {cmd}");
+    crate::lprint!("실행: {cmd}", "Running: {cmd}");
     let signals = Signals::new()?;
     let child = Command::new("bash")
         .args(["-c", cmd])
@@ -154,15 +160,24 @@ pub fn execute(cwd: &Path, cmd: &str) -> Result<Execution> {
     let mut error = None;
     let status = loop {
         if signals.flag.load(Ordering::Relaxed) {
-            error = Some("INTERRUPTED: 검증 명령 취소됨".into());
+            error = Some(
+                crate::i18n::text(
+                    "INTERRUPTED: 검증 명령 취소됨",
+                    "INTERRUPTED: verification command cancelled",
+                )
+                .into(),
+            );
             break owned.stop()?;
         }
         if overflow.load(Ordering::Relaxed) || timeout.is_some_and(|t| started.elapsed() >= t) {
             error = Some(
                 if overflow.load(Ordering::Relaxed) {
-                    "출력 크기 상한 초과"
+                    crate::i18n::text("출력 크기 상한 초과", "Output size limit exceeded")
                 } else {
-                    "ETIMEDOUT: 명령 시간 제한 초과"
+                    crate::i18n::text(
+                        "ETIMEDOUT: 명령 시간 제한 초과",
+                        "ETIMEDOUT: command time limit exceeded",
+                    )
                 }
                 .to_owned(),
             );
@@ -176,7 +191,7 @@ pub fn execute(cwd: &Path, cmd: &str) -> Result<Execution> {
     let out = stdout.join().unwrap_or_default();
     let err = stderr.join().unwrap_or_default();
     if overflow.load(Ordering::Relaxed) {
-        error = Some("출력 크기 상한 초과".into())
+        error = Some(crate::i18n::text("출력 크기 상한 초과", "Output size limit exceeded").into())
     }
     let mut output = String::from_utf8_lossy(&out).into_owned();
     if !err.is_empty() {
@@ -227,8 +242,9 @@ pub fn automatic(
     if execution.code.is_none() || !red && execution.code != Some(0) {
         return Err(Error::new(
             "cmd_failed",
-            format!(
+            crate::lfmt!(
                 "검증 실패: {observed}\n{}",
+                "Verification failed: {observed}\n{}",
                 execution
                     .output
                     .lines()
@@ -245,7 +261,10 @@ pub fn automatic(
     if red && execution.code == Some(0) {
         return Err(Error::new(
             "red_expected_failure",
-            "red 재현이 성공했습니다",
+            crate::i18n::text(
+                "red 재현이 성공했습니다",
+                "The red reproduction succeeded unexpectedly",
+            ),
         ));
     }
     Ok(
@@ -282,7 +301,10 @@ pub fn recheck(
     if only.is_some() && targets.is_empty() {
         return Err(Error::new(
             "not_recheckable",
-            "통과한 자동 항목만 재검증 가능",
+            crate::i18n::text(
+                "통과한 자동 항목만 재검증 가능",
+                "Only proven automatic checks can be rechecked",
+            ),
         ));
     }
     let slug = s(&work["slug"]).to_owned();
@@ -335,7 +357,15 @@ pub fn stale(cwd: &Path, work: &Value) -> Vec<(usize, bool, String)> {
             if let Some(e) = c.get(key) {
                 match store::contained(cwd, s(&e["observed"]), "evidence", usize::MAX / 2) {
                     Ok(bytes) if sha256(&bytes) == s(&e["sha256"]) => {}
-                    _ => result.push((i, red, format!("{} 증거 파일 누락 또는 변경", s(&c["id"])))),
+                    _ => result.push((
+                        i,
+                        red,
+                        crate::lfmt!(
+                            "{} 증거 파일 누락 또는 변경",
+                            "{} evidence file is missing or changed",
+                            s(&c["id"])
+                        ),
+                    )),
                 }
             }
         }

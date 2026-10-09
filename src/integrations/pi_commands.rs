@@ -113,8 +113,9 @@ pub fn next(work: Option<&Value>) -> String {
     }
     let slug = s(w, "slug");
     if w["total"] == 0 || blocker(w, "no_checks") {
-        return format!(
-            "gdm plan add --desc <검증항목> --cmd <명령> --expect <기대> --slug {slug}"
+        return crate::lfmt!(
+            "gdm plan add --desc <검증항목> --cmd <명령> --expect <기대> --slug {slug}",
+            "gdm plan add --desc <check> --cmd <command> --expect <expected> --slug {slug}"
         );
     }
     if let Some(c) = w["checks"]
@@ -128,22 +129,28 @@ pub fn next(work: Option<&Value>) -> String {
             return format!("gdm pass {id} --slug {slug}");
         }
         let expert = if c["expert"] == true {
-            " --reviewer <검토자> --note <판단근거>"
+            crate::i18n::text(
+                " --reviewer <검토자> --note <판단근거>",
+                " --reviewer <reviewer> --note <reasoning>",
+            )
         } else {
             ""
         };
-        return format!(
-            "사람 확인 {id} · gdm pass {id} --manual --observed <확인파일>{expert} --slug {slug}"
+        return crate::lfmt!(
+            "사람 확인 {id} · gdm pass {id} --manual --observed <확인파일>{expert} --slug {slug}",
+            "Human review {id} · gdm pass {id} --manual --observed <evidence-file>{expert} --slug {slug}"
         );
     }
     if blocker(w, "simplification_required") {
-        return format!(
-            "gdm plan add --desc <단순화검사> --cmd <명령> --expect <기대> --kind static --slug {slug}"
+        return crate::lfmt!(
+            "gdm plan add --desc <단순화검사> --cmd <명령> --expect <기대> --kind static --slug {slug}",
+            "gdm plan add --desc <simplification-check> --cmd <command> --expect <expected> --kind static --slug {slug}"
         );
     }
     if blocker(w, "expert_review_required") {
-        return format!(
-            "gdm plan add --desc <전문가확인> --expect <판단기준> --manual --expert --slug {slug}"
+        return crate::lfmt!(
+            "gdm plan add --desc <전문가확인> --expect <판단기준> --manual --expert --slug {slug}",
+            "gdm plan add --desc <expert-review> --expect <criteria> --manual --expert --slug {slug}"
         );
     }
     if ["audit_required", "audit_failed", "audit_stale"]
@@ -170,7 +177,11 @@ fn retro(v: &Value) -> Result<Value> {
 }
 pub fn summary(works: &[Value], history: &Value) -> Result<String> {
     let Some(focus) = select(works) else {
-        return Ok("GDM · Work 없음\n다음: gdm plan init".into());
+        return Ok(crate::i18n::text(
+            "GDM · Work 없음\n다음: gdm plan init",
+            "GDM · No work\nNext: gdm plan init",
+        )
+        .into());
     };
     let manual = focus["checks"]
         .as_array()
@@ -179,11 +190,14 @@ pub fn summary(works: &[Value], history: &Value) -> Result<String> {
         .find(|c| c["status"] != "proven" && c["manual"] == true);
     let first = focus["blockers"].as_array().and_then(|a| a.first());
     let exception = if let Some(c) = manual {
-        format!("사람 확인 대기 {}", s(c, "id"))
+        crate::lfmt!("사람 확인 대기 {}", "Awaiting human review {}", s(c, "id"))
     } else if let Some(b) = first {
-        b["message"].as_str().unwrap_or("없음").into()
+        b["message"]
+            .as_str()
+            .unwrap_or(crate::i18n::text("없음", "None"))
+            .into()
     } else {
-        "없음".into()
+        crate::i18n::text("없음", "None").into()
     };
     let history = retro(history)?;
     let mut lines = vec![format!(
@@ -195,27 +209,40 @@ pub fn summary(works: &[Value], history: &Value) -> Result<String> {
     let o = &focus["contract"]["outcome"];
     if outcome(o) {
         lines.extend([
-            "선언한 outcome (GDM 미측정)".into(),
-            format!("병목: {}", s(o, "bottleneck")),
-            format!("원하는 결과: {}", s(o, "desiredOutcome")),
+            crate::i18n::text(
+                "선언한 outcome (GDM 미측정)",
+                "Declared outcome (not measured by GDM)",
+            )
+            .into(),
+            crate::lfmt!("병목: {}", "Bottleneck: {}", s(o, "bottleneck")),
+            crate::lfmt!(
+                "원하는 결과: {}",
+                "Desired outcome: {}",
+                s(o, "desiredOutcome")
+            ),
             format!(
                 "baseline: {} · target: {} · unit: {}",
                 s(o, "baseline"),
                 s(o, "target"),
                 s(o, "unit")
             ),
-            format!("사람 개입 조건: {}", s(o, "interveneIf")),
+            crate::lfmt!(
+                "사람 개입 조건: {}",
+                "Human intervention condition: {}",
+                s(o, "interveneIf")
+            ),
         ]);
     }
     lines.extend([
-        format!("예외: {exception}"),
-        format!(
+        crate::lfmt!("예외: {exception}", "Exception: {exception}"),
+        crate::lfmt!(
             "전체 피드백: good {} · bad {} · 저장소 전체 회귀 검토 후보 {}",
+            "All feedback: good {} · bad {} · Repository-wide regression review candidates {}",
             history["feedback"]["good"],
             history["feedback"]["bad"],
             history["evalCandidates"].as_array().unwrap().len()
         ),
-        format!("다음: {}", next(Some(focus))),
+        crate::lfmt!("다음: {}", "Next: {}", next(Some(focus))),
     ]);
     Ok(lines.join("\n"))
 }
@@ -362,8 +389,12 @@ pub fn rpc(cwd: &Path, v: &Value) -> Result<Value> {
         "feedback" => {
             let feedback = parse_feedback(s(v, "args"))?;
             let status = command(cwd, &strings(&["status", "--json"]))?;
-            let target = select(works(&status, false)?)
-                .ok_or_else(|| error("기록할 GDM Work가 없습니다"))?;
+            let target = select(works(&status, false)?).ok_or_else(|| {
+                error(crate::i18n::text(
+                    "기록할 GDM Work가 없습니다",
+                    "No GDM Work to record",
+                ))
+            })?;
             let mut args = strings(&[
                 "feedback",
                 "--value",
@@ -382,7 +413,7 @@ pub fn rpc(cwd: &Path, v: &Value) -> Result<Value> {
                 return Err(error("gdm feedback returned an invalid receipt"));
             }
             Ok(
-                json!({"receipt":receipt,"message":format!("피드백 기록 · {} · {}",s(target,"slug"),s(&feedback,"value"))}),
+                json!({"receipt":receipt,"message":crate::lfmt!("피드백 기록 · {} · {}", "Feedback recorded · {} · {}",s(target,"slug"),s(&feedback,"value"))}),
             )
         }
         "contract-definition" => Ok(definition()),
@@ -417,12 +448,13 @@ pub fn rpc(cwd: &Path, v: &Value) -> Result<Value> {
                 })
                 .map(|e| &e["data"]);
             let delta = if let Some(b) = baseline {
-                format!(
+                crate::lfmt!(
                     "이전 대비 {:+}",
+                    "Change from previous {:+}",
                     score["passed"].as_i64().unwrap() - b["passed"].as_i64().unwrap()
                 )
             } else {
-                "baseline 생성".into()
+                crate::i18n::text("baseline 생성", "Baseline created").into()
             };
             let model = s(v, "modelId");
             if model.is_empty() {
@@ -430,7 +462,7 @@ pub fn rpc(cwd: &Path, v: &Value) -> Result<Value> {
             }
             let record = json!({"suiteVersion":SUITE,"harnessVersion":"gdm-pi/v1","modelId":model,"thinkingLevel":v["thinkingLevel"].as_str().unwrap_or("off"),"at":now(),"passed":score["passed"],"total":score["total"],"caseResults":score["caseResults"]});
             Ok(
-                json!({"record":record,"entryType":"gdm-contract-check","message":format!("GDM contract check · {}/{} · {delta} · {model}\n제한된 contract smoke이며 전체 하네스 인증이 아닙니다.",score["passed"],score["total"]),"level":if score["passed"]==score["total"]{"info"}else{"warning"}}),
+                json!({"record":record,"entryType":"gdm-contract-check","message":crate::lfmt!("GDM contract check · {}/{} · {delta} · {model}\n제한된 contract smoke이며 전체 하네스 인증이 아닙니다.", "GDM contract check · {}/{} · {delta} · {model}\nThis is a limited contract smoke check, not certification of the entire harness.",score["passed"],score["total"]),"level":if score["passed"]==score["total"]{"info"}else{"warning"}}),
             )
         }
         _ => Err(error("unknown Pi command action")),

@@ -15,9 +15,12 @@ pub mod store;
 use crate::support::{Error, Result, ensure_flags, has_flag, print_json};
 use std::path::Path;
 pub fn run(cwd: &Path, argv: &[String]) -> Result<()> {
-    let (command, args) = argv
-        .split_first()
-        .ok_or_else(|| Error::new("usage", "gdm 명령 필요"))?;
+    let (command, args) = argv.split_first().ok_or_else(|| {
+        Error::new(
+            "usage",
+            crate::i18n::text("gdm 명령 필요", "A gdm command is required"),
+        )
+    })?;
     let sub = args.first().map(String::as_str).unwrap_or("");
     let mutates = matches!(
         command.as_str(),
@@ -60,15 +63,27 @@ pub fn run(cwd: &Path, argv: &[String]) -> Result<()> {
         "protocol" => protocol::run(cwd, args),
         "workspace" => {
             if sub != "fingerprint" {
-                return Err(Error::new("usage", "workspace fingerprint 필요"));
+                return Err(Error::new(
+                    "usage",
+                    crate::i18n::text("workspace fingerprint 필요", "Use workspace fingerprint"),
+                ));
             }
             ensure_flags(&args[1..], &[], &["json"])?;
             if !has_flag(args, "json") {
-                return Err(Error::new("usage", "workspace fingerprint는 --json 필요"));
+                return Err(Error::new(
+                    "usage",
+                    crate::i18n::text(
+                        "workspace fingerprint는 --json 필요",
+                        "workspace fingerprint requires --json",
+                    ),
+                ));
             }
             print_json(&fingerprint::capture_source(cwd)?)
         }
         "doctor" => doctor::run(cwd),
-        _ => Err(Error::new("usage", format!("알 수 없는 명령: {command}"))),
+        _ => Err(Error::new(
+            "usage",
+            crate::lfmt!("알 수 없는 명령: {command}", "Unknown command: {command}"),
+        )),
     }
 }

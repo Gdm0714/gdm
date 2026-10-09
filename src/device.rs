@@ -17,12 +17,13 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
     if options.json {
         print_json(&receipt)?;
     } else {
-        println!(
+        crate::lprint!(
             "{}: {}\n기록: {}",
+            "{}: {}\nRecord: {}",
             if receipt["success"] == true {
-                "통과"
+                crate::i18n::text("통과", "Passed")
             } else {
-                "실패"
+                crate::i18n::text("실패", "Failed")
             },
             options.action,
             receipt["receiptPath"].as_str().unwrap_or_default()
@@ -36,7 +37,10 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
             }
         }
         if let Some(path) = receipt["capture"]["path"].as_str() {
-            println!("화면: {path}\n이미지를 직접 열어 UI를 검수해 주세요.");
+            crate::lprint!(
+                "화면: {path}\n이미지를 직접 열어 UI를 검수해 주세요.",
+                "Screen: {path}\nOpen the image to review the UI."
+            );
         }
     }
     if receipt["success"] != true {
@@ -46,7 +50,10 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
                 .unwrap_or("device_command_failed"),
             receipt["error"]["message"]
                 .as_str()
-                .unwrap_or("실기기 작업 실패"),
+                .unwrap_or(crate::i18n::text(
+                    "실기기 작업 실패",
+                    "Device operation failed",
+                )),
         ));
     }
     Ok(())

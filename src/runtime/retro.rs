@@ -65,20 +65,24 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
     let result = if all {
         let mut types = json!({});
         for m in &misses {
-            increment(&mut types, m["type"].as_str().unwrap_or("미분류"));
+            increment(
+                &mut types,
+                m["type"]
+                    .as_str()
+                    .unwrap_or(crate::i18n::text("미분류", "Unclassified")),
+            );
         }
         let mut entries = types.as_object().unwrap().iter().collect::<Vec<_>>();
         entries.sort_by_key(|(_, v)| std::cmp::Reverse(v.as_u64().unwrap()));
-        let mut suggestions=entries.iter().map(|(t,c)|format!("검수 체크리스트에 \"{t}\" 유형 반영 검토 — 게이트 통과 후 {c}건 발견 (gdm-agents/auditor.md)")).collect::<Vec<_>>();
+        let mut suggestions=entries.iter().map(|(t,c)|crate::lfmt!("검수 체크리스트에 \"{t}\" 유형 반영 검토 — 게이트 통과 후 {c}건 발견 (gdm-agents/auditor.md)", "Consider the \"{t}\" category in the audit checklist — {c} defects found after the gate passed (gdm-agents/auditor.md)")).collect::<Vec<_>>();
         if edits.len() >= 3 {
-            suggestions.push(format!(
-                "check 기준 수정 {}건 — plan 단계에서 기준을 더 구체화하면 재작업이 줄어듭니다",
+            suggestions.push(crate::lfmt!("check 기준 수정 {}건 — plan 단계에서 기준을 더 구체화하면 재작업이 줄어듭니다", "Check criteria changed {} times — more specific criteria during planning can reduce rework",
                 edits.len()
             ));
         }
         let fails = rechecks.iter().filter(|e| e["ok"] == false).count();
         if fails > 0 {
-            suggestions.push(format!("recheck가 회귀 {fails}건을 잡음 — 후속 변경의 영향 항목만 중간 재검증하고 done 직전 중복 실행은 생략"));
+            suggestions.push(crate::lfmt!("recheck가 회귀 {fails}건을 잡음 — 후속 변경의 영향 항목만 중간 재검증하고 done 직전 중복 실행은 생략", "Recheck caught {fails} regressions — recheck only affected checks during changes; skip duplicate checks immediately before done"));
         }
         let habits = super::habit::overview(cwd)?;
         json!({"works":works.len(),"done":works.iter().filter(|w|b(&w["done"])).count(),"events":events,"denied":denied,"misses":misses,"feedback":feedback,"evalCandidates":eval,"editCount":edits.len(),"recheckFails":fails,"suggestions":suggestions,"habitCandidates":habits["candidates"],"habitAdopted":habits["adopted"],"habitNext":habits["next"]})
@@ -88,8 +92,9 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
     if has_flag(args, "json") {
         print_json(&result)
     } else {
-        println!(
+        crate::lprint!(
             "회고 — 이벤트 {events}건\n{}",
+            "Retrospective — {events} events\n{}",
             serde_json::to_string_pretty(&result)?
         );
         Ok(())

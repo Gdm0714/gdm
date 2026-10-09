@@ -21,13 +21,19 @@ pub fn pattern(value: &str, re: &'static str) -> Result<()> {
     {
         Ok(())
     } else {
-        Err(Error::new("usage", "habit 필드 형식 오류"))
+        Err(Error::new(
+            "usage",
+            crate::i18n::text("habit 필드 형식 오류", "Invalid habit field format"),
+        ))
     }
 }
 pub fn exact(value: &Value, required: &[&str], optional: &[&str]) -> Result<()> {
-    let object = value
-        .as_object()
-        .ok_or_else(|| Error::new("habit_event_invalid", "객체 필요"))?;
+    let object = value.as_object().ok_or_else(|| {
+        Error::new(
+            "habit_event_invalid",
+            crate::i18n::text("객체 필요", "An object is required"),
+        )
+    })?;
     if required.iter().all(|k| object.contains_key(*k))
         && object
             .keys()
@@ -35,7 +41,10 @@ pub fn exact(value: &Value, required: &[&str], optional: &[&str]) -> Result<()> 
     {
         Ok(())
     } else {
-        Err(Error::new("habit_event_invalid", "필드 집합 오류"))
+        Err(Error::new(
+            "habit_event_invalid",
+            crate::i18n::text("필드 집합 오류", "Invalid field set"),
+        ))
     }
 }
 pub fn scan(value: &Value, harvest: bool) -> Result<()> {
@@ -84,10 +93,17 @@ pub fn scan_tokens(raw: &str) -> Result<()> {
             i += 1;
         }
         if i >= bytes.len() {
-            return Err(Error::new("privacy_rejected", "habit JSON 토큰 오류"));
+            return Err(Error::new(
+                "privacy_rejected",
+                crate::i18n::text("habit JSON 토큰 오류", "Invalid habit JSON token"),
+            ));
         }
-        let text: String = serde_json::from_str(&raw[start..=i])
-            .map_err(|_| Error::new("privacy_rejected", "habit JSON 토큰 오류"))?;
+        let text: String = serde_json::from_str(&raw[start..=i]).map_err(|_| {
+            Error::new(
+                "privacy_rejected",
+                crate::i18n::text("habit JSON 토큰 오류", "Invalid habit JSON token"),
+            )
+        })?;
         contract::assert_no_sensitive(&text, "habit-json")?;
         i += 1;
     }
@@ -107,7 +123,10 @@ pub fn rule_path(path: &str) -> Result<()> {
                     .contains(&p.to_lowercase().as_str())
         })
     {
-        return Err(Error::new("privacy_rejected", "rule-ref 거부"));
+        return Err(Error::new(
+            "privacy_rejected",
+            crate::i18n::text("rule-ref 거부", "rule-ref rejected"),
+        ));
     }
     Ok(())
 }
@@ -180,7 +199,12 @@ pub fn validate(event: &Value) -> Result<()> {
             "revision",
             "predecessorEventId",
         ],
-        _ => return Err(Error::new("habit_event_invalid", "kind 오류")),
+        _ => {
+            return Err(Error::new(
+                "habit_event_invalid",
+                crate::i18n::text("kind 오류", "Invalid kind"),
+            ));
+        }
     };
     let mut keys = common.to_vec();
     keys.extend(specific);
@@ -196,7 +220,10 @@ pub fn validate(event: &Value) -> Result<()> {
     if event["schemaVersion"] != 1 || !contract::canonical_timestamp(s(event, "at")) {
         return Err(Error::new(
             "event_conflict",
-            "habit schema 또는 timestamp 오류",
+            crate::i18n::text(
+                "habit schema 또는 timestamp 오류",
+                "Invalid habit schema or timestamp",
+            ),
         ));
     }
     pattern(s(event, "eventId"), r"^ev-[0-9a-f]{16}$")?;
@@ -204,7 +231,10 @@ pub fn validate(event: &Value) -> Result<()> {
     if kind != "observation" {
         pattern(s(event, "habitId"), r"^h-[0-9a-f]{16}$")?;
         if !positive(&event["version"]) {
-            return Err(Error::new("usage", "version 오류"));
+            return Err(Error::new(
+                "usage",
+                crate::i18n::text("version 오류", "Invalid version"),
+            ));
         }
     }
     match kind {
@@ -222,7 +252,13 @@ pub fn validate(event: &Value) -> Result<()> {
             .contains(&s(event, "taxonomy"))
                 || !["incident", "principle"].contains(&s(event, "sourceKind"))
             {
-                return Err(Error::new("usage", "observation 분류 오류"));
+                return Err(Error::new(
+                    "usage",
+                    crate::i18n::text(
+                        "observation 분류 오류",
+                        "Invalid observation classification",
+                    ),
+                ));
             }
             contract::opaque_id(s(event, "sourceToken"), "source-token")?;
             contract::opaque_id(s(event, "sourceGroup"), "source-group")?;
@@ -230,19 +266,31 @@ pub fn validate(event: &Value) -> Result<()> {
         "proposal" => {
             pattern(s(event, "pattern"), r"^[a-z0-9][a-z0-9.-]{2,63}$")?;
             contract::safe_text(s(event, "statement"), "statement", 160)?;
-            let values = event["sourceEventIds"]
-                .as_array()
-                .ok_or_else(|| Error::new("habit_event_invalid", "source events 배열 필요"))?;
+            let values = event["sourceEventIds"].as_array().ok_or_else(|| {
+                Error::new(
+                    "habit_event_invalid",
+                    crate::i18n::text(
+                        "source events 배열 필요",
+                        "A source events array is required",
+                    ),
+                )
+            })?;
             let mut prior = None;
             for value in values {
-                let value = value
-                    .as_str()
-                    .ok_or_else(|| Error::new("habit_event_invalid", "source event ID 필요"))?;
+                let value = value.as_str().ok_or_else(|| {
+                    Error::new(
+                        "habit_event_invalid",
+                        crate::i18n::text("source event ID 필요", "A source event ID is required"),
+                    )
+                })?;
                 pattern(value, r"^ev-[0-9a-f]{16}$")?;
                 if prior.is_some_and(|p| p >= value) {
                     return Err(Error::new(
                         "event_conflict",
-                        "proposal source events는 중복 없이 정렬되어야 합니다",
+                        crate::i18n::text(
+                            "proposal source events는 중복 없이 정렬되어야 합니다",
+                            "Proposal source events must be sorted and unique",
+                        ),
                     ));
                 }
                 prior = Some(value);
@@ -263,7 +311,10 @@ pub fn validate(event: &Value) -> Result<()> {
                     .as_u64()
                     .is_none_or(|n| n > 9_007_199_254_740_991)
             {
-                return Err(Error::new("usage", "evaluation 필드 오류"));
+                return Err(Error::new(
+                    "usage",
+                    crate::i18n::text("evaluation 필드 오류", "Invalid evaluation field"),
+                ));
             }
             if !event["predecessorEventId"].is_null() {
                 pattern(s(event, "predecessorEventId"), r"^ev-[0-9a-f]{16}$")?;
@@ -275,12 +326,18 @@ pub fn validate(event: &Value) -> Result<()> {
         _ => unreachable!(),
     }
     if serde_json::to_vec(event)?.len() + 1 >= 2048 {
-        return Err(Error::new("privacy_rejected", "habit event 크기 초과"));
+        return Err(Error::new(
+            "privacy_rejected",
+            crate::i18n::text("habit event 크기 초과", "Habit event size limit exceeded"),
+        ));
     }
     if event["eventId"] != expected_id(event) {
         return Err(Error::new(
             "event_conflict",
-            "habit event identity가 일치하지 않습니다",
+            crate::i18n::text(
+                "habit event identity가 일치하지 않습니다",
+                "Habit event identity mismatch",
+            ),
         ));
     }
     Ok(())
@@ -309,7 +366,10 @@ pub fn reduce(events: &[Value]) -> Result<State> {
             }
             return Err(Error::new(
                 "event_conflict",
-                "habit event identity가 충돌합니다",
+                crate::i18n::text(
+                    "habit event identity가 충돌합니다",
+                    "Habit event identity conflict",
+                ),
             ));
         }
         let habit = s(event, "habitId");
@@ -326,12 +386,21 @@ pub fn reduce(events: &[Value]) -> Result<State> {
                         .get(source.as_str().unwrap())
                         .filter(|e| e["kind"] == "observation")
                         .ok_or_else(|| {
-                            Error::new("habit_transition", "proposal source observation이 없습니다")
+                            Error::new(
+                                "habit_transition",
+                                crate::i18n::text(
+                                    "proposal source observation이 없습니다",
+                                    "Proposal source observation is missing",
+                                ),
+                            )
                         })?;
                     if source["pattern"] != event["pattern"] {
                         return Err(Error::new(
                             "habit_transition",
-                            "proposal source pattern이 일치하지 않습니다",
+                            crate::i18n::text(
+                                "proposal source pattern이 일치하지 않습니다",
+                                "Proposal source pattern mismatch",
+                            ),
                         ));
                     }
                     groups.insert(s(source, "sourceGroup"));
@@ -340,7 +409,10 @@ pub fn reduce(events: &[Value]) -> Result<State> {
                 if groups.len() < 2 || !incident {
                     return Err(Error::new(
                         "habit_transition",
-                        "proposal에는 다른 source group 두 개와 incident 근거가 필요합니다",
+                        crate::i18n::text(
+                            "proposal에는 다른 source group 두 개와 incident 근거가 필요합니다",
+                            "A proposal requires two different source groups and incident evidence",
+                        ),
                     ));
                 }
                 let latest = state
@@ -355,7 +427,10 @@ pub fn reduce(events: &[Value]) -> Result<State> {
                     {
                         return Err(Error::new(
                             "habit_transition",
-                            "retired version 다음에만 같은 pattern 새 version을 만들 수 있습니다",
+                            crate::i18n::text(
+                                "retired version 다음에만 같은 pattern 새 version을 만들 수 있습니다",
+                                "A new version for the same pattern requires the previous version to be retired",
+                            ),
                         ));
                     }
                 } else {
@@ -376,7 +451,10 @@ pub fn reduce(events: &[Value]) -> Result<State> {
                     {
                         return Err(Error::new(
                             "habit_transition",
-                            "첫 habit identity 또는 parallel proposal 오류",
+                            crate::i18n::text(
+                                "첫 habit identity 또는 parallel proposal 오류",
+                                "Invalid initial habit identity or parallel proposal",
+                            ),
                         ));
                     }
                 }
@@ -395,7 +473,13 @@ pub fn reduce(events: &[Value]) -> Result<State> {
                     .get_mut(&key)
                     .filter(|v| v.adoption.is_none() && v.retirement.is_none())
                     .ok_or_else(|| {
-                        Error::new("habit_transition", "proposed habit만 채택할 수 있습니다")
+                        Error::new(
+                            "habit_transition",
+                            crate::i18n::text(
+                                "proposed habit만 채택할 수 있습니다",
+                                "Only proposed habits can be adopted",
+                            ),
+                        )
                     })?;
                 version.adoption = Some(event.clone());
             }
@@ -407,7 +491,10 @@ pub fn reduce(events: &[Value]) -> Result<State> {
                     .ok_or_else(|| {
                         Error::new(
                             "habit_transition",
-                            "아직 은퇴하지 않은 habit만 은퇴할 수 있습니다",
+                            crate::i18n::text(
+                                "아직 은퇴하지 않은 habit만 은퇴할 수 있습니다",
+                                "Only non-retired habits can be retired",
+                            ),
                         )
                     })?;
                 version.retirement = Some(event.clone());
@@ -420,7 +507,10 @@ pub fn reduce(events: &[Value]) -> Result<State> {
                     .ok_or_else(|| {
                         Error::new(
                             "habit_transition",
-                            "현재 adopted habit만 평가할 수 있습니다",
+                            crate::i18n::text(
+                                "현재 adopted habit만 평가할 수 있습니다",
+                                "Only currently adopted habits can be evaluated",
+                            ),
                         )
                     })?;
                 let key = format!("{key}@{}", s(event, "workSlug"));
@@ -431,7 +521,10 @@ pub fn reduce(events: &[Value]) -> Result<State> {
                     {
                         return Err(Error::new(
                             "stale_correction",
-                            "evaluation correction chain 오류",
+                            crate::i18n::text(
+                                "evaluation correction chain 오류",
+                                "Invalid evaluation correction chain",
+                            ),
                         ));
                     }
                 } else if event["revision"] != 0
@@ -440,7 +533,10 @@ pub fn reduce(events: &[Value]) -> Result<State> {
                 {
                     return Err(Error::new(
                         "habit_transition",
-                        "첫 평가는 revision 0이어야 합니다",
+                        crate::i18n::text(
+                            "첫 평가는 revision 0이어야 합니다",
+                            "The first evaluation must have revision 0",
+                        ),
                     ));
                 }
                 state.evaluations.insert(key, event.clone());

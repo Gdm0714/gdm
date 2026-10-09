@@ -1,6 +1,52 @@
 fn main() {
     use std::io::Read;
-    let args: Vec<String> = std::env::args().skip(1).collect();
+    let mut args: Vec<String> = std::env::args().skip(1).collect();
+    let mut preference = None;
+    if args
+        .first()
+        .is_some_and(|s| s == "--language" || s.starts_with("--language="))
+    {
+        let flag = args.remove(0);
+        let value = if let Some(value) = flag.strip_prefix("--language=") {
+            value.to_owned()
+        } else if !args.is_empty() {
+            args.remove(0)
+        } else {
+            String::new()
+        };
+        match gdm::i18n::Preference::parse(&value) {
+            Ok(value) => preference = Some(value),
+            Err(error) => {
+                eprintln!("{error}");
+                std::process::exit(2);
+            }
+        }
+    }
+    if let Err(error) = gdm::i18n::configure(preference) {
+        eprintln!("{error}");
+        std::process::exit(2);
+    }
+    if args.first().is_some_and(|s| s == "language") {
+        let result = if args.len() == 2 {
+            gdm::i18n::Preference::parse(&args[1]).and_then(|value| {
+                let path = gdm::i18n::config_path()?;
+                gdm::i18n::save_preference(&path, value)?;
+                gdm::lprint!(
+                    "언어 저장됨: {} (다음 실행부터 적용)",
+                    "Language saved: {} (applies on next launch)",
+                    value.name()
+                );
+                Ok(())
+            })
+        } else {
+            Err("Usage: gdm language auto|ko|en".into())
+        };
+        if let Err(error) = result {
+            eprintln!("{error}");
+            std::process::exit(2);
+        }
+        return;
+    }
     let cwd = std::env::current_dir().unwrap_or_default();
     let result = match args.first().map(String::as_str) {
         Some("--version") => {
@@ -33,10 +79,7 @@ fn main() {
             gdm::integrations::run(&cwd, &args, &input)
         }
         None | Some("--help" | "-h") => {
-            eprintln!(
-                "{}",
-                include_str!("usage.txt").replace("{VERSION}", env!("CARGO_PKG_VERSION"))
-            );
+            eprintln!("{}", gdm::i18n::usage());
             eprintln!(
                 "  gdm computer-use status|serve|mcp|select|benchmark\n  gdm device list|doctor|build|install|test|capture\n  gdm memory rpc\n  gdm render-skills --target codex|claude|pi --output DIR"
             );
@@ -48,11 +91,11 @@ fn main() {
             | "doctor" | "habit" | "protocol",
         ) => gdm::runtime::run(&cwd, &args),
         _ => {
-            eprintln!(
-                "{}",
-                include_str!("usage.txt").replace("{VERSION}", env!("CARGO_PKG_VERSION"))
-            );
-            Err(gdm::support::Error::new("usage", "알 수 없는 명령"))
+            eprintln!("{}", gdm::i18n::usage());
+            Err(gdm::support::Error::new(
+                "usage",
+                gdm::i18n::text("알 수 없는 명령", "Unknown command"),
+            ))
         }
     };
     if let Err(e) = result {
