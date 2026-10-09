@@ -33,21 +33,31 @@ case "${PI_CODING_AGENT_DIR:-}" in
   *) PI_AGENT_DIR="$INSTALL_CWD/$PI_CODING_AGENT_DIR" ;;
 esac
 
-err() { echo "gdm 설치 실패: $*" >&2; exit 1; }
+# Keep installer messages independent of user content and installation behavior.
+gdm_install_language="${GDM_LANGUAGE:-auto}"
+if [ "$gdm_install_language" = auto ]; then
+  gdm_install_language="${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}"
+  if [ -z "$gdm_install_language" ] && [ "$(uname -s)" = Darwin ]; then
+    gdm_install_language="$(/usr/bin/defaults read -g AppleLanguages 2>/dev/null | tr -d '\"(), ' | sed '/^$/d' | head -n 1 || true)"
+  fi
+fi
+case "$gdm_install_language" in ko|ko[-_.@]*|KO|KO[-_.@]*) gdm_install_language=ko ;; *) gdm_install_language=en ;; esac
+say() { if [ "$gdm_install_language" = ko ]; then printf '%s\n' "$1"; else printf '%s\n' "${2:-$1}"; fi; }
+err() { say "gdm 설치 실패: $1" "gdm installation failed: ${2:-$1}" >&2; exit 1; }
 
-command -v curl >/dev/null || err "curl이 필요합니다"
-command -v tar >/dev/null || err "tar이 필요합니다"
+command -v curl >/dev/null || err "curl이 필요합니다" "curl is required"
+command -v tar >/dev/null || err "tar이 필요합니다" "tar is required"
 
 os="$(uname -s)"; arch="$(uname -m)"
 case "$os" in
   Darwin) os="darwin" ;;
   Linux) os="linux" ;;
-  *) err "지원하지 않는 OS: $os (macOS·Linux만 지원)" ;;
+  *) err "지원하지 않는 OS: $os (macOS·Linux만 지원)" "Unsupported OS: $os (macOS and Linux only)" ;;
 esac
 case "$arch" in
   arm64 | aarch64) arch="arm64" ;;
   x86_64 | amd64) arch="x64" ;;
-  *) err "지원하지 않는 아키텍처: $arch" ;;
+  *) err "지원하지 않는 아키텍처: $arch" "Unsupported architecture: $arch" ;;
 esac
 asset="gdm-$os-$arch"
 
@@ -140,18 +150,18 @@ stage_remote_skills() {
   local output_variable="$3"
   local stage source staged
   mkdir -p "$root"
-  [ -d "$root" ] || err "skill 경로가 디렉터리가 아닙니다: $root"
+  [ -d "$root" ] || err "skill 경로가 디렉터리가 아닙니다: $root" "Skill path is not a directory: $root"
   stage="$(mktemp -d "$root/.gdm-stage.XXXXXX")"
   printf -v "$output_variable" '%s' "$stage"
   source="$tmp/pkg/targets/$target"
-  [ -d "$source" ] || err "target skill bundle이 없습니다: $target"
+  [ -d "$source" ] || err "target skill bundle이 없습니다: $target" "Missing target skill bundle: $target"
   [ -f "$source/gdm-target-manifest.json" ] && [ ! -L "$source/gdm-target-manifest.json" ] || \
-    err "target skill manifest가 없습니다: $target"
+    err "target skill manifest가 없습니다: $target" "Missing target skill manifest: $target"
   if find "$source" -type l -print -quit | grep -q .; then
-    err "target skill bundle에 symlink가 있습니다: $target"
+    err "target skill bundle에 symlink가 있습니다: $target" "Target skill bundle contains a symlink: $target"
   fi
   for staged in "$source"/gdm-*; do
-    [ -e "$staged" ] && [ ! -L "$staged" ] || err "target skill bundle 항목이 올바르지 않습니다: $staged"
+    [ -e "$staged" ] && [ ! -L "$staged" ] || err "target skill bundle 항목이 올바르지 않습니다: $staged" "Invalid target skill bundle entry: $staged"
     cp -R "$staged" "$stage/$(basename "$staged")"
   done
 }
@@ -162,7 +172,7 @@ sha256_path() {
   elif command -v shasum >/dev/null 2>&1; then
     shasum -a 256 "$1" | awk '{print $1}'
   else
-    err "sha256sum 또는 shasum이 필요합니다"
+    err "sha256sum 또는 shasum이 필요합니다" "sha256sum or shasum is required"
   fi
 }
 
@@ -182,20 +192,20 @@ validate_staged_target() {
   local stage="$1" target="$2"
   local manifest="$stage/gdm-target-manifest.json"
   local top_keys runner_hash adapter_target adapter_hash skill_name skill_hash hash_field hash_value
-  [ -f "$manifest" ] && [ ! -L "$manifest" ] || err "target manifest가 일반 파일이 아닙니다: $target"
+  [ -f "$manifest" ] && [ ! -L "$manifest" ] || err "target manifest가 일반 파일이 아닙니다: $target" "Target manifest is not a regular file: $target"
   top_keys="$(awk -F'"' '/^  "[^"]+":/ { print $2 }' "$manifest" | tr '\n' ' ')"
   [ "$top_keys" = "schemaVersion target adapterVersion canonicalSourceSha256 sourceSha256 capabilityProfile hook runner skills " ] || \
-    err "target manifest schema key가 올바르지 않습니다: $target"
+    err "target manifest schema key가 올바르지 않습니다: $target" "Invalid target manifest schema keys: $target"
   [ "$(manifest_top_value "$manifest" schemaVersion)" = "gdm-target-skill-manifest/v1" ] || \
-    err "target manifest schema가 올바르지 않습니다: $target"
+    err "target manifest schema가 올바르지 않습니다: $target" "Invalid target manifest schema: $target"
   [ "$(manifest_top_value "$manifest" target)" = "$target" ] || \
-    err "target manifest identity가 올바르지 않습니다: $target"
+    err "target manifest identity가 올바르지 않습니다: $target" "Invalid target manifest identity: $target"
   [ "$(manifest_top_value "$manifest" adapterVersion)" = "gdm-target-adapter/v1" ] || \
-    err "target adapter version이 올바르지 않습니다: $target"
+    err "target adapter version이 올바르지 않습니다: $target" "Invalid target adapter version: $target"
   for hash_field in canonicalSourceSha256 sourceSha256; do
-    hash_value="$(manifest_top_value "$manifest" "$hash_field")" || err "target manifest hash가 없습니다: $target/$hash_field"
-    case "$hash_value" in *[!0-9a-f]*) err "target manifest hash가 올바르지 않습니다: $target/$hash_field" ;; esac
-    [ "${#hash_value}" -eq 64 ] || err "target manifest hash 길이가 올바르지 않습니다: $target/$hash_field"
+    hash_value="$(manifest_top_value "$manifest" "$hash_field")" || err "target manifest hash가 없습니다: $target/$hash_field" "Missing target manifest hash: $target/$hash_field"
+    case "$hash_value" in *[!0-9a-f]*) err "target manifest hash가 올바르지 않습니다: $target/$hash_field" "Invalid target manifest hash: $target/$hash_field" ;; esac
+    [ "${#hash_value}" -eq 64 ] || err "target manifest hash 길이가 올바르지 않습니다: $target/$hash_field" "Invalid target manifest hash length: $target/$hash_field"
   done
   for expected in \
     '    "id": "gdm-read-only-specialist/v1",' \
@@ -210,38 +220,38 @@ validate_staged_target() {
     '        "path": "gdm-agents/providers/codex.sh",' \
     '        "path": "gdm-agents/providers/claude.sh",' \
     '        "path": "gdm-agents/providers/pi.sh",'; do
-    grep -Fqx "$expected" "$manifest" || err "target manifest capability/runner가 올바르지 않습니다: $target"
+    grep -Fqx "$expected" "$manifest" || err "target manifest capability/runner가 올바르지 않습니다: $target" "Invalid target manifest capability or runner: $target"
   done
   if [ "$target" = "codex" ]; then
     grep -Fqx '    "id": "gdm-agent-gate-v1",' "$manifest" &&
       grep -Fqx '    "status": "supported",' "$manifest" &&
       grep -Fqx '    "requiredForTarget": true' "$manifest" || \
-      err "Codex target hook manifest가 올바르지 않습니다"
+      err "Codex target hook manifest가 올바르지 않습니다" "Invalid Codex target hook manifest"
   else
     grep -Fqx '    "id": null,' "$manifest" &&
       grep -Fqx '    "status": "not-required",' "$manifest" &&
       grep -Fqx '    "requiredForTarget": false' "$manifest" || \
-      err "외부 target hook manifest가 올바르지 않습니다: $target"
+      err "외부 target hook manifest가 올바르지 않습니다: $target" "Invalid external target hook manifest: $target"
   fi
-  runner_hash="$(manifest_runner_hash "$manifest")" || err "runner hash가 없습니다: $target"
+  runner_hash="$(manifest_runner_hash "$manifest")" || err "runner hash가 없습니다: $target" "Missing runner hash: $target"
   [ "$runner_hash" = "$(sha256_path "$stage/gdm-agents/run-role.sh")" ] &&
     [ -x "$stage/gdm-agents/run-role.sh" ] && [ ! -L "$stage/gdm-agents/run-role.sh" ] || \
-    err "runner bytes 또는 mode가 manifest와 다릅니다: $target"
+    err "runner bytes 또는 mode가 manifest와 다릅니다: $target" "Runner bytes or mode do not match the manifest: $target"
   for adapter_target in codex claude pi; do
     adapter_hash="$(manifest_adapter_hash "$manifest" "$adapter_target")" || \
-      err "provider adapter hash가 없습니다: $target/$adapter_target"
+      err "provider adapter hash가 없습니다: $target/$adapter_target" "Missing provider adapter hash: $target/$adapter_target"
     [ "$adapter_hash" = "$(sha256_path "$stage/gdm-agents/providers/$adapter_target.sh")" ] &&
       [ -x "$stage/gdm-agents/providers/$adapter_target.sh" ] &&
       [ ! -L "$stage/gdm-agents/providers/$adapter_target.sh" ] || \
-      err "provider adapter bytes 또는 mode가 manifest와 다릅니다: $target/$adapter_target"
+      err "provider adapter bytes 또는 mode가 manifest와 다릅니다: $target/$adapter_target" "Provider adapter bytes or mode do not match the manifest: $target/$adapter_target"
   done
   while IFS="$(printf '\t')" read -r skill_name skill_hash; do
-    case "$skill_name" in gdm-*) ;; *) err "manifest skill name이 올바르지 않습니다: $target" ;; esac
-    case "${skill_name#gdm-}" in ""|*[!a-z0-9-]*) err "manifest skill name이 올바르지 않습니다: $target" ;; esac
+    case "$skill_name" in gdm-*) ;; *) err "manifest skill name이 올바르지 않습니다: $target" "Invalid manifest skill name: $target" ;; esac
+    case "${skill_name#gdm-}" in ""|*[!a-z0-9-]*) err "manifest skill name이 올바르지 않습니다: $target" "Invalid manifest skill name: $target" ;; esac
     [ -f "$stage/$skill_name/SKILL.md" ] && [ ! -L "$stage/$skill_name/SKILL.md" ] || \
-      err "manifest skill 파일이 없습니다: $target/$skill_name"
+      err "manifest skill 파일이 없습니다: $target/$skill_name" "Missing manifest skill file: $target/$skill_name"
     [ "$skill_hash" = "$(sha256_path "$stage/$skill_name/SKILL.md")" ] || \
-      err "rendered skill hash가 다릅니다: $target/$skill_name"
+      err "rendered skill hash가 다릅니다: $target/$skill_name" "Rendered skill hash mismatch: $target/$skill_name"
   done <<EOF
 $(awk -F'"' '/^  "skills": \[/ { skills=1; next } skills && /^      "name":/ { name=$4 } skills && /^      "renderedSha256":/ { print name "\t" $4; count++ } END { if (!count) exit 1 }' "$manifest")
 EOF
@@ -277,30 +287,30 @@ apply_skill_swap() {
   done <"$rollback/.names"
 }
 
-echo "[1/7] 릴리스 다운로드: $asset ($VERSION)"
+say "[1/7] 릴리스 다운로드: $asset ($VERSION)" "[1/7] Downloading release: $asset ($VERSION)"
 curl -fSL "$base/$asset" -o "$tmp/gdm" \
-  || err "바이너리를 받지 못했습니다 ($base/$asset). 레포 공개 여부·릴리스 존재를 확인하세요."
-curl -fSL "$base/gdm-skills.tar.gz" -o "$tmp/skills.tar.gz" || err "스킬 번들을 받지 못했습니다"
+  || err "바이너리를 받지 못했습니다 ($base/$asset). 레포 공개 여부·릴리스 존재를 확인하세요." "Could not download the binary ($base/$asset). Check release availability."
+curl -fSL "$base/gdm-skills.tar.gz" -o "$tmp/skills.tar.gz" || err "스킬 번들을 받지 못했습니다" "Could not download the skills bundle"
 
-echo "[2/7] 체크섬 검증"
+say "[2/7] 체크섬 검증" "[2/7] Verifying checksums"
 if [ "${GDM_SKIP_VERIFY:-0}" = "1" ]; then
-  echo "  건너뜀 (GDM_SKIP_VERIFY=1)"
+  say "  건너뜀 (GDM_SKIP_VERIFY=1)" "  Skipped (GDM_SKIP_VERIFY=1)"
 else
   curl -fsSL "$base/SHASUMS256.txt" -o "$tmp/SHASUMS256.txt" \
-    || err "SHASUMS256.txt가 없어 설치를 중단합니다 (의도적 생략은 GDM_SKIP_VERIFY=1)"
+    || err "SHASUMS256.txt가 없어 설치를 중단합니다 (의도적 생략은 GDM_SKIP_VERIFY=1)" "Installation stopped: SHASUMS256.txt is unavailable (GDM_SKIP_VERIFY=1 explicitly skips verification)"
   verify_asset() {
     file="$1"
     path="$2"
     want="$(awk -v f="$file" '$2 == f {print $1}' "$tmp/SHASUMS256.txt")"
-    [ -n "$want" ] || err "체크섬 목록에 $file 항목이 없습니다"
+    [ -n "$want" ] || err "체크섬 목록에 $file 항목이 없습니다" "Missing checksum entry: $file"
     if command -v sha256sum >/dev/null; then
       got="$(sha256sum "$path" | awk '{print $1}')"
     elif command -v shasum >/dev/null; then
       got="$(shasum -a 256 "$path" | awk '{print $1}')"
     else
-      err "sha256sum 또는 shasum이 필요합니다"
+      err "sha256sum 또는 shasum이 필요합니다" "sha256sum or shasum is required"
     fi
-    [ "$want" = "$got" ] || err "$file 체크섬 불일치 (기대 $want, 실제 $got)"
+    [ "$want" = "$got" ] || err "$file 체크섬 불일치 (기대 $want, 실제 $got)" "$file checksum mismatch (expected $want, got $got)"
   }
   verify_asset "$asset" "$tmp/gdm"
   verify_asset "gdm-skills.tar.gz" "$tmp/skills.tar.gz"
@@ -309,16 +319,16 @@ fi
 
 chmod +x "$tmp/gdm"
 
-echo "[3/7] 번들 구조·Codex 게이트 사전검증"
+say "[3/7] 번들 구조·Codex 게이트 사전검증" "[3/7] Checking bundle structure and the Codex gate"
 mkdir -p "$tmp/pkg"
 tar -xzf "$tmp/skills.tar.gz" -C "$tmp/pkg"
 [ -d "$tmp/pkg/targets/codex" ] && [ -d "$tmp/pkg/targets/claude" ] && \
   [ -d "$tmp/pkg/targets/pi" ] || \
-  err "target 스킬 번들 구조가 올바르지 않습니다"
+  err "target 스킬 번들 구조가 올바르지 않습니다" "Invalid target skills bundle structure"
 CODEX_HOME="$CODEX_HOME_DIR" "$tmp/gdm" agent hook-install \
   --binary "$tmp/gdm" --dry-run
 
-echo "[4/7] 스킬 대상 사전검증·staging"
+say "[4/7] 스킬 대상 사전검증·staging" "[4/7] Checking and staging skill targets"
 stage_remote_skills "$HOME/.claude/skills" claude CLAUDE_STAGE
 stage_remote_skills "$CODEX_HOME_DIR/skills" codex CODEX_STAGE
 stage_remote_skills "$PI_AGENT_DIR/skills" pi PI_STAGE
@@ -330,23 +340,23 @@ for parity_field in canonicalSourceSha256 sourceSha256; do
     "$(manifest_top_value "$CODEX_STAGE/gdm-target-manifest.json" "$parity_field")" ] && \
     [ "$(manifest_top_value "$CLAUDE_STAGE/gdm-target-manifest.json" "$parity_field")" = \
     "$(manifest_top_value "$PI_STAGE/gdm-target-manifest.json" "$parity_field")" ] || \
-    err "target manifest source parity가 다릅니다: $parity_field"
+    err "target manifest source parity가 다릅니다: $parity_field" "Target manifests disagree on source: $parity_field"
 done
 [ "$(manifest_runner_hash "$CLAUDE_STAGE/gdm-target-manifest.json")" = \
   "$(manifest_runner_hash "$CODEX_STAGE/gdm-target-manifest.json")" ] && \
   [ "$(manifest_runner_hash "$CLAUDE_STAGE/gdm-target-manifest.json")" = \
   "$(manifest_runner_hash "$PI_STAGE/gdm-target-manifest.json")" ] || \
-  err "target manifest runner parity가 다릅니다"
+  err "target manifest runner parity가 다릅니다" "Target manifests disagree on runner"
 
-echo "[5/7] 바이너리·스킬 transactional 교체"
+say "[5/7] 바이너리·스킬 transactional 교체" "[5/7] Replacing binaries and skills transactionally"
 mkdir -p "$BIN_DIR"
 if { [ -e "$BIN_DIR/gdm" ] || [ -L "$BIN_DIR/gdm" ]; } &&
   [ ! -f "$BIN_DIR/gdm" ] && [ ! -L "$BIN_DIR/gdm" ]; then
-  err "기존 바이너리 경로가 일반 파일이 아닙니다: $BIN_DIR/gdm"
+  err "기존 바이너리 경로가 일반 파일이 아닙니다: $BIN_DIR/gdm" "Existing binary path is not a regular file: $BIN_DIR/gdm"
 fi
 if { [ -e "$BIN_DIR/gdm-pi" ] || [ -L "$BIN_DIR/gdm-pi" ]; } &&
   [ ! -f "$BIN_DIR/gdm-pi" ] && [ ! -L "$BIN_DIR/gdm-pi" ]; then
-  err "기존 Pi 실행기 경로가 일반 파일이 아닙니다: $BIN_DIR/gdm-pi"
+  err "기존 Pi 실행기 경로가 일반 파일이 아닙니다: $BIN_DIR/gdm-pi" "Existing Pi launcher path is not a regular file: $BIN_DIR/gdm-pi"
 fi
 INSTALL_TMP="$(mktemp "$BIN_DIR/.gdm.tmp.XXXXXX")"
 cp "$tmp/gdm" "$INSTALL_TMP"
@@ -376,14 +386,14 @@ apply_skill_swap "$CODEX_HOME_DIR/skills" "$CODEX_STAGE" "$CODEX_SKILL_ROLLBACK"
 apply_skill_swap "$PI_AGENT_DIR/skills" "$PI_STAGE" "$PI_SKILL_ROLLBACK"
 echo "  → $HOME/.claude/skills, $CODEX_HOME_DIR/skills, $PI_AGENT_DIR/skills"
 
-echo "[6/7] Codex 에이전트 게이트 commit"
+say "[6/7] Codex 에이전트 게이트 commit" "[6/7] Committing the Codex agent gate"
 CODEX_HOME="$CODEX_HOME_DIR" "$BIN_DIR/gdm" agent hook-install \
   --binary "$BIN_DIR/gdm" >/dev/null
 INSTALL_COMMITTED=1
 
 # PATH setup and doctor are advisory after the atomic install commit.
 set +e
-echo "[7/7] PATH 점검·doctor"
+say "[7/7] PATH 점검·doctor" "[7/7] Checking PATH and running doctor"
 case ":$PATH:" in
   *":$BIN_DIR:"*) : ;;
   *)
@@ -395,19 +405,19 @@ case ":$PATH:" in
     esac
     if [ -n "$rc" ] && ! grep -qsF "$BIN_DIR" "$rc"; then
       if printf '\n# gdm\n%s\n' "$line" >>"$rc"; then
-        echo "  $rc 에 PATH 추가 — 새 셸을 열거나 'source $rc' 실행"
+        say "  $rc 에 PATH 추가 — 새 셸을 열거나 'source $rc' 실행" "  Added PATH to $rc — open a new shell or run 'source $rc'"
       else
-        echo "  경고: ${rc}에 PATH를 추가하지 못했습니다. 직접 추가하세요: $line" >&2
+        say "  경고: ${rc}에 PATH를 추가하지 못했습니다. 직접 추가하세요: $line" "  Warning: could not add PATH to ${rc}. Add it manually: $line" >&2
       fi
     else
-      echo "  PATH에 추가하세요: $line"
+      say "  PATH에 추가하세요: $line" "  Add to PATH: $line"
     fi
     ;;
 esac
 if ! CODEX_HOME="$CODEX_HOME_DIR" "$BIN_DIR/gdm" doctor; then
-  echo "경고: 설치는 완료됐지만 gdm doctor 점검에 실패했습니다" >&2
+  say "경고: 설치는 완료됐지만 gdm doctor 점검에 실패했습니다" "Warning: installation completed, but gdm doctor reported a problem" >&2
 fi
 
 echo
-echo "설치 완료. 사용: 프로젝트에서 gdm-pi [auto|go|full], \$gdm-go / \$gdm-full 또는 gdm --help"
+say "설치 완료. 사용: 프로젝트에서 gdm-pi [auto|go|full], \$gdm-go / \$gdm-full 또는 gdm --help" "Installation complete. In your project, use gdm-pi [auto|go|full], \$gdm-go / \$gdm-full, or gdm --help"
 exit 0
