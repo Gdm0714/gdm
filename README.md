@@ -39,7 +39,7 @@ Priority: `--language` before the command, `GDM_LANGUAGE`, saved choice, system 
 
 ## 실행 파일로 설치
 
-소스 저장소는 private으로 유지하며, macOS 13 이상의 Apple Silicon·Intel용 서명·공증된 실행 파일을 배포합니다. Rust·Bun·GitHub 로그인 없이 설치할 수 있습니다.
+소스는 이 저장소에 [MIT](./LICENSE) 라이선스로 공개되어 있습니다. 소스를 빌드하지 않고 쓰려면 macOS 13 이상의 Apple Silicon·Intel용 서명·공증된 실행 파일을 설치하세요. Rust·Bun·GitHub 로그인 없이 설치할 수 있습니다.
 
 ```sh
 curl -fL https://gdmux.pages.dev/install.sh -o /tmp/gdm-tools-install.sh
