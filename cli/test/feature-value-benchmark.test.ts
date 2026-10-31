@@ -6,7 +6,7 @@ import {
   createRememberEvent,
   renderMemoryBlock,
   selectMemories,
-} from "../../tests/legacy/pi/gdm-memory/core.ts";
+} from "../../tests/integrations/oracles/memory-core.ts";
 import {
   CHILD_SCHEMA,
   MANIFEST_SCHEMA,

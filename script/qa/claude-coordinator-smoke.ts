@@ -24,7 +24,7 @@ if (mode === "--run") {
   mkdirSync(bin);
   symlinkSync(process.execPath, join(bin, "bun"));
   symlinkSync(process.env.GDM_SMOKE_GDM_BIN ?? join(homedir(), ".local/bin/gdm"), join(bin, "gdm"));
-  for (const provider of ["codex", "pi", "gdm-pi"]) {
+  for (const provider of ["codex", "gid"]) {
     const path = join(bin, provider);
     writeFileSync(path, '#!/bin/sh\nprintf "%s\\n" "$0" >> "$GDM_SMOKE_TRIPWIRE"\nexit 97\n');
     chmodSync(path, 0o755);

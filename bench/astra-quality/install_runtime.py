@@ -42,4 +42,6 @@ def main():
     save(HERE/'installation.json',{'version':load(ROOT/'cli/package.json')['version'],'backup':str(backup),'files':files,'settingsSha256':settings,
        'settings':{k:load(home/'.pi/agent/settings.json').get(k) for k in ['defaultProvider','defaultModel','defaultThinkingLevel']}})
     print('installed version',load(ROOT/'cli/package.json')['version'],'files',len(files))
+if __name__ == "__main__":
+    raise SystemExit('Retired benchmark: Pi integration was removed. Historical results are preserved; use the native GDM/gid benchmarks for new runs.')
 if __name__=='__main__':main()

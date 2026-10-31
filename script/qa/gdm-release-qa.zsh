@@ -138,7 +138,7 @@ done
 archive_entries=$(tar -tzf "$RELEASE_DIR/gdm-skills.tar.gz" | sed 's#/$##' | LC_ALL=C sort)
 expected_targets="$scratch/expected-targets"
 mkdir -p "$expected_targets/targets"
-for target in codex claude pi; do
+for target in codex claude gid; do
   "$RELEASE_DIR/$host_asset" render-skills \
     --target "$target" \
     --source-root "$ROOT/skills" \
@@ -185,4 +185,4 @@ with tarfile.open(sys.argv[2], "r:gz") as archive:
             )
 PY
 
-print -- "GDM release QA passed: ${#assets} native target(s), deterministic Codex/Claude/Pi skills with exact contents and modes, verified checksums, overwrite refused"
+print -- "GDM release QA passed: ${#assets} native target(s), deterministic Codex/Claude/gid skills with exact contents and modes, verified checksums, overwrite refused"

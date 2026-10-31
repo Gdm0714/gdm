@@ -16,7 +16,7 @@ function fixture(): { readonly cwd: string; readonly home: string; readonly code
   for (const [target, output] of [
     ["codex", join(codexHome, "skills")],
     ["claude", join(home, ".claude", "skills")],
-    ["pi", join(home, ".pi", "agent", "skills")],
+    ["gid", join(home, ".config", "gid", "skills")],
   ] as const) {
     const rendered = Bun.spawnSync([
       "bun", RENDERER, "--target", target, "--source-root", join(ROOT, "skills"),
@@ -30,7 +30,7 @@ function fixture(): { readonly cwd: string; readonly home: string; readonly code
 function doctor(state: ReturnType<typeof fixture>): string {
   const result = Bun.spawnSync(["bun", CLI, "doctor"], {
     cwd: state.cwd,
-    env: { ...process.env, HOME: state.home, CODEX_HOME: state.codexHome },
+    env: { ...process.env, HOME: state.home, CODEX_HOME: state.codexHome, GID_CONFIG_DIR: join(state.home, ".config", "gid") },
     stdout: "pipe",
     stderr: "pipe",
   });
@@ -49,7 +49,7 @@ describe("protocol target manifest doctor", () => {
     expect(healthy).toContain("protocol target codex: OK manifest[valid]");
     expect(healthy).toContain("hook[supported] runner[supported]");
     expect(healthy).toContain("protocol target claude: OK manifest[valid]");
-    expect(healthy).toContain("protocol target pi: OK manifest[valid]");
+    expect(healthy).toContain("protocol target gid: OK manifest[valid]");
     expect(healthy).toContain("hook[not-required] runner[supported]");
     expect(healthy).toContain("protocol target source parity: OK");
     expect(healthy).not.toContain("core parity");

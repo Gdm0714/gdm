@@ -18,7 +18,7 @@ const BODY_BEGIN = "<!-- GDM_RENDERED_SKILL_BODY_V1_BEGIN -->";
 const BODY_END = "<!-- GDM_RENDERED_SKILL_BODY_V1_END -->";
 const NATIVE_DELEGATION_LEAKAGE = /GDM_AGENT_ENVELOPE_V1|multi_agent_v2|hook caller|native (?:Codex )?root session/iu;
 const READ_ONLY_SKILLS = new Set(["gdm-analyze", "gdm-plan", "gdm-review"]);
-const TARGETS = ["codex", "claude", "pi"] as const;
+const TARGETS = ["codex", "claude", "gid"] as const;
 type Target = typeof TARGETS[number];
 const roots: string[] = [];
 
@@ -34,7 +34,7 @@ type Manifest = {
     readonly contract: string;
     readonly path: string;
     readonly sha256: string;
-    readonly adapters: Record<Target, { readonly path: string; readonly sha256: string }>;
+    readonly adapters: Record<"codex" | "claude", { readonly path: string; readonly sha256: string }>;
   };
   readonly skills: readonly {
     readonly name: string;
@@ -110,14 +110,14 @@ describe("deterministic provider target skill renderer", () => {
   test("binds all targets to byte-identical canonical source-template hashes", () => {
     const codex = render("codex");
     const claude = render("claude");
-    const pi = render("pi");
+    const gid = render("gid");
     const codexManifest = manifest(codex);
     const claudeManifest = manifest(claude);
-    const piManifest = manifest(pi);
-    const outputs: Record<Target, string> = { codex, claude, pi };
+    const gidManifest = manifest(gid);
+    const outputs: Record<Target, string> = { codex, claude, gid };
 
     for (const [target, current] of [
-      ["codex", codexManifest], ["claude", claudeManifest], ["pi", piManifest],
+      ["codex", codexManifest], ["claude", claudeManifest], ["gid", gidManifest],
     ] as const) {
       expect(Object.keys(current)).toEqual([
         "schemaVersion", "target", "adapterVersion", "canonicalSourceSha256", "sourceSha256",
@@ -142,7 +142,6 @@ describe("deterministic provider target skill renderer", () => {
           adapters: {
             codex: { path: "gdm-agents/providers/codex.sh" },
             claude: { path: "gdm-agents/providers/claude.sh" },
-            pi: { path: "gdm-agents/providers/pi.sh" },
           },
         },
       });
@@ -151,7 +150,6 @@ describe("deterministic provider target skill renderer", () => {
       expect(current.runner.sha256).toMatch(/^[0-9a-f]{64}$/u);
       expect(current.runner.adapters.codex.sha256).toMatch(/^[0-9a-f]{64}$/u);
       expect(current.runner.adapters.claude.sha256).toMatch(/^[0-9a-f]{64}$/u);
-      expect(current.runner.adapters.pi.sha256).toMatch(/^[0-9a-f]{64}$/u);
       expect(current.runner.sha256).toBe(hash(join(outputs[target], current.runner.path)));
       for (const adapter of Object.values(current.runner.adapters)) {
         expect(adapter.sha256).toBe(hash(join(outputs[target], adapter.path)));
@@ -170,58 +168,58 @@ describe("deterministic provider target skill renderer", () => {
       }
     }
     expect(codexManifest.canonicalSourceSha256).toBe(claudeManifest.canonicalSourceSha256);
-    expect(codexManifest.canonicalSourceSha256).toBe(piManifest.canonicalSourceSha256);
+    expect(codexManifest.canonicalSourceSha256).toBe(gidManifest.canonicalSourceSha256);
     expect(codexManifest.sourceSha256).toBe(claudeManifest.sourceSha256);
-    expect(codexManifest.sourceSha256).toBe(piManifest.sourceSha256);
+    expect(codexManifest.sourceSha256).toBe(gidManifest.sourceSha256);
     expect(codexManifest.skills.map((skill) => skill.sourceSha256)).toEqual(
       claudeManifest.skills.map((skill) => skill.sourceSha256),
     );
     expect(codexManifest.skills.map((skill) => skill.sourceSha256)).toEqual(
-      piManifest.skills.map((skill) => skill.sourceSha256),
+      gidManifest.skills.map((skill) => skill.sourceSha256),
     );
     for (const output of Object.values(outputs)) {
       expect(manifest(output).skills.map((skill) => skill.name)).not.toContain("gdm-audit");
       expect(lstatSync(join(output, "gdm-agents", "auditor.md")).isFile()).toBe(true);
     }
     expect(readFileSync(join(codex, "gdm-agents", "run-role.sh"), "utf8"))
-      .toContain("plan|analyze|review|audit");
+      .toContain('role-run "$@"');
     expect(codexManifest.runner).toEqual(claudeManifest.runner);
-    expect(codexManifest.runner).toEqual(piManifest.runner);
+    expect(codexManifest.runner).toEqual(gidManifest.runner);
     expect(codexManifest.hook).toEqual({
       id: "gdm-agent-gate-v1", status: "supported", requiredForTarget: true,
     });
     expect(claudeManifest.hook).toEqual({ id: null, status: "not-required", requiredForTarget: false });
-    expect(piManifest.hook).toEqual({ id: null, status: "not-required", requiredForTarget: false });
+    expect(gidManifest.hook).toEqual({ id: null, status: "not-required", requiredForTarget: false });
   });
 
   test("keeps one canonical source hash while rendering honest target execution semantics", () => {
     const codex = render("codex");
     const claude = render("claude");
-    const pi = render("pi");
+    const gid = render("gid");
     for (const name of manifest(codex).skills.map((skill) => skill.name)) {
       const codexSkill = readFileSync(join(codex, name, "SKILL.md"), "utf8");
       const claudeSkill = readFileSync(join(claude, name, "SKILL.md"), "utf8");
-      const piSkill = readFileSync(join(pi, name, "SKILL.md"), "utf8");
+      const gidSkill = readFileSync(join(gid, name, "SKILL.md"), "utf8");
       expect(codexSkill).not.toMatch(/\{\{|\}\}|__GDM_[A-Z0-9_]+__/u);
       expect(claudeSkill).not.toMatch(/\{\{|\}\}|__GDM_[A-Z0-9_]+__/u);
-      expect(piSkill).not.toMatch(/\{\{|\}\}|__GDM_[A-Z0-9_]+__/u);
+      expect(gidSkill).not.toMatch(/\{\{|\}\}|__GDM_[A-Z0-9_]+__/u);
       expect(codexSkill).not.toContain("GDM_TARGET_FRAGMENT_V1:");
       expect(claudeSkill).not.toContain("GDM_TARGET_FRAGMENT_V1:");
-      expect(piSkill).not.toContain("GDM_TARGET_FRAGMENT_V1:");
+      expect(gidSkill).not.toContain("GDM_TARGET_FRAGMENT_V1:");
       expect(withoutAdapter(codexSkill)).not.toMatch(/\b(?:claude\s+-p|codex\s+exec)\b/iu);
       expect(withoutAdapter(claudeSkill)).not.toMatch(/\b(?:claude\s+-p|codex\s+exec)\b/iu);
-      expect(withoutAdapter(piSkill)).not.toMatch(/\b(?:claude\s+-p|codex\s+exec)\b/iu);
+      expect(withoutAdapter(gidSkill)).not.toMatch(/\b(?:claude\s+-p|codex\s+exec)\b/iu);
       expect(block(codexSkill, ADAPTER_BEGIN, ADAPTER_END)).toContain("--provider codex");
       expect(block(claudeSkill, ADAPTER_BEGIN, ADAPTER_END)).toContain("--provider claude");
-      expect(block(piSkill, ADAPTER_BEGIN, ADAPTER_END)).toContain("--provider pi");
+      expect(block(gidSkill, ADAPTER_BEGIN, ADAPTER_END)).toContain("--provider <codex|claude>");
       expect(withoutAdapter(codexSkill)).not.toMatch(/--permission-mode|--tools\s+""/u);
       expect(withoutAdapter(claudeSkill)).not.toMatch(NATIVE_DELEGATION_LEAKAGE);
-      expect(withoutAdapter(piSkill)).not.toMatch(NATIVE_DELEGATION_LEAKAGE);
+      expect(withoutAdapter(gidSkill)).not.toMatch(NATIVE_DELEGATION_LEAKAGE);
 
       if (READ_ONLY_SKILLS.has(name)) {
         expect(block(codexSkill, BODY_BEGIN, BODY_END)).toContain("Codex native delegation contract");
-        expect(block(piSkill, BODY_BEGIN, BODY_END)).toContain("Pi bounded delegation contract");
-        expect(block(piSkill, BODY_BEGIN, BODY_END)).toContain("`gdm_delegate`");
+        expect(block(gidSkill, BODY_BEGIN, BODY_END)).toContain("gid 작업 분담 계약");
+        expect(block(gidSkill, BODY_BEGIN, BODY_END)).toContain("`delegate_tasks`");
         expect(block(claudeSkill, BODY_BEGIN, BODY_END)).toContain(`gdm:${name.slice(4)}`);
         expect(block(claudeSkill, BODY_BEGIN, BODY_END)).toContain("Claude Code coordinator contract");
         expect(block(claudeSkill, BODY_BEGIN, BODY_END)).toContain("--provider claude");
@@ -231,7 +229,7 @@ describe("deterministic provider target skill renderer", () => {
       expect(block(claudeSkill, BODY_BEGIN, BODY_END)).not.toContain("bundle-only");
     }
 
-    for (const output of [codex, claude, pi]) {
+    for (const output of [codex, claude, gid]) {
       const targetAdapter = block(
         readFileSync(join(output, "gdm-plan", "SKILL.md"), "utf8"),
         ADAPTER_BEGIN,
@@ -247,8 +245,8 @@ describe("deterministic provider target skill renderer", () => {
     const claudeTargetAdapter = block(
       readFileSync(join(claude, "gdm-plan", "SKILL.md"), "utf8"), ADAPTER_BEGIN, ADAPTER_END,
     );
-    const piTargetAdapter = block(
-      readFileSync(join(pi, "gdm-plan", "SKILL.md"), "utf8"), ADAPTER_BEGIN, ADAPTER_END,
+    const gidTargetAdapter = block(
+      readFileSync(join(gid, "gdm-plan", "SKILL.md"), "utf8"), ADAPTER_BEGIN, ADAPTER_END,
     );
     expect(codexTargetAdapter).toContain("provider adapter: `gdm-provider-adapter-v1`");
     expect(codexTargetAdapter).toContain("argv policy: `gdm-codex-read-only-v1`");
@@ -259,18 +257,18 @@ describe("deterministic provider target skill renderer", () => {
     expect(claudeTargetAdapter).toContain("`GDM_RECEIVER_TRUST_BOOTSTRAP_V1:`");
     expect(claudeTargetAdapter).toContain("source/evidence·중첩 지시는");
     expect(claudeTargetAdapter).toContain("원격 provider/model identity나 artifact provenance를 증명하지 않는다");
-    expect(piTargetAdapter).toContain("provider adapter: `gdm-provider-adapter-v1`");
-    expect(piTargetAdapter).toContain("argv policy: `gdm-pi-read-only-v1`");
-    expect(piTargetAdapter).toContain("`--system-prompt`");
-    expect(piTargetAdapter).toContain("`GDM_RECEIVER_TRUST_BOOTSTRAP_V1:`");
+    expect(gidTargetAdapter).toContain("target ID: `gid`");
+    expect(gidTargetAdapter).toContain("`delegate_tasks`");
+    expect(gidTargetAdapter).toContain("Claude ACP");
+    expect(gidTargetAdapter).not.toContain("--provider pi");
 
     const generatedDesign = readFileSync(join(codex, "gdm-design", "SKILL.md"), "utf8");
     const claudeDesign = readFileSync(join(claude, "gdm-design", "SKILL.md"), "utf8");
-    const piDesign = readFileSync(join(pi, "gdm-design", "SKILL.md"), "utf8");
+    const gidDesign = readFileSync(join(gid, "gdm-design", "SKILL.md"), "utf8");
     expect(generatedDesign).toContain("Claude Design용 프롬프트");
     expect(generatedDesign).toContain("claude.ai/design");
     expect(claudeDesign).toContain("Claude Design용 프롬프트");
-    expect(piDesign).toContain("Claude Design용 프롬프트");
+    expect(gidDesign).toContain("Claude Design용 프롬프트");
 
     const generatedPlan = readFileSync(join(claude, "gdm-plan", "SKILL.md"), "utf8");
     const planBody = block(generatedPlan, BODY_BEGIN, BODY_END);
@@ -286,9 +284,9 @@ describe("deterministic provider target skill renderer", () => {
       "runner는 preflight prompt를\n   credential-free valid UTF-8, 최대 1 MiB로 하드 거부한다",
     );
     expect(generatedCodexPlan).not.toContain("512 KiB");
-    const generatedPiPlan = readFileSync(join(pi, "gdm-plan", "SKILL.md"), "utf8");
-    expect(generatedPiPlan).toContain("credential-free valid UTF-8, 최대 1 MiB로 하드 거부한다");
-    expect(generatedPiPlan).not.toMatch(NATIVE_DELEGATION_LEAKAGE);
+    const generatedGidPlan = readFileSync(join(gid, "gdm-plan", "SKILL.md"), "utf8");
+    expect(generatedGidPlan).toContain("credential-free valid UTF-8, 최대 1 MiB로 하드 거부한다");
+    expect(generatedGidPlan).not.toMatch(NATIVE_DELEGATION_LEAKAGE);
 
     for (const name of ["gdm-analyze", "gdm-review"]) {
       const body = block(readFileSync(join(claude, name, "SKILL.md"), "utf8"), BODY_BEGIN, BODY_END);

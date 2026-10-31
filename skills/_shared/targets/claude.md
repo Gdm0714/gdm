@@ -5,7 +5,7 @@
 
 - target ID: `claude`
 - 일반 Claude Code 세션은 계획·구현·통합·검증·완료를 수행하는 진행자다. 사용자가 선택한
-  Claude 모델과 세션 도구 권한을 그대로 사용하며 Codex·Pi 로그인이나 실행 파일을 요구하지 않는다.
+  Claude 모델과 세션 도구 권한을 그대로 사용하며 다른 공급자의 로그인이나 실행 파일을 요구하지 않는다.
   스킬 설명을 읽고 요청에 맞는 `gdm-plan`, `gdm-go`, `gdm-full` 등 전체 작업 절차를 실행한다.
 - 아래 capability profile과 model 기본값은 `run-role.sh`의 전문 역할에만 적용한다.
   진행자의 파일 편집·명령 실행을 막거나 현재 Claude 모델을 바꾸는 설정이 아니다.

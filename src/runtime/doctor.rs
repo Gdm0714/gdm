@@ -44,11 +44,11 @@ fn runner(root: &Path, v: &Value) -> bool {
         || v["contract"] != "gdm-role-runner/v1"
         || v["path"] != "gdm-agents/run-role.sh"
         || !hash_file(root, "gdm-agents/run-role.sh", &v["sha256"])
-        || !exact(&v["adapters"], &["codex", "claude", "pi"])
+        || !exact(&v["adapters"], &["codex", "claude"])
     {
         return false;
     }
-    for name in ["codex", "claude", "pi"] {
+    for name in ["codex", "claude"] {
         let a = &v["adapters"][name];
         let path = format!("gdm-agents/providers/{name}.sh");
         if !exact(a, &["path", "sha256"])
@@ -222,7 +222,10 @@ pub fn run(cwd: &Path) -> Result<()> {
         if p.is_absolute() { p } else { cwd.join(p) }
     };
     let codex = setting("CODEX_HOME", home.join(".codex"));
-    let pi = setting("PI_CODING_AGENT_DIR", home.join(".pi/agent"));
+    let gid = setting(
+        "GID_CONFIG_DIR",
+        setting("XDG_CONFIG_HOME", home.join(".config")).join("gid"),
+    );
     if let Ok(link) = home.join(".claude/skills/gdm-go").canonicalize()
         && let Some(root) = link.parent().and_then(Path::parent)
         && let Ok(bytes) = fs::read(root.join("cli/package.json"))
@@ -249,7 +252,7 @@ pub fn run(cwd: &Path) -> Result<()> {
     let targets = [
         ("codex", codex.join("skills")),
         ("claude", home.join(".claude/skills")),
-        ("pi", pi.join("skills")),
+        ("gid", gid.join("skills")),
     ];
     let mut hashes = vec![];
     for (target, root) in &targets {
@@ -280,9 +283,9 @@ pub fn run(cwd: &Path) -> Result<()> {
         };
         let a = mark(&home.join(".claude"));
         let c = mark(&codex);
-        let p = mark(&pi);
+        let p = mark(&gid);
         missing |= [a, c, p].contains(&crate::i18n::text("없음", "None"));
-        println!("  gdm-{skill}: claude[{a}] codex[{c}] pi[{p}]");
+        println!("  gdm-{skill}: claude[{a}] codex[{c}] gid[{p}]");
     }
     if missing {
         crate::lprint!(

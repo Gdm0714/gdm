@@ -114,8 +114,8 @@ fn absolute(cwd: &Path, path: impl AsRef<Path>) -> PathBuf {
 }
 pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
     let target = required_flag(args, "target")?;
-    if !["codex", "claude", "pi"].contains(&target.as_str()) {
-        return Err(error("target must be codex, claude, or pi"));
+    if !["codex", "claude", "gid"].contains(&target.as_str()) {
+        return Err(error("target must be codex, claude, or gid"));
     }
     let output = absolute(cwd, required_flag(args, "output")?);
     let repository = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -127,12 +127,7 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
         .unwrap_or_else(|| repository.join("agents"));
     safe(&source, true)?;
     safe(&agents, true)?;
-    for name in [
-        "run-role.sh",
-        "providers/codex.sh",
-        "providers/claude.sh",
-        "providers/pi.sh",
-    ] {
+    for name in ["run-role.sh", "providers/codex.sh", "providers/claude.sh"] {
         let p = agents.join(name);
         safe(&p, false)?;
         if fs::metadata(p)?.permissions().mode() & 0o111 == 0 {
@@ -257,7 +252,7 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
     }
     copy_tree(&agents, &output.join("gdm-agents"))?;
     let mut adapters = serde_json::Map::new();
-    for provider in ["codex", "claude", "pi"] {
+    for provider in ["codex", "claude"] {
         let p = format!("gdm-agents/providers/{provider}.sh");
         adapters.insert(
             provider.to_owned(),
@@ -346,7 +341,7 @@ pub fn verify_manifests(cwd: &Path, args: &[String]) -> Result<()> {
             ],
         )?;
         let target = text(&v, "target")?;
-        if !["codex", "claude", "pi"].contains(&target)
+        if !["codex", "claude", "gid"].contains(&target)
             || !targets.insert(target.to_owned())
             || v["schemaVersion"] != "gdm-target-skill-manifest/v1"
             || v["adapterVersion"] != "gdm-target-adapter/v1"
@@ -367,12 +362,12 @@ pub fn verify_manifests(cwd: &Path, args: &[String]) -> Result<()> {
         }
         let r = &v["runner"];
         keys(r, &["contract", "path", "sha256", "adapters"])?;
-        keys(&r["adapters"], &["codex", "claude", "pi"])?;
+        keys(&r["adapters"], &["codex", "claude"])?;
         if r["contract"] != "gdm-role-runner/v1" || r["path"] != "gdm-agents/run-role.sh" {
             return Err(error("manifest role runner contract mismatch"));
         }
         artifact(root, text(r, "path")?, text(r, "sha256")?, true)?;
-        for provider in ["codex", "claude", "pi"] {
+        for provider in ["codex", "claude"] {
             let a = &r["adapters"][provider];
             keys(a, &["path", "sha256"])?;
             if a["path"] != format!("gdm-agents/providers/{provider}.sh") {

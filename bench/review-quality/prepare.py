@@ -305,4 +305,6 @@ def main():
     save(HERE/'active-run.json',{'path':str(run),'manifestSha256':sha((run/'manifest.json').read_bytes())})
     print(str(run),flush=True)
 
+if __name__ == "__main__":
+    raise SystemExit('Retired benchmark: Pi integration was removed. Historical results are preserved; use the native GDM/gid benchmarks for new runs.')
 if __name__=='__main__':main()

@@ -17,7 +17,7 @@ function filesUnder(path: string): string[] {
 }
 
 describe("P1 context navigation scope and simplicity", () => {
-  test("keeps the provider read-only, local, one-shot, and schema-free in Pi", () => {
+  test("keeps the provider read-only, local, one-shot, and without automatic injection", () => {
     const contextFiles = filesUnder("cli/src/context-nav");
     const source = [...contextFiles.map(read), read("cli/src/context-nav-command.ts")].join("\n");
 
@@ -37,8 +37,6 @@ describe("P1 context navigation scope and simplicity", () => {
     ]) {
       expect(source, forbidden).not.toContain(forbidden);
     }
-    expect(read("agents/pi/gdm-pi")).not.toContain("gdm-context");
-    expect(read("agents/pi/gdm-pi")).not.toContain("gdm_context");
     for (const path of filesUnder("skills")) {
       expect(read(path), path).not.toContain("gdm-context-query/v1");
     }

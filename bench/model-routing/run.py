@@ -173,6 +173,7 @@ def summarize(run):
     save(run/'summary.json',{'completed':len(rows),'planned':len(manifest['schedule']),'arms':summary})
 
 def main():
+    raise SystemExit('Retired benchmark: Pi integration was removed. Historical results are preserved; use the native GDM/gid benchmarks for new runs.')
     p=argparse.ArgumentParser();p.add_argument('--prepare',action='store_true');p.add_argument('--execute',action='store_true');p.add_argument('--run');p.add_argument('--limit',type=int);opts=p.parse_args()
     run=prepare() if opts.prepare else Path(opts.run or load(HERE/'active-run.json')['path'])
     if opts.execute:

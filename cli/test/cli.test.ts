@@ -369,19 +369,19 @@ describe("CLI regression", () => {
       "--reason",
       "  다음 행동이 모호함  ",
       "--source",
-      "pi",
+      "gid",
       "--slug",
       "sample",
       "--json",
     ]);
     const reasonlessBad = runCli(cwd, [
-      "feedback", "--value", "bad", "--source", "pi", "--slug", "sample", "--json",
+      "feedback", "--value", "bad", "--source", "gid", "--slug", "sample", "--json",
     ]);
     const unsafeReason = runCli(cwd, [
       "feedback", "--value", "bad", "--reason", "줄바꿈\n거부", "--slug", "sample",
     ]);
     const unsafeSource = runCli(cwd, [
-      "feedback", "--value", "bad", "--source", "pi/session", "--slug", "sample",
+      "feedback", "--value", "bad", "--source", "gid/session", "--slug", "sample",
     ]);
     const retro = runCli(cwd, ["retro", "--all", "--json"]);
 
@@ -393,7 +393,7 @@ describe("CLI regression", () => {
       slug: "sample",
       value: "bad",
       reason: "다음 행동이 모호함",
-      source: "pi",
+      source: "gid",
     });
     expect(reasonlessBad.exitCode).toBe(2);
     expect(reasonlessBad.stdout).toBe("");
@@ -413,13 +413,13 @@ describe("CLI regression", () => {
         event: "feedback",
         value: "bad",
         reason: "다음 행동이 모호함",
-        source: "pi",
+        source: "gid",
       }),
     ]);
     expect(JSON.parse(retro.stdout)).toMatchObject({
       misses: [],
       feedback: { good: 1, bad: 1, total: 2 },
-      evalCandidates: [{ work: "sample", reason: "다음 행동이 모호함", source: "pi" }],
+      evalCandidates: [{ work: "sample", reason: "다음 행동이 모호함", source: "gid" }],
     });
   });
 

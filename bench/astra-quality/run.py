@@ -187,4 +187,6 @@ def main():
         for entry in pending[:o.limit] if o.limit else pending:
             if (run/'pause').exists():print('PAUSED before next observation',flush=True);break
             run_one(run,entry)
+if __name__ == "__main__":
+    raise SystemExit('Retired benchmark: Pi integration was removed. Historical results are preserved; use the native GDM/gid benchmarks for new runs.')
 if __name__=='__main__':main()

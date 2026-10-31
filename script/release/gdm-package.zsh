@@ -77,7 +77,7 @@ for asset in $assets; do
 done
 
 mkdir -p "$render_root/targets"
-for target in codex claude pi; do
+for target in codex claude gid; do
   "$BIN_DIR/$host_asset" render-skills \
     --target "$target" \
     --source-root "$ROOT/skills" \
@@ -87,7 +87,7 @@ done
 "$BIN_DIR/$host_asset" verify-manifests \
   "$render_root/targets/codex/gdm-target-manifest.json" \
   "$render_root/targets/claude/gdm-target-manifest.json" \
-  "$render_root/targets/pi/gdm-target-manifest.json"
+  "$render_root/targets/gid/gdm-target-manifest.json"
 
 python3 - "$render_root" "$stage/gdm-skills.tar.gz" "$epoch" <<'PY'
 from pathlib import Path

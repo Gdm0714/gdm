@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 const ROOT = join(import.meta.dir, "..", "..");
 
-test("fresh standalone install completes go and preserves same-provider audit gates without calling Codex or Pi", () => {
+test("fresh standalone install completes go and preserves same-provider audit gates without calling other providers", () => {
   const home = mkdtempSync(join(tmpdir(), "gdm-claude-only-install-"));
   try {
     const bin = join(home, "test-bin");
@@ -13,7 +13,7 @@ test("fresh standalone install completes go and preserves same-provider audit ga
     mkdirSync(bin);
     mkdirSync(cwd);
     symlinkSync(process.execPath, join(bin, "bun"));
-    for (const provider of ["codex", "pi", "claude"]) {
+    for (const provider of ["codex", "gid", "claude"]) {
       const path = join(bin, provider);
       writeFileSync(path, '#!/bin/sh\nprintf "%s\\n" "$0" >> "$HOME/unexpected-provider-call"\nexit 97\n');
       chmodSync(path, 0o755);

@@ -1,4 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-export GDM_PI_LAUNCHER_PATH="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
-exec "${GDM_NATIVE_EXECUTABLE:-gdm}" pi-launch "$@"

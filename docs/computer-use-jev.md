@@ -1,6 +1,6 @@
 # Rust Computer Use와 Jev 실험
 
-Computer Use는 GDM 네이티브 기능이다. Pi 호스트 어댑터와 표준 stdio MCP 서버가
+Computer Use는 GDM 네이티브 기능이다. 표준 stdio MCP 서버와 CLI가
 같은 Rust 구현을 사용한다. 실제 입력 대상은 전용 macOS Tart VM이며 호스트 데스크톱을
 조작하지 않는다. macOS Apple Silicon, 고정된 Tart/Softnet 빌드와 준비된 VM이 필요하다.
 
@@ -48,7 +48,7 @@ Jev는 화면 이미지를 직접 해석하지 않는다. 기존 모델이 작�
 gdm computer-use mcp --env-file /absolute/path/to/.env
 ```
 
-Pi 어댑터에는 `GDM_TYPESAFE_ENV_FILE`로 파일 경로만 전달할 수 있다. MCP 호스트에는
+MCP 호스트에는
 실행 명령 `gdm`과 인자 `computer-use mcp --env-file <경로>`를 등록한다.
 `gid`에서 자동으로 켜지는 설정 변경은 포함하지 않는다. 해당 엔진의 MCP 등록을 사용한다.
 

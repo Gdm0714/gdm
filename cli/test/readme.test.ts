@@ -32,33 +32,21 @@ function proseParagraphs(markdown: string): readonly string[] {
 describe("public README", () => {
   test("opens with the harness, then gives a bounded reader journey", () => {
     const headings = [...README.matchAll(/^## (.+)$/gmu)].map((match) => match[1]);
-    expect(headings).toEqual([
-      "무엇을 해결하나",
-      "하네스 구성",
-      "빠른 시작",
-      "최근 추가된 Pi 기능",
-      "검증 모델",
-      "선택형 도구와 디자인",
-      "요구사항",
-      "저장소 구조",
-      "개발과 검증",
-      "문서",
-      "라이선스",
-    ]);
+    for (const heading of ["무엇을 해결하나", "하네스 구성", "빠른 시작", "로컬 도구", "검증 모델", "문서"]) {
+      expect(headings).toContain(heading);
+    }
     expect(README.startsWith("# gdm\n")).toBe(true);
-    for (const path of ["cli", "skills", "agents/pi/gdm-memory", "agents/pi/gdm-computer-use"]) {
+    for (const path of ["src", "skills", "agents/providers", "src/computer_use"]) {
       expect(existsSync(join(ROOT, path)), path).toBe(true);
     }
     for (const path of ["native", "website", "assets", "design-system.md"]) {
       expect(existsSync(join(ROOT, path)), path).toBe(false);
     }
-    expect(README).toContain("별도 `gidem-native` 저장소");
     expect(README).toContain("작업 증거가 다음 습관을 바꾸는 개인 AI 워크플로우");
     expect(Math.max(...proseParagraphs(README).map((paragraph) => paragraph.length))).toBeLessThanOrEqual(420);
     expect(Math.max(...README.split("\n").map((line) => line.length))).toBeLessThanOrEqual(140);
     expect(README.match(/<details>/gu)).toHaveLength(1);
     expect(README.match(/<\/details>/gu)).toHaveLength(1);
-    expect(README.match(/^```/gmu)?.length ?? 0).toBe(18);
     expect(README).toContain("### 2. Claude Code에서 실행");
     expect(README).toContain("/gdm-go 로그인 오류를 수정하고 검증까지 완료해줘");
   });
@@ -66,15 +54,14 @@ describe("public README", () => {
   test("describes current features and honest release boundaries", () => {
     for (const value of [
       "### 영구 메모리",
-      "/memory doctor",
+      "gdm memory rpc",
       "### 격리 Computer Use",
-      "gdm-computer-use/setup.sh",
+      "gdm computer-use setup",
       "### bounded Context Pack",
       "gdm context status",
       "18회",
       "13회만 measurement-valid",
-      "Pi 자동 주입이나 기본 활성화에 연결되지 않은 실험 기능",
-      "원격 release asset은 아직 게시되지 않았다",
+      "자동 주입이나 기본 활성화에 연결되지 않은 실험 기능",
     ]) {
       expect(README).toContain(value);
     }

@@ -9,25 +9,21 @@ case "${CODEX_HOME:-}" in
   /*) CODEX_HOME_DIR="$CODEX_HOME" ;;
   *) CODEX_HOME_DIR="$INSTALL_CWD/$CODEX_HOME" ;;
 esac
-case "${PI_CODING_AGENT_DIR:-}" in
-  "") PI_AGENT_DIR="$HOME/.pi/agent" ;;
-  /*) PI_AGENT_DIR="$PI_CODING_AGENT_DIR" ;;
-  *) PI_AGENT_DIR="$INSTALL_CWD/$PI_CODING_AGENT_DIR" ;;
+case "${GID_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/gid}" in
+  /*) GID_CONFIG_ROOT="${GID_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/gid}" ;;
+  *) GID_CONFIG_ROOT="$INSTALL_CWD/${GID_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/gid}" ;;
 esac
 
 BUILD_TMP=""
-PI_LAUNCHER_TMP=""
 ROLLBACK_DIR=""
 CLAUDE_STAGE=""
 CODEX_STAGE=""
-PI_STAGE=""
+GID_STAGE=""
 CLAUDE_SKILL_ROLLBACK=""
 CODEX_SKILL_ROLLBACK=""
-PI_SKILL_ROLLBACK=""
+GID_SKILL_ROLLBACK=""
 BINARY_OLD_MOVED=0
 BINARY_NEW_INSTALLED=0
-PI_BINARY_OLD_MOVED=0
-PI_BINARY_NEW_INSTALLED=0
 INSTALL_COMMITTED=0
 
 # Called by cleanup(), which itself is invoked through the EXIT trap.
@@ -57,18 +53,11 @@ cleanup() {
   set +e
   if [ "$INSTALL_COMMITTED" = "0" ]; then
     # Skill roots may coincide, so unwind in the reverse order of installation.
-    rollback_skill_swap "$PI_AGENT_DIR/skills" "$PI_STAGE" "$PI_SKILL_ROLLBACK"
+    rollback_skill_swap "$GID_CONFIG_ROOT/skills" "$GID_STAGE" "$GID_SKILL_ROLLBACK"
     rollback_skill_swap "$CODEX_HOME_DIR/skills" "$CODEX_STAGE" "$CODEX_SKILL_ROLLBACK"
     rollback_skill_swap "$HOME/.claude/skills" "$CLAUDE_STAGE" "$CLAUDE_SKILL_ROLLBACK"
-    if [ "$PI_BINARY_NEW_INSTALLED" = "1" ]; then
-      [ ! -e "$BIN_DIR/gdm-pi" ] && [ ! -L "$BIN_DIR/gdm-pi" ] || rm -f "$BIN_DIR/gdm-pi"
-    fi
     if [ "$BINARY_NEW_INSTALLED" = "1" ]; then
       [ ! -e "$BIN_DIR/gdm" ] && [ ! -L "$BIN_DIR/gdm" ] || rm -f "$BIN_DIR/gdm"
-    fi
-    if [ "$PI_BINARY_OLD_MOVED" = "1" ] && [ -n "$ROLLBACK_DIR" ] &&
-      { [ -e "$ROLLBACK_DIR/gdm-pi" ] || [ -L "$ROLLBACK_DIR/gdm-pi" ]; }; then
-      mv "$ROLLBACK_DIR/gdm-pi" "$BIN_DIR/gdm-pi"
     fi
     if [ "$BINARY_OLD_MOVED" = "1" ] && [ -n "$ROLLBACK_DIR" ] &&
       { [ -e "$ROLLBACK_DIR/gdm" ] || [ -L "$ROLLBACK_DIR/gdm" ]; }; then
@@ -76,13 +65,12 @@ cleanup() {
     fi
   fi
   [ -z "$BUILD_TMP" ] || rm -f "$BUILD_TMP"
-  [ -z "$PI_LAUNCHER_TMP" ] || rm -f "$PI_LAUNCHER_TMP"
   [ -z "$CLAUDE_STAGE" ] || rm -rf "$CLAUDE_STAGE"
   [ -z "$CODEX_STAGE" ] || rm -rf "$CODEX_STAGE"
-  [ -z "$PI_STAGE" ] || rm -rf "$PI_STAGE"
+  [ -z "$GID_STAGE" ] || rm -rf "$GID_STAGE"
   [ -z "$CLAUDE_SKILL_ROLLBACK" ] || rm -rf "$CLAUDE_SKILL_ROLLBACK"
   [ -z "$CODEX_SKILL_ROLLBACK" ] || rm -rf "$CODEX_SKILL_ROLLBACK"
-  [ -z "$PI_SKILL_ROLLBACK" ] || rm -rf "$PI_SKILL_ROLLBACK"
+  [ -z "$GID_SKILL_ROLLBACK" ] || rm -rf "$GID_SKILL_ROLLBACK"
   [ -z "$ROLLBACK_DIR" ] || rm -rf "$ROLLBACK_DIR"
   exit "$status"
 }
@@ -146,11 +134,6 @@ if { [ -e "$BIN_DIR/gdm" ] || [ -L "$BIN_DIR/gdm" ]; } &&
   echo "gdm 설치 실패: 기존 바이너리 경로가 일반 파일이 아닙니다: $BIN_DIR/gdm" >&2
   exit 1
 fi
-if { [ -e "$BIN_DIR/gdm-pi" ] || [ -L "$BIN_DIR/gdm-pi" ]; } &&
-  [ ! -f "$BIN_DIR/gdm-pi" ] && [ ! -L "$BIN_DIR/gdm-pi" ]; then
-  echo "gdm 설치 실패: 기존 Pi 실행기 경로가 일반 파일이 아닙니다: $BIN_DIR/gdm-pi" >&2
-  exit 1
-fi
 BUILD_TMP="$(mktemp "$BIN_DIR/.gdm.tmp.XXXXXX")"
 cargo build --manifest-path "$REPO/Cargo.toml" --locked --release
 cp "${CARGO_TARGET_DIR:-$REPO/target}/release/gdm" "$BUILD_TMP"
@@ -161,34 +144,25 @@ CODEX_HOME="$CODEX_HOME_DIR" "$BUILD_TMP" agent hook-install \
 echo "[2/5] 스킬 대상 사전검증·staging"
 stage_generated_skills "$HOME/.claude/skills" claude CLAUDE_STAGE
 stage_generated_skills "$CODEX_HOME_DIR/skills" codex CODEX_STAGE
-stage_generated_skills "$PI_AGENT_DIR/skills" pi PI_STAGE
+stage_generated_skills "$GID_CONFIG_ROOT/skills" gid GID_STAGE
 "$BUILD_TMP" verify-manifests "$CLAUDE_STAGE/gdm-target-manifest.json" \
-  "$CODEX_STAGE/gdm-target-manifest.json" "$PI_STAGE/gdm-target-manifest.json"
+  "$CODEX_STAGE/gdm-target-manifest.json" "$GID_STAGE/gdm-target-manifest.json"
 
-PI_LAUNCHER_TMP="$(mktemp "$BIN_DIR/.gdm-pi.tmp.XXXXXX")"
-cp "$PI_STAGE/gdm-agents/pi/gdm-pi" "$PI_LAUNCHER_TMP"
-chmod 755 "$PI_LAUNCHER_TMP"
 
 echo "[3/5] 바이너리·스킬 transactional 교체"
 ROLLBACK_DIR="$(mktemp -d "$BIN_DIR/.gdm-rollback.XXXXXX")"
 prepare_skill_swap "$HOME/.claude/skills" "$CLAUDE_STAGE" CLAUDE_SKILL_ROLLBACK
 prepare_skill_swap "$CODEX_HOME_DIR/skills" "$CODEX_STAGE" CODEX_SKILL_ROLLBACK
-prepare_skill_swap "$PI_AGENT_DIR/skills" "$PI_STAGE" PI_SKILL_ROLLBACK
+prepare_skill_swap "$GID_CONFIG_ROOT/skills" "$GID_STAGE" GID_SKILL_ROLLBACK
 if [ -e "$BIN_DIR/gdm" ] || [ -L "$BIN_DIR/gdm" ]; then
   mv "$BIN_DIR/gdm" "$ROLLBACK_DIR/gdm"
   BINARY_OLD_MOVED=1
 fi
-if [ -e "$BIN_DIR/gdm-pi" ] || [ -L "$BIN_DIR/gdm-pi" ]; then
-  mv "$BIN_DIR/gdm-pi" "$ROLLBACK_DIR/gdm-pi"
-  PI_BINARY_OLD_MOVED=1
-fi
 mv "$BUILD_TMP" "$BIN_DIR/gdm"
 BINARY_NEW_INSTALLED=1
-mv "$PI_LAUNCHER_TMP" "$BIN_DIR/gdm-pi"
-PI_BINARY_NEW_INSTALLED=1
 apply_skill_swap "$HOME/.claude/skills" "$CLAUDE_STAGE" "$CLAUDE_SKILL_ROLLBACK"
 apply_skill_swap "$CODEX_HOME_DIR/skills" "$CODEX_STAGE" "$CODEX_SKILL_ROLLBACK"
-apply_skill_swap "$PI_AGENT_DIR/skills" "$PI_STAGE" "$PI_SKILL_ROLLBACK"
+apply_skill_swap "$GID_CONFIG_ROOT/skills" "$GID_STAGE" "$GID_SKILL_ROLLBACK"
 
 echo "[4/5] Codex 에이전트 게이트 commit"
 CODEX_HOME="$CODEX_HOME_DIR" "$BIN_DIR/gdm" agent hook-install \
@@ -199,10 +173,10 @@ INSTALL_COMMITTED=1
 # complete install into a partial-failure report.
 set +e
 echo "[5/5] 점검"
-if ! CODEX_HOME="$CODEX_HOME_DIR" "$BIN_DIR/gdm" doctor; then
+if ! CODEX_HOME="$CODEX_HOME_DIR" GID_CONFIG_DIR="$GID_CONFIG_ROOT" "$BIN_DIR/gdm" doctor; then
   echo "경고: 설치는 완료됐지만 gdm doctor 점검에 실패했습니다" >&2
 fi
 
 echo
-echo "설치 완료. 사용: 프로젝트 디렉토리에서 gdm-pi [auto|go|full], \$gdm-go / \$gdm-full 또는 gdm --help"
+echo "설치 완료. 사용: gid에서 /skill gdm-go 또는 /skill gdm-full을 사용하세요. CLI 안내: gdm --help"
 exit 0

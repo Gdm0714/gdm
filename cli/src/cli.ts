@@ -1506,12 +1506,11 @@ const TARGET_RUNNER = {
   adapters: {
     codex: "gdm-agents/providers/codex.sh",
     claude: "gdm-agents/providers/claude.sh",
-    pi: "gdm-agents/providers/pi.sh",
   },
 } as const;
 const TARGET_HASH_RE = /^[0-9a-f]{64}$/u;
 
-type TargetName = "codex" | "claude" | "pi";
+type TargetName = "codex" | "claude" | "gid";
 type TargetManifestDoctor = {
   readonly target: TargetName;
   readonly status: "valid" | "drift" | "missing";
@@ -1561,8 +1560,8 @@ function doctorRunnerValid(root: string, value: unknown): boolean {
   if (!doctorRecord(value) || !doctorExactKeys(value, ["contract", "path", "sha256", "adapters"])) return false;
   if (value.contract !== TARGET_RUNNER.contract || value.path !== TARGET_RUNNER.path ||
       !doctorInstalledHash(root, TARGET_RUNNER.path, value.sha256) || !doctorRecord(value.adapters) ||
-      !doctorExactKeys(value.adapters, ["codex", "claude", "pi"])) return false;
-  for (const provider of ["codex", "claude", "pi"] as const) {
+      !doctorExactKeys(value.adapters, ["codex", "claude"])) return false;
+  for (const provider of ["codex", "claude"] as const) {
     const adapter = value.adapters[provider];
     const expectedPath = TARGET_RUNNER.adapters[provider];
     if (!doctorRecord(adapter) || !doctorExactKeys(adapter, ["path", "sha256"]) ||
@@ -1677,11 +1676,11 @@ function inspectTargetManifest(target: TargetName, skillsRoot: string): TargetMa
   };
 }
 
-function targetManifestDoctorLines(home: string, codexHomePath: string, piAgentPath: string): string[] {
+function targetManifestDoctorLines(home: string, codexHomePath: string, gidConfigPath: string): string[] {
   const targets = [
     inspectTargetManifest("codex", join(codexHomePath, "skills")),
     inspectTargetManifest("claude", join(home, ".claude", "skills")),
-    inspectTargetManifest("pi", join(piAgentPath, "skills")),
+    inspectTargetManifest("gid", join(gidConfigPath, "skills")),
   ] as const;
   const lines = targets.map((result) => {
     const prefix = result.status === "valid" ? "OK" : result.status === "missing" ? "WARN" : "ERROR";
@@ -1705,10 +1704,10 @@ function cmdDoctor(cwd: string): void {
   const home = homedir();
   const codexEnv = { ...process.env, HOME: process.env.HOME ?? home };
   const codexHomePath = resolveCodexHome(cwd, codexEnv);
-  const configuredPiAgentPath = process.env.PI_CODING_AGENT_DIR;
-  const piAgentPath = configuredPiAgentPath === undefined || configuredPiAgentPath.length === 0
-    ? join(home, ".pi", "agent")
-    : isAbsolute(configuredPiAgentPath) ? resolve(configuredPiAgentPath) : resolve(cwd, configuredPiAgentPath);
+  const configuredGidConfigPath = process.env.GID_CONFIG_DIR;
+  const gidConfigPath = configuredGidConfigPath === undefined || configuredGidConfigPath.length === 0
+    ? join(process.env.XDG_CONFIG_HOME ?? join(home, ".config"), "gid")
+    : isAbsolute(configuredGidConfigPath) ? resolve(configuredGidConfigPath) : resolve(cwd, configuredGidConfigPath);
   const repo = repoVersionFromSkills();
   if (repo) {
     if (repo.version === VERSION) {
@@ -1723,18 +1722,18 @@ function cmdDoctor(cwd: string): void {
   for (const line of codexAgentHookDoctorLines(cwd, codexEnv, process.execPath)) {
     console.log(line);
   }
-  for (const line of targetManifestDoctorLines(home, codexHomePath, piAgentPath)) console.log(line);
+  for (const line of targetManifestDoctorLines(home, codexHomePath, gidConfigPath)) console.log(line);
   for (const name of SKILL_NAMES) {
     const claude = existsSync(join(home, ".claude", "skills", `gdm-${name}`));
     const codex = existsSync(join(codexHomePath, "skills", `gdm-${name}`));
-    const pi = existsSync(join(piAgentPath, "skills", `gdm-${name}`));
+    const gid = existsSync(join(gidConfigPath, "skills", `gdm-${name}`));
     const mark = (ok: boolean) => (ok ? "OK" : "없음");
-    console.log(`  gdm-${name}: claude[${mark(claude)}] codex[${mark(codex)}] pi[${mark(pi)}]`);
+    console.log(`  gdm-${name}: claude[${mark(claude)}] codex[${mark(codex)}] gid[${mark(gid)}]`);
   }
   if (SKILL_NAMES.some((name) =>
     !existsSync(join(home, ".claude", "skills", `gdm-${name}`)) ||
     !existsSync(join(codexHomePath, "skills", `gdm-${name}`)) ||
-    !existsSync(join(piAgentPath, "skills", `gdm-${name}`))
+    !existsSync(join(gidConfigPath, "skills", `gdm-${name}`))
   )) {
     console.log(`  → 누락 스킬은 재설치로 채웁니다: curl -fsSL https://raw.githubusercontent.com/Gdm0714/gdm/main/install.sh | bash (소스 설치는 install/install.sh)`);
   }

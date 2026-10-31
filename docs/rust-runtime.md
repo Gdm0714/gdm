@@ -21,13 +21,8 @@ python3 script/qa/rust-native-check.py
 `tests/runtime/state_oracle.json`과 Rust 테스트가 같은 입력의 상태 검증·해시를 비교한다.
 Bun은 이 전환 검증에서만 필요하다. 배포 바이너리는 Bun·Node 없이 실행된다.
 
-`rust-integration-parity.py`는 기존 `pi-integration.test.ts` 중 런처와 실제 자식
-프로세스 실행 테스트를 Rust 대상으로 실행한다. 나머지 두 테스트는 이전 JS 정책
-함수를 직접 호출하므로 네이티브 통과 개수에 포함하지 않는다. 해당 요청·역할 설정·
-예산 동작은 `native-contracts.test.ts`, Rust delegate 테스트와 실제 Pi 호스트
-어댑터 테스트가 검사한다. 시간 제한 환경변수는 기존 JS 함수를 독립된 기준으로
-삼아 실제 자식을 실행하는 별도 회귀 테스트로 비교한다. 숫자로만 된 1,000~900,000ms가
-유효하며, 범위를 벗어나거나 잘못된 형식이면 기존처럼 600,000ms를 사용한다.
+`rust-integration-parity.py`는 네이티브 훅, 메모리 RPC, Codex·Claude 역할 실행기와
+Codex·Claude·gid 스킬 렌더링을 격리된 fixture로 확인한다.
 
 `install/install.sh`는 Cargo release 빌드, Rust 스킬 렌더러, 매니페스트 검증을 거쳐
 기존 설치를 교체한다. 중간 실패 시 이전 바이너리와 스킬을 복구한다.
@@ -50,7 +45,7 @@ macOS/Linux 배포 파일은 해당 Rust target의 linker/SDK가 준비된 빌�
 2. `src/support.rs`: `Result<T>`는 성공 값 또는 명시적인 오류다. `?`는 오류를
    호출자에게 전달한다. CLI 경계에서 오류를 기존 종료 코드로 변환한다.
 3. `src/runtime`: 계약, 상태 저장, 증거, 프로토콜과 완료 판정을 담당한다.
-4. `src/integrations`: 에이전트 훅, 메모리, 스킬 렌더링, Pi 연결을 담당한다.
+4. `src/integrations`: 에이전트 훅, 메모리, 스킬 렌더링, 공급자 연결을 담당한다.
 5. `src/computer_use`: VM과 키보드·마우스 전송, Jev 선택, 실측을 담당한다.
 
 Rust의 소유권은 이 프로젝트에서 프로세스 수명 관리에 유용하다.
@@ -63,8 +58,8 @@ VM 경계 감시는 PID와 시작 시각을 함께 추적한다.
 알 수 없는 필드·행동을 거절한다. 실제 입력 전 좌표 범위와 필드 관계를 추가로
 검사한다. Jev가 문자열로 임의 명령을 만들 수 있는 실행 경로는 없다.
 
-Pi는 확장을 JavaScript 호스트에서 읽으므로 작은 TS 어댑터가 남는다.
-어댑터는 도구 등록, UI 알림, JSON 전달만 수행한다. 저장·선택·실행 제한·프로세스
-관리는 Rust 바이너리로 이동했다. Markdown 스킬도 실행 코드가 아닌 입력 데이터다.
+Pi 호스트 확장과 TS 어댑터는 제거했다. 저장·선택·실행 제한·프로세스 관리는
+Rust 바이너리가 담당한다. 공급자 셸 어댑터는 네이티브 명령으로 전달하며,
+Markdown 스킬은 실행 코드가 아닌 입력 데이터다.
 
 이 Mac의 패키징 경로만 검증하려면 `GDM_RELEASE_HOST_ONLY=1 zsh script/qa/gdm-release-qa.zsh`를 실행한다. 실제 호스트 바이너리와 스킬의 바이트·권한·체크섬·재현성과 출력 덮어쓰기 거부를 확인한다. 기본 모드는 여전히 네 플랫폼 산출물을 요구하며, 호스트 검증만으로 다른 플랫폼의 빌드 성공을 주장하지 않는다.

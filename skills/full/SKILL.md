@@ -154,7 +154,7 @@ gdm-go의 도구 전부 + 검수:
 | `gdm plan init --audit --require <보존> --forbid <금지> --risk <low\|medium\|high> --verification <deterministic\|inspectable\|opaque> [preflight·scope 플래그] [--simplify]` | preflight 계약·baseline과 함께 검수 필수 작업 시작 |
 | `gdm audit brief` | 검수자에게 줄 브리핑 패키지 출력 |
 | `gdm audit verdict (--pass\|--fail) --report <파일> --implementation-model <모델> --audit-model <모델>` | 검수자 판정과 독립성·보고서·워크트리 지문 기록 |
-| `gdm-agents/run-role.sh --mode work --provider <codex\|claude\|pi> --role audit --slug <슬러그> --handoff-event-id <event-id> --claim-id <claim-id> --receiver-role audit [--workspace <경로>] [--model <모델>]` | canonical dispatch identity에 결속된 deterministic model-view를 주입하고 stdout을 `.gdm/<슬러그>/out/protocol/<claim-id>.out`에 저장하며 claim·finish receipt와 자원 제한 안에서 단일 검수 PID 트리를 실행. Work mode에는 `--prompt`를 쓰지 않는다 |
+| `gdm-agents/run-role.sh --mode work --provider <codex\|claude> --role audit --slug <슬러그> --handoff-event-id <event-id> --claim-id <claim-id> --receiver-role audit [--workspace <경로>] [--model <모델>]` | canonical dispatch identity에 결속된 deterministic model-view를 주입하고 stdout을 `.gdm/<슬러그>/out/protocol/<claim-id>.out`에 저장하며 claim·finish receipt와 자원 제한 안에서 단일 검수 PID 트리를 실행. Work mode에는 `--prompt`를 쓰지 않는다 |
 
 ## 프로세스
 

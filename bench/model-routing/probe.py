@@ -11,6 +11,7 @@ from fixtures import materialize
 from run import HERE, file_hashes, parse_events, save, sha, stop_group
 
 def main():
+    raise SystemExit('Retired benchmark: Pi integration was removed. Historical results are preserved; use the native GDM/gid benchmarks for new runs.')
     root=Path(tempfile.mkdtemp(prefix='gdm-pi-role-live-',dir=str(Path.home()/'projects/harness-bench-runs')))
     work=root/'workspace';materialize('t8',work);before=file_hashes(work)
     pi=str(Path(shutil.which('pi')).resolve());extension=Path.home()/'.pi/agent/skills/gdm-agents/pi/gdm-delegate.ts'
