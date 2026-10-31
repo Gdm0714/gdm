@@ -9,6 +9,7 @@ pub mod evidence;
 pub mod fingerprint;
 pub mod habit;
 pub mod protocol;
+pub mod regression;
 pub mod retro;
 pub mod state;
 pub mod store;
@@ -38,6 +39,7 @@ pub fn run(cwd: &Path, argv: &[String]) -> Result<()> {
         && sub != "list"
         && !(sub == "contract" && has_flag(args, "check-commit")))
         || (command == "audit" && sub == "verdict")
+        || (command == "regression" && matches!(sub, "capture" | "replay"))
         || (command == "preset" && sub != "list");
     let _lock = if mutates {
         Some(store::lock(cwd)?)
@@ -59,6 +61,7 @@ pub fn run(cwd: &Path, argv: &[String]) -> Result<()> {
         "delivery" => delivery::run(cwd, args),
         "attempt" => attempt::run(cwd, args),
         "retro" => retro::run(cwd, args),
+        "regression" => regression::run(cwd, args),
         "habit" => habit::run(cwd, args),
         "protocol" => protocol::run(cwd, args),
         "workspace" => {

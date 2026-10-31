@@ -62,7 +62,7 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
             }
         }
     }
-    let result = if all {
+    let mut result = if all {
         let mut types = json!({});
         for m in &misses {
             increment(
@@ -89,6 +89,11 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
     } else {
         json!({"slug":works[0]["slug"],"done":works[0]["done"],"events":events,"denied":denied,"frictionByCheck":friction,"edits":edits,"rechecks":rechecks})
     };
+    let mut regression_candidates = Vec::new();
+    for work in &works {
+        regression_candidates.extend(super::regression::candidates(cwd, s(&work["slug"]))?);
+    }
+    result["regressionCandidates"] = json!(regression_candidates);
     if has_flag(args, "json") {
         print_json(&result)
     } else {

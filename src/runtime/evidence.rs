@@ -112,6 +112,16 @@ pub fn execute(cwd: &Path, cmd: &str) -> Result<Execution> {
         }
     };
     crate::lprint!("실행: {cmd}", "Running: {cmd}");
+    execute_bounded(cwd, cmd, timeout)
+}
+
+/// Execute an explicitly supplied command with the same process-group and
+/// output limits as a check, without printing into a caller's JSON response.
+pub(crate) fn execute_bounded(
+    cwd: &Path,
+    cmd: &str,
+    timeout: Option<Duration>,
+) -> Result<Execution> {
     let signals = Signals::new()?;
     let child = Command::new("bash")
         .args(["-c", cmd])

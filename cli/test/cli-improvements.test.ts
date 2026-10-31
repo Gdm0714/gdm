@@ -258,7 +258,9 @@ describe("status --checks", () => {
     const result = runCli(tempRepo(), ["retro", "--all", "--json"]);
 
     expect(result.exitCode).toBe(0);
+    // Native regression diagnostics deliberately extend the legacy schema.
     expect(JSON.parse(result.stdout)).toEqual({
+      ...(process.env.GDM_NATIVE_TEST_BINARY ? { regressionCandidates: [] } : {}),
       works: 0,
       done: 0,
       events: 0,

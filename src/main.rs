@@ -88,7 +88,7 @@ fn main() {
         Some(
             "plan" | "pass" | "recheck" | "audit" | "done" | "status" | "resume" | "retro"
             | "feedback" | "preset" | "miss" | "repair" | "delivery" | "attempt" | "workspace"
-            | "doctor" | "habit" | "protocol",
+            | "doctor" | "habit" | "protocol" | "regression",
         ) => gdm::runtime::run(&cwd, &args),
         _ => {
             eprintln!("{}", gdm::i18n::usage());

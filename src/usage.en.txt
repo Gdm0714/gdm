@@ -50,6 +50,10 @@ Usage:
   gdm status [--json] [--checks]                            # List work in the current directory (--checks: check details)
   gdm resume [--json] [--slug <slug>]
   gdm retro [--all] [--json] [--slug <slug>]              # Retrospective (--all: across all work, with suggestions)
+  gdm regression candidates [--slug <slug>] --json        # Recorded failures with stable candidate IDs
+  gdm regression capture --slug <slug> --candidate <id> --case <name> --fixture <relative-file>... --cmd <check> --expect <behavior> [--timeout-ms <ms>]
+  gdm regression show --slug <slug> --case <name>          # Inspect the frozen case and digest; does not execute
+  gdm regression replay --slug <slug> --case <name> [--expected-case-sha256 <sha256>] # Explicitly run the check in a scratch directory
   gdm feedback --value good [--reason <reason>] [--source <id>] [--slug <slug>] [--json]
   gdm feedback --value bad --reason <reason> [--source <id>] [--slug <slug>] [--json]
   gdm miss --desc <description> [--type <type>] [--check <id>] [--slug <slug>]  # Record a defect discovered after a gate passed

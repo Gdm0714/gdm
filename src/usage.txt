@@ -50,6 +50,10 @@ gdm {VERSION} — 작업 증거가 다음 습관을 바꾸는 개인 AI 워크�
   gdm status [--json] [--checks]                            # 현재 디렉토리 전체 작업 현황 (--checks: 항목 상세)
   gdm resume [--json] [--slug <슬러그>]
   gdm retro [--all] [--json] [--slug <슬러그>]              # 회고 (--all: 전체 작업 횡단 + 개선 제안)
+  gdm regression candidates [--slug <슬러그>] --json        # 기록된 실패와 고정된 후보 ID
+  gdm regression capture --slug <슬러그> --candidate <id> --case <이름> --fixture <상대파일>... --cmd <검증명령> --expect <기대동작> [--timeout-ms <ms>]
+  gdm regression show --slug <슬러그> --case <이름>          # 실행 없이 고정된 사례와 해시 조회
+  gdm regression replay --slug <슬러그> --case <이름> [--expected-case-sha256 <sha256>] # 임시 디렉토리에서 검증 명령 실행
   gdm feedback --value good [--reason <사유>] [--source <id>] [--slug <슬러그>] [--json]
   gdm feedback --value bad --reason <사유> [--source <id>] [--slug <슬러그>] [--json]
   gdm miss --desc <내용> [--type <유형>] [--check <id>] [--slug <슬러그>]  # 게이트 통과 후 발견된 결함 기록

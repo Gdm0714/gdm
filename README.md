@@ -151,6 +151,11 @@ gdm done --slug fix-login
 
 </details>
 
+기록된 실패를 다시 검사하려면 `gdm regression candidates`에서 후보를 고르고,
+`capture`로 최소 입력과 검증 명령을 고정한 뒤 `replay`로 수정 전후를 비교한다.
+사례 저장은 명령을 실행하지 않으며, 재실행 결과는 Work 완료 상태와 별도로 기록된다.
+[실패 기록을 회귀 사례로 연결하기](docs/regression-cases.md)에 사용법과 실행 범위를 정리했다.
+
 ## 최근 추가된 Pi 기능
 
 ### 영구 메모리
