@@ -36,6 +36,14 @@ Usage:
   gdm audit brief [--json] [--slug <slug>]                # Print the briefing package for an independent auditor
   gdm audit verdict (--pass | --fail) --report <audit-report> --implementation-model <model> --audit-model <model> [--slug <slug>]
   gdm done [--slug <slug>] [--expected-plan-fingerprint <sha256>]
+  gdm team configure --slug <slug> --mode coordinated|single [--reason <reason>] [--max-active <1..4>] [--session <root-session-id>]
+  gdm team add --slug <slug> --task <id> --role <role> --path <relative-path>... --access read|write --deliverable <text> --acceptance <criteria> --check <id>... [--depends-on <task-id>]...
+  gdm team claim --slug <slug> --task <id> --assignee <worker-id> --attempt <attempt-id>
+  gdm team report --slug <slug> --task <id> --attempt <attempt-id> --outcome completed|failed|cancelled|inconclusive --summary <text> --artifact <relative-file> [--tokens <count>] [--elapsed-ms <time>]
+  gdm team review --slug <slug> --task <id> --attempt <attempt-id> --decision accept|reject --reason <reason>
+  gdm team retry --slug <slug> --task <id> --attempt <attempt-id> --reason <reason>
+  gdm team withdraw --slug <slug> --task <id> --reason <reason> [--attempt <current-attempt-id>]
+  gdm team status|next --slug <slug> [--json]               # Collect results and inspect next actions; no automatic execution
   gdm protocol export [--slug <slug>] [--expected-plan-fingerprint <sha256>] [--expected-state-fingerprint <sha256>] [--expected-source-fingerprint <sha256>]
   gdm protocol handoff --slug <slug> --handoff-id <id> --from-role <id> --to-role <id> --intent <description> [--from-provider <id>] [--to-provider <id>] [--artifact <repository-relative-file>] [--expected-plan-fingerprint <sha256>] [--expected-state-fingerprint <sha256>] [--expected-source-fingerprint <sha256>]
   gdm protocol offer --slug <slug> --handoff-id <id> --from-role <id> --to-role <id> --intent <description> --expected-plan-fingerprint <sha256> --expected-state-fingerprint <sha256> --expected-source-fingerprint <sha256> [--from-provider <id>] [--to-provider <id>] [--artifact <repository-relative-file>]

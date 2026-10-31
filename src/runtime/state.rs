@@ -377,6 +377,7 @@ pub fn completion_blockers(w: &Value) -> Vec<Value> {
             )
         }
     }
+    out.extend(super::team::blockers(w));
     out
 }
 pub fn evidence_valid(e: &Value) -> bool {
@@ -545,6 +546,7 @@ pub fn validate_work(mut w: Value) -> Result<Value> {
         return Err(bad("baseline"));
     }
     w["contract"] = contract::normalize(w.get("contract"))?;
+    super::team::validate(&w)?;
     if b(&w["done"]) {
         let mut candidate = w.clone();
         candidate["done"] = json!(false);

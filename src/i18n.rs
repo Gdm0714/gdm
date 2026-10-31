@@ -51,26 +51,23 @@ pub fn from_locale(value: &str) -> Language {
 }
 fn system_language() -> Language {
     for key in ["LC_ALL", "LC_MESSAGES", "LANG"] {
-        if let Ok(value) = std::env::var(key) {
-            if !value.trim().is_empty() {
-                return from_locale(&value);
-            }
+        if let Ok(value) = std::env::var(key)
+            && !value.trim().is_empty()
+        {
+            return from_locale(&value);
         }
     }
     #[cfg(target_os = "macos")]
     if let Ok(output) = std::process::Command::new("/usr/bin/defaults")
         .args(["read", "-g", "AppleLanguages"])
         .output()
+        && output.status.success()
+        && let Some(first) = String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .map(str::trim)
+            .find(|line| !line.is_empty() && !matches!(*line, "(" | ")"))
     {
-        if output.status.success() {
-            if let Some(first) = String::from_utf8_lossy(&output.stdout)
-                .lines()
-                .map(str::trim)
-                .find(|line| !line.is_empty() && !matches!(*line, "(" | ")"))
-            {
-                return from_locale(first.trim_matches(['"', ',', ' ']));
-            }
-        }
+        return from_locale(first.trim_matches(['"', ',', ' ']));
     }
     Language::English
 }
@@ -129,7 +126,7 @@ pub fn configure(explicit: Option<Preference>) -> Result<(), String> {
 pub fn language() -> Language {
     #[cfg(test)]
     {
-        return TEST_LANGUAGE.with(|v| v.get().unwrap_or(Language::Korean));
+        TEST_LANGUAGE.with(|v| v.get().unwrap_or(Language::Korean))
     }
     #[cfg(not(test))]
     {

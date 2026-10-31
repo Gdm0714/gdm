@@ -339,6 +339,16 @@ pub fn render_work(w: &Value) -> String {
             check["evidence"]["observed"].as_str().unwrap_or("—")
         ));
     }
+    if let Some(team) = w.get("team") {
+        lines.extend([
+            String::new(),
+            crate::i18n::text("## 작업 조율", "## Team coordination").into(),
+            String::new(),
+            format!("- Mode: {}", s(&team["mode"])),
+            format!("- Next: `gdm team next --slug {}`", s(&w["slug"])),
+            format!("- State: `{}`", super::team::summary(w)),
+        ]);
+    }
     if let Some(d) = w.get("delivery") {
         lines.extend([
             String::new(),

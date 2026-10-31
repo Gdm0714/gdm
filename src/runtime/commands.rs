@@ -738,6 +738,10 @@ pub fn done(cwd: &Path, args: &[String]) -> Result<()> {
     state::assert_plan(&w, read_flag(args, "expected-plan-fingerprint")?.as_deref())?;
     let result = (|| {
         state::assert_open(&w)?;
+        if let Some(blocker) = super::team::blockers(&w).first() {
+            return Err(Error::new(s(&blocker["code"]), s(&blocker["message"])));
+        }
+        super::team::verify_artifacts(cwd, &w)?;
         let scope = |w: &Value| -> Result<()> {
             let problems = fingerprint::scope_problems(w, &fingerprint::capture_workspace(cwd)?);
             if !problems.is_empty() {
@@ -799,6 +803,7 @@ pub fn done(cwd: &Path, args: &[String]) -> Result<()> {
                     .join(", "),
             ));
         }
+        super::team::verify_artifacts(cwd, &w)?;
         if let Some(blocker) = state::completion_blockers(&w).first() {
             return Err(Error::new(s(&blocker["code"]), s(&blocker["message"])));
         }
@@ -831,6 +836,9 @@ pub fn status(cwd: &Path, args: &[String]) -> Result<()> {
     for w in store::list(cwd)? {
         let journal = store::read_journal(cwd, s(&w["slug"]))?;
         let mut summary = json!({"slug":w["slug"],"done":w["done"],"proven":state::proven_count(&w),"total":state::checks(&w).len(),"blockers":state::completion_blockers(&w),"audit":fingerprint::audit_state(cwd,&w)?,"contract":w["contract"],"delivery":w["delivery"]});
+        if w.get("team").is_some() {
+            summary["team"] = super::team::summary(&w);
+        }
         if let Some(last) = journal.last() {
             summary["lastEvent"] = last["event"].clone();
             summary["lastAt"] = last["ts"].clone();
@@ -862,6 +870,7 @@ pub fn status(cwd: &Path, args: &[String]) -> Result<()> {
                     s(&last["event"])
                 );
             }
+            print_team(&w);
             if let Some(delivery) = w.get("delivery") {
                 crate::lprint!(
                     "  전달: {} · PR {} · CI {}",
@@ -888,6 +897,7 @@ pub fn resume(cwd: &Path, args: &[String]) -> Result<()> {
         return print_json(&json!({"work":w,"journal":tail}));
     }
     print_work(&w);
+    print_team(&w);
     if w["contract"].get("outcome").is_some() {
         crate::lprint!(
             "선언한 outcome (GDM 미측정):\n{}",
@@ -922,6 +932,17 @@ pub fn resume(cwd: &Path, args: &[String]) -> Result<()> {
         crate::lprint!("전달: {}", "Delivery: {}", w["delivery"]);
     }
     Ok(())
+}
+fn print_team(w: &Value) {
+    if let Some(team) = w.get("team") {
+        crate::lprint!(
+            "  작업 조율: {} · 다음 단계: gdm team next --slug {}",
+            "  Team coordination: {} · Next: gdm team next --slug {}",
+            s(&team["mode"]),
+            s(&w["slug"])
+        );
+        println!("{}", super::team::summary(w));
+    }
 }
 pub fn miss(cwd: &Path, args: &[String]) -> Result<()> {
     ensure_flags(args, &["desc", "type", "check", "slug"], &[])?;
