@@ -1223,11 +1223,53 @@ fn lifecycle(cwd: &Path, input: &Value, t: i64, stop: bool) -> Result<Value> {
         Ok(json!({}))
     })
 }
+// Only explicitly bound work belongs to this root session. Native turn-stop
+// observations release leases; they never accept durable task results.
+fn team_stop_reasons(cwd: &Path, session: &str) -> Result<Vec<String>> {
+    use crate::runtime::{state, store, team};
+    let root = store::root(cwd);
+    if !store::inspect(&root, true)? {
+        return Ok(Vec::new());
+    }
+    let mut reasons = Vec::new();
+    let mut entries = fs::read_dir(root)?.collect::<std::io::Result<Vec<_>>>()?;
+    entries.sort_by_key(|e| e.file_name());
+    for entry in entries {
+        let slug = entry.file_name().to_string_lossy().into_owned();
+        if state::validate_slug(&slug).is_err() || !entry.file_type()?.is_dir() {
+            continue;
+        }
+        let path = entry.path().join("checks.json");
+        if !store::inspect(&path, false).unwrap_or(false) {
+            continue;
+        }
+        // An unidentifiable record cannot be attached to this session. Its own
+        // CLI load/done still fails closed; unrelated sessions must stay usable.
+        let Ok(work) = store::read_json(&path) else {
+            continue;
+        };
+        if work["team"]["sessionId"] != session || work["team"]["mode"] != "coordinated" {
+            continue;
+        }
+        let work = state::validate_work(work)?;
+        if work["done"] == true {
+            continue;
+        }
+        let blockers = team::blockers(&work);
+        let detail = blockers
+            .first()
+            .map(|b| s(b, "message"))
+            .unwrap_or("task results collected; final verification remains");
+        reasons.push(format!("{slug}: {detail}. Run gdm team next --slug {slug}; collect and verify results, then run gdm done --slug {slug}"));
+    }
+    Ok(reasons)
+}
 fn stop(cwd: &Path, input: &Value, t: i64) -> Result<Value> {
     let session = required(input, "session_id", true)?;
     if input.get("stop_hook_active").is_some() && !input["stop_hook_active"].is_boolean() {
         return Err(err("stop_hook_active must be a boolean when present"));
     }
+    let team_reasons = team_stop_reasons(cwd, session)?;
     with_ledger(cwd, session, t, |v, _| {
         let mut pending = 0;
         let mut running = 0;
@@ -1250,14 +1292,18 @@ fn stop(cwd: &Path, input: &Value, t: i64) -> Result<Value> {
             }
             ids.push(format!("agent:{}", s(a, "agentId")));
         }
-        if ids.is_empty() {
+        if ids.is_empty() && team_reasons.is_empty() {
             return Ok(json!({}));
         }
         ids.truncate(32);
-        let reason = format!(
+        let mut reason = format!(
             "gdm agent gate: delegated work remains pending ({pending}) or running ({running}) [{}]. Reconcile or stop those agents before ending the turn.",
             ids.join(", ")
         );
+        if !team_reasons.is_empty() {
+            reason.push_str(" Durable coordination remains: ");
+            reason.push_str(&team_reasons.join("; "));
+        }
         if input["stop_hook_active"] == true {
             Ok(
                 json!({"systemMessage":format!("{reason} The Stop guardrail already continued once, so it will not create an infinite continuation loop.")}),

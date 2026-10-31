@@ -30,7 +30,7 @@ fn failure(code: i32, message: impl Into<String>) -> Error {
 fn usage() -> Error {
     failure(
         64,
-        "usage: gdm role-run --mode <work|preflight> --provider <codex|claude|pi> --role <plan|analyze|review|audit> [--workspace <dir>] [--model <model>] ...",
+        "usage: gdm role-run --mode <work|preflight> --provider <codex|claude> --role <plan|analyze|review|audit> [--workspace <dir>] [--model <model>] ...",
     )
 }
 fn re(pattern: &str, text: &str) -> bool {
@@ -512,42 +512,6 @@ fn provider_argv(provider: &str, workspace: &Path, requested: &str) -> Result<Ve
             };
             out.extend(["--model".into(), model]);
         }
-        "pi" => {
-            let model = if requested.is_empty() {
-                "openai-codex/gpt-6-astra:medium"
-            } else {
-                requested
-            };
-            if model.len() > 160
-                || model.starts_with('-')
-                || !re(r"^[A-Za-z0-9._:+-]+/[A-Za-z0-9._:+-]+$", model)
-            {
-                return Err(failure(
-                    64,
-                    "PROVIDER_MODEL_INVALID: pi requires an explicit provider/model",
-                ));
-            }
-            out.extend(
-                [
-                    "--mode",
-                    "text",
-                    "--print",
-                    "--no-session",
-                    "--no-tools",
-                    "--no-extensions",
-                    "--no-skills",
-                    "--no-prompt-templates",
-                    "--no-themes",
-                    "--no-context-files",
-                    "--no-approve",
-                    "--system-prompt",
-                    BOOTSTRAP,
-                    "--model",
-                    model,
-                ]
-                .map(str::to_owned),
-            );
-        }
         _ => return Err(usage()),
     }
     Ok(out)
@@ -687,7 +651,6 @@ impl Claim<'_> {
                 "argv-policy-id",
                 match self.provider {
                     "claude" => "gdm-claude-read-only-v3",
-                    "pi" => "gdm-pi-read-only-v1",
                     _ => "gdm-codex-read-only-v1",
                 },
             ),
@@ -784,7 +747,7 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
     let provider = value(&f, "provider");
     let role = value(&f, "role");
     if !["work", "preflight"].contains(&mode)
-        || !["codex", "claude", "pi"].contains(&provider)
+        || !["codex", "claude"].contains(&provider)
         || !["plan", "analyze", "review", "audit"].contains(&role)
     {
         return Err(usage());

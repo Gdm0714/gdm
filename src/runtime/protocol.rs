@@ -139,7 +139,10 @@ pub fn state_fingerprint(work: &Value) -> String {
         contract["outcome"] = outcome.clone();
     }
     let checks:Vec<_>=work["checks"].as_array().into_iter().flatten().map(|check|json!({"id":check["id"],"desc":check["desc"],"cmd":check["cmd"],"expect":check["expect"],"manual":check["manual"],"kind":kind(check),"expert":field(check,"expert",json!(false)),"status":check["status"],"redEvidence":check["redEvidence"],"evidence":check["evidence"]})).collect();
-    let value = json!({"slug":work["slug"],"brief":work["brief"],"createdAt":work["createdAt"],"done":work["done"],"doneAt":work["doneAt"],"verificationPlanSourceFingerprint":work["verificationPlanSourceFingerprint"],"auditRequired":field(work,"auditRequired",json!(false)),"audit":audit_record(work),"baseline":work["baseline"],"checks":checks,"contract":contract});
+    let mut value = json!({"slug":work["slug"],"brief":work["brief"],"createdAt":work["createdAt"],"done":work["done"],"doneAt":work["doneAt"],"verificationPlanSourceFingerprint":work["verificationPlanSourceFingerprint"],"auditRequired":field(work,"auditRequired",json!(false)),"audit":audit_record(work),"baseline":work["baseline"],"checks":checks,"contract":contract});
+    if let Some(team) = work.get("team") {
+        value["team"] = team.clone();
+    }
     let mut bytes = Vec::new();
     tagged(&json!("gdm-work-state-v1"), &mut bytes);
     tagged(&value, &mut bytes);
@@ -170,7 +173,7 @@ fn evidence(e: &Value) -> Value {
         json!({"observed":e["observed"],"sha256":e["sha256"],"exitCode":e["exitCode"],"manual":e["manual"],"reviewer":e["reviewer"],"notePresent":!s(e,"note").trim().is_empty(),"at":e["at"]})
     }
 }
-fn no_credentials(value: &Value) -> Result<()> {
+pub(super) fn no_credentials(value: &Value) -> Result<()> {
     match value {
         Value::String(v) => {
             if super::credentials::contains_credentials(v) {
@@ -546,9 +549,11 @@ fn validate_work_journal(work: &Value, journal: &[Value]) -> Result<()> {
 }
 
 fn check_completed(cwd: &Path, work: &Value) -> Result<()> {
+    super::team::verify_snapshot_artifacts(cwd, work)?;
     if work["done"] != true {
         return Ok(());
     }
+    super::team::verify_artifacts(cwd, work)?;
     for c in work["checks"].as_array().into_iter().flatten() {
         for k in ["evidence", "redEvidence"] {
             if let Some(e) = c.get(k) {
@@ -617,6 +622,11 @@ pub fn snapshot(cwd: &Path, work: &Value, source: &Value, journal: &[Value]) -> 
         Value::Null
     };
     let value = json!({"schemaVersion":"gdm-work-snapshot/v1","work":{"slug":work["slug"],"brief":work["brief"],"createdAt":work["createdAt"],"doneAt":work["doneAt"],"phase":phase,"planFingerprint":fp["planFingerprint"],"stateFingerprint":fp["stateFingerprint"],"planSourceFingerprint":work["verificationPlanSourceFingerprint"],"sourceFingerprint":source},"contract":contract,"checks":checks,"audit":audit,"completion":{"state":if work["done"]==true{"completed"}else if blockers.is_empty(){"ready-to-validate"}else{"blocked"},"blockers":blockers,"validationCommand":if work["done"]==true{Value::Null}else{json!(format!("gdm done --slug {}",s(work,"slug"))) }},"latestHandoff":latest});
+    let mut value = value;
+    if let Some(team) = work.get("team") {
+        value["team"] = team.clone();
+        value["coordination"] = super::team::summary(work);
+    }
     no_credentials(&value)?;
     Ok(value)
 }

@@ -91,4 +91,6 @@ def main():
         save(dest/'result.json',result)
         print(f"END {entry['id']} transport={result['transportSuccess']} response={result['responseValid']} seconds={result['seconds']}",flush=True)
 
+if __name__ == "__main__":
+    raise SystemExit('Retired benchmark: Pi integration was removed. Historical results are preserved; use the native GDM/gid benchmarks for new runs.')
 if __name__=='__main__':main()

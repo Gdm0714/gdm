@@ -38,7 +38,7 @@ describe("Claude Code standalone GDM coordinator", () => {
     expect(go).toContain("Claude Code coordinator contract");
     expect(go).toContain("현재 Claude Code 세션");
     expect(go).toContain("--provider claude");
-    expect(go).toContain("Codex·Pi 로그인이나 실행 파일을 요구하지 않는다");
+    expect(go).toContain("다른 공급자의 로그인이나 실행 파일을 요구하지 않는다");
     expect(go).toContain("`.gdm/` 아래 파일을 직접 쓰거나 고치지 않는다");
     expect(go).not.toContain("codex-fallback");
     expect(go).not.toContain("Astra medium");

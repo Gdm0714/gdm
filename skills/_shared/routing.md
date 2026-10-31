@@ -38,13 +38,12 @@
 
 ## 실행 모델 라우팅
 
-대화형 진입점은 Codex, Claude Code, Pi다. `ENTRYPOINT_PROVIDER: current session`,
+대화형 진입점은 Codex, Claude Code, gid다. `ENTRYPOINT_PROVIDER: current session`,
 `TECHNICAL_DESIGN_PROVIDER: coordinator`, `TECHNICAL_DESIGN_ASSIST: optional Claude CLI`,
 `VISUAL_DESIGN_PROVIDER: Claude Design`을 기본값으로 쓴다.
 진행자가 사용자 문답, 로컬 조사, 작업 계약, 구현, 변경 통합, gdm 게이트와 최종
 보고를 소유한다. Claude Code만 사용하는 진행자는 선택한 Claude 모델로 구현하고,
-외부 전문 역할도 `--provider claude`로 실행한다. Pi의 Terra·Astra 기본 배분은 Pi 실행
-프로필에만 적용하며 Claude 사용자에게 OpenAI 계정을 요구하지 않는다. full의 독립성은
+외부 전문 역할도 `--provider claude`로 실행한다. 다른 실행 대상의 모델 기본값을 Claude 진행자에게 강제하지 않는다.
 공급자 이름이 아닌 실제 모델 차이로 판단하므로 같은 Claude 공급자에서도 다른 모델로
 검수할 수 있다. 사용 가능한 다른 모델이 없으면 full을 차단하고 일상 go와 구분한다.
 
@@ -188,7 +187,7 @@ crash·timeout인 경우, 출력이 malformed JSON·schema mismatch인 경우, �
 
 ## 역할 실행과 제한된 병렬 위임
 
-분리 가능한 역할은 설치 target이 제공하는 Codex·Claude·Pi의 제한된 역할 실행기로 위임할 수 있다.
+분리 가능한 역할은 설치 target이 제공하는 Codex·Claude의 제한된 역할 실행기로 위임할 수 있다.
 해당 역할 스킬 전문과 필요한 파일·증거 경로만 전달하고, 사용자의 비밀, 전체 대화,
 불필요한 저장소 원문은 넘기지 않는다. 결과를 받은 뒤 진행자가 실제 파일과 gdm 게이트로
 다시 판정한다.
@@ -279,7 +278,7 @@ Stop 장벽은 한 번만 continuation을 요청하고 재진입에서는 경고
 
 독립 검수는 예외적으로 pass당 정확히 1명의 **leaf 실행**이다. 검수자에는
 `MAX_AGENT_DEPTH: 0`, `MAX_CHILD_AGENTS: 0`을 적용하고 병렬 검수자나 하위 검수자를 만들지
-않는다. Codex·Claude·Pi 검수는 설치된 `gdm-agents/run-role.sh --mode work --role audit`로만
+않는다. Codex·Claude 검수는 설치된 `gdm-agents/run-role.sh --mode work --role audit`로만
 실행해 동일 capability profile로 하위 위임과 사용자 MCP를 제거하고 자원 한도를 적용한다.
 
 진행자는 외부 역할이 만든 루트 PID를 기록하고 종료 시 회수한다. 자원 한도 초과 시 그 PID의

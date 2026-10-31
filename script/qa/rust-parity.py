@@ -21,7 +21,10 @@ tests = sys.argv[1:] or [
     'audit-integrity.test.ts', 'protocol-cli.test.ts', 'protocol-integrity-v2.test.ts',
     'protocol-receipt.test.ts', 'protocol-concurrency.test.ts',
 ]
-env = dict(os.environ, GDM_NATIVE_TEST_BINARY=str(binary), GDM_NATIVE_EXECUTABLE=str(binary))
+# The legacy oracle asserts Korean messages; never inherit a user locale or
+# saved language preference for this compatibility runner.
+env = dict(os.environ, GDM_LANGUAGE="ko", GDM_NATIVE_TEST_BINARY=str(binary),
+           GDM_NATIVE_EXECUTABLE=str(binary))
 if not binary.is_file():
     raise SystemExit('Build the native gdm binary first: cargo build --locked')
 result = subprocess.run(

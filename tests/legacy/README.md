@@ -1,9 +1,6 @@
-# TypeScript compatibility oracle
+# Legacy test fixtures
 
-This snapshot is test data for the Rust migration. Nothing here is installed,
-launched or imported by the production harness. Native compatibility checks use
-its independently implemented schemas, hashes and expected behavior.
-
-The former CLI sources in `cli/src` likewise remain a test oracle; production
-builds and installation use the root Cargo crate. Pi requires a JavaScript host
-adapter; `agents/pi` contains only those adapters and static prompts.
+The TypeScript CLI under `cli/` remains an independent test oracle for the Rust
+runtime where explicitly referenced by QA scripts. Production builds and
+installation use the root Cargo crate. Pi adapters and their legacy fixtures
+have been removed; current skill targets are Codex, Claude, and gid.

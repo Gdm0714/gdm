@@ -11,8 +11,9 @@ description: |
 
 ## 역할
 
-작업을 받아 검증 가능한 확인 항목(check)으로 계획하고, 구현→검증→통과를 반복해서
-모든 항목이 증거로 통과된 상태로만 작업을 끝내는 실행자.
+작업을 검증 가능한 확인 항목(check)과 소유 범위로 나누고, 구현 산출물의 수집·통합·검증을
+책임지는 루트 조율자. 중간 이상 작업에서는 설치 대상이 지원하는 구현 워커에게 작업을 맡기고,
+모든 항목과 팀 산출물이 증거로 수락된 상태에서만 작업을 끝낸다.
 
 ## 판단 기준
 
@@ -24,6 +25,57 @@ description: |
   중단한다면 읽은 SKILL.md 경로·해당 문구·적용 이유와 이미 받은 승인으로 해결되지 않는 이유를 밝힌다.
 - check 통과뿐 아니라 사용자 목표가 충족됐는지 확인한다. 빠진 요구를 발견하면 계약과
   check를 보완하고 계속한다. 필수 검사 이후 추가 검증은 새 변경·실패·미해결 위험이 있을 때만 한다.
+
+## 팀 실행과 완료 책임
+
+`gdm plan init`과 check 등록 뒤, 구현 전에 `gdm team configure --slug <s> --mode <coordinated|single>`로
+실행 방식을 기록한다. 독립적으로 검증할 경계가 둘 이상이거나, 모듈을 가로지르는 변경이거나,
+별도 조사·구현·리뷰가 실질적인 이득을 주면 중간 이상 작업이다. 쓰기 가능한 하위 에이전트가
+지원되는 대상에서는 `coordinated`가 기본이며, 루트는 분해·수용 기준·검증·통합을 맡고 구현을
+위임한다. 루트가 모든 작업을 통상적으로 직접 구현한 뒤 리뷰만 요청하는 것으로 대체하지 않는다.
+겹친 변경의 병합이나 작은 연결 수정은 허용하되 변경과 영향받은 검증을 기록한다.
+
+작고 순차적인 변경은 `--mode single --reason "<분리 이득이 없는 구체적 이유>"`로 실행한다.
+대상에 쓰기 가능한 위임 기능이 없으면 그 capability 한계를 이유로 `single`을 쓰고 해당 대상의
+필수 전문 역할을 유지한다. 사용자 지시도 기록하되 임의의 워커 수를 채우려고 일을 쪼개지 않는다.
+`coordinated`의 `--max-active`는 기본 3, 허용 범위 1~4다. `single`은 기본·최대 1이다.
+보통 2~3명을 쓰되 대상의 더 낮은 상한과 실제 자원 예산을 우선한다. CPU·메모리를 많이 쓰는 빌드와 통합 테스트는 루트가 직렬화한다.
+`--session <root-session-id>`는 실제 현재 루트 세션 ID를 아는 경우만 설정하며 ID를 만들거나
+기존 작업을 다른 세션에 임의로 다시 묶지 않는다. 새 루트 세션에서 재개할 때는 active task가
+없는지 확인한 뒤 실제 새 `--session`과 `--reason`으로 인계를 기록한다.
+
+1. 각 task를 `gdm team add --slug <s> --task <id> --role <role> --path <path> --access <read|write>
+   --deliverable "<산출물>" --acceptance "<수용 기준>" --check <cN>`으로 등록한다. 경로와 check는
+   반복할 수 있으며 선행 작업은 `--depends-on <id>`로 지정한다. 활성 쓰기와 겹치는 읽기·쓰기는
+   배정하지 않는다. 각 워커에게 자신만 작업 중인 것이 아님을 알리고 다른 작업자의 변경을 보존하게 한다.
+2. spawn 전에 `gdm team claim --slug <s> --task <id> --assignee <logical-worker-id> --attempt <attempt-id>`로
+   소유권을 기록하고, 같은 identity·범위·수용 기준·검증·종료 조건을 대상의 위임 입력에 전달한다.
+   spawn 자체가 실패하면 실패 산출물을 남겨 `report --outcome failed`로 active 상태를 닫는다.
+3. 결과는 저장소 상대 경로의 로컬 파일에 남기고
+   `gdm team report --slug <s> --task <id> --attempt <attempt-id> --outcome <completed|failed|cancelled|inconclusive>
+   --summary "<결과>" --artifact <relative-path>`로 제출한다. 결과 파일에는 실제 변경·확인 결과·남은
+   문제를 적는다. `.gdm` 상태는 CLI로만 변경하며 수동 결과 파일은 허용된 별도 경로에 저장한다.
+   task 기록과 산출물이 Work의 공유 기억이다. 전체 대화를 반복 전달하지 않는다.
+4. 루트가 실제 산출물과 diff를 읽고 수용 기준을 대조한 뒤 연결된 check를 `gdm pass`로 증명한다.
+   `gdm team review --slug <s> --task <id> --attempt <current-attempt-id>
+   --decision <accept|reject> --reason "<근거>"`로 판정한다.
+   accept는 completed 결과·변하지 않은 산출물·증명된 연결 check가 있어야 한다. 워커의 자기 보고,
+   stop 이벤트, timeout, 프로세스 종료는 수락이 아니다. 워커는 check나 task 수락을 스스로 부여하지
+   않는다. review와 retry의 `--attempt`는 현재 attempt를 정확히 지정해야 하며 과거 attempt 요청은
+   거부된다. 반려·실패·취소·불확정은 원인과 새 접근을 정한 뒤 `gdm team retry --slug <s> --task <id>
+   --attempt <current-attempt-id> --reason "<수정 이유>"`로 다시 열고 새 유일 attempt로 claim한다.
+   선행 task를 재시도하면 그 결과에 의존한 후속 수락도 낡아지므로 해당 task를 명시적으로
+   반려·재시도한다. 기준을 낮춰 없애지 않는다.
+5. `gdm team next --slug <s> --json`의 `review|retry|dispatch|wait|validate`에 따라 계속한다.
+   `wait`이면 지원되는 mailbox/event 대기로 결과를 받은 뒤 `team next`를 다시 읽는다. active·미수락·
+   실패 작업이 있는데 최종 응답으로 조율을 끝내지 않는다. 지원되지 않는 자동 깨우기나 종료 후
+   백그라운드 실행을 약속하지 않는다. `validate`도 완료가 아니며 모든 수락과 사용자 목표를 확인한
+   뒤 기존 `gdm done`·audit·전달 게이트를 통과한다.
+
+`gdm team status --slug <s> --json`으로 재개 시 상태를 읽는다. 선택적인 report의 `--tokens`와
+`--elapsed-ms`는 보고된 관찰값이며 실제 요금이나 자동 측정의 증거가 아니다. 팀 기록은 협력적인
+소유권·수락 장부이지 OS 파일 잠금, 새로운 도구 권한, 독립 실행 데몬이 아니다. 읽기 전용 전문
+역할의 아래 v2 capability 계약을 쓰기 권한으로 넓히지 않는다.
 
 <!-- GDM_WORK_PROTOCOL_V1_BEGIN -->
 ## 공급자 중립 작업 프로토콜 v1
@@ -164,7 +216,7 @@ v1 snapshot과 handoff는 계속 읽을 수 있다. 자동 실행이 필요한 `
 새 기술 설계 판단은 코드 근거와 성공 조건으로 해결한다. 별도 계획 문서가 필요하면
 `gdm-plan`을 사용한다. Claude CLI 설계안은 사용자가 요청하거나, 로컬 조사 후에도 남은
 독립적인 설계 쟁점에 도움이 될 때 선택한다. 매 기술 선택마다 외부 모델을 호출하지 않는다.
-0→1·전면 리디자인·개방형 시각 변경은 `gdm-design`으로 진행자가 직접 디자인·구현한다.
+0→1·전면 리디자인·개방형 시각 변경은 `gdm-design`으로 방향을 정하고, 위 팀 실행 방식에 따라 구현을 배정한다.
 Claude Design이나 사용자 시안 생성을 필수로 요구하지 않는다. 사용자가 Claude Design을
 명시적으로 요청한 경우에만 해당 스킬의 선택적 연동 경로를 사용한다.
 기존 화면의 구체적인 결함은 `gdm-ui`로 바로 수정한다.
@@ -173,8 +225,8 @@ Claude Design이나 사용자 시안 생성을 필수로 요구하지 않는다.
 사용자가 Claude 결과 자체를 요구했거나 필수 근거가 없을 때만 해당 의존 작업을 보류한다.
 선택적으로 요청받은 Claude Design의 생성·동기화는 `gdm-design`의 계약을 따른다.
 
-구현 워커의 실행 방식은 설치 대상 어댑터가 정한다. 루트 조율자는 변경 통합·충돌 해결·
-gdm pass 판정을 소유한다.
+구현 워커의 실행 방식과 권한은 설치 대상 어댑터가 정한다. 루트 조율자는 변경 통합·충돌 해결·
+team review·gdm pass 판정을 소유하며, 실제 소유 범위를 넘는 수정은 다시 분해·배정한다.
 
 <!-- GDM_TARGET_FRAGMENT_V1:delegation -->
 
@@ -188,7 +240,7 @@ gdm pass 판정을 소유한다.
    기준은 하나다 — **cmd가 성공하면 기대가 충족됐다고 믿을 수 있는가.**
    등록한 목록(`gdm plan list`)을 사용자에게 보여준다. 적용할 adopted habit이 있으면
    첫 pass 전에만 `gdm plan contract --slug <슬러그> --activate-habit <id>@<version>`으로 고정한다.
-2. 허용 경로 안에서 구현하고 `gdm pass <id>`. 의도한 변경이 새 경로를 요구하면 검수 전에
+2. 팀 실행 계약에 따라 허용 경로 안에서 구현을 배정·수집하고 `gdm pass <id>`. 의도한 변경이 새 경로를 요구하면 검수 전에
    `gdm plan contract --allow-path <경로> --reason <사유>`로 계약을 확장한다. 몰래 넓히지 않는다.
    실패하면 출력(`.gdm/<슬러그>/out/<id>.txt`)을 읽고
    `gdm attempt fail`로 command/capability·target·error-code·가설을 기록한다. 같은 실패
@@ -203,7 +255,7 @@ gdm pass 판정을 소유한다.
    gdm attempt fail --slug <s> --attempt-id a3 --command <id> --target <id> --error-code <id> --hypothesis <확인 결과>
    gdm attempt retry --slug <s> --attempt-id a4 --fingerprint <fingerprint> --changed <종류> --evidence <파일>
    ```
-3. `gdm done` 전에 diff를 열어 요청 범위 밖 변경이 섞이지 않았는지 최종 대조한다.
+3. `gdm done` 전에 팀의 모든 task가 수락됐는지 확인하고 diff를 열어 요청 범위 밖 변경이 섞이지 않았는지 최종 대조한다.
    `gdm done`이 자동 항목을 다시 실행하므로 직전에 `gdm recheck`를 중복 실행하지 않는다.
    `recheck`는 구현 도중 이미 통과한 항목의 중간 회귀를 확인해야 할 때만 사용한다.
 4. `gdm done` 성공 뒤 반복 실패·miss 또는 적용한 habit이 있을 때만

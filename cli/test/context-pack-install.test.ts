@@ -15,7 +15,7 @@ function setup() {
   temporary.push(root);
   const source = join(root, "source-gdm");
   const target = join(root, "gdm");
-  const launcher = join(root, "gdm-pi");
+  const launcher = join(root, "unrelated-launcher");
   writeFileSync(source, "new-context-binary\n");
   writeFileSync(target, "old-binary\n");
   writeFileSync(launcher, "preserved-launcher\n");

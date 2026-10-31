@@ -1,0 +1,13 @@
+{
+  "measured_at": "2026-10-29T02:40:08.096853+00:00",
+  "hardware": "Apple M4",
+  "memory_bytes": 17179869184,
+  "os": "macOS-26.5.1-arm64-arm-64bit-Mach-O",
+  "rustc": "rustc 1.97.0 (2d8144b78 2026-07-07)",
+  "cargo": "cargo 1.97.0 (c980f4866 2026-06-30)",
+  "power": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=22085731)\t100%; charged; 0:00 remaining present: true",
+  "loadavg": "{ 5.15 4.58 4.73 }",
+  "memory_pressure_snapshot": "Mach Virtual Memory Statistics: (page size of 16384 bytes)\nPages free:                                     3952.\nPages active:                                 191133.\nPages inactive:                               185173.\nPages speculative:                              5153.\nPages throttled:                                   0.\nPages wired down:                             259112.\nPages purgeable:                                8899.\n\"Translation faults\":                      181917554.\nPages copy-on-write:                        17891587.\nPages zero filled:                         137240945.\nPages reactivated:                          21656238.\nPages purged:                                2217183.\nFile-backed pages:                            139454.\nAnonymous pages:                              242005.\nPages stored in compressor:                  1069250.\nPages occupied by compressor:                 349869.\nDecompressions:                             22950667.\nCompressions:                               28326080.\nPageins:                                    13404143.\nPageouts:                                      80369.\nSwapins:                                      776880.\nSwapouts:                                    1055298.",
+  "methodology": "Synthetic local data; optimized isolated processes; warmup; alternating paired trials; sequential benchmark suites; active user apps left untouched",
+  "background_load_note": "OneDrive updater observed near one CPU core at setup; wall times include background contention. Process CPU time is measured separately."
+}

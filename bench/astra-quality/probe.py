@@ -28,4 +28,6 @@ Then scout thinking medium: read src/cache.ts and identify key contract. Then de
     r['success']=bool(p.returncode==0 and not timedout and r['sourceUnchanged'] and r['agentEnded'] and r['stopReason']=='stop' and len(r['delegateAttempts'])==4 and sum(a.get('rejected',False) for a in r['delegateAttempts'])==1 and all(a.get('error') for a in r['delegateAttempts'] if a.get('rejected')) and [(c['role'],c['model'],c['thinking']) for c in r['children']]==expected and all(c['ok'] and c['reportedModels']==[c['model']] and any(t['name']=='read' and not t['isError'] for t in c['toolCalls']) for c in r['children']))
     save(HERE/'live-role-probe.json',r);print({k:r[k] for k in ['path','success','seconds','sourceUnchanged']},flush=True)
     assert r['success'],'preserved live probe failed'
+if __name__ == "__main__":
+    raise SystemExit('Retired benchmark: Pi integration was removed. Historical results are preserved; use the native GDM/gid benchmarks for new runs.')
 if __name__=='__main__':main()

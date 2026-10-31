@@ -104,6 +104,8 @@ def verify(run, installed=True):
     save(HERE/'verification.json',receipt)
     print(json.dumps({k:v for k,v in receipt.items() if k!='outcomes'},ensure_ascii=False))
 
+if __name__ == "__main__":
+    raise SystemExit('Retired benchmark: Pi integration was removed. Historical results are preserved; use the native GDM/gid benchmarks for new runs.')
 if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('--self-test',action='store_true');p.add_argument('--no-install',action='store_true');args=p.parse_args()
     self_test()

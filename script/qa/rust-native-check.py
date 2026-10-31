@@ -5,9 +5,8 @@ Runs the actual source installer (including Cargo release compilation), then
 builds a local release fixture from that executable and native-rendered skills
 for the actual remote installer. No provider, VM, credential, or network access
 is needed. Cargo uses the existing toolchain/cache with offline mode enabled.
-Pi still requires its JavaScript host; the allowed files below are UI/RPC glue.
-This gate verifies native runtime/distribution boundaries, not Pi host behavior
-or cross-platform release binaries.
+This gate verifies native runtime/distribution boundaries and gid skill installation,
+not external model behavior or cross-platform release binaries.
 """
 from __future__ import annotations
 
@@ -26,12 +25,9 @@ import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parents[2]
-TARGETS = ("claude", "codex", "pi")
-HOST_GLUE = {
-    "pi/native.ts", "pi/gdm-delegate.ts", "pi/gdm-memory/index.ts",
-    "pi/gdm-computer-use/index.ts", "pi/ax.mjs", "pi/presentation.mjs",
-    "pi/presentation.d.mts",
-}
+TARGETS = ("claude", "codex", "gid")
+HOST_GLUE = set()
+
 LEGACY_NAMES = {
     "delegate-budget.ts", "delegate-state.ts", "delegate-policy.ts",
     "store.ts", "backend.ts", "rfb.ts", "bootstrap.ts", "lifecycle.ts",
@@ -73,31 +69,18 @@ def static_gate() -> None:
     check_glue(ROOT / "agents")
     for name, command in {
         "run-role.sh": "role-run", "providers/codex.sh": "provider-run",
-        "providers/claude.sh": "provider-run", "providers/pi.sh": "provider-run",
-        "pi/gdm-pi": "pi-launch", "pi/gdm-computer-use/setup.sh": "computer-use setup",
+        "providers/claude.sh": "provider-run",
     }.items():
         text = (ROOT / "agents" / name).read_text()
         require(command in text and 'exec "${GDM_NATIVE_EXECUTABLE' in text,
                 f"entrypoint bypasses native runtime: {name}")
-    passed("production runtime/install entrypoints are native; JavaScript is explicit Pi host glue")
+    passed("production runtime/install entrypoints are native and have no Pi host glue")
 
 
 def check_glue(agents: Path) -> None:
     actual = {p.relative_to(agents).as_posix() for p in agents.rglob("*")
               if p.is_file() and p.suffix in (".ts", ".js", ".mjs", ".mts")}
     require(actual == HOST_GLUE, f"unexpected/missing host glue: {actual ^ HOST_GLUE}")
-    for relative in actual:
-        text = (agents / relative).read_text()
-        require(not re.search(r'from\s+[\'"](?:node:)?fs(?:/promises)?[\'"]', text),
-                f"host glue owns filesystem state: {relative}")
-        require("Bun." not in text and "tests/legacy" not in text and "cli/src" not in text,
-                f"legacy behavior in shipped host glue: {relative}")
-        if relative != "pi/native.ts":
-            require("child_process" not in text, f"process lifecycle outside native transport: {relative}")
-    for relative in ("pi/gdm-delegate.ts", "pi/gdm-memory/index.ts"):
-        require("nativeRpc(" in (agents / relative).read_text(), f"native RPC missing: {relative}")
-    require("ComputerTransport" in (agents / "pi/gdm-computer-use/index.ts").read_text(),
-            "computer use bridge does not use native transport")
 
 
 def run(args: list[str | Path], cwd: Path, env: dict[str, str], *,
@@ -143,13 +126,12 @@ def write(path: Path, data: str | bytes, executable: bool = False) -> None:
 
 
 def skill_roots(home: Path) -> list[Path]:
-    return [home / ".claude/skills", home / ".codex/skills", home / ".pi/agent/skills"]
+    return [home / ".claude/skills", home / ".codex/skills", home / ".config/gid/skills"]
 
 
 def seed(home: Path) -> dict[Path, bytes]:
     originals = {
         home / ".local/bin/gdm": b"#!/bin/sh\nprintf old-gdm\\n\n",
-        home / ".local/bin/gdm-pi": b"#!/bin/sh\nprintf old-pi\\n\n",
     }
     for root in skill_roots(home):
         originals[root / "gdm-go/SKILL.md"] = b"prior GDM skill\n"
@@ -163,7 +145,7 @@ def no_debris(home: Path) -> None:
     for root in [home / ".local/bin", *skill_roots(home)]:
         if root.is_dir():
             debris = [p.name for p in root.iterdir()
-                      if p.name.startswith((".gdm-stage.", ".gdm-rollback.", ".gdm.tmp.", ".gdm-pi.tmp."))]
+                      if p.name.startswith((".gdm-stage.", ".gdm-rollback.", ".gdm.tmp."))]
             require(not debris, f"installer transaction debris: {debris}")
 
 
@@ -251,7 +233,7 @@ def main() -> None:
         def environment(home: Path) -> dict[str, str]:
             home.mkdir(parents=True, exist_ok=True)
             return dict(base_env, HOME=str(home), CODEX_HOME=str(home / ".codex"),
-                        PI_CODING_AGENT_DIR=str(home / ".pi/agent"))
+                        GID_CONFIG_DIR=str(home / ".config/gid"))
 
         source_home = temp / "source-home"
         originals = seed(source_home)
@@ -344,6 +326,32 @@ def main() -> None:
         hook_assertions(remote_home, hooks, config)
         native_workflow(remote_binary, temp / "remote-work", remote_env)
         passed("actual remote installer verifies local release checksums and native lifecycle")
+        # Custom roots must be honored independently from Codex. The relative
+        # form resolves against the invoking directory, not an installer's cd.
+        for location in ("absolute", "relative", "xdg"):
+            home = temp / f"remote-gid-{location}"
+            config = home / "custom gid"
+            current = home / "invocation"
+            current.mkdir(parents=True)
+            env = dict(environment(home), GDM_BASE_URL=assets.as_uri())
+            if location == "absolute":
+                env["GID_CONFIG_DIR"] = str(config)
+            elif location == "relative":
+                env["GID_CONFIG_DIR"] = "../custom gid"
+            else:
+                env.pop("GID_CONFIG_DIR")
+                env["XDG_CONFIG_HOME"] = str(home / "xdg config")
+                config = home / "xdg config/gid"
+            sentinel = config / "skills/user-owned/SKILL.md"
+            write(sentinel, b"custom skill must survive\n")
+            run(["/bin/bash", ROOT / "install.sh"], current, env)
+            manifest = config / "skills/gdm-target-manifest.json"
+            require(json.loads(manifest.read_bytes())["target"] == "gid", "gid override installed wrong target")
+            require(sentinel.read_bytes() == b"custom skill must survive\n", "gid override lost user skill")
+            require(not (home / ".config/gid/skills/gdm-go").exists(), "gid override ignored")
+            run([home / ".local/bin/gdm", "verify-manifests", manifest], current, env)
+            passed(f"actual remote installer respects {location} gid config root")
+
         require(not interpreter_log.exists(), "Bun/Node invocation attempted in native runtime/install flow")
         passed("all runtime/render/source-install/remote-install paths ran with Bun and Node denied")
     print(f"Native distribution gate: {CHECKS} checks passed. Temporary homes removed; no global installation.", flush=True)

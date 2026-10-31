@@ -89,4 +89,6 @@ def main():
     receipt.update(complete=True,analysisSha256=sha((HERE/'analysis.json').read_bytes()),installationSha256=sha((HERE/'installation.json').read_bytes()),probeSha256=sha((HERE/'live-role-probe.json').read_bytes()))
     save(HERE/'verification.json',receipt)
     print('Verified 12 immutable 0.12.0 observations, independent grading and role/error probe; installed 0.12.1 differs only by the documented spawn telemetry patch')
+if __name__ == "__main__":
+    raise SystemExit('Retired benchmark: Pi integration was removed. Historical results are preserved; use the native GDM/gid benchmarks for new runs.')
 if __name__=='__main__':main()

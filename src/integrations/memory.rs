@@ -12,6 +12,7 @@ use std::{
     path::{Path, PathBuf},
 };
 use unicode_normalization::UnicodeNormalization;
+// Persisted identifier retained so existing local memory remains readable.
 const SCHEMA: &str = "gdm-pi-memory-event/1";
 const MAX_LOG: usize = 256 * 1024;
 fn error(message: impl Into<String>) -> Error {
@@ -414,14 +415,14 @@ pub fn rpc(cwd: &Path, input: &Value) -> Result<Value> {
         .get("agentDir")
         .and_then(Value::as_str)
         .map(PathBuf::from)
-        .or_else(|| std::env::var_os("GDM_PI_AGENT_DIR").map(PathBuf::from))
-        .ok_or_else(|| error("GDM_PI_AGENT_DIR must be absolute"))?;
+        .or_else(|| std::env::var_os("GDM_MEMORY_DIR").map(PathBuf::from))
+        .ok_or_else(|| error("GDM_MEMORY_DIR must be absolute"))?;
     if !agent_dir.is_absolute() {
-        return Err(error("GDM_PI_AGENT_DIR must be absolute"));
+        return Err(error("GDM_MEMORY_DIR must be absolute"));
     }
     let info = fs::symlink_metadata(&agent_dir)?;
     if !info.is_dir() || info.file_type().is_symlink() {
-        return Err(error("GDM_PI_AGENT_DIR must be a regular directory"));
+        return Err(error("GDM_MEMORY_DIR must be a regular directory"));
     }
     let scope = if string(input, "scope").is_empty() {
         "global"

@@ -1,10 +1,7 @@
 //! Provider adapters call native policy and storage through these commands.
 pub mod agent;
 pub mod context;
-pub mod delegate;
 pub mod memory;
-pub mod pi_commands;
-pub mod pi_launcher;
 pub mod render;
 pub mod role_runner;
 
@@ -20,13 +17,10 @@ pub fn run(cwd: &Path, argv: &[String], stdin: &str) -> Result<()> {
         Some("agent") => agent::run(cwd, &argv[1..], stdin),
         Some("context" | "graph") => context::run(cwd, argv),
         Some("memory") => memory::run(cwd, &argv[1..], stdin),
-        Some("delegate") => delegate::run(cwd, &argv[1..], stdin),
         Some("render-skills") => render::run(cwd, &argv[1..]),
         Some("verify-manifests") => render::verify_manifests(cwd, &argv[1..]),
         Some("role-run") => role_runner::run(cwd, &argv[1..]),
         Some("provider-run") => role_runner::provider_run(cwd, &argv[1..]),
-        Some("pi-launch") => pi_launcher::run(cwd, &argv[1..]),
-        Some("pi-commands") => pi_commands::run(cwd, &argv[1..], stdin),
         _ => Err(Error::new("usage", "unknown integration command")),
     }
 }

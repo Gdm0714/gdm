@@ -169,45 +169,7 @@ function probeWithFixture(root: string): (path: string) => BinaryProbe {
 }
 
 async function main(): Promise<void> {
-  if (process.argv.length !== 2) throw new Error("usage: install-gdm.ts");
-  const root = resolve(import.meta.dir, "../..");
-  const source = join(root, "cli/dist/gdm");
-  const target = resolve(process.env.HOME ?? "", ".local/bin/gdm");
-  const launcher = resolve(process.env.HOME ?? "", ".local/bin/gdm-pi");
-  const resultsDirectory = join(import.meta.dir, "results");
-  if (existsSync(resultsDirectory)) {
-    const resultsStat = lstatSync(resultsDirectory);
-    if (!resultsStat.isDirectory() || resultsStat.isSymbolicLink()) throw new Error("unsafe install receipt directory");
-  } else {
-    mkdirSync(resultsDirectory, { mode: 0o700 });
-  }
-  const receiptPath = join(resultsDirectory, "install.json");
-  if (existsSync(receiptPath)) throw new Error("install receipt already exists");
-  const fixture = createPilotFixture();
-  try {
-    const result = installBinary({ source, target, launcher, probe: probeWithFixture(fixture.root) });
-    const receipt = {
-      schemaVersion: INSTALL_SCHEMA,
-      target: "user-local-gdm",
-      sourceSha256: result.sourceSha256,
-      oldSha256: result.oldSha256,
-      installedSha256: result.installedSha256,
-      launcherSha256: result.launcherSha256,
-      backupName: basename(result.backupPath),
-      backupSha256: sha256(readFileSync(result.backupPath)),
-      oldVersion: result.oldProbe.version,
-      oldContextSupported: result.oldProbe.contextSupported,
-      installedVersion: result.installedProbe.version,
-      installedContextSupported: result.installedProbe.contextSupported,
-      querySha256: result.installedProbe.querySha256,
-      queryBytes: result.installedProbe.queryBytes,
-      installedAt: new Date().toISOString(),
-    } as const;
-    writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, { flag: "wx", mode: 0o444 });
-    console.log(JSON.stringify({ installed: true, sourceSha256: result.sourceSha256, backupName: basename(result.backupPath) }));
-  } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
-  }
+  throw new Error("Retired benchmark installer: Pi integration was removed. Use install/install.sh for the native GDM/gid targets.");
 }
 
 if (import.meta.main) await main();

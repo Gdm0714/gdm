@@ -57,11 +57,11 @@ fn main() {
         Some("device") => gdm::device::run(&cwd, &args[1..]),
         Some(
             "agent" | "memory" | "render-skills" | "verify-manifests" | "context" | "graph"
-            | "delegate" | "role-run" | "provider-run" | "pi-launch" | "pi-commands",
+            | "role-run" | "provider-run",
         ) => {
             let mut input = String::new();
             let needs_input = (args[0] == "agent" && args.get(1).is_some_and(|s| s == "hook"))
-                || (["memory", "delegate", "pi-commands"].contains(&args[0].as_str())
+                || (["memory"].contains(&args[0].as_str())
                     && args.get(1).is_some_and(|s| s == "rpc"));
             if needs_input {
                 if let Err(e) = std::io::stdin()
@@ -81,14 +81,14 @@ fn main() {
         None | Some("--help" | "-h") => {
             eprintln!("{}", gdm::i18n::usage());
             eprintln!(
-                "  gdm computer-use status|serve|mcp|select|benchmark\n  gdm device list|doctor|build|install|test|capture\n  gdm memory rpc\n  gdm render-skills --target codex|claude|pi --output DIR"
+                "  gdm computer-use status|serve|mcp|select|benchmark\n  gdm device list|doctor|build|install|test|capture\n  gdm memory rpc\n  gdm render-skills --target codex|claude|gid --output DIR"
             );
             Ok(())
         }
         Some(
             "plan" | "pass" | "recheck" | "audit" | "done" | "status" | "resume" | "retro"
             | "feedback" | "preset" | "miss" | "repair" | "delivery" | "attempt" | "workspace"
-            | "doctor" | "habit" | "protocol",
+            | "doctor" | "habit" | "protocol" | "regression" | "team",
         ) => gdm::runtime::run(&cwd, &args),
         _ => {
             eprintln!("{}", gdm::i18n::usage());
