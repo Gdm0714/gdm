@@ -382,7 +382,7 @@ fn concurrency_limit_releases_capacity_when_an_attempt_reports() {
     let cwd = temp.path();
     team_denied(
         cwd,
-        &["configure", "--mode", "coordinated", "--max-active", "5"],
+        &["configure", "--mode", "coordinated", "--max-active", "33"],
     );
     team_denied(
         cwd,
@@ -407,10 +407,61 @@ fn concurrency_limit_releases_capacity_when_an_attempt_reports() {
 }
 
 #[test]
+fn explicit_larger_budget_dispatches_eight_workers_and_enforces_capacity() {
+    let temp = setup();
+    let cwd = temp.path();
+    team(cwd, &["configure", "--mode", "coordinated"]);
+    assert_eq!(team_json(cwd, "status")["maxActive"], 3);
+    configure(cwd, "32");
+    assert_eq!(team_json(cwd, "status")["maxActive"], 32);
+    configure(cwd, "8");
+    for i in 0..9 {
+        add(
+            cwd,
+            &format!("module-{i}"),
+            &format!("src/module-{i}"),
+            "write",
+            None,
+        );
+    }
+    let next = team_json(cwd, "next");
+    let dispatch: Vec<_> = next["actions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|a| a["action"] == "dispatch")
+        .map(|a| a["taskId"].as_str().unwrap().to_owned())
+        .collect();
+    assert_eq!(
+        dispatch,
+        (0..8).map(|i| format!("module-{i}")).collect::<Vec<_>>()
+    );
+    for i in 0..8 {
+        claim(cwd, &format!("module-{i}"), &format!("attempt-{i}"));
+    }
+    assert_eq!(team_json(cwd, "status")["active"], 8);
+    let ninth = [
+        "claim",
+        "--task",
+        "module-8",
+        "--assignee",
+        "worker-module-8",
+        "--attempt",
+        "attempt-8",
+    ];
+    assert!(team_denied(cwd, &ninth).contains("team_active_limit"));
+    assert!(!has_action(cwd, "dispatch", "module-8"));
+    report(cwd, "module-0", "attempt-0", "failed");
+    assert!(has_action(cwd, "dispatch", "module-8"));
+    team(cwd, &ninth);
+    assert_eq!(team_json(cwd, "status")["active"], 8);
+}
+
+#[test]
 fn overlapping_writes_conflict_but_sibling_paths_and_readers_can_run() {
     let temp = setup();
     let cwd = temp.path();
-    configure(cwd, "4");
+    configure(cwd, "8");
     add(cwd, "writer", "src", "write", None);
     add(cwd, "reader", "src/component.rs", "read", None);
     add(cwd, "sibling", "src-other", "write", None);

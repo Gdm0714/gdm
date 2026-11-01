@@ -111,18 +111,38 @@ v1 snapshot과 handoff는 계속 읽을 수 있다. 자동 실행이 필요한 `
 - CRITICAL: 한 작업의 **실제 구현 모델은 하나**이며 실제 구현 모델과 검수 모델은 달라야 한다.
   같은 구현 모델의 에이전트는 여러 명이어도 된다. 역할 이름이나 조율자 정체성이 아니라
   실제 diff를 만든 주체를 기준으로 기록한다.
-- IMPORTANT: gdm-go의 팀 실행과 완료 책임을 적용한다. `plan init`과 check 등록 후
-  `gdm team configure`로 coordinated 또는 사유가 있는 single을 기록한다. 중간 이상은 독립 검증
-  경계 둘 이상·모듈 간 변경·의미 있는 병렬 조사/구현/리뷰로 판단하며, 지원되는 대상에서는 구현을
-  위임한다. 워커 수 자체를 목표로 삼지 않는다. 대상별 쓰기 권한과 읽기 전용 전문 역할은 유지한다.
-- IMPORTANT: task의 소유 경로·산출물·수용 기준·연결 check·의존성을 등록하고 spawn 전 claim한다.
-  루트가 실제 결과를 확인하고 `gdm pass` 후 `gdm team review --attempt <current-attempt-id>`로
+- IMPORTANT: gdm-go의 팀 실행과 완료 책임을 적용한다. 사용자 원문 요청을 Work brief로
+  보존해 `plan init`하고 check를 최소 1개 등록한 후
+  `gdm team auto --slug <s> --from-request --provider <claude|codex> --model <planner-model> --max-active <1..32> --executor <native|unavailable> --json`을 실행한다.
+  진행자가 역할을 미리 매핑하거나 modules JSON을 작성하지 않는다. 호스트는 실제 가용 슬롯·
+  executor·허용 capability catalogue와 필요한 명시적 context만 제공한다. `--context <path>`는
+  반복 가능하고 `--capabilities-file <path>`로 실제 허용 route를 전달한다. GDM은 원문·check·경로로
+  내부 planner를 제한된 tool-0 호출로 한 번 실행하고 `gdm-team-plan/v1` 배정과 provenance를 만든다.
+  기본 worker route는 `native-inherit`이며 planner의 `--model`은 worker 모델 선택이 아니다.
+  `--file <team-plan.json>`은 명시적 수동 import 호환 경로이며 기본 흐름이 아니다.
+  새 배정의 `--dry-run`도 실제 planner 호출이며 적용만 생략한다. 동일 입력은 저장된 결과를
+  재사용하며 `plannerReused: true`를 반환한다. planner 실패는 명시적으로 보고하고
+  수동 역할 배정이나 키워드 추정으로 대체하지 않는다. CLI가 native 워커를 직접 띄우지 않으므로
+  호스트가 생성된 next·route·prompt를 그대로 native dispatch 루프로 실행하며 재승인을 묻지 않는다.
+  복잡한 작업의 executor가 unavailable이면 필수 역할을 없애지
+  않고 blocked를 보고한다. 작은 low risk 단일 module의 사유 있는 single만 유지한다.
+  기본 상속 모델·허용된 예산과 대상별 권한·비방해 검증을 유지하고 비싼 외부 모델을 자동 추가하지 않는다.
+- IMPORTANT: 생성된 task의 소유 경로·산출물·수용 기준·연결 check·의존성을 유지하고 spawn 전 claim한다.
+  implementation에는 필요한 테스트 작성·수정 경로의 쓰기 소유권을 포함하고 verifier는 읽기 전용을 유지한다.
+  루트가 실제 결과를 확인하고 implementation·verification은 `gdm pass` 후 `gdm team review --attempt <current-attempt-id>`로
   수락한다. 실패·반려는 현재 attempt를 지정한 `gdm team retry --attempt <current-attempt-id>`와
   사유로 처리하고 새 유일 attempt로 claim한다. 선행 결과가 바뀐 후속 task도 명시적으로 반려·
   재시도하며, `gdm team next --json`에 따라 결과 수집·검토·재배정을 계속한다.
-  active·미수락·실패 task를 남긴 채 완료를 보고하지 않는다. coordinated의 기본 활성 예산은
-  3(보통 2~3), single은 1이며 대상별 상한을 지키고 무거운 빌드는 직렬화한다. team 기록은
-  audit나 done을 대체하지 않는다.
+  active·미수락·실패 task를 남긴 채 완료를 보고하지 않는다. coordinated의 활성 예산은
+  품질·완료 시간에 도움이 되는 독립 작업 수와 실제 호스트 가용 슬롯·자원·사용자 비용 한도로
+  정하고 결과 수집마다 재평가한다. single은 1이며 무거운 빌드는 직렬화한다. team 기록은
+  audit나 done을 대체하지 않는다. 해당 Work 구현에 참여하지 않은 실행자의 native verification도
+  아래의 다른 실제 모델에 의한 독립 audit를 대체하지 않는다.
+  새 요청 계획은 schema `gdm-team-plan/v1`을 유지하며 planner semantic v2로 식별한다.
+  knowledge의 `acceptanceMode: artifact-review`, `checks: []`는 출처·근거·미확인 사항을 담은 completed 보고서의
+  불변 해시와 수용 기준을 검토해 수락하며 아직 구현하지 않은 최종 동작 check의 통과를 요구하지 않는다.
+  모든 Work check는 implementation 또는 verification에서 증명한다. 수동·이전 계획의 연결 check
+  수락 방식과 최종 `gdm done`의 전체 check 게이트는 바꾸지 않는다.
 - IMPORTANT: 루트 조율자는 변경 통합·충돌 해결과 최종 판정을 소유한다. coordinated에서는 제한된 연결·
   충돌 수정 외의 통상 구현을 위임하며, 제품 파일을 직접 고치면 기록된 실제 구현 모델과 동일해야 한다.
 
@@ -151,7 +171,7 @@ gdm-go의 도구 전부 + 검수:
 
 | 명령 | 용도 |
 |---|---|
-| `gdm plan init --audit --require <보존> --forbid <금지> --risk <low\|medium\|high> --verification <deterministic\|inspectable\|opaque> [preflight·scope 플래그] [--simplify]` | preflight 계약·baseline과 함께 검수 필수 작업 시작 |
+| `gdm plan init --audit --require <보존> --forbid <금지> --risk <low\|medium\|high> --verification <deterministic\|inspectable\|opaque> [--profile integration] [preflight·scope 플래그] [--simplify]` | preflight 계약·baseline과 함께 검수 필수 작업 시작 |
 | `gdm audit brief` | 검수자에게 줄 브리핑 패키지 출력 |
 | `gdm audit verdict (--pass\|--fail) --report <파일> --implementation-model <모델> --audit-model <모델>` | 검수자 판정과 독립성·보고서·워크트리 지문 기록 |
 | `gdm-agents/run-role.sh --mode work --provider <codex\|claude> --role audit --slug <슬러그> --handoff-event-id <event-id> --claim-id <claim-id> --receiver-role audit [--workspace <경로>] [--model <모델>]` | canonical dispatch identity에 결속된 deterministic model-view를 주입하고 stdout을 `.gdm/<슬러그>/out/protocol/<claim-id>.out`에 저장하며 claim·finish receipt와 자원 제한 안에서 단일 검수 PID 트리를 실행. Work mode에는 `--prompt`를 쓰지 않는다 |
@@ -171,6 +191,8 @@ gdm-go의 도구 전부 + 검수:
 2. 구현 전 가정·불확실성·허용/금지 경로·중단 조건·risk·verification을 분류하고
    `gdm plan init --slug <슬러그> --brief "<요약>" --audit --require "<보존 조건>"
    --forbid "자동 커밋" ...`에 모두 기록한다. 구조 변경의 간소화 검증이 필요할 때 `--simplify`를 붙인다.
+   새 외부 API·인증·업무 상태/다중 턴 작업은 `--profile integration`을 붙인다. 이런 흐름과
+   무관한 작은 로컬 작업·legacy Work를 소급 분류하지 않으며 미분류를 실환경 검증으로 설명하지 않는다.
    high risk는 `--audit`을 생략해도 CLI가 독립 검수를 요구하지만 full은 의도를 드러내기 위해
    명시한다. init 기준선 전에 있던 로컬 변경은 보존 대상이며 이후 delta만 범위 판정한다.
 3. check 설계: gdm-go의 `regression|behavior|edge|static|manual` 분류에
@@ -184,12 +206,16 @@ gdm-go의 도구 전부 + 검수:
    인터랙티브 표면(HTTP·CLI·화면)의 동작을 바꾸는 작업이면 그 표면을 **실제로 구동한
    증거** check도 1개 이상 둔다 (curl 응답, 실행 기록, 스크린샷) — 코드 검증은
    표면 구동을 대신하지 못한다.
+   외부 연동은 gdm-go의 계약 작성 절차로 중요한 미확인 사항 각각과 필수 결과를 check에
+   연결한 뒤 `gdm plan verification import --slug <s> --file <contract.json>`을 실행한다.
+   `gdm plan verification show --slug <s> --json`으로 원문 입력·정상 업무 결과·금지 행동·
+   필요한 다중 턴 상태, 비적용 사유와 증거 범위를 대조한다. 통과 수로 이 대조를 대신하지 않는다.
    등록 후 필요한 검증을 알리고 승인된 범위의 구현을 계속한다. full이라는 이유만으로
    이미 받은 승인을 다시 묻지 않는다.
 4. 구현 시작 전에 실제 구현 모델 하나를 지정한다. 검수 입력의 첫 필드에
    `implementationModel: <실제 모델>`을 기록하고 작업 기록에도 남긴다. 지원되는 대상의 중간 이상
-   작업은 같은 실제 구현 모델의 워커에게 겹치지 않는 파일·모듈을 배정한다. 작은 순차 작업과
-   쓰기 위임이 없는 대상은 single 사유를 기록하고 허용된 방식으로 구현한다. 루트는
+   작업은 생성된 route·소유 경계대로 같은 실제 구현 모델의 워커를 실행한다. 작은 순차 작업은
+   auto의 single 사유를 유지한다. 루트는
    산출물 수집·수용 기준 대조·통합·pass를 맡고, 모든 team task를 수락한 후 독립 검수로 간다.
    검수 전 마지막 변경 이후의 검증이 빠졌을 때만 해당 항목을 `gdm recheck --check <id>`로
    재실행한다. task review와 일반 reviewer 참여는 아래 독립 audit를 대신하지 않는다.
@@ -197,7 +223,11 @@ gdm-go의 도구 전부 + 검수:
    a. `gdm audit brief` 출력, 검수자 프롬프트 전문, 실제 `git diff`와 관련 source excerpt,
       evidence 파일의 exact content·hash·command output을 하나의 contained regular audit
       artifact로 준비한다. brief에는 preflight·경로 계약, red→green·static·expert 증거가
-      포함되어야 한다. 경로나 요약만 넣지 않는다. 최신 세 fingerprint와
+      포함되어야 한다. 외부 연동은 원문 요구, 원문/합성/변형 입력 구분, 실제 업무 영수증·상태를
+      검사한 결과, 전체 중요 미확인 사항과 waiver 사유·정책, 현재 계약·대상 결속을 포함한다.
+      검수자는 등록된 check의 누락과 정상 사용자까지 거절하는 반례도 판단해야 한다.
+      원문 중 민감한 내용은 외부로 보내지 않으며 제외·변형 때문에 확인할 수 없는 범위를 적는다.
+      같은 소스·계약·fixture·대상·검사기 후보를 고정하고 경로나 요약만 넣지 않는다. 최신 세 fingerprint와
       `--artifact <audit-artifact>`를 넣은 `gdm protocol offer`로 이 bytes/hash를 먼저 고정한다.
       credential-free valid UTF-8 완결본이 1 MiB를 넘으면 내용을 임의로 자르지 말고 자동
       audit를 차단한다.
@@ -221,10 +251,15 @@ gdm-go의 도구 전부 + 검수:
       --implementation-model <실제 구현 모델> --audit-model <검수 모델>`.
       CLI는 보고서 해시와 현재 Git 워크트리의 실제 파일 내용 지문을 함께 묶는다. 이후 코드나
       보고서가 바뀌면 검수가 무효가 되고, 같은 내용을 커밋해 HEAD만 바뀐 경우에는 유지된다.
-      Git 지문이 유효한 경우 `done`은 같은 검증 명령을 다시 실행하지 않는다.
+      유효한 audit 결속이 있으면 `done`은 같은 검증 명령을 다시 실행하지 않는다. 외부 연동은
+      소스뿐 아니라 계약·입력·대상 결속도 현재 후보와 맞아야 한다. `audit_bound`를 새 실행으로
+      보고하지 않으며 후보가 바뀌면 필요한 재검증·재검수를 수행한다.
 6. 반려면: 반려 사유를 check로 반영(`gdm plan add`/`edit --reason`)하고 4로.
    (check가 바뀌면 기존 검수는 자동 무효 — 재검수가 필요해진다. 정상 동작이다.)
-7. 통과면 `gdm done` 뒤 gdm-go의 조건부 habit 관찰·평가를 적용하고 사용자 목표 충족을 확인한다.
+   외부 연동의 요구·미확인 사항·범위가 바뀌면 검증 계약도 import하고 연결 증거와
+   해소/한계 기록을 다시 검증한다. 반려 이유만 적고 예전 후보의 증거를 그대로 쓰지 않는다.
+7. 통과면 `gdm done` 뒤 gdm-go의 현재 `verificationSummary` 확인과 조건부 habit 관찰·평가를
+   적용하고 사용자 목표 충족을 확인한다. check 개수나 audit pass만으로 전체 준비 완료를 선언하지 않는다.
 8. 전달은 별도 gate다. `gdm plan contract --check-commit --slug <슬러그>`를 실행한다.
    - exit 4(기본값 커밋 금지)이고 사용자가 전달을 **명시적으로 승인하지 않았으면**:
      검증 결과만 보고하고 멈춘다. `done`이나 이 스킬 호출은 승인이 아니다.
@@ -246,6 +281,8 @@ gdm-go의 도구 전부 + 검수:
 
 gdm-go와 동일하되, 완료 보고에 검수 결과 한 줄을 추가한다:
 "검수: 통과 (보고: .gdm/<슬러그>/out/protocol/<claim-id>.out)".
+외부 연동은 고정한 후보의 실제 검증 범위와 `audit_bound`/재실행 구분, unknown·waived 및
+수용 근거를 함께 밝힌다. 검수 통과가 이 한계를 없애지는 않는다.
 
 ## 예시
 
@@ -265,17 +302,18 @@ Good:
 사용자: 심의 상태 전이 버그 고쳐줘. 중요한 거니까 $gdm-full
 
 어시스턴트:
-1. plan init --audit --require "기존 심의 전이 보존" --forbid "자동 커밋",
-   check 4개(happy/edge/regression/adversarial) 등록·공유
-2. 구현은 현재 진행자 모델의 두 워커가 겹치지 않는 상태 전이·테스트 모듈을 맡음
-   → 조율자가 변경 통합·pass ×4 → recheck 통과
+1. plan init --audit --profile integration --require "기존 심의 전이 보존" --forbid "자동 커밋",
+   check 4개(happy/edge/regression/adversarial) 등록 → 검증 계약 import·show → 범위 공유
+2. team auto → 지식 결과 수락 → 같은 실제 구현 모델의 두 워커가 상태 전이·테스트 모듈을 맡음
+   → 조율자가 변경 통합·pass·review → 구현에 참여하지 않은 verify 워커의 최종 검증 수락
 3. audit brief + 실제 diff/source excerpt + evidence exact content/hash/command output을 묶어
    단일 검수자 실행 — 실제 구현 모델과 다른 사용 가능한 Claude 모델을 지정한다
    `gdm-agents/run-role.sh --mode work --provider claude --model <다른 실제 모델 ID> --role audit --slug ... --handoff-event-id ... --claim-id ... --receiver-role audit`
    → 검수자가 반려 ("전문간사 배정 전 통보 시도 케이스 미검증")
 4. verdict --fail 기록 → 해당 케이스를 c5로 추가, 구현·pass → 재검수 → 통과
 5. verdict --pass → done → habit feedback 1회 → commit gate가 닫혀 있어 전달 없이 정지
-6. "검증 완료: 5개 항목 통과, 검수 통과(1회 반려 후 보완), 전달 승인 대기.
+6. "검증 완료: 고정한 후보의 로컬 격리 DB·통보 mock에서 심의 전이와 통보 상태를 확인했습니다.
+   실서비스 통보는 검증 범위 밖입니다. 검수 통과(1회 반려 후 보완), 전달 승인 대기.
    보고: .gdm/…/out/protocol/<claim-id>.out"
 </example>
 

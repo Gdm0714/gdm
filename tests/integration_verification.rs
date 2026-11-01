@@ -881,6 +881,71 @@ fn completed_summary_rechecks_team_artifacts_excluded_from_source() {
 }
 
 #[test]
+fn completed_summary_rechecks_automatic_allocation_history_under_gdm() {
+    let r = Repo::new(true, false);
+    r.write(
+        ".gdm/team-proof.txt",
+        "Reviewed source findings and product outcomes\n",
+    );
+    r.ok(&[
+        "plan",
+        "add",
+        "--slug",
+        "sample",
+        "--desc",
+        "Source findings are available",
+        "--cmd",
+        "test -s .gdm/team-proof.txt",
+        "--expect",
+        "Reviewed findings exist",
+    ]);
+    r.imported();
+    let assignment = |checks: &[&str]| json!({"paths":["outcome.txt"],"checks":checks,"deliverable":"Evidence for assigned role","acceptance":"Expected result is observed"});
+    let mut module = assignment(&["c1"]);
+    module["id"] = json!("service");
+    let mut plan = json!({"schemaVersion":"gdm-team-plan/v1","executor":"native","maxActive":3,"modules":[module],"independentVerification":true,"knowledge":assignment(&["c3"]),"verification":assignment(&["c2"])});
+    r.write(".gdm/team-plan.json", &plan.to_string());
+    r.team(&["auto", "--file", ".gdm/team-plan.json"]);
+    r.accepted_attempt("knowledge", "k1", "researcher", "c3");
+    plan["maxActive"] = json!(2);
+    r.write(".gdm/team-plan.json", &plan.to_string());
+    r.team(&[
+        "auto",
+        "--file",
+        ".gdm/team-plan.json",
+        "--replan",
+        "--reason",
+        "Adjust concurrency after reviewed source findings",
+    ]);
+    r.accepted_attempt("knowledge", "k2", "researcher", "c3");
+    r.accepted_attempt("implement-service", "i1", "builder", "c1");
+    r.accepted_attempt("verify", "v1", "tester", "c2");
+    r.resolved();
+    r.done();
+    let w = r.state();
+    assert_eq!(w["verificationSummary"]["completionValid"], true);
+    let path = w["team"]["allocationHistory"][0]["artifact"]["path"]
+        .as_str()
+        .unwrap();
+    assert!(path.starts_with(".gdm/"));
+    let source_before = r.json(&["workspace", "fingerprint", "--json"]);
+    r.write(path, "Changed historical allocation\n");
+    assert_eq!(
+        r.json(&["workspace", "fingerprint", "--json"]),
+        source_before
+    );
+    let summary = &r.state()["verificationSummary"];
+    assert_eq!(summary["completionValid"], false);
+    assert!(
+        summary["blockers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|b| b["code"] == "team_verification_stale")
+    );
+}
+
+#[test]
 fn legitimate_team_update_archives_completed_receipt_before_revalidation() {
     let r = Repo::new(true, false);
     r.imported();

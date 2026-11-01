@@ -310,7 +310,7 @@ describe("doctor 버전 드리프트", () => {
 });
 
 describe("doctor Codex 서브에이전트 상한", () => {
-  test("공식 agents 설정의 4개 상한을 권장 범위로 보고한다", () => {
+  test("공식 agents 설정의 4개 상한을 실행 대상의 진단 정책으로 보고한다", () => {
     const cwd = tempRepo();
     const home = mkdtempSync(join(tmpdir(), "gdm-agent-limit-home-"));
     mkdirSync(join(home, ".codex"), { recursive: true });
@@ -323,14 +323,20 @@ describe("doctor Codex 서브에이전트 상한", () => {
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain(
-      "Codex 서브에이전트 사용자 설정: 동시 활성 4개 (권장 범위)",
+      process.env.GDM_NATIVE_TEST_BINARY
+        ? "Codex 서브에이전트 사용자 설정: 동시 상한 4개 (현재 세션 유효값 미확인)"
+        : "Codex 서브에이전트 사용자 설정: 동시 활성 4개 (권장 범위)",
     );
     expect(result.stdout).toContain("현재 세션 유효값");
     expect(result.stdout).toContain("/debug-config");
     expect(result.stdout).not.toContain("구형 상한 설정");
+    if (process.env.GDM_NATIVE_TEST_BINARY) {
+      expect(result.stdout).not.toContain("권장 범위");
+      expect(result.stdout).not.toContain("낮추세요");
+    }
   });
 
-  test("구형 multi_agent_v2의 1000개 상한을 위험으로 경고한다", () => {
+  test("구형 multi_agent_v2의 상한과 실행 대상의 마이그레이션 안내를 보고한다", () => {
     const cwd = tempRepo();
     const home = mkdtempSync(join(tmpdir(), "gdm-agent-limit-legacy-home-"));
     mkdirSync(join(home, ".codex"), { recursive: true });
@@ -343,12 +349,24 @@ describe("doctor Codex 서브에이전트 상한", () => {
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain(
-      "Codex 서브에이전트 사용자 설정: legacy 동시 활성 1000개 (위험 — 8개 초과)",
+      process.env.GDM_NATIVE_TEST_BINARY
+        ? "Codex 서브에이전트 사용자 설정: legacy 동시 상한 1000개 (현재 세션 유효값 미확인)"
+        : "Codex 서브에이전트 사용자 설정: legacy 동시 활성 1000개 (위험 — 8개 초과)",
     );
-    expect(result.stdout).toContain("[agents] max_concurrent_threads_per_session = 4만 유지");
+    expect(result.stdout).toContain(
+      process.env.GDM_NATIVE_TEST_BINARY
+        ? "[agents] max_concurrent_threads_per_session = 1000만 유지"
+        : "[agents] max_concurrent_threads_per_session = 4만 유지",
+    );
+    if (process.env.GDM_NATIVE_TEST_BINARY) {
+      expect(result.stdout).not.toContain("= 4만 유지");
+      expect(result.stdout).not.toContain("위험 —");
+      expect(result.stdout).not.toContain("낮추세요");
+      expect(result.stdout).toContain("/debug-config");
+    }
   });
 
-  test("명시 상한이 없으면 안전한 설정 예시를 안내한다", () => {
+  test("명시 상한이 없으면 실행 대상의 설정 안내를 보고한다", () => {
     const cwd = tempRepo();
     const home = mkdtempSync(join(tmpdir(), "gdm-agent-limit-unset-home-"));
     mkdirSync(join(home, ".codex"), { recursive: true });
@@ -360,7 +378,15 @@ describe("doctor Codex 서브에이전트 상한", () => {
     expect(result.stdout).toContain(
       "Codex 서브에이전트 사용자 설정: 명시 상한 없음 (현재 세션 유효값 미확인)",
     );
-    expect(result.stdout).toContain("16GB급 장비 권장: [agents] max_concurrent_threads_per_session = 4");
+    expect(result.stdout).toContain(
+      process.env.GDM_NATIVE_TEST_BINARY
+        ? "실제 가용 슬롯·독립 작업·자원·비용 예산에 맞춰 작업별 동시 실행 수를 정하세요"
+        : "16GB급 장비 권장: [agents] max_concurrent_threads_per_session = 4",
+    );
+    if (process.env.GDM_NATIVE_TEST_BINARY) {
+      expect(result.stdout).not.toContain("max_concurrent_threads_per_session = 4");
+      expect(result.stdout).not.toContain("16GB급 장비 권장");
+    }
   });
 });
 
@@ -500,7 +526,9 @@ describe("doctor custom CODEX_HOME", () => {
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain(
-      "Codex 서브에이전트 사용자 설정: 동시 활성 4개 (권장 범위)",
+      process.env.GDM_NATIVE_TEST_BINARY
+        ? "Codex 서브에이전트 사용자 설정: 동시 상한 4개 (현재 세션 유효값 미확인)"
+        : "Codex 서브에이전트 사용자 설정: 동시 활성 4개 (권장 범위)",
     );
     expect(result.stdout).not.toContain("1000개");
     expect(result.stdout).toContain("Codex 에이전트 게이트: 설치됨");
@@ -523,7 +551,11 @@ describe("Codex TOML 및 hook 설치 정밀 진단", () => {
     const result = runCli(cwd, ["doctor"], { HOME: home });
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain("사용자 설정: 동시 활성 4개 (권장 범위)");
+    expect(result.stdout).toContain(
+      process.env.GDM_NATIVE_TEST_BINARY
+        ? "사용자 설정: 동시 상한 4개 (현재 세션 유효값 미확인)"
+        : "사용자 설정: 동시 활성 4개 (권장 범위)",
+    );
     expect(result.stdout).toContain(
       "설정 완료 · 실행 가능 · 사용자 설정 활성",
     );

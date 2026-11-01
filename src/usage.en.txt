@@ -27,6 +27,14 @@ Usage:
   gdm plan add  --desc <check> --expect <expected> --manual [--expert] [--slug <slug>]
   gdm plan add  --from-brief [--dry-run] [--slug <slug>]   # Import draft checks from the brief section "## Verification checks" (Korean heading also supported)
   gdm plan list [--json] [--slug <slug>]
+  gdm plan init ... --profile integration
+  gdm plan verification import --slug <slug> --file <contract.json>
+  gdm plan verification show --slug <slug> [--json]
+  gdm plan verification resolve --slug <slug> --id <unknown-id>
+  gdm plan verification waive --slug <slug> --id <unknown-id> --reason <limit> --policy <authority> [--accept-unknown-scope]
+  gdm team auto --slug <slug> --from-request --provider claude|codex --model <planner-model> --max-active <1..32> --executor native|unavailable
+                [--context <relative-file>]... [--capabilities-file <catalogue.json>] [--dry-run] [--json] [--replan --reason <reason>]  # invoke the internal planner from the original brief and registered checks; allocate roles and routes
+  gdm team auto --slug <slug> --file <spec.json> [--dry-run] [--json] [--replan --reason <reason>]  # explicit manual import compatibility; --from-request is the default workflow
   gdm plan edit --check <id> [--desc ..] [--cmd ..] [--expect ..] [--kind ..] --reason <reason> [--slug <slug>]
   gdm plan source --fingerprint <sha256> [--slug <slug>]
   gdm pass <id> --red [--note <note>] [--slug <slug>] [--expected-plan-fingerprint <sha256>]     # Record the pre-fix failure for a regression check
@@ -36,7 +44,7 @@ Usage:
   gdm audit brief [--json] [--slug <slug>]                # Print the briefing package for an independent auditor
   gdm audit verdict (--pass | --fail) --report <audit-report> --implementation-model <model> --audit-model <model> [--slug <slug>]
   gdm done [--slug <slug>] [--expected-plan-fingerprint <sha256>]
-  gdm team configure --slug <slug> --mode coordinated|single [--reason <reason>] [--max-active <1..4>] [--session <root-session-id>]
+  gdm team configure --slug <slug> --mode coordinated|single [--reason <reason>] [--max-active <1..32>] [--session <root-session-id>]
   gdm team add --slug <slug> --task <id> --role <role> --path <relative-path>... --access read|write --deliverable <text> --acceptance <criteria> --check <id>... [--depends-on <task-id>]...
   gdm team claim --slug <slug> --task <id> --assignee <worker-id> --attempt <attempt-id>
   gdm team report --slug <slug> --task <id> --attempt <attempt-id> --outcome completed|failed|cancelled|inconclusive --summary <text> --artifact <relative-file> [--tokens <count>] [--elapsed-ms <time>]
@@ -82,6 +90,8 @@ Presets: use "@name" as --cmd in plan add/edit to expand a registered command
   (Example: gdm preset set test "./gradlew test" → gdm plan add --cmd @test ...)
 
 Rules:
+  - Register at least one check before team auto --from-request. New inputs invoke the actual planner even with --dry-run; unchanged inputs reuse the result
+    --model selects the planner; workers follow allowed catalogue routes. The host claims before executing generated next/route prompts
   - GDM produces automatic evidence: pass runs cmd and stores and hashes its output.
     A check passes only on exit 0. Design commands to succeed only when expectations are met.
   - done succeeds only after revalidating every check and evidence file and hash.

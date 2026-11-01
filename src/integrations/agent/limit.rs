@@ -8,7 +8,6 @@ use std::{
     path::Path,
 };
 use toml_edit::{DocumentMut, Item, TableLike};
-pub const RECOMMENDED_CONCURRENT_LIMIT: u64 = 4;
 fn note() -> &'static str {
     crate::i18n::text(
         "  → 현재 세션 유효값은 CLI·프로필·프로젝트 설정이 덮을 수 있으므로 /debug-config에서 확인하세요",
@@ -168,8 +167,8 @@ fn lines(config: &Value, path: &Path) -> Vec<String> {
             out.push(format!("  → {message}"));
         }
         out.push(crate::lfmt!(
-            "  → {}의 [agents] max_concurrent_threads_per_session = 4를 확인하세요",
-            "  → Check [agents] max_concurrent_threads_per_session = 4 in {}",
+            "  → {}의 [agents] max_concurrent_threads_per_session 상한이 양의 정수인지 확인하세요",
+            "  → Check that [agents] max_concurrent_threads_per_session is a positive integer in {}",
             path.display()
         ));
     } else {
@@ -177,33 +176,20 @@ fn lines(config: &Value, path: &Path) -> Vec<String> {
         let legacy = config["legacyFeature"]
             .as_u64()
             .or_else(|| config["legacyAgents"].as_u64());
-        if let Some(effective) = official.or(legacy) {
+        if let Some(configured) = official.or(legacy) {
             let prefix = if official.is_none() {
-                crate::i18n::text("legacy 동시 활성", "Legacy concurrency")
+                crate::i18n::text("legacy 동시 상한", "Legacy concurrency limit")
             } else {
-                crate::i18n::text("동시 활성", "Concurrent agents")
-            };
-            let class = if effective <= 4 {
-                crate::i18n::text("권장 범위", "Recommended range")
-            } else if effective <= 8 {
-                crate::i18n::text(
-                    "고병렬 설정 — 메모리 압력 확인",
-                    "High parallelism — check memory pressure",
-                )
-            } else {
-                crate::i18n::text("위험 — 8개 초과", "Risk — exceeds 8")
+                crate::i18n::text("동시 상한", "Concurrency limit")
             };
             out.push(crate::lfmt!(
-                "  Codex 서브에이전트 사용자 설정: {prefix} {effective}개 ({class})",
-                "  Codex subagent user settings: {prefix} {effective} ({class})"
+                "  Codex 서브에이전트 사용자 설정: {prefix} {configured}개 (현재 세션 유효값 미확인)",
+                "  Codex subagent user settings: {prefix} {configured} (effective session value unverified)"
             ));
             if legacy.is_some() {
-                out.push(crate::i18n::text("  → 구형 상한 설정을 제거하고 [agents] max_concurrent_threads_per_session = 4만 유지하세요", "  → Remove legacy limits and keep only [agents] max_concurrent_threads_per_session = 4").into());
-            } else if effective > 8 {
                 out.push(crate::lfmt!(
-                    "  → {}의 [agents] max_concurrent_threads_per_session = 4로 낮추세요",
-                    "  → Lower [agents] max_concurrent_threads_per_session to 4 in {}",
-                    path.display()
+                    "  → 구형 상한 설정을 제거하고 [agents] max_concurrent_threads_per_session = {configured}만 유지하세요",
+                    "  → Remove legacy limits and keep only [agents] max_concurrent_threads_per_session = {configured}"
                 ));
             }
         } else {
@@ -211,7 +197,7 @@ fn lines(config: &Value, path: &Path) -> Vec<String> {
                 crate::i18n::text("  Codex 서브에이전트 사용자 설정: 명시 상한 없음 (현재 세션 유효값 미확인)", "  Codex subagent user settings: no explicit limit (effective session value unverified)").into(),
             );
             out.push(
-                crate::i18n::text("  → 16GB급 장비 권장: [agents] max_concurrent_threads_per_session = 4", "  → Recommended for 16 GB machines: [agents] max_concurrent_threads_per_session = 4").into(),
+                crate::i18n::text("  → 실제 가용 슬롯·독립 작업·자원·비용 예산에 맞춰 작업별 동시 실행 수를 정하세요", "  → Choose per-work concurrency from available slots, independent tasks, resources and spending limits").into(),
             );
         }
     }
@@ -246,7 +232,7 @@ mod tests {
         let l = lines(&config, Path::new("/test/config.toml"));
         assert_eq!(
             l[0],
-            "  Codex 서브에이전트 사용자 설정: 동시 활성 4개 (권장 범위)"
+            "  Codex 서브에이전트 사용자 설정: 동시 상한 4개 (현재 세션 유효값 미확인)"
         );
         assert!(l[1].contains("구형 상한"));
     }
@@ -281,20 +267,55 @@ mod tests {
         assert_eq!(read_at(temp.path())["invalidKind"], "path");
     }
     #[test]
-    fn boundaries_and_inline_tables() {
-        for (n, label) in [
-            (4, "권장 범위"),
-            (5, "고병렬 설정"),
-            (8, "고병렬 설정"),
-            (9, "위험"),
-        ] {
+    fn configured_limits_are_preserved_without_unmeasured_risk_classification() {
+        for n in [1, 4, 5, 8, 9, 16, 32, 1000] {
             let c = parse(&format!(
                 "agents={{max_concurrent_threads_per_session={n}}}"
             ));
+            assert_eq!(c["official"], n);
+            assert_eq!(c["invalid"], false);
             let l = lines(&c, Path::new("/test/config.toml"));
-            assert!(l[0].contains(label));
-            assert_eq!(l.iter().any(|s| s.contains("4로 낮추세요")), n > 8);
+            assert!(l[0].contains(&format!("동시 상한 {n}개")));
+            assert!(l[0].contains("현재 세션 유효값 미확인"));
+            assert!(
+                !l.iter().any(|s| s.contains("낮추세요")
+                    || s.contains("위험")
+                    || s.contains("권장 범위"))
+            );
             assert!(l.last().unwrap().contains("/debug-config"));
         }
+    }
+    #[test]
+    fn legacy_migration_keeps_the_selected_value() {
+        for (source, expected) in [
+            ("[agents]\nmax_threads=12\n", 12),
+            (
+                "[features.multi_agent_v2]\nmax_concurrent_threads_per_session=16\n",
+                16,
+            ),
+            (
+                "[agents]\nmax_concurrent_threads_per_session=24\nmax_threads=6\n",
+                24,
+            ),
+        ] {
+            let l = lines(&parse(source), Path::new("/test/config.toml"));
+            assert!(l[0].contains(&format!("동시 상한 {expected}개")));
+            assert!(l[1].contains(&format!(
+                "max_concurrent_threads_per_session = {expected}만 유지"
+            )));
+        }
+    }
+    #[test]
+    fn inspection_does_not_rewrite_the_users_configuration() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("config.toml");
+        let original = "# Keep user formatting and unrelated settings\nmodel = 'chosen-model'\n[agents]\nmax_concurrent_threads_per_session = 32\nmax_threads = 6\n";
+        fs::write(&path, original).unwrap();
+        let config = read_at(temp.path());
+        let output = lines(&config, &path);
+        assert_eq!(config["official"], 32);
+        assert!(output[0].contains("동시 상한 32개"));
+        assert!(output[1].contains("max_concurrent_threads_per_session = 32만 유지"));
+        assert_eq!(fs::read_to_string(&path).unwrap(), original);
     }
 }

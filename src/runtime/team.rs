@@ -6,8 +6,13 @@ use crate::support::{
 use serde_json::{Value, json};
 use std::{collections::BTreeSet, fs, path::Path};
 
+mod planning;
+mod request;
+
 const SCHEMA: &str = "gdm-team/v1";
 const MAX_TASKS: usize = 64;
+// A Work budget is separate from the host's available worker slots.
+const MAX_ACTIVE_WORKERS: u64 = 32;
 const MAX_ATTEMPTS: usize = 64;
 const MAX_ARTIFACT: usize = 1024 * 1024;
 const MAX_NUMBER: u64 = 9_007_199_254_740_991;
@@ -335,12 +340,12 @@ pub fn validate(work: &Value) -> Result<()> {
             "configuredAt",
             "tasks",
         ],
-        &["reason", "sessionId"],
+        &["reason", "sessionId", "allocation", "allocationHistory"],
     ) || team["schemaVersion"] != SCHEMA
         || !["coordinated", "single"].contains(&s(team, "mode"))
         || team["maxActive"]
             .as_u64()
-            .is_none_or(|n| !(1..=4).contains(&n))
+            .is_none_or(|n| !(1..=MAX_ACTIVE_WORKERS).contains(&n))
         || (team["mode"] == "single" && team["maxActive"] != 1)
         || !timestamp(&team["configuredAt"])
         || team.get("sessionId").is_some_and(|v| !id_ok(v))
@@ -371,9 +376,16 @@ pub fn validate(work: &Value) -> Result<()> {
                 "status",
                 "attempts",
             ],
-            &["withdrawal"],
+            &["withdrawal", "routeId", "acceptanceMode"],
         ) || !id_ok(&task["id"])
             || !id_ok(&task["role"])
+            || task.get("routeId").is_some_and(|r| !id_ok(r))
+            || task.get("acceptanceMode").is_some_and(|m| {
+                *m != "artifact-review"
+                    || task["role"] != "knowledge"
+                    || task["access"] != "read"
+                    || work["team"]["allocation"]["request"]["input"]["promptVersion"] != 2
+            })
             || !["read", "write"].contains(&s(task, "access"))
             || !text_ok(&task["deliverable"], "deliverable", 480)
             || !text_ok(&task["acceptance"], "acceptance", 480)
@@ -381,9 +393,17 @@ pub fn validate(work: &Value) -> Result<()> {
                 v.as_str()
                     .is_some_and(|v| path(v, false).is_ok_and(|p| p == v))
             })
-            || !strings(&task["checks"], 1, 64, |v| {
-                id_ok(v) && state::checks(work).iter().any(|c| c["id"] == *v)
-            })
+            || !strings(
+                &task["checks"],
+                if task["acceptanceMode"] == "artifact-review" {
+                    0
+                } else {
+                    1
+                },
+                64,
+                |v| id_ok(v) && state::checks(work).iter().any(|c| c["id"] == *v),
+            )
+            || (task["acceptanceMode"] == "artifact-review" && !array(&task["checks"]).is_empty())
             || !strings(&task["dependsOn"], 0, MAX_TASKS, |v| {
                 id_ok(v) && ids.contains(state::s(v))
             })
@@ -534,6 +554,7 @@ pub fn validate(work: &Value) -> Result<()> {
     }) {
         return Err(corrupt());
     }
+    planning::validate(work)?;
     Ok(())
 }
 /// File-independent completion gates, also used by legacy work completion.
@@ -544,7 +565,7 @@ pub fn blockers(work: &Value) -> Vec<Value> {
     if validate(work).is_err() {
         return vec![json!({"code":"team_state_corrupt","message":"Team state is invalid"})];
     }
-    let mut out = vec![];
+    let mut out = planning::blockers(work);
     let current = accepted_ids(work);
     if team["mode"] == "coordinated" && tasks(work).is_empty() {
         out.push(json!({"code":"team_tasks_required","message":"Coordinated work requires at least one scoped task"}));
@@ -564,6 +585,7 @@ pub fn blockers(work: &Value) -> Vec<Value> {
 /// Re-read accepted artifacts and linked evidence at the final completion gate.
 pub fn verify_artifacts(cwd: &Path, work: &Value) -> Result<()> {
     validate(work)?;
+    planning::verify_history(cwd, work)?;
     for task in tasks(work).iter().filter(|t| t["status"] == "accepted") {
         verify_task(cwd, work, task)?;
     }
@@ -573,6 +595,7 @@ pub fn verify_artifacts(cwd: &Path, work: &Value) -> Result<()> {
 /// acceptance need repair. That does not permit altered accepted artifacts.
 pub fn verify_snapshot_artifacts(cwd: &Path, work: &Value) -> Result<()> {
     validate(work)?;
+    planning::verify_history(cwd, work)?;
     for task in tasks(work).iter().filter(|t| t["status"] == "accepted") {
         verify_result_files(cwd, task)?;
         verify_linked_evidence(cwd, work, task)?;
@@ -665,7 +688,7 @@ pub fn summary(work: &Value) -> Value {
             json!({"taskId":task["id"],"attemptId":latest(task)["id"],"status":task["status"],"action":action})
         })
         .collect();
-    json!({"schemaVersion":SCHEMA,"mode":team["mode"],"maxActive":team["maxActive"],"sessionId":team["sessionId"],"taskCount":tasks(work).len(),"pending":count("pending"),"active":count("active"),"reported":count("reported"),"rejected":count("rejected"),"withdrawn":count("withdrawn"),"accepted":current.len(),"taskStates":states,"blockers":blockers(work)})
+    json!({"schemaVersion":SCHEMA,"mode":team["mode"],"maxActive":team["maxActive"],"sessionId":team["sessionId"],"taskCount":tasks(work).len(),"pending":count("pending"),"active":count("active"),"reported":count("reported"),"rejected":count("rejected"),"withdrawn":count("withdrawn"),"accepted":current.len(),"taskStates":states,"blockers":blockers(work),"allocation":planning::projection(work)})
 }
 
 fn grammar(args: &[String], allowed: &[&str], repeatable: &[&str]) -> Result<()> {
@@ -684,9 +707,9 @@ fn grammar(args: &[String], allowed: &[&str], repeatable: &[&str]) -> Result<()>
                 format!("Unknown or duplicate team flag --{key}"),
             ));
         }
-        if key == "json" {
+        if ["json", "dry-run", "replan", "from-request"].contains(&key) {
             if inline.is_some() {
-                return Err(err("usage", "--json does not take a value"));
+                return Err(err("usage", format!("--{key} does not take a value")));
             }
         } else if inline.is_none() {
             index += 1;
@@ -754,10 +777,10 @@ fn configure(cwd: &Path, work: &mut Value, args: &[String]) -> Result<()> {
         return Err(err("usage", "Single mode requires a substantive --reason"));
     }
     let cap = number(args, "max-active")?.unwrap_or(if mode == "single" { 1 } else { 3 });
-    if !(1..=4).contains(&cap) || (mode == "single" && cap != 1) {
+    if !(1..=MAX_ACTIVE_WORKERS).contains(&cap) || (mode == "single" && cap != 1) {
         return Err(err(
             "usage",
-            "--max-active must be 1 through 4; single mode requires 1",
+            format!("--max-active must be 1 through {MAX_ACTIVE_WORKERS}; single mode requires 1"),
         ));
     }
     let session = read_flag(args, "session")?
@@ -817,6 +840,11 @@ fn configure(cwd: &Path, work: &mut Value, args: &[String]) -> Result<()> {
     } else if let Some(session) = old.get("sessionId") {
         team["sessionId"] = session.clone();
     }
+    for key in ["allocation", "allocationHistory"] {
+        if let Some(value) = old.get(key) {
+            team[key] = value.clone();
+        }
+    }
     if work["team"] == team {
         return Ok(());
     }
@@ -835,6 +863,7 @@ fn configure(cwd: &Path, work: &mut Value, args: &[String]) -> Result<()> {
 }
 fn add(cwd: &Path, work: &mut Value, args: &[String]) -> Result<()> {
     configured(work)?;
+    planning::locked(work)?;
     let id = contract::opaque_id(&required_flag(args, "task")?, "task")?;
     let prior = tasks(work).iter().position(|t| t["id"] == id);
     if prior.is_some_and(|i| {
@@ -911,6 +940,7 @@ fn claim(cwd: &Path, work: &mut Value, args: &[String]) -> Result<()> {
     let assignee = contract::opaque_id(&required_flag(args, "assignee")?, "assignee")?;
     let attempt = contract::opaque_id(&required_flag(args, "attempt")?, "attempt")?;
     let task = &tasks(work)[i];
+    planning::claim(cwd, work, task, &assignee, &attempt)?;
     if task["status"] != "pending" {
         return Err(err("team_transition", "Only a pending task can be claimed"));
     }
@@ -1144,6 +1174,7 @@ fn retry(cwd: &Path, work: &mut Value, args: &[String]) -> Result<()> {
 }
 fn withdraw(cwd: &Path, work: &mut Value, args: &[String]) -> Result<()> {
     configured(work)?;
+    planning::locked(work)?;
     let i = index(work, &required_flag(args, "task")?)?;
     let why = reason(&required_flag(args, "reason")?)?;
     let expected = read_flag(args, "attempt")?
@@ -1202,6 +1233,13 @@ fn next(cwd: &Path, work: &Value) -> Value {
     if work.get("team").is_none() {
         return json!({"action":"configure","command":format!("gdm team configure --slug {} --mode coordinated",s(work,"slug"))});
     }
+    let mut allocation_blockers = planning::blockers(work);
+    if let Err(error) = planning::verify_history(cwd, work) {
+        allocation_blockers.push(json!({"code":error.code,"message":error.message}));
+    }
+    if !allocation_blockers.is_empty() {
+        return json!({"schemaVersion":"gdm-team-next/v1","automaticExecution":false,"actions":[{"action":"blocked","blockers":allocation_blockers}],"allocation":planning::projection(work)});
+    }
     let mut actions = vec![];
     let current = accepted_ids(work);
     let active: Vec<_> = tasks(work)
@@ -1231,7 +1269,16 @@ fn next(cwd: &Path, work: &Value) -> Value {
                 })
             })
         {
-            actions.push(json!({"action":"dispatch","taskId":id,"role":task["role"],"paths":task["paths"],"access":task["access"],"deliverable":task["deliverable"],"acceptance":task["acceptance"],"checks":task["checks"],"message":"The coordinator must claim this task with its assignee and attempt before launching the scoped worker"}));
+            let mut action = json!({"action":"dispatch","taskId":id,"role":task["role"],"paths":task["paths"],"access":task["access"],"deliverable":task["deliverable"],"acceptance":task["acceptance"],"checks":task["checks"],"message":"The coordinator must claim this task with its assignee and attempt before launching the scoped worker"});
+            if let Some(route) = request::route(work, task) {
+                action["route"] = route.clone();
+                action["routeId"] = task["routeId"].clone();
+                action["prompt"] = json!(request::dispatch_prompt(work, task));
+                if let Some(mode) = task.get("acceptanceMode") {
+                    action["acceptanceMode"] = mode.clone();
+                }
+            }
+            actions.push(action);
             selected.push(task);
         }
     }
@@ -1255,6 +1302,24 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
         .ok_or_else(|| err("usage", "A team subcommand is required"))?;
     let (allowed, repeatable): (&[&str], &[&str]) = match command.as_str() {
         "configure" => (&["slug", "mode", "reason", "max-active", "session"], &[]),
+        "auto" => (
+            &[
+                "slug",
+                "file",
+                "dry-run",
+                "json",
+                "replan",
+                "reason",
+                "from-request",
+                "provider",
+                "model",
+                "max-active",
+                "executor",
+                "context",
+                "capabilities-file",
+            ],
+            &["context"],
+        ),
         "add" => (
             &[
                 "slug",
@@ -1290,11 +1355,33 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
         _ => return Err(err("usage", "Unknown team subcommand")),
     };
     grammar(args, allowed, repeatable)?;
+    if command == "auto" && args.iter().any(|a| a == "--from-request") {
+        return print_json(&request::run(cwd, args)?);
+    }
+    if command == "auto"
+        && args.iter().any(|a| {
+            [
+                "--provider",
+                "--model",
+                "--max-active",
+                "--executor",
+                "--context",
+                "--capabilities-file",
+            ]
+            .contains(&a.split('=').next().unwrap_or(""))
+        })
+    {
+        return Err(err(
+            "usage",
+            "Planner options require --from-request; --file is a manual import",
+        ));
+    }
     let slug = required_flag(args, "slug")?;
     let mut work = store::load(cwd, &slug)?;
     validate(&work)?;
     match command.as_str() {
         "configure" => configure(cwd, &mut work, args)?,
+        "auto" => return print_json(&planning::run(cwd, &mut work, args)?),
         "add" => add(cwd, &mut work, args)?,
         "claim" => claim(cwd, &mut work, args)?,
         "report" => report(cwd, &mut work, args)?,

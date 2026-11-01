@@ -7,7 +7,6 @@ import {
   AGENT_SESSION_ACTIVE_EXECUTION_LIMIT,
   parseAgentEnvelope,
 } from "../src/codex-agent-hook.ts";
-import { RECOMMENDED_CONCURRENT_LIMIT } from "../src/codex-agent-limit.ts";
 
 const ROOT = join(import.meta.dir, "..", "..");
 const ORDINARY_WORKFLOWS = ["go", "full", "plan", "review", "analyze", "research"];
@@ -28,7 +27,7 @@ const ENVELOPE_FIELDS = [
 const ENVELOPE_ADAPTATION_INSTRUCTION =
   "아래 한 줄은 형식 예시일 뿐이다. 복사하기 전에 `taskId`, `parentId`, `role`, `scope`, `ownership.mode/resources`, `deliverable`, `verify`, `stopWhen`, `canDelegate`, `childQuota`(quota), `depth`, `blockedBy` 값을 작업에 맞게 모두 바꾼다.";
 const HARD_FUSE =
-  "훅이 실행되는 하나의 native root session tree에서 활성 실행 예약 32는 새 spawn의 입장 상한이고, 동시 4는 해당 target runtime의 유효 설정이 4일 때 native hard 상한이다.";
+  "훅이 실행되는 하나의 native root session tree에서 활성 실행 예약 32는 새 spawn의 입장 상한이고, 실제 동시 실행 상한은 해당 target runtime의 유효 설정을 따른다.";
 
 function skill(name: string): string {
   return readFileSync(join(ROOT, "skills", name, "SKILL.md"), "utf8");
@@ -54,6 +53,104 @@ function delegationContract(): string {
 }
 
 describe("workflow policy", () => {
+  test("request-driven allocation leaves role and module planning inside GDM", () => {
+    const routing = readFileSync(join(ROOT, "skills", "_shared", "routing.md"), "utf8");
+    for (const source of [skill("go"), skill("full"), skill("plan"), routing]) {
+      const text = normalized(source);
+      const command = source.split("\n").find((line) => line.includes("gdm team auto --slug <s> --from-request"));
+      expect(command).toBeDefined();
+      for (const flag of ["--provider", "--model", "--max-active", "--executor"]) {
+        expect(command).toContain(flag);
+      }
+      expect(command).not.toContain("--file");
+      expect(text).toMatch(/원문.*(?:Work brief|brief)/u);
+      expect(text).toContain("check를 최소 1개 등록");
+      expect(text).toContain("진행자가 역할을 미리 매핑하거나 modules JSON을 작성하지 않는다");
+      expect(text).toContain("--context <path>");
+      expect(text).toContain("--capabilities-file <path>");
+      expect(text).toContain("`native-inherit`");
+      expect(text).toContain("planner의 `--model`은 worker 모델 선택이 아니다");
+      expect(text).toMatch(/tool-0 호출/u);
+      expect(text).toMatch(/--dry-run.{0,20}(?:도 실제 planner|`도 실제 planner)/u);
+      expect(text).toMatch(/수동 import.*호환 경로이며 기본 흐름이 아니다/u);
+      expect(source).not.toMatch(/(?:배정|gdm-team-plan\/v1)[^\n]{0,20}파일을 작성/u);
+      expect(source).not.toContain("modules[{id,paths,checks,deliverable,acceptance}]");
+    }
+
+    for (const target of ["codex", "claude", "gid"]) {
+      const text = normalized(readFileSync(join(ROOT, "skills", "_shared", "targets", "fragments", `${target}-delegation.md`), "utf8"));
+      expect(text).toContain("`gdm team auto --from-request`가 생성");
+      expect(text).toContain("진행자가 역할을 미리 매핑하거나 modules JSON을 작성하지 않는다");
+      expect(text).toContain("route·prompt를 그대로");
+      expect(text).toMatch(/(?:spawn|실행) 전에 `gdm team claim`/u);
+      expect(text).toContain("blocked");
+      expect(text).toContain("report");
+      expect(text).toContain("review");
+    }
+
+    const docs = readFileSync(join(ROOT, "docs", "automatic-role-allocation.md"), "utf8");
+    const requestWorkflow = docs.split("## Manual import compatibility")[0]!;
+    const exampleCommands = requestWorkflow.split("\n").filter((line) => line.startsWith("gdm team auto "));
+    expect(exampleCommands.length).toBeGreaterThan(0);
+    for (const command of exampleCommands) {
+      expect(command).toContain("--from-request");
+      expect(command).not.toContain("--file");
+    }
+    expect(requestWorkflow).toContain("automaticPlanning: true");
+    expect(requestWorkflow).toContain("automaticExecution: false");
+    expect(requestWorkflow).toContain("allocation.request");
+    const catalogue = JSON.parse(requestWorkflow.match(/```json\n([\s\S]*?)\n```/u)![1]!);
+    expect(catalogue).toEqual({
+      schemaVersion: "gdm-team-capabilities/v1",
+      routes: [{ id: "native-inherit", provider: "native", model: "inherit", roles: ["knowledge", "implementation", "verification"], access: ["read", "write"] }],
+    });
+    // The compatibility example remains available, explicitly separated from the default workflow.
+    expect(docs.split("## Manual import compatibility")[1]).toContain("gdm team auto --slug feature --file .gdm/plans/roles.json");
+
+    for (const file of ["usage.txt", "usage.en.txt"]) {
+      const usage = readFileSync(join(ROOT, "src", file), "utf8");
+      const firstAuto = usage.split("\n").find((line) => line.includes("gdm team auto "))!;
+      expect(firstAuto).toContain("--from-request");
+      expect(firstAuto).not.toContain("--file");
+      expect(usage).toContain("--capabilities-file");
+    }
+  });
+
+  test("knowledge discovery unlocks implementation without requiring future behavior checks", () => {
+    const routing = readFileSync(join(ROOT, "skills", "_shared", "routing.md"), "utf8");
+    for (const source of [skill("go"), skill("full"), skill("plan"), routing]) {
+      const text = normalized(source);
+      expect(text).toContain("gdm-team-plan/v1");
+      expect(text).toContain("planner semantic v2");
+      expect(text).toContain("`acceptanceMode: artifact-review`, `checks: []`");
+      expect(text).toContain("completed 보고서의 불변 해시와 수용 기준");
+      expect(text).toMatch(/(?:미래|아직 구현하지 않은)[^.]*check[^.]*?(?:넣지|요구하지) 않는다/u);
+      expect(text).toMatch(/모든 (?:Work )?check는 implementation 또는 verification/u);
+      expect(text).toContain("`gdm done`");
+      expect(text).toContain("수동·이전 계획의 연결 check");
+      expect(text).toContain("테스트 작성·수정 경로");
+      expect(text).toContain("verifier는 읽기 전용을 유지");
+    }
+    for (const target of ["codex", "claude", "gid"]) {
+      const text = normalized(readFileSync(join(ROOT, "skills", "_shared", "targets", "fragments", `${target}-delegation.md`), "utf8"));
+      expect(text).toContain("Work의 하위 위임도 호스트와 GDM이 조율한다");
+      expect(text).toContain("`acceptanceMode: artifact-review`, `checks: []`");
+      expect(text).toContain("미래의 동작 check 통과를 요구하지 않는다");
+      expect(text).toContain("최종 done의 전체 check 게이트");
+    }
+
+    const docs = readFileSync(join(ROOT, "docs", "automatic-role-allocation.md"), "utf8");
+    const knowledgeContract = docs.split("## Accept knowledge before implementation")[1]!.split("## Manual import compatibility")[0]!;
+    expect(knowledgeContract).toContain("cannot be enabled by a manual `--file` import");
+    expect(knowledgeContract).toContain("Every registered check must still be covered by implementation or verification");
+    expect(knowledgeContract).toContain("nor resolves a verification-contract uncertainty");
+    const manual = docs.split("## Manual import compatibility")[1]!;
+    const legacySpec = JSON.parse(manual.match(/```json\n([\s\S]*?)\n```/u)![1]!);
+    expect(legacySpec.schemaVersion).toBe("gdm-team-plan/v1");
+    expect(legacySpec.knowledge.checks).toEqual(["c1"]);
+    expect(legacySpec.knowledge).not.toHaveProperty("acceptanceMode");
+  });
+
   test("technical design is optional while explicit visual design keeps its artifact contract", () => {
     const routing = readFileSync(join(ROOT, "skills", "_shared", "routing.md"), "utf8");
     const plan = skill("plan");
@@ -193,9 +290,9 @@ describe("workflow policy", () => {
     expect(routing).toContain("일반 역할은 leaf가 아니며");
     expect(routing).toMatch(/새로 발견한 독립 경계[\s\S]*하위 역할을 만들 수 있다/);
     expect(normalized(routing)).toMatch(
-      /hook-enabled native root session tree에서[\s\S]*모든 세대의 활성 spawned agent를 합쳐 동시에 최대 4명/,
+      /hook-enabled native root session tree에서[\s\S]*모든 세대의 활성 spawned agent를 함께 센다/,
     );
-    expect(delegation).toContain("`MAX_ACTIVE_SUBAGENTS: 4`");
+    expect(delegation).toContain("`MAX_ACTIVE_SUBAGENTS: adaptive`");
     expect(delegation).toContain("일반 역할은 leaf가 아니다");
     expect(routing).not.toContain("외부 역할은 항상 **leaf 실행**");
 
@@ -240,10 +337,11 @@ describe("workflow policy", () => {
     const policies = [routing, delegation];
 
     expect(AGENT_SESSION_ACTIVE_EXECUTION_LIMIT).toBe(32);
-    expect(RECOMMENDED_CONCURRENT_LIMIT).toBe(4);
     for (const policy of policies) {
       const compact = normalized(policy);
       expect(policy).toContain("`MAX_IN_FLIGHT_SPAWNS_PER_ROOT: 32`");
+      expect(policy).toContain("`MAX_ACTIVE_SUBAGENTS: adaptive`");
+      expect(policy).toContain("실제 호스트 가용");
       expect(policy).not.toContain("MAX_TOTAL_SPAWNS_PER_ROOT");
       expect(policy).not.toContain("INITIAL_SPAWN_ATTEMPT_BUDGET");
       expect(policy).not.toContain("SPAWN_ATTEMPT_EXTENSION");
@@ -266,7 +364,7 @@ describe("workflow policy", () => {
       );
       expect(compact).toContain("이를 부모 신원 하드 경계라고 주장하지 않는다");
       expect(compact).toMatch(
-        /비대화형 CLI[·와 ]+별도 (?:Codex )?세션을 합친 논리 작업 전체의 동시 4는 .*협력적 운영 규칙/,
+        /비대화형 CLI[·와 ]+별도 (?:Codex )?세션을 합친 논리 작업 전체도 같은 작업별 동시 예산을 공유하는 협력적 운영 규칙/,
       );
       expect(compact).toContain("canonical scope");
       expect(compact).toContain("write resource");
@@ -347,7 +445,7 @@ describe("workflow policy", () => {
           policy,
           /동시\s*(\d+)[^.!?\n]{0,160}?(?:하드|hard)(?:\s+상한|\s+퓨즈)/gu,
         ),
-      ).toEqual([RECOMMENDED_CONCURRENT_LIMIT]);
+      ).toEqual([]);
       expect(
         capturedNumbers(
           policy,
@@ -381,10 +479,10 @@ describe("workflow policy", () => {
       expect(depthValues).toEqual(name === "routing" ? [3, 0] : [3]);
       expect(
         capturedNumbers(policy, /`MAX_ACTIVE_SUBAGENTS:\s*(\d+)`/gu),
-      ).toEqual([RECOMMENDED_CONCURRENT_LIMIT]);
+      ).toEqual([]);
       expect(
         capturedNumbers(policy, /동시에 최대\s*(\d+)명/gu),
-      ).toEqual([RECOMMENDED_CONCURRENT_LIMIT]);
+      ).toEqual([]);
     }
     expect(design).toContain(
       "동시 4는 현재 세션의 effective Codex 설정이 4일 때 네이티브 하드 퓨즈다.",
@@ -449,7 +547,7 @@ describe("workflow policy", () => {
     const delegation = delegationContract();
     expect(research).toContain("GDM_TARGET_FRAGMENT_V1:delegation");
     expect(research).toContain("target adapter가 독립 역할을 허용하면");
-    expect(delegation).toContain("`MAX_ACTIVE_SUBAGENTS: 4`");
+    expect(delegation).toContain("`MAX_ACTIVE_SUBAGENTS: adaptive`");
     expect(delegation).toContain("자기복제형 재위임");
     expect(normalized(delegation)).toContain("끝이 정해지지 않은 팬아웃");
     expect(research).not.toContain("다른 세션에서의 gdm-research 재호출은 금지한다");
@@ -494,7 +592,7 @@ describe("workflow policy", () => {
     expect(auditor).not.toContain("재현 명령을 직접 실행");
     expect(design).toContain("gdm-agents/run-auditor.sh");
     expect(routing).toContain("gdm-agents/run-role.sh --mode work --role audit");
-    expect(routing).toContain("`MAX_ACTIVE_SUBAGENTS: 4`");
+    expect(routing).toContain("`MAX_ACTIVE_SUBAGENTS: adaptive`");
     expect(routing).toContain("일반 역할은 leaf가 아니며");
     expect(routing).toContain("독립 검수는 예외적으로 pass당 정확히 1명의 **leaf 실행**");
     expect(routing).toContain("자신이 시작하지 않은 사용자 터미널");

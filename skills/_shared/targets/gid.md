@@ -6,10 +6,12 @@
 - target ID: `gid`
 - 스킬 설치 경로는 `GID_CONFIG_DIR/skills`이며, 미설정 시
   `${XDG_CONFIG_HOME:-~/.config}/gid/skills`다. 다른 실행 환경의 스킬 변형으로 대체하지 않는다.
-- gid native에서 `delegate_tasks`가 제공되면 그 도구로 서로 겹치지 않는 작업을 배정한다.
+- gid native에서 `delegate_tasks`가 제공되면 `team auto --from-request`가 생성한
+  next·route·prompt를 그 도구로 실행한다. host가 Work의 역할·module·worker 모델을 다시 정하지 않는다.
   도구 응답은 배정된 작업의 종료와 결과 수집을 기다린 뒤 반환된다. 작업자는 부모의 모델과
   권한을 상속하며 현재 구현에서는 다시 위임하지 않는다. 이 도구가 없으면 capability 한계를
-  기록하고 `single`로 실행한다. 기본 Codex 백엔드의 자체 Agent·Stop 훅을 가정하지 않는다.
+  기록한다. 작은 작업의 single은 유지하지만 복잡한 자동 배정은 `executor: unavailable`로
+  차단하며 필수 역할을 없애지 않는다. 기본 Codex 백엔드의 자체 Agent·Stop 훅을 가정하지 않는다.
 - Claude ACP에서는 현재 세션이 실제 제공하는 Agent 도구와 추적 가능한 대기·상태 조회를
   사용한다. 공급자 이벤트가 보인다는 이유만으로 쓰기 권한이나 자동 재개를 가정하지 않는다.
   결과가 모이기 전에 최종 응답으로 끝내지 않는다. 예약 도구만 남긴 후 종료하지 않는다.

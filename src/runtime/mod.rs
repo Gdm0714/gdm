@@ -42,7 +42,9 @@ pub fn run(cwd: &Path, argv: &[String]) -> Result<()> {
         && !(sub == "contract" && has_flag(args, "check-commit")))
         || (command == "audit" && sub == "verdict")
         || (command == "regression" && matches!(sub, "capture" | "replay"))
-        || (command == "team" && !matches!(sub, "status" | "next"))
+        || (command == "team"
+            && !matches!(sub, "status" | "next")
+            && !(sub == "auto" && has_flag(args, "from-request")))
         || (command == "preset" && sub != "list");
     let _lock = if mutates {
         Some(store::lock(cwd)?)
