@@ -333,6 +333,7 @@ pub fn normalize(value: Option<&Value>) -> Result<Value> {
         "scopeAmendments",
         "outcome",
         "latestCommitTransition",
+        "integrationVerification",
     ];
     v.as_object_mut()
         .unwrap()

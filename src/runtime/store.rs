@@ -217,6 +217,9 @@ pub fn render_work(w: &Value) -> String {
         s(&w["brief"]).into(),
         String::new(),
     ];
+    if let Some(v) = c.get("integrationVerification") {
+        lines.extend(["## Integration verification scope and limitations".into(), String::new(), "Declared scope and accepted limitations; file hashes do not establish remote provenance.".into(), String::new(), "```json".into(), serde_json::to_string_pretty(v).unwrap_or_default(), "```".into(), String::new()]);
+    }
     if let Some(o) = c.get("outcome") {
         lines.extend([
             crate::i18n::text(

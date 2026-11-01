@@ -1,7 +1,7 @@
 use super::{
     contract, evidence, fingerprint,
     state::{self, b, s},
-    store,
+    store, verification,
 };
 use crate::support::{
     Error, Result, ensure_flags, has_flag, now, print_json, read_flag, read_flags, required_flag,
@@ -40,6 +40,9 @@ fn resolve_cmd(cwd: &Path, cmd: Option<String>) -> Result<Option<String>> {
     Ok(None)
 }
 fn print_work(w: &Value) {
+    if let Some(summary) = w.get("verificationSummary") {
+        println!("  integration: {summary}");
+    }
     println!(
         "{} · {} ({}/{})",
         s(&w["slug"]),
@@ -113,6 +116,7 @@ pub fn plan(cwd: &Path, args: &[String]) -> Result<()> {
                     "target",
                     "unit",
                     "intervene-if",
+                    "profile",
                 ],
                 &["audit", "simplify"],
             )?;
@@ -139,7 +143,16 @@ pub fn plan(cwd: &Path, args: &[String]) -> Result<()> {
             let at = now();
             let audit = has_flag(args, "audit") || contract["risk"] == "high";
             let baseline = fingerprint::capture_workspace(cwd)?;
-            let work = json!({"slug":slug,"brief":brief.trim(),"createdAt":at,"done":false,"auditRequired":audit,"baseline":baseline,"checks":[],"contract":contract});
+            let mut work = json!({"slug":slug,"brief":brief.trim(),"createdAt":at,"done":false,"auditRequired":audit,"baseline":baseline,"checks":[],"contract":contract});
+            if let Some(profile) = read_flag(args, "profile")? {
+                if profile != "integration" {
+                    return Err(Error::new(
+                        "verification_unsupported",
+                        "Supported profile: integration",
+                    ));
+                }
+                verification::initialize(&mut work);
+            }
             store::append_journal(
                 cwd,
                 &slug,
@@ -154,6 +167,7 @@ pub fn plan(cwd: &Path, args: &[String]) -> Result<()> {
                 );
             }
         }
+        "verification" => return verification::run(cwd, args),
         "contract" => {
             ensure_flags(
                 args,
@@ -190,6 +204,9 @@ pub fn plan(cwd: &Path, args: &[String]) -> Result<()> {
             }
             let mut w = resolve(cwd, args, true)?;
             if let Some(e) = contract::mutate(&mut w, args)? {
+                if matches!(s(&e["event"]), "contract.constraints" | "contract.scope") {
+                    verification::plan_changed(&mut w);
+                }
                 store::append_journal(cwd, s(&w["slug"]), &e)?;
                 store::save(cwd, &w)?;
             }
@@ -222,7 +239,8 @@ pub fn plan(cwd: &Path, args: &[String]) -> Result<()> {
         }
         "list" => {
             ensure_flags(args, &["slug"], &["json"])?;
-            let w = resolve(cwd, args, true)?;
+            let mut w = resolve(cwd, args, true)?;
+            verification::project(cwd, &mut w);
             if has_flag(args, "json") {
                 print_json(&w)?
             } else {
@@ -466,7 +484,7 @@ pub fn pass(cwd: &Path, args: &[String]) -> Result<()> {
                     ),
                 ));
             }
-            e = evidence::automatic(cwd, s(&w["slug"]), id, s(&c["cmd"]), true, true)?;
+            e = evidence::automatic_bound(cwd, &w, id, s(&c["cmd"]), true, true)?;
         } else {
             if state::kind(&c) == "regression" && c.get("redEvidence").is_none() {
                 return Err(Error::new(
@@ -498,6 +516,14 @@ pub fn pass(cwd: &Path, args: &[String]) -> Result<()> {
                     ));
                 }
                 e = json!({"observed":observed,"sha256":sha256(bytes),"manual":true});
+                if verification::active(&w) {
+                    let observation = verification::observe(cwd, &w)?;
+                    if let Some(binding) =
+                        verification::bind(&w, id, &observation, &observation, true)
+                    {
+                        e["verificationBinding"] = binding;
+                    }
+                }
                 if let Some(r) = reviewer {
                     e["reviewer"] = json!(contract::safe_text(&r, "reviewer", 240)?);
                 }
@@ -511,7 +537,7 @@ pub fn pass(cwd: &Path, args: &[String]) -> Result<()> {
                         ),
                     ));
                 }
-                e = evidence::automatic(cwd, s(&w["slug"]), id, s(&c["cmd"]), false, true)?;
+                e = evidence::automatic_bound(cwd, &w, id, s(&c["cmd"]), false, true)?;
             }
         }
         if let Some(n) = note {
@@ -536,6 +562,7 @@ pub fn pass(cwd: &Path, args: &[String]) -> Result<()> {
             .unwrap()
             .extend(e.as_object().unwrap().clone());
         e["at"] = json!(at);
+        verification::evidence_replaced(&mut w, id);
         w["checks"][i][if red { "redEvidence" } else { "evidence" }] = e;
         if !red {
             w["checks"][i]["status"] = json!("proven");
@@ -563,7 +590,11 @@ pub fn recheck(cwd: &Path, args: &[String]) -> Result<()> {
     ensure_flags(args, &["check", "slug", "expected-plan-fingerprint"], &[])?;
     let mut w = resolve(cwd, args, false)?;
     state::assert_plan(&w, read_flag(args, "expected-plan-fingerprint")?.as_deref())?;
-    let failed = evidence::recheck(cwd, &mut w, read_flag(args, "check")?.as_deref(), false)?;
+    let result = evidence::recheck(cwd, &mut w, read_flag(args, "check")?.as_deref(), false);
+    if result.is_err() && verification::active(&w) {
+        store::save(cwd, &w)?;
+    }
+    let failed = result?;
     store::save(cwd, &w)?;
     if !failed.is_empty() {
         return Err(Error::new(
@@ -706,7 +737,10 @@ pub fn audit(cwd: &Path, args: &[String]) -> Result<()> {
             ));
         }
         let at = now();
-        let a = json!({"result":if pass{"pass"}else{"fail"},"report":report,"reportSha256":sha256(bytes),"implementationModel":implementation,"auditModel":audit_model,"workspace":fingerprint::capture_workspace(cwd)?,"stateHash":state::checks_hash(&w),"at":at});
+        let mut a = json!({"result":if pass{"pass"}else{"fail"},"report":report,"reportSha256":sha256(bytes),"implementationModel":implementation,"auditModel":audit_model,"workspace":fingerprint::capture_workspace(cwd)?,"stateHash":state::checks_hash(&w),"at":at});
+        if verification::active(&w) && pass {
+            a["verificationBinding"] = verification::audit_binding(cwd, &w)?;
+        }
         let mut event = json!({"ts":at,"event":"audit"});
         event
             .as_object_mut()
@@ -738,6 +772,11 @@ pub fn done(cwd: &Path, args: &[String]) -> Result<()> {
     state::assert_plan(&w, read_flag(args, "expected-plan-fingerprint")?.as_deref())?;
     let result = (|| {
         state::assert_open(&w)?;
+        if verification::active(&w)
+            && let Some(blocker) = state::completion_blockers(&w).first()
+        {
+            return Err(Error::new(s(&blocker["code"]), s(&blocker["message"])));
+        }
         if let Some(blocker) = super::team::blockers(&w).first() {
             return Err(Error::new(s(&blocker["code"]), s(&blocker["message"])));
         }
@@ -763,8 +802,21 @@ pub fn done(cwd: &Path, args: &[String]) -> Result<()> {
         let bound = requires
             && w["audit"]["result"] == "pass"
             && w["audit"].get("workspace").is_some_and(|v| !v.is_null());
+        let before = if verification::active(&w) {
+            verification::observe(cwd, &w)?
+        } else {
+            Value::Null
+        };
+        if verification::active(&w) {
+            verification::assert_evidence_current(cwd, &w, &before)?;
+            if bound {
+                verification::check_audit(cwd, &w)?;
+            }
+        }
+        let mut executions = vec![];
         if !bound {
-            let failed = evidence::recheck(cwd, &mut w, None, true)?;
+            let (failed, observed) = evidence::recheck_observed(cwd, &mut w, None, true)?;
+            executions = observed;
             if !failed.is_empty() {
                 store::save(cwd, &w)?;
                 return Err(Error::new(
@@ -808,6 +860,18 @@ pub fn done(cwd: &Path, args: &[String]) -> Result<()> {
             return Err(Error::new(s(&blocker["code"]), s(&blocker["message"])));
         }
         let at = now();
+        if verification::active(&w) {
+            let after = verification::observe(cwd, &w)?;
+            verification::assert_unchanged(&before, &after)?;
+            w["verificationCompletion"] = verification::completion(
+                &w,
+                if bound { "audit_bound" } else { "validate" },
+                &before,
+                &after,
+                executions,
+                &at,
+            );
+        }
         w["done"] = json!(true);
         w["doneAt"] = json!(at);
         store::append_journal(
@@ -836,6 +900,9 @@ pub fn status(cwd: &Path, args: &[String]) -> Result<()> {
     for w in store::list(cwd)? {
         let journal = store::read_journal(cwd, s(&w["slug"]))?;
         let mut summary = json!({"slug":w["slug"],"done":w["done"],"proven":state::proven_count(&w),"total":state::checks(&w).len(),"blockers":state::completion_blockers(&w),"audit":fingerprint::audit_state(cwd,&w)?,"contract":w["contract"],"delivery":w["delivery"]});
+        if let Some(v) = verification::summary(cwd, &w) {
+            summary["verificationSummary"] = v;
+        }
         if w.get("team").is_some() {
             summary["team"] = super::team::summary(&w);
         }
@@ -847,6 +914,9 @@ pub fn status(cwd: &Path, args: &[String]) -> Result<()> {
             summary["checks"] = w["checks"].clone();
         }
         if !has_flag(args, "json") {
+            if let Some(v) = summary.get("verificationSummary") {
+                println!("  integration: {}", v);
+            }
             if has_flag(args, "checks") {
                 print_work(&w);
             } else {

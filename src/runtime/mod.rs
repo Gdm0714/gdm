@@ -14,6 +14,7 @@ pub mod retro;
 pub mod state;
 pub mod store;
 pub mod team;
+pub mod verification;
 use crate::support::{Error, Result, ensure_flags, has_flag, print_json};
 use std::path::Path;
 pub fn run(cwd: &Path, argv: &[String]) -> Result<()> {

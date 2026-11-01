@@ -716,6 +716,9 @@ fn persist(cwd: &Path, work: &mut Value, event: &str, details: Value) -> Result<
     // Use the same predicate as export before committing any new immutable
     // metadata. Legacy records remain readable for diagnosis.
     protocol::no_credentials(&work["team"])?;
+    // A team mutation changes the state bound by enhanced completion receipts.
+    // Preserve the prior receipt as history before clearing current completion.
+    super::verification::invalidate(work);
     work["done"] = json!(false);
     work.as_object_mut().unwrap().remove("doneAt");
     work.as_object_mut().unwrap().remove("audit");

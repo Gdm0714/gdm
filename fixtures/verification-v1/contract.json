@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "gdm-verification-contract/v1",
+  "profile": "integration",
+  "review": {
+    "note": "Reviewed original requirements; synthetic fixture does not prove captured production input.",
+    "classifications": [
+      {
+        "uncertaintyIndex": 0,
+        "unknownIds": [
+          "input-envelope"
+        ]
+      }
+    ]
+  },
+  "requirements": {
+    "input": {
+      "checkIds": [
+        "c1"
+      ]
+    },
+    "positiveOutcome": {
+      "checkIds": [
+        "c1"
+      ]
+    },
+    "deniedAction": {
+      "checkIds": [
+        "c2"
+      ]
+    },
+    "stateContinuity": {
+      "checkIds": [],
+      "notApplicableReason": "This example has one operation without multi-turn state."
+    }
+  },
+  "checks": [
+    {
+      "checkId": "c1",
+      "inputOrigin": "synthetic",
+      "environment": "mock",
+      "targetKind": "workspace",
+      "fixture": {
+        "artifactRef": "fixtures/verification-v1/input.json",
+        "sha256": "9ee18fb9b0c8220ca18e584632ae11809816a5652fd7e41efc5d3956eeb67770"
+      },
+      "target": {
+        "artifactRef": "fixtures/verification-v1/target.json",
+        "sha256": "ee63871653e8760794051735b3826b51efb5daa0b68c210e5775910f283fbf38"
+      },
+      "validator": {
+        "artifactRef": "fixtures/verification-v1/validator.sh",
+        "sha256": "3a8bea16de81525effd82998e32bfc62f710a78b0fb37a9495336ac0d81c2464"
+      }
+    },
+    {
+      "checkId": "c2",
+      "inputOrigin": "synthetic",
+      "environment": "mock",
+      "targetKind": "workspace",
+      "fixture": {
+        "artifactRef": "fixtures/verification-v1/input.json",
+        "sha256": "9ee18fb9b0c8220ca18e584632ae11809816a5652fd7e41efc5d3956eeb67770"
+      },
+      "target": {
+        "artifactRef": "fixtures/verification-v1/target.json",
+        "sha256": "ee63871653e8760794051735b3826b51efb5daa0b68c210e5775910f283fbf38"
+      },
+      "validator": {
+        "artifactRef": "fixtures/verification-v1/validator.sh",
+        "sha256": "3a8bea16de81525effd82998e32bfc62f710a78b0fb37a9495336ac0d81c2464"
+      }
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "input-envelope",
+      "description": "Validate the synthetic example input shape. Captured production input remains outside this contract.",
+      "checkId": "c1",
+      "conditions": {
+        "inputOrigin": "synthetic",
+        "environment": "mock",
+        "targetKind": "workspace",
+        "fixtureRequired": true,
+        "targetRequired": true
+      },
+      "status": "open"
+    }
+  ]
+}
