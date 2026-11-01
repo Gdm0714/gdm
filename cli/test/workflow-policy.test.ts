@@ -69,6 +69,10 @@ describe("workflow policy", () => {
       expect(text).toContain("--context <path>");
       expect(text).toContain("--capabilities-file <path>");
       expect(text).toContain("`native-inherit`");
+      if (source === skill("go") || source === skill("full")) {
+        expect(text).toContain("같은 역할도");
+        expect(text).toContain("host-declared");
+      }
       expect(text).toContain("planner의 `--model`은 worker 모델 선택이 아니다");
       expect(text).toMatch(/tool-0 호출/u);
       expect(text).toMatch(/--dry-run.{0,20}(?:도 실제 planner|`도 실제 planner)/u);
@@ -121,7 +125,7 @@ describe("workflow policy", () => {
     for (const source of [skill("go"), skill("full"), skill("plan"), routing]) {
       const text = normalized(source);
       expect(text).toContain("gdm-team-plan/v1");
-      expect(text).toContain("planner semantic v2");
+      expect(text).toMatch(/planner semantic v[23]/u);
       expect(text).toContain("`acceptanceMode: artifact-review`, `checks: []`");
       expect(text).toContain("completed 보고서의 불변 해시와 수용 기준");
       expect(text).toMatch(/(?:미래|아직 구현하지 않은)[^.]*check[^.]*?(?:넣지|요구하지) 않는다/u);
@@ -238,7 +242,7 @@ describe("workflow policy", () => {
     expect(normalized(skill("db"))).toContain("승인이 없으면 실행 전에 확인받는다");
     // Autonomy changes must not turn validation, explicit model requests, or delivery into optional gates.
     expect(go).toContain('`gdm done`이 성공(exit 0)하기 전에 "완료했다"고 보고하지 않는다');
-    expect(full).toContain("실제 구현 모델과 다른 모델의 검수자 정확히 1명");
+    expect(full).toContain("모든 실제 구현 모델과 다른 모델의 검수자 정확히 1명");
     expect(full).toContain("전달을 **명시적으로 승인하지 않았으면**");
     expect(plan).toContain("사용자가 Claude 결과 자체를 요구했거나 필수 근거가 없을 때만 해당 의존 작업을 보류한다");
   });
@@ -275,7 +279,9 @@ describe("workflow policy", () => {
   test("full binds audit identity and workspace while PR delivery is machine-gated", () => {
     const full = skill("full");
     const pr = skill("pr");
-    expect(full).toContain("--implementation-model <실제 구현 모델> --audit-model <검수 모델>");
+    expect(full).toContain("--implementation-model <실제 구현 모델> [--implementation-model <다른 구현 모델> ...] --audit-model <검수 모델>");
+    expect(full).toContain("모델마다 별도의 정확한 `implementationModel: <모델>` 줄");
+    expect(full).toContain("`implementationModels`");
     expect(full).toContain("Git 워크트리의 실제 파일 내용 지문");
     expect(pr).toContain("gdm delivery prepare");
     expect(pr).toContain("CI 체크가 없으면 통과 기록을 만들지 않고 다음 단계로 진행한다");

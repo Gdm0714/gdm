@@ -549,6 +549,22 @@ pub fn validate_work(mut w: Value) -> Result<Value> {
             || ["implementationModel", "auditModel"]
                 .iter()
                 .any(|k| a.get(k).is_some_and(|v| !v.is_string()))
+            || a.get("implementationModels").is_some_and(|v| {
+                v.as_array().is_none_or(|models| {
+                    models.is_empty()
+                        || models.len() > 64
+                        || models.first() != a.get("implementationModel")
+                        || models
+                            .iter()
+                            .any(|m| !m.is_string() || s(m).trim().is_empty())
+                        || models
+                            .iter()
+                            .map(|m| s(m).to_lowercase())
+                            .collect::<std::collections::BTreeSet<_>>()
+                            .len()
+                            != models.len()
+                })
+            })
             || a.get("workspace")
                 .is_some_and(|v| !v.is_null() && !fingerprint_valid(v)))
     {

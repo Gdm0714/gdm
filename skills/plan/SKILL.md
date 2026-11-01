@@ -217,7 +217,12 @@ gdm team auto --slug <s> --from-request --provider <claude|codex> --model <plann
 
 호스트는 실제 가용 슬롯·executor·허용 capability catalogue와 필요한 명시적 context만 제공한다.
 `--context <path>`는 반복 가능하고 `--capabilities-file <path>`는 사용 가능한 route의 목록이다.
-기본 worker route는 `native-inherit`이며 planner의 `--model`은 worker 모델 선택이 아니다.
+호스트 도구가 여러 모델 선택을 지원하면 현재 도구 메타데이터와 사용자 예산에서 실제 실행 가능한
+후보로 capability catalogue v2를 자동 구성한다. 역할마다 여러 후보를 허용하고 고정 역할·모델 표를
+만들지 않는다. GDM이 각 작업의 난도·위험·필요 능력과 비용 조건을 보고 route·effort·selectionReason을
+선택한다. 선택 기능이 없는 호스트의 기본 worker route는 `native-inherit`이며 planner의 `--model`은 worker 모델 선택이 아니다.
+선택된 모델·추론 수준은 그대로 실행하고 claim에 동일한 host-declared 실행 정보를 기록한다.
+지원하지 않는 경로를 다른 모델로 바꾸지 않는다. 상세 schema와 한도는 `docs/automatic-role-allocation.md`를 따른다.
 GDM이 내부 planner를 제한된 tool-0 호출로 한 번 실행해 역할·경로·의존성·route를 검증하고
 `gdm-team-plan/v1`과 provenance를 만든다. `--file <team-plan.json>`은 명시적 수동 import
 호환 경로이며 기본 흐름이 아니다. 상세는 gdm 저장소의 `docs/automatic-role-allocation.md`를 따른다.
@@ -227,7 +232,7 @@ GDM이 내부 planner를 제한된 tool-0 호출로 한 번 실행해 역할·�
 생성된 next·route·prompt를 그대로 실행하고 spawn 전에 claim한다. 배정 자체의 재승인은 묻지 않는다.
 미확인 사항·integration에는 knowledge, 지식 조사·medium/high risk·다중 module·독립 검증에는
 verification이 필요하다. 지식 수락 뒤 구현, 선행 결과 수락 뒤 별도 실행자의 최종 검증을 연다.
-새 요청 계획은 schema `gdm-team-plan/v1`을 유지하며 planner semantic v2로 식별한다.
+새 요청 계획은 schema `gdm-team-plan/v1`을 유지한다. capability catalogue v1은 planner semantic v2, 다중 모델 catalogue v2는 semantic v3로 식별한다.
 knowledge의 `acceptanceMode: artifact-review`, `checks: []`는 출처·근거·미확인 사항이 담긴 completed 보고서의
 불변 해시와 수용 기준으로 판단한다. 미래의 최종 동작 check 통과를 지식 수락의 선행 조건으로
 넣지 않는다. 모든 Work check는 implementation 또는 verification에 연결하며 최종 `gdm done`

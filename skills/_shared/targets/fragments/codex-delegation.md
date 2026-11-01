@@ -12,6 +12,10 @@ Work의 역할·소유 경로·의존성·실행 route는 `gdm team auto --from-
 capability catalogue·명시적 context만 제공하고 생성된 `team next`의 route·prompt를 그대로
 native 도구에 전달한다. 기본 worker route는 `native-inherit`이며 planner의 `--model`과
 worker 모델은 별개다. route가 실행 불가능하면 blocked로 남기고 임의의 모델로 바꾸지 않는다.
+호스트 도구 메타데이터가 여러 허용 모델·effort를 지원하면 실제 실행 가능한 catalogue를 자동 구성한다.
+GDM은 난도·위험·실행 능력·비용 제약에 따라 배정별 route·effort와 이유를 고른다. 같은 역할도
+달라질 수 있다. 선택된 route·provider·model·effort를 claim에 host-declared로 기록하고 정확히
+전달한다. 메타데이터가 선택을 지원하지 않으면 상속 route만 사용한다. tool-0 Claude는 쓰기 워커가 아니다.
 `--file`은 명시적 수동 import 호환 경로다. Work의 새 경계나 변경 요구는 context와 check를
 갱신해 `--from-request --replan --reason`으로 반영한다.
 Work의 하위 위임도 호스트와 GDM이 조율한다. childQuota는 임의의 범위·모델 확장 승인이 아니며,
@@ -31,7 +35,7 @@ Work task는 native spawn 전에 `gdm team claim`한다. assignee에는 아직 �
 논리 ID를, `deliverable` 또는 `verify` 문자열에는 `Work slug=<s>; task=<task-id>;
 assignee=<logical-id>; attempt=<attempt-id>`와 실제 산출물·검증을 함께 넣는다. retry는 새 attempt와
 새 native taskId를 쓴다. spawn 실패는 실패 artifact와 `team report --outcome failed`로 닫는다.
-worker의 결과는 root가 확인한 뒤 report·pass·review로 수락한다. planner semantic v2 knowledge의
+worker의 결과는 root가 확인한 뒤 report·pass·review로 수락한다. planner semantic v3 knowledge의
 `acceptanceMode: artifact-review`, `checks: []`는 출처 근거가 담긴 completed 보고서의 불변 해시와
 수용 기준을 review하며 미래의 동작 check 통과를 요구하지 않는다. implementation·verification은
 연결 check를 증명하고 최종 done의 전체 check 게이트와 수동·이전 계획의 동작은 유지한다. review와 retry에는 현재

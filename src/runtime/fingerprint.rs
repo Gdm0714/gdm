@@ -278,7 +278,8 @@ pub fn scope_problems(w: &Value, current: &Value) -> Vec<Value> {
         })
         .collect()
 }
-pub fn audit_problems(cwd: &Path, a: &Value) -> Result<Vec<String>> {
+pub fn audit_problems(cwd: &Path, w: &Value) -> Result<Vec<String>> {
+    let a = &w["audit"];
     let mut errors = vec![];
     if s(&a["reportSha256"]).is_empty() {
         errors.push(
@@ -315,14 +316,15 @@ pub fn audit_problems(cwd: &Path, a: &Value) -> Result<Vec<String>> {
             )
             .into(),
         )
-    } else if s(&a["implementationModel"]).to_lowercase() == s(&a["auditModel"]).to_lowercase() {
-        errors.push(
-            crate::i18n::text(
-                "구현 모델과 검수 모델이 같습니다",
-                "The implementation and audit models are the same",
-            )
-            .into(),
-        )
+    } else {
+        let models = a
+            .get("implementationModels")
+            .and_then(Value::as_array)
+            .map(|values| values.iter().map(|v| s(v).to_owned()).collect::<Vec<_>>())
+            .unwrap_or_else(|| vec![s(&a["implementationModel"]).to_owned()]);
+        if let Err(error) = validate_audit_models(cwd, w, &models, s(&a["auditModel"])) {
+            errors.push(error.to_string());
+        }
     }
     match a.get("workspace") {
         None => errors.push(
@@ -348,6 +350,50 @@ pub fn audit_problems(cwd: &Path, a: &Value) -> Result<Vec<String>> {
     }
     Ok(errors)
 }
+/// Declared model attribution is not remote identity attestation. New adaptive
+/// attempts additionally bind the declaration to the immutable selected route.
+pub(crate) fn validate_audit_models(
+    cwd: &Path,
+    work: &Value,
+    models: &[String],
+    audit: &str,
+) -> Result<()> {
+    let normalized: std::collections::BTreeSet<_> =
+        models.iter().map(|m| m.to_lowercase()).collect();
+    if models.is_empty() || models.len() > 64 || normalized.len() != models.len() {
+        return Err(Error::new(
+            "audit_model_mismatch",
+            "Declare each implementation model once",
+        ));
+    }
+    if normalized.contains(&audit.to_lowercase()) {
+        return Err(Error::new(
+            "audit_independence",
+            crate::i18n::text(
+                "구현 모델과 검수 모델은 달라야 합니다",
+                "The implementation and audit models must differ",
+            ),
+        ));
+    }
+    let (recorded, unknown) = super::team::implementation_models(cwd, work)?;
+    if recorded
+        .iter()
+        .any(|m| !normalized.contains(&m.to_lowercase()))
+    {
+        return Err(Error::new(
+            "audit_model_mismatch",
+            "Audit must include every recorded implementation model",
+        ));
+    }
+    if unknown && work["team"]["allocation"]["request"]["input"]["promptVersion"] == 3 {
+        return Err(Error::new(
+            "audit_model_unknown",
+            "Adaptive implementation history has unknown model attribution",
+        ));
+    }
+    Ok(())
+}
+
 pub fn audit_state(cwd: &Path, w: &Value) -> Result<String> {
     if !b(&w["auditRequired"]) && w["contract"]["risk"] != "high" {
         return Ok("".into());
@@ -361,7 +407,7 @@ pub fn audit_state(cwd: &Path, w: &Value) -> Result<String> {
             "검수: 무효 (상태 변경됨, 재검수 필요)",
             "Audit: invalid (state changed; audit again)",
         )
-    } else if audit_problems(cwd, &w["audit"])?.is_empty() {
+    } else if audit_problems(cwd, w)?.is_empty() {
         crate::i18n::text("검수: 통과", "Audit: passed")
     } else {
         crate::i18n::text(
@@ -402,4 +448,23 @@ pub fn describe_scope(problems: &[Value]) -> String {
         "Change scope violates the contract: {detail}. {}",
         recovery.join(" · ")
     )
+}
+
+#[cfg(test)]
+mod model_tests {
+    use super::*;
+
+    #[test]
+    fn audit_covers_all_declared_writers() {
+        let directory = tempfile::tempdir().unwrap();
+        let work = json!({"team":{"tasks":[
+            {"access":"write","attempts":[{"execution":{"model":"writer-a"}}]},
+            {"access":"write","attempts":[{"execution":{"model":"writer-b"}}]},
+            {"access":"read","attempts":[{"execution":{"model":"reader"}}]}
+        ]}});
+        let all = vec!["writer-a".to_owned(), "writer-b".to_owned()];
+        assert!(validate_audit_models(directory.path(), &work, &all, "reader").is_ok());
+        assert!(validate_audit_models(directory.path(), &work, &all[..1], "reader").is_err());
+        assert!(validate_audit_models(directory.path(), &work, &all, "WRITER-B").is_err());
+    }
 }

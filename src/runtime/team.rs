@@ -376,7 +376,13 @@ pub fn validate(work: &Value) -> Result<()> {
                 "status",
                 "attempts",
             ],
-            &["withdrawal", "routeId", "acceptanceMode"],
+            &[
+                "withdrawal",
+                "routeId",
+                "effort",
+                "selectionReason",
+                "acceptanceMode",
+            ],
         ) || !id_ok(&task["id"])
             || !id_ok(&task["role"])
             || task.get("routeId").is_some_and(|r| !id_ok(r))
@@ -384,7 +390,10 @@ pub fn validate(work: &Value) -> Result<()> {
                 *m != "artifact-review"
                     || task["role"] != "knowledge"
                     || task["access"] != "read"
-                    || work["team"]["allocation"]["request"]["input"]["promptVersion"] != 2
+                    || !matches!(
+                        work["team"]["allocation"]["request"]["input"]["promptVersion"].as_u64(),
+                        Some(2 | 3)
+                    )
             })
             || !["read", "write"].contains(&s(task, "access"))
             || !text_ok(&task["deliverable"], "deliverable", 480)
@@ -428,8 +437,9 @@ pub fn validate(work: &Value) -> Result<()> {
             if !exact(
                 attempt,
                 &["id", "assignee", "claimedAt", "dependencies"],
-                &["report", "review", "retry"],
+                &["report", "review", "retry", "execution"],
             ) || !id_ok(&attempt["id"])
+                || !execution_matches(work, task, attempt.get("execution"))
                 || !id_ok(&attempt["assignee"])
                 || !attempt_ids.insert(s(attempt, "id"))
                 || !timestamp(&attempt["claimedAt"])
@@ -934,6 +944,140 @@ fn add(cwd: &Path, work: &mut Value, args: &[String]) -> Result<()> {
     })?;
     persist(cwd, work, "add", task)
 }
+fn adaptive(work: &Value) -> bool {
+    work["team"]["allocation"]["request"]["input"]["promptVersion"] == 3
+}
+fn execution_matches(work: &Value, task: &Value, execution: Option<&Value>) -> bool {
+    if !adaptive(work) {
+        return execution.is_none();
+    }
+    let Some(e) = execution else {
+        return false;
+    };
+    let Some(route) = request::route(work, task) else {
+        return false;
+    };
+    exact(
+        e,
+        &["routeId", "provider", "model", "effort", "source"],
+        &[],
+    ) && e["source"] == "host-declared"
+        && e["routeId"] == task["routeId"]
+        && e["provider"] == route["provider"]
+        && e["model"] == route["model"]
+        && e["effort"] == task["effort"]
+}
+fn historical_teams(cwd: &Path, work: &Value) -> Result<Vec<Value>> {
+    planning::verify_history(cwd, work)?;
+    array(&work["team"]["allocationHistory"])
+        .iter()
+        .map(|h| {
+            let bytes = store::contained(
+                cwd,
+                s(&h["artifact"], "path"),
+                "team-plan-history",
+                MAX_ARTIFACT,
+            )?;
+            let old: Value = serde_json::from_slice(&bytes)?;
+            Ok(old["team"].clone())
+        })
+        .collect()
+}
+/// Known host-declared implementation models and whether any worker attribution is absent.
+pub(crate) fn implementation_models(cwd: &Path, work: &Value) -> Result<(Vec<String>, bool)> {
+    let mut teams = historical_teams(cwd, work)?;
+    teams.push(work["team"].clone());
+    let mut models = BTreeSet::new();
+    let mut unknown = false;
+    for team in teams {
+        for task in array(&team["tasks"])
+            .iter()
+            .filter(|t| t["access"] == "write")
+        {
+            for attempt in array(&task["attempts"]) {
+                if let Some(model) = attempt["execution"]["model"]
+                    .as_str()
+                    .filter(|m| *m != "inherit")
+                {
+                    models.insert(model.to_owned());
+                } else {
+                    unknown = true;
+                }
+            }
+        }
+    }
+    Ok((models.into_iter().collect(), unknown))
+}
+fn claim_execution(
+    cwd: &Path,
+    work: &Value,
+    task: &Value,
+    args: &[String],
+) -> Result<Option<Value>> {
+    let keys = [
+        "execution-route",
+        "execution-provider",
+        "execution-model",
+        "execution-effort",
+    ];
+    if !adaptive(work) {
+        if keys
+            .iter()
+            .any(|k| read_flag(args, k).ok().flatten().is_some())
+        {
+            return Err(err(
+                "team_execution_invalid",
+                "Legacy assignments have no adaptive execution declaration",
+            ));
+        }
+        return Ok(None);
+    }
+    let effort = required_flag(args, "execution-effort")?;
+    let execution = json!({"routeId":required_flag(args,"execution-route")?,"provider":required_flag(args,"execution-provider")?,"model":required_flag(args,"execution-model")?,"effort":if effort=="inherit" {Value::Null} else {json!(effort)},"source":"host-declared"});
+    if !execution_matches(work, task, Some(&execution)) {
+        return Err(err(
+            "team_execution_invalid",
+            "Host declaration must exactly match selected route, provider, model and effort; substitution is forbidden",
+        ));
+    }
+    let route = request::route(work, task).unwrap();
+    if route["execution"] != "native" {
+        return Err(err(
+            "team_execution_unavailable",
+            "This host only launches native worker routes; replan unavailable execution",
+        ));
+    }
+    if let Some(limit) = route["maxInvocations"].as_u64() {
+        let mut teams = historical_teams(cwd, work)?;
+        teams.push(work["team"].clone());
+        let mut used = 0u64;
+        for team in teams {
+            for attempt in array(&team["tasks"])
+                .iter()
+                .flat_map(|t| array(&t["attempts"]))
+            {
+                let e = &attempt["execution"];
+                if e.is_null() {
+                    return Err(err(
+                        "team_invocation_limit",
+                        "Historical claims lack attribution; a cumulative cap cannot be proven",
+                    ));
+                }
+                if e["provider"] == execution["provider"] && e["model"] == execution["model"] {
+                    used += 1;
+                }
+            }
+        }
+        if used >= limit {
+            return Err(err(
+                "team_invocation_limit",
+                "Cumulative provider/model claim reservation limit reached, including failed attempts",
+            ));
+        }
+    }
+    Ok(Some(execution))
+}
+
 fn claim(cwd: &Path, work: &mut Value, args: &[String]) -> Result<()> {
     configured(work)?;
     let i = index(work, &required_flag(args, "task")?)?;
@@ -1000,6 +1144,7 @@ fn claim(cwd: &Path, work: &mut Value, args: &[String]) -> Result<()> {
             "An active task has overlapping read or write ownership",
         ));
     }
+    let execution = claim_execution(cwd, work, task, args)?;
     let task_id = task["id"].clone();
     let dependencies = dependency_receipts(work, task);
     let claimed_at = event_time(work);
@@ -1009,12 +1154,19 @@ fn claim(cwd: &Path, work: &mut Value, args: &[String]) -> Result<()> {
         .push(
             json!({"id":attempt,"assignee":assignee,"claimedAt":claimed_at,"dependencies":dependencies}),
         );
+    if let Some(execution) = execution.clone() {
+        work["team"]["tasks"][i]["attempts"]
+            .as_array_mut()
+            .unwrap()
+            .last_mut()
+            .unwrap()["execution"] = execution;
+    }
     work["team"]["tasks"][i]["status"] = json!("active");
     persist(
         cwd,
         work,
         "claim",
-        json!({"taskId":task_id,"attemptId":attempt,"assignee":assignee}),
+        json!({"taskId":task_id,"attemptId":attempt,"assignee":assignee,"execution":execution}),
     )
 }
 fn report(cwd: &Path, work: &mut Value, args: &[String]) -> Result<()> {
@@ -1273,6 +1425,11 @@ fn next(cwd: &Path, work: &Value) -> Value {
             if let Some(route) = request::route(work, task) {
                 action["route"] = route.clone();
                 action["routeId"] = task["routeId"].clone();
+                for key in ["effort", "selectionReason"] {
+                    if let Some(v) = task.get(key) {
+                        action[key] = v.clone();
+                    }
+                }
                 action["prompt"] = json!(request::dispatch_prompt(work, task));
                 if let Some(mode) = task.get("acceptanceMode") {
                     action["acceptanceMode"] = mode.clone();
@@ -1334,7 +1491,19 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
             ],
             &["path", "check", "depends-on"],
         ),
-        "claim" => (&["slug", "task", "assignee", "attempt"], &[]),
+        "claim" => (
+            &[
+                "slug",
+                "task",
+                "assignee",
+                "attempt",
+                "execution-route",
+                "execution-provider",
+                "execution-model",
+                "execution-effort",
+            ],
+            &[],
+        ),
         "report" => (
             &[
                 "slug",
@@ -1505,6 +1674,24 @@ mod tests {
             json!({"observed":path,"sha256":sha256(b"Check passed"),"manual":true,"at":now()});
         store::save(cwd, work).unwrap();
     }
+    #[test]
+    fn adaptive_execution_declaration_is_exact_and_legacy_absent() {
+        let route = json!({"id":"chosen","provider":"native","model":"available-model"});
+        let work = json!({"team":{"allocation":{"request":{"input":{"promptVersion":3,"capabilities":{"routes":[route]}}}}}});
+        let task = json!({"routeId":"chosen","effort":"high"});
+        let mut e = json!({"routeId":"chosen","provider":"native","model":"available-model","effort":"high","source":"host-declared"});
+        assert!(execution_matches(&work, &task, Some(&e)));
+        assert!(!execution_matches(&work, &task, None));
+        e["model"] = json!("substituted-model");
+        assert!(!execution_matches(&work, &task, Some(&e)));
+        e["model"] = json!("available-model");
+        e["effort"] = Value::Null;
+        assert!(!execution_matches(&work, &task, Some(&e)));
+        let legacy = json!({"team":{}});
+        assert!(execution_matches(&legacy, &task, None));
+        assert!(!execution_matches(&legacy, &task, Some(&e)));
+    }
+
     #[test]
     fn report_is_not_acceptance_and_done_rechecks_preserve_definition_receipt() {
         let (repo, mut work) = fixture();

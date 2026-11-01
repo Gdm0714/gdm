@@ -49,8 +49,8 @@ planner 호출 실패·잘못된 배정은 명시적으로 실패하며 키워�
 승인된 작업은 매번 사용자에게 배정해 달라고 묻지 않고 아래 native dispatch 루프로 실행한다.
 
 상세 계약은 gdm 저장소의 `docs/automatic-role-allocation.md`를 따른다. 생성된
-`gdm-team-plan/v1`은 유지하되 새 요청 계획은 planner semantic v2(`input.promptVersion: 2`,
-`plannerContract.version: 2`)를 쓴다. knowledge는 `acceptanceMode: artifact-review`, `checks: []`이며
+`gdm-team-plan/v1`은 유지하되 v2 catalogue의 새 요청 계획은 planner semantic v3(`input.promptVersion: 3`,
+`plannerContract.version: 3`)를 쓴다. v1 catalogue의 요청 계획은 기존 semantic v2를 유지한다. knowledge는 `acceptanceMode: artifact-review`, `checks: []`이며
 등록된 모든 check는 implementation 또는 verification에 배정한다. 미확인 사항·integration이면 knowledge가
 필요하며, 지식 조사·medium/high risk·여러 module·independentVerification이면 별도 verification이
 필요하다. 명시적 verification 배정도 independentVerification 값과 무관하게 coordinated로 실행한다.
@@ -73,9 +73,7 @@ active·reported가 남으면 재계획할 수 없다. 이전 증거는 history�
 blocked를 보고하고 필수 역할을 없애 single로 낮추지 않는다. 독립적으로 가능한 작업은 계속한다.
 
 coordinated의 통상 구현은 생성된 배정대로 위임하고 루트는 요구·수용 기준·검증·통합을 맡는다. 작은 연결·충돌
-수정은 영향받은 검증과 함께 기록한다. 기본 상속 모델을 사용하고 모델·추론 수준 변경은 실제
-사용 가능한 선택지와 이미 허용된 예산 안에서만 한다. 높은 추론은 필요한 설계·독립 검수에
-집중하며 비싼 외부 Claude 호출을 자동 추가하거나 실제 모델 신원을 추측하지 않는다. 동시 예산은
+수정은 영향받은 검증과 함께 기록한다. 호스트 도구 메타데이터에 여러 허용 모델·추론 수준이 노출되면 실제 실행 가능한 capability catalogue를 자동 구성한다. 그렇지 않으면 상속만 제공한다. GDM은 작업 난도·위험·실행 능력·비용 제약에 따라 각 배정의 route와 effort 및 선택 이유를 고른다. 같은 역할도 작업마다 다를 수 있으며 고정 역할별 모델 표는 쓰지 않는다. 승인된 Claude 사용량을 관리하고 실제 모델 신원이나 가격을 추측하지 않는다. 동시 예산은
 고정 인원수가 아니라 독립적으로 진행 가능한 범위와 품질·완료 시간에 주는 이익으로 정한다.
 실제 호스트 가용 슬롯·자원·사용자 비용 한도를 planner에 전달하고, 결과가
 모일 때마다 대기 중인 의존성·충돌·중복 조사·통합 부담을 확인해 재계획에 반영한다.
@@ -90,7 +88,7 @@ coordinated의 통상 구현은 생성된 배정대로 위임하고 루트는 �
    있음과 기존 변경 보존, 사용자 승인·도구 권한·비밀 보호·비방해 검증 제약을 함께 전달한다.
    자동 배정은 읽기 전용 역할을 쓰기로 넓히거나 사용자 화면·입력 제어를 허용하지 않는다.
 2. spawn 전에 `gdm team claim --slug <s> --task <id> --assignee <logical-worker-id> --attempt <attempt-id>`로
-   소유권을 기록하고, 같은 identity·범위·수용 기준·검증·종료 조건을 대상의 위임 입력에 전달한다.
+   adaptive 배정이면 `--execution-route <id> --execution-provider <provider> --execution-model <model> --execution-effort <effort>`를 함께 지정한다 (null effort는 `inherit`). host-declared 실행 선언이며 원격 신원 증명은 아니다. 선택된 모델·effort를 지원되는 native 도구에 정확히 전달하고, override가 상속 컨텍스트에서 불가능하면 전체 생성 프롬프트를 가진 지원되는 새 컨텍스트를 사용한다. 같은 identity·범위·수용 기준·검증·종료 조건을 대상의 위임 입력에 전달한다.
    spawn 자체가 실패하면 실패 산출물을 남겨 `report --outcome failed`로 active 상태를 닫는다.
 3. 결과는 저장소 상대 경로의 로컬 파일에 남기고
    `gdm team report --slug <s> --task <id> --attempt <attempt-id> --outcome <completed|failed|cancelled|inconclusive>

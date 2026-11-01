@@ -171,6 +171,9 @@ fn audit_record(work: &Value) -> Value {
         return Value::Null;
     }
     let mut record = json!({"result":a["result"],"report":a["report"],"reportSha256":a["reportSha256"],"implementationModel":a["implementationModel"],"auditModel":a["auditModel"],"workspace":a["workspace"],"stateHash":a["stateHash"],"at":a["at"]});
+    if let Some(models) = a.get("implementationModels") {
+        record["implementationModels"] = models.clone();
+    }
     if let Some(binding) = a.get("verificationBinding") {
         record["verificationBinding"] = binding.clone();
     }

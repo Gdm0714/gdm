@@ -17,7 +17,11 @@ fn digest(value: &Value) -> String {
 
 fn catalog(value: &Value) -> Result<()> {
     if !exact(value, &["schemaVersion", "routes"], &[])
-        || value["schemaVersion"] != "gdm-team-capabilities/v1"
+        || ![
+            json!("gdm-team-capabilities/v1"),
+            json!("gdm-team-capabilities/v2"),
+        ]
+        .contains(&value["schemaVersion"])
         || value["routes"]
             .as_array()
             .is_none_or(|a| a.is_empty() || a.len() > 16)
@@ -29,8 +33,22 @@ fn catalog(value: &Value) -> Result<()> {
     }
     let mut ids = BTreeSet::new();
     for route in array(&value["routes"]) {
-        if !exact(route, &["id", "provider", "model", "roles", "access"], &[])
-            || !id_ok(&route["id"])
+        if !exact(
+            route,
+            &["id", "provider", "model", "roles", "access"],
+            if value["schemaVersion"] == "gdm-team-capabilities/v2" {
+                &[
+                    "execution",
+                    "efforts",
+                    "strengths",
+                    "limitations",
+                    "costClass",
+                    "maxInvocations",
+                ]
+            } else {
+                &[]
+            },
+        ) || !id_ok(&route["id"])
             || !ids.insert(s(route, "id"))
             || !text_ok(&route["provider"], "provider", 80)
             || !text_ok(&route["model"], "model", 120)
@@ -45,6 +63,43 @@ fn catalog(value: &Value) -> Result<()> {
                 "team_capabilities_invalid",
                 "Routes require unique IDs, actual provider/model hints and explicit role/access support",
             ));
+        }
+    }
+    if value["schemaVersion"] == "gdm-team-capabilities/v2" {
+        for r in array(&value["routes"]) {
+            if array(&value["routes"]).iter().any(|other| {
+                other["provider"] == r["provider"]
+                    && other["model"] == r["model"]
+                    && other.get("maxInvocations") != r.get("maxInvocations")
+            }) {
+                return Err(err(
+                    "team_capabilities_invalid",
+                    "All routes for one provider/model must share the same cumulative invocation cap",
+                ));
+            }
+            if !["native", "tool-free"].contains(&s(r, "execution"))
+                || r["efforts"].as_array().is_none_or(|a| {
+                    a.is_empty()
+                        || a.len() > 16
+                        || a.iter()
+                            .any(|v| !v.is_null() && (!text_ok(v, "effort", 80) || *v == "inherit"))
+                        || a.iter().enumerate().any(|(i, v)| a[..i].contains(v))
+                })
+                || !strings(&r["strengths"], 0, 16, |v| text_ok(v, "strength", 240))
+                || !strings(&r["limitations"], 0, 16, |v| text_ok(v, "limitation", 240))
+                || r.get("costClass")
+                    .is_some_and(|v| !text_ok(v, "costClass", 80))
+                || r.get("maxInvocations")
+                    .is_some_and(|v| v.as_u64().is_none_or(|n| n == 0 || n > MAX_NUMBER))
+                || (r["execution"] == "tool-free"
+                    && (array(&r["access"]).contains(&json!("write"))
+                        || array(&r["roles"]).contains(&json!("implementation"))))
+            {
+                return Err(err(
+                    "team_capabilities_invalid",
+                    "Adaptive routes require explicit execution, supported efforts and bounded capability hints; tool-free routes cannot implement or write",
+                ));
+            }
         }
     }
     protocol::no_credentials(value)
@@ -217,7 +272,10 @@ fn input(cwd: &Path, work: &Value, args: &[String]) -> Result<Value> {
         }
         knowledge.push(json!({"taskId":task["id"],"path":path,"sha256":sha256(&text),"text":text}));
     }
-    let value = json!({"schemaVersion":"gdm-team-request-input/v1","work":planning::inputs(work),"inventory":inventory(cwd, work)?,"contexts":contexts,"acceptedKnowledge":knowledge,"capabilities":catalog,"maxActive":cap,"executor":executor,"provider":required_flag(args,"provider")?,"model":required_flag(args,"model")?,"promptVersion":2});
+    let mut value = json!({"schemaVersion":"gdm-team-request-input/v1","work":planning::inputs(work),"inventory":inventory(cwd, work)?,"contexts":contexts,"acceptedKnowledge":knowledge,"capabilities":catalog,"maxActive":cap,"executor":executor,"provider":required_flag(args,"provider")?,"model":required_flag(args,"model")?,"promptVersion":if catalog["schemaVersion"] == "gdm-team-capabilities/v2" {3} else {2}});
+    if value["promptVersion"] == 3 {
+        value["invocationReservations"] = reservation_summary(cwd, work, &value["capabilities"])?;
+    }
     protocol::no_credentials(&value)?;
     if protocol::canonical_json(&value).len() > 48 * 1024 {
         return Err(err(
@@ -226,6 +284,41 @@ fn input(cwd: &Path, work: &Value, args: &[String]) -> Result<Value> {
         ));
     }
     Ok(value)
+}
+
+fn reservation_summary(cwd: &Path, work: &Value, capabilities: &Value) -> Result<Value> {
+    let mut teams = super::historical_teams(cwd, work)?;
+    teams.push(work["team"].clone());
+    let attempts: Vec<_> = teams
+        .iter()
+        .flat_map(|t| array(&t["tasks"]))
+        .flat_map(|t| array(&t["attempts"]))
+        .collect();
+    let unknown = attempts.iter().any(|a| a.get("execution").is_none());
+    let mut seen = BTreeSet::new();
+    let mut reservations = vec![];
+    for route in array(&capabilities["routes"]) {
+        let key = (s(route, "provider"), s(route, "model"));
+        if !seen.insert(key) {
+            continue;
+        }
+        let used = attempts
+            .iter()
+            .filter(|a| {
+                a["execution"]["provider"] == route["provider"]
+                    && a["execution"]["model"] == route["model"]
+            })
+            .count() as u64;
+        let remaining = if unknown {
+            None
+        } else {
+            route["maxInvocations"]
+                .as_u64()
+                .map(|limit| limit.saturating_sub(used))
+        };
+        reservations.push(json!({"provider":route["provider"],"model":route["model"],"claimed":used,"maxInvocations":route.get("maxInvocations").cloned().unwrap_or(Value::Null),"remaining":remaining}));
+    }
+    Ok(json!({"unknownAttribution":unknown,"providerModels":reservations}))
 }
 
 fn assignments(spec: &Value) -> impl Iterator<Item = (&Value, &str, &str)> {
@@ -252,7 +345,7 @@ fn ground(spec: &Value, input: &Value) -> Result<()> {
     }
     catalog(&input["capabilities"])?;
     for (assignment, role, access) in assignments(spec) {
-        if input["promptVersion"] == 2
+        if input["promptVersion"].as_u64().is_some_and(|v| v >= 2)
             && role == "knowledge"
             && (assignment["acceptanceMode"] != "artifact-review"
                 || !assignment["checks"].as_array().is_some_and(Vec::is_empty))
@@ -281,6 +374,35 @@ fn ground(spec: &Value, input: &Value) -> Result<()> {
                 "team_route_invalid",
                 "Planner route must be an offered catalog ID supporting the assigned role and access",
             ));
+        }
+        if input["promptVersion"] == 3 {
+            let route = route.unwrap();
+            if assignment.get("effort").is_none()
+                || !array(&route["efforts"]).contains(&assignment["effort"])
+                || !text_ok(&assignment["selectionReason"], "selectionReason", 480)
+            {
+                return Err(err(
+                    "team_route_invalid",
+                    "Adaptive selection requires an offered effort and task-specific selectionReason",
+                ));
+            }
+            if let Some(limit) = route["maxInvocations"].as_u64()
+                && assignments(spec)
+                    .filter(|(a, _, _)| {
+                        array(&input["capabilities"]["routes"]).iter().any(|r| {
+                            r["id"] == a["routeId"]
+                                && r["provider"] == route["provider"]
+                                && r["model"] == route["model"]
+                        })
+                    })
+                    .count() as u64
+                    > limit
+            {
+                return Err(err(
+                    "team_invocation_limit",
+                    "Plan exceeds route invocation reservation limit",
+                ));
+            }
         }
         for path in array(&assignment["paths"]) {
             let existing = array(&input["inventory"])
@@ -443,7 +565,25 @@ fn schema(provider: &str) -> Value {
     value
 }
 
+fn adaptive_schema(value: &mut Value) {
+    value["properties"]["effort"] =
+        json!({"anyOf":[{"type":"string","minLength":1,"maxLength":80},{"type":"null"}]});
+    value["properties"]["selectionReason"] = json!({"type":"string","minLength":1,"maxLength":480});
+    value["required"]
+        .as_array_mut()
+        .unwrap()
+        .extend([json!("effort"), json!("selectionReason")]);
+}
 fn prompt(input: &Value) -> String {
+    if input["promptVersion"] == 3 {
+        return format!(
+            "{}\nAdaptive contract version 3. Each assignment must select an offered route and explicit offered effort, including null only when offered. Include selectionReason based on task difficulty, risk, context, execution capability and advisory cost. Do not substitute unavailable models or invent capabilities. maxInvocations is a cumulative reservation cap, not spend metering. Knowledge dependencies are attached automatically. Module dependsOn contains only earlier module IDs, never a knowledge task ID. invocationReservations describes all historical and current claim reservations. unknownAttribution means cumulative remaining capacity cannot be proven. Choose within remaining limits and do not describe reservations as actual calls or spend.",
+            prompt_v2(input)
+        );
+    }
+    prompt_v2(input)
+}
+fn prompt_v2(input: &Value) -> String {
     format!(
         "{}\nStructured-output contract version 2. Every schema property is required. Use null for an unnecessary knowledge or verification assignment, independentVerification when unspecified, and knowledgeIndependentReason when implementation depends on knowledge. Never omit required properties. Null is a representation of an absent optional value, not a request to create an empty assignment.\nNew metadata restriction. Do not use a colon in any prose field or identifier. Write full sentences instead of colon-prefixed lists or labels. This restriction overrides the earlier legacy punctuation description. Module IDs use only ASCII letters, digits, dot, underscore and hyphen and are at most 54 characters; other IDs have the same character set and a 64 character limit.\nKnowledge MUST use acceptanceMode artifact-review and checks []. Its acceptance is a source-backed immutable findings artifact reviewed by the coordinator, not final behavior checks. Its deliverable must separate source facts, assumptions and unresolved issues. Its acceptance must describe source citations and resolution quality. Assign every registered check to implementation or final verification so final behavior can remain red during knowledge work. Keep implementation tasks together when their linked checks cannot pass until later dependent implementation finishes; do not create a dependency cycle through check completion or pretend a failing check passed. Implementation owns the relevant test files with write access when tests must be added or repaired, especially regression work. The final verification role is read-only and does not create tests.",
         prompt_v1(input)
@@ -452,7 +592,12 @@ fn prompt(input: &Value) -> String {
 
 // Provider wire output remains unchanged in provenance. Only the explicitly
 // nullable fields are removed when constructing the canonical allocation.
+#[cfg(test)]
 fn canonical_plan(response: &Value) -> Result<Value> {
+    canonical_plan_version(response, 2)
+}
+
+fn canonical_plan_version(response: &Value, version: u64) -> Result<Value> {
     if !exact(response, &["plan", "rationale"], &[])
         || !exact(
             &response["plan"],
@@ -473,7 +618,7 @@ fn canonical_plan(response: &Value) -> Result<Value> {
             "Planner response must include every required structured-output property",
         ));
     }
-    fn assignment(value: &Value, module: bool, knowledge: bool) -> bool {
+    fn assignment(value: &Value, module: bool, knowledge: bool, version: u64) -> bool {
         let mut keys = vec![
             "paths",
             "checks",
@@ -488,6 +633,9 @@ fn canonical_plan(response: &Value) -> Result<Value> {
         if knowledge {
             keys.push("acceptanceMode");
         }
+        if version == 3 {
+            keys.extend(["effort", "selectionReason"]);
+        }
         exact(value, &keys, &[])
     }
     let mut plan = response["plan"].clone();
@@ -495,7 +643,7 @@ fn canonical_plan(response: &Value) -> Result<Value> {
         return Err(err("team_plan_invalid", "Planner modules must be an array"));
     };
     for module in modules {
-        if !assignment(module, true, false) {
+        if !assignment(module, true, false, version) {
             return Err(err(
                 "team_plan_invalid",
                 "Planner module is missing a required property or contains an unknown property",
@@ -509,7 +657,7 @@ fn canonical_plan(response: &Value) -> Result<Value> {
         }
     }
     for key in ["knowledge", "verification"] {
-        if !plan[key].is_null() && !assignment(&plan[key], false, key == "knowledge") {
+        if !plan[key].is_null() && !assignment(&plan[key], false, key == "knowledge", version) {
             return Err(err(
                 "team_plan_invalid",
                 "Planner role must be a complete assignment or null",
@@ -529,10 +677,10 @@ fn recorded_contract(request: &Value) -> Result<(String, String)> {
         Some(1) if request.get("plannerContract").is_none() => {
             Ok((prompt_v1(&request["input"]), schema_v1().to_string()))
         }
-        Some(2) => {
+        Some(version @ (2 | 3)) => {
             let contract = &request["plannerContract"];
             if !exact(contract, &["version", "prompt", "schema"], &[])
-                || contract["version"] != 2
+                || contract["version"] != version
                 || contract["prompt"]
                     .as_str()
                     .is_none_or(|s| s.is_empty() || s.len() > 64 * 1024)
@@ -566,7 +714,11 @@ pub(super) fn validate(work: &Value) -> Result<()> {
     let plan = if request["input"]["promptVersion"] == 1 {
         request["response"]["plan"].clone()
     } else {
-        canonical_plan(&request["response"]).map_err(|_| corrupt())?
+        canonical_plan_version(
+            &request["response"],
+            request["input"]["promptVersion"].as_u64().unwrap_or(0),
+        )
+        .map_err(|_| corrupt())?
     };
     if !exact(
         request,
@@ -792,7 +944,13 @@ pub(super) fn run(cwd: &Path, args: &[String]) -> Result<Value> {
     };
     // Never hold the repository lock while waiting for a model process.
     let planner_prompt = prompt(&input);
-    let planner_schema = schema(s(&input, "provider"));
+    let mut planner_schema = schema(s(&input, "provider"));
+    if input["promptVersion"] == 3 {
+        let plan = &mut planner_schema["properties"]["plan"]["properties"];
+        adaptive_schema(&mut plan["modules"]["items"]);
+        adaptive_schema(&mut plan["knowledge"]["anyOf"][0]);
+        adaptive_schema(&mut plan["verification"]["anyOf"][0]);
+    }
     let reply = crate::integrations::role_runner::request_plan(
         s(&input, "provider"),
         s(&input, "model"),
@@ -801,7 +959,7 @@ pub(super) fn run(cwd: &Path, args: &[String]) -> Result<Value> {
     )?;
     protocol::no_credentials(&reply.value)?;
     protocol::no_credentials(&reply.receipt)?;
-    let mut request = json!({"schemaVersion":SCHEMA,"input":input,"inputDigest":digest(&input),"response":reply.value,"responseDigest":digest(&reply.value),"receipt":reply.receipt,"plannerContract":{"version":2,"prompt":planner_prompt,"schema":planner_schema.to_string()}});
+    let mut request = json!({"schemaVersion":SCHEMA,"input":input,"inputDigest":digest(&input),"response":reply.value,"responseDigest":digest(&reply.value),"receipt":reply.receipt,"plannerContract":{"version":input["promptVersion"],"prompt":planner_prompt,"schema":planner_schema.to_string()}});
     let plan = (|| -> Result<Value> {
         if !exact(&reply.value, &["plan", "rationale"], &[]) {
             return Err(err(
@@ -815,8 +973,24 @@ pub(super) fn run(cwd: &Path, args: &[String]) -> Result<Value> {
                 "Invalid planner field response.rationale",
             ));
         }
-        let plan = canonical_plan(&reply.value)?;
+        let plan = canonical_plan_version(&reply.value, input["promptVersion"].as_u64().unwrap())?;
         ground(&plan, &input)?;
+        if input["promptVersion"] == 3 {
+            let mut teams=super::historical_teams(cwd,&before)?;
+            teams.push(before["team"].clone());
+            for route in array(&input["capabilities"]["routes"]) {
+                if let Some(limit)=route["maxInvocations"].as_u64() {
+                    let mut used=0u64;
+                    for attempt in teams.iter().flat_map(|t|array(&t["tasks"])).flat_map(|t|array(&t["attempts"])) {
+                        let e=&attempt["execution"];
+                        if e.is_null() {return Err(err("team_invocation_limit","Historical claims lack attribution for cumulative planning limits"));}
+                        if e["provider"]==route["provider"] && e["model"]==route["model"] {used+=1;}
+                    }
+                    let planned=assignments(&plan).filter(|(a,_,_)|array(&input["capabilities"]["routes"]).iter().any(|r|r["id"]==a["routeId"] && r["provider"]==route["provider"] && r["model"]==route["model"])).count() as u64;
+                    if used+planned>limit {return Err(err("team_invocation_limit","Plan plus historical reservations exceeds cumulative provider/model invocation cap"));}
+                }
+            }
+        }
         planning::check_spec(&plan, &input["work"])?;
         Ok(plan)
     })()
@@ -903,6 +1077,43 @@ mod tests {
             Value::Array(values) => values.iter().all(strict_objects),
             _ => true,
         }
+    }
+
+    #[test]
+    fn adaptive_catalog_rejects_tool_free_write_and_unsupported_effort() {
+        let mut cap = json!({"schemaVersion":"gdm-team-capabilities/v2","routes":[{"id":"host-a","provider":"native","model":"available-a","roles":["implementation"],"access":["write"],"execution":"native","efforts":[null,"high"],"strengths":["Complex changes"],"limitations":[],"maxInvocations":1}]});
+        assert!(catalog(&cap).is_ok());
+        cap["routes"][0]["execution"] = json!("tool-free");
+        assert_eq!(catalog(&cap).unwrap_err().code, "team_capabilities_invalid");
+        cap["routes"][0]["execution"] = json!("native");
+        let input = json!({"executor":"native","maxActive":2,"promptVersion":3,"capabilities":cap,"inventory":[{"path":"src","kind":"directory"}]});
+        let mut plan = json!({"executor":"native","maxActive":1,"modules":[{"routeId":"host-a","paths":["src"],"createPaths":[],"dependsOn":[],"effort":"low","selectionReason":"Small scoped change"}]});
+        assert_eq!(
+            ground(&plan, &input).unwrap_err().code,
+            "team_route_invalid"
+        );
+        plan["modules"][0]["effort"] = json!("high");
+        assert!(ground(&plan, &input).is_ok());
+        let duplicate = plan["modules"][0].clone();
+        plan["modules"].as_array_mut().unwrap().push(duplicate);
+        assert_eq!(
+            ground(&plan, &input).unwrap_err().code,
+            "team_invocation_limit"
+        );
+    }
+
+    #[test]
+    fn adaptive_same_role_selects_different_available_models() {
+        let route = |id: &str, model: &str| json!({"id":id,"provider":"native","model":model,"roles":["implementation"],"access":["write"],"execution":"native","efforts":["high",null],"strengths":[],"limitations":[]});
+        let input = json!({"executor":"native","maxActive":2,"promptVersion":3,"capabilities":{"schemaVersion":"gdm-team-capabilities/v2","routes":[route("small","small-model"),route("large","large-model")]},"inventory":[{"path":"src","kind":"directory"}]});
+        let assignment = |id: &str, effort: Value| json!({"routeId":id,"paths":["src"],"createPaths":[],"dependsOn":[],"effort":effort,"selectionReason":"Selected for task complexity and cost"});
+        let mut plan = json!({"executor":"native","maxActive":2,"modules":[assignment("small",Value::Null),assignment("large",json!("high"))]});
+        assert!(ground(&plan, &input).is_ok());
+        plan["modules"][1]["routeId"] = json!("unavailable");
+        assert_eq!(
+            ground(&plan, &input).unwrap_err().code,
+            "team_route_invalid"
+        );
     }
 
     #[test]

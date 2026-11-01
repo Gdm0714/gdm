@@ -34,10 +34,18 @@ fn assignment(v: &Value, module: bool, input: &Value) -> bool {
                 "knowledgeIndependentReason",
                 "dependsOn",
                 "routeId",
+                "effort",
+                "selectionReason",
                 "createPaths",
             ]
         } else {
-            &["routeId", "createPaths", "acceptanceMode"]
+            &[
+                "routeId",
+                "effort",
+                "selectionReason",
+                "createPaths",
+                "acceptanceMode",
+            ]
         },
     ) && (!module || id_ok(&v["id"]))
         && text_ok(&v["deliverable"], "deliverable", 480)
@@ -241,6 +249,11 @@ fn task(id: &str, role: &str, assignment: &Value, deps: Vec<Value>, access: &str
         "dependsOn":deps,"status":"pending","attempts":[]});
     if let Some(route) = assignment.get("routeId") {
         task["routeId"] = route.clone();
+    }
+    for key in ["effort", "selectionReason"] {
+        if let Some(v) = assignment.get(key) {
+            task[key] = v.clone();
+        }
     }
     if let Some(mode) = assignment.get("acceptanceMode") {
         task["acceptanceMode"] = mode.clone();
@@ -482,7 +495,7 @@ pub(super) fn validate(work: &Value) -> Result<()> {
     }
     super::request::validate(work)?;
     if a["spec"]["knowledge"].get("acceptanceMode").is_some()
-        && a["request"]["input"]["promptVersion"] != 2
+        && !matches!(a["request"]["input"]["promptVersion"].as_u64(), Some(2 | 3))
     {
         return Err(corrupt());
     }
@@ -608,7 +621,7 @@ pub(super) fn apply(
     if spec["knowledge"].get("acceptanceMode").is_some()
         && request
             .as_ref()
-            .is_none_or(|r| r["input"]["promptVersion"] != 2)
+            .is_none_or(|r| !matches!(r["input"]["promptVersion"].as_u64(), Some(2 | 3)))
     {
         return Err(err(
             "team_plan_invalid",

@@ -670,11 +670,14 @@ pub fn audit(cwd: &Path, args: &[String]) -> Result<()> {
         ));
     }
     let report = required_flag(args, "report")?;
-    let implementation = contract::safe_text(
-        &required_flag(args, "implementation-model")?,
-        "implementation-model",
-        240,
-    )?;
+    let implementations = read_flags(args, "implementation-model")?
+        .iter()
+        .map(|model| contract::safe_text(model, "implementation-model", 240))
+        .collect::<Result<Vec<_>>>()?;
+    let implementation = implementations
+        .first()
+        .ok_or_else(|| Error::new("usage", "At least one --implementation-model is required"))?
+        .clone();
     let audit_model =
         contract::safe_text(&required_flag(args, "audit-model")?, "audit-model", 240)?;
     let bytes = store::contained(cwd, &report, "report", usize::MAX / 2)?;
@@ -707,8 +710,15 @@ pub fn audit(cwd: &Path, args: &[String]) -> Result<()> {
             ),
         ));
     }
-    if !content.contains(&format!("implementationModel: {implementation}"))
-        || !content.contains(&format!("auditModel: {audit_model}"))
+    let has_model = |key: &str, model: &str| {
+        content
+            .lines()
+            .any(|line| line.trim().trim_matches('*') == format!("{key}: {model}"))
+    };
+    if implementations
+        .iter()
+        .any(|model| !has_model("implementationModel", model))
+        || !has_model("auditModel", &audit_model)
     {
         return Err(Error::new(
             "audit_model_mismatch",
@@ -727,17 +737,9 @@ pub fn audit(cwd: &Path, args: &[String]) -> Result<()> {
                 ),
             ));
         }
-        if implementation.to_lowercase() == audit_model.to_lowercase() {
-            return Err(Error::new(
-                "audit_independence",
-                crate::i18n::text(
-                    "구현 모델과 검수 모델은 달라야 합니다",
-                    "The implementation and audit models must differ",
-                ),
-            ));
-        }
+        fingerprint::validate_audit_models(cwd, &w, &implementations, &audit_model)?;
         let at = now();
-        let mut a = json!({"result":if pass{"pass"}else{"fail"},"report":report,"reportSha256":sha256(bytes),"implementationModel":implementation,"auditModel":audit_model,"workspace":fingerprint::capture_workspace(cwd)?,"stateHash":state::checks_hash(&w),"at":at});
+        let mut a = json!({"result":if pass{"pass"}else{"fail"},"report":report,"reportSha256":sha256(bytes),"implementationModel":implementation,"implementationModels":implementations,"auditModel":audit_model,"workspace":fingerprint::capture_workspace(cwd)?,"stateHash":state::checks_hash(&w),"at":at});
         if verification::active(&w) && pass {
             a["verificationBinding"] = verification::audit_binding(cwd, &w)?;
         }
@@ -794,7 +796,7 @@ pub fn done(cwd: &Path, args: &[String]) -> Result<()> {
         scope(&w)?;
         let requires = b(&w["auditRequired"]) || w["contract"]["risk"] == "high";
         if requires && w["audit"]["result"] == "pass" {
-            let problems = fingerprint::audit_problems(cwd, &w["audit"])?;
+            let problems = fingerprint::audit_problems(cwd, &w)?;
             if !problems.is_empty() {
                 return Err(Error::new("audit_stale", problems.join(", ")));
             }

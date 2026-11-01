@@ -17,6 +17,10 @@ Work의 역할·소유 경로·의존성·실행 route는 `gdm team auto --from-
 capability catalogue·명시적 context만 제공하고 생성된 `team next`의 route·prompt를 그대로
 현재 도구에 전달한다. 기본 worker route는 `native-inherit`이며 planner의 `--model`과
 worker 모델은 별개다. route가 실행 불가능하면 blocked로 남기고 임의의 모델로 바꾸지 않는다.
+호스트 도구 메타데이터가 여러 허용 모델·effort를 지원하면 실제 실행 가능한 catalogue를 자동 구성한다.
+GDM은 난도·위험·실행 능력·비용 제약에 따라 배정별 route·effort와 이유를 고른다. 같은 역할도
+달라질 수 있다. 선택된 route·provider·model·effort를 claim에 host-declared로 기록하고 정확히
+전달한다. 메타데이터가 선택을 지원하지 않으면 상속 route만 사용한다. tool-0 Claude는 쓰기 워커가 아니다.
 `--file`은 명시적 수동 import 호환 경로다. Work의 새 경계나 변경 요구는 context와 check를
 갱신해 `--from-request --replan --reason`으로 반영한다.
 Work의 하위 위임도 호스트와 GDM이 조율한다. 작업자는 임의로 범위·모델을 확장하지 않고
@@ -30,7 +34,7 @@ Work의 하위 위임도 호스트와 GDM이 조율한다. 작업자는 임의�
 않는다. Work task로 등록한 위임은 spawn 전에 `gdm team claim`으로 논리 assignee와 attempt를 기록하고 위임 입력에 같은
 Work slug·task·assignee·attempt를 전달한다. spawn 실패는 실패 artifact와 report로 닫는다.
 하위 역할의 응답은 검증 증거가 아니며 진행자가 실제 변경·artifact를 확인하고 pass·review로
-수락한다. planner semantic v2 knowledge의 `acceptanceMode: artifact-review`, `checks: []`는 출처 근거가
+수락한다. planner semantic v3 knowledge의 `acceptanceMode: artifact-review`, `checks: []`는 출처 근거가
 담긴 completed 보고서의 불변 해시와 수용 기준을 review하며 미래의 동작 check 통과를 요구하지 않는다.
 implementation·verification은 연결 check를 증명하고 최종 done의 전체 check 게이트와 수동·이전 계획의
 동작은 유지한다. review와 retry는 현재 `--attempt`를 반드시 지정하고 과거 attempt 요청은 거부한다.
@@ -44,7 +48,7 @@ stop·timeout을 성공으로 세지 않는다. `gdm team next --json`에 따라
 runner의 ACK·receipt·adoption을 확인한다. 실패·빈 응답·단순 프로세스 시작을 성공으로
 세지 않는다. 사용자 요청이 없는 다른 공급자 호출을 폴백으로 사용하지 않는다.
 
-`gdm-full` 검수는 일반 하위 에이전트가 대신하지 않는다. 실제 구현 모델과 다른 Claude
+`gdm-full` 검수는 일반 하위 에이전트가 대신하지 않는다. 모든 실제 구현 모델과 다른 Claude
 모델을 `run-role.sh --mode work --role audit --model <모델 ID>`로 호출하고 같은 모델의
 이름·역할만 바꾼 검수를 거부한다. 사용할 수 있는 다른 모델이 없으면 full의 독립성 조건을
 유지하고 차단 이유를 알린다. 스킬을 실행했다는 사실은 commit·push·PR 승인도 아니다.

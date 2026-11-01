@@ -11,10 +11,9 @@ description: |
 
 ## 역할
 
-배포 수준 작업의 **루트 조율자**. 한 작업의 실제 구현 모델을 하나로 기록하되, 그 모델의
-지원되는 coordinated 실행에서는 여러 구현 에이전트가 겹치지 않는 파일·모듈을 나눠 맡는다.
+배포 수준 작업의 **루트 조율자**. 실제 구현에 참여한 모든 모델을 기록한다. 지원되는 coordinated 실행에서는 여러 구현 에이전트가 겹치지 않는 파일·모듈을 나눠 맡는다.
 중간 이상 작업의 구현 위임과 작은 순차 작업·대상 capability 한계의 single 사유는 gdm-go의 팀 실행
-계약을 따른다. 루트 조율자가 산출물과 gdm 게이트를 통합하며, **실제 구현 모델과 다른 모델**의 새 컨텍스트 검수자가 통과 판정을
+계약을 따른다. 루트 조율자가 산출물과 gdm 게이트를 통합하며, **모든 실제 구현 모델과 다른 모델**의 새 컨텍스트 검수자가 통과 판정을
 내린 상태로만 작업을 끝낸다. 라우팅 계약: `skills/_shared/routing.md`.
 
 <!-- GDM_WORK_PROTOCOL_V1_BEGIN -->
@@ -108,9 +107,7 @@ v1 snapshot과 handoff는 계속 읽을 수 있다. 자동 실행이 필요한 `
 
 - gdm-go의 모든 제약이 그대로 적용된다 (상태는 CLI로만, done 전 완료 보고 금지,
   기준 몰래 완화 금지).
-- CRITICAL: 한 작업의 **실제 구현 모델은 하나**이며 실제 구현 모델과 검수 모델은 달라야 한다.
-  같은 구현 모델의 에이전트는 여러 명이어도 된다. 역할 이름이나 조율자 정체성이 아니라
-  실제 diff를 만든 주체를 기준으로 기록한다.
+- CRITICAL: 조율자와 현재 후보에 남은 과거 시도를 포함해 실제 구현에 참여한 모든 모델을 기록한다. 검수 모델은 그 모두와 달라야 한다. 모델 귀속을 확인할 수 없으면 독립성을 증명하지 못하므로 full 완료를 차단한다.
 - IMPORTANT: gdm-go의 팀 실행과 완료 책임을 적용한다. 사용자 원문 요청을 Work brief로
   보존해 `plan init`하고 check를 최소 1개 등록한 후
   `gdm team auto --slug <s> --from-request --provider <claude|codex> --model <planner-model> --max-active <1..32> --executor <native|unavailable> --json`을 실행한다.
@@ -126,7 +123,7 @@ v1 snapshot과 handoff는 계속 읽을 수 있다. 자동 실행이 필요한 `
   호스트가 생성된 next·route·prompt를 그대로 native dispatch 루프로 실행하며 재승인을 묻지 않는다.
   복잡한 작업의 executor가 unavailable이면 필수 역할을 없애지
   않고 blocked를 보고한다. 작은 low risk 단일 module의 사유 있는 single만 유지한다.
-  기본 상속 모델·허용된 예산과 대상별 권한·비방해 검증을 유지하고 비싼 외부 모델을 자동 추가하지 않는다.
+  호스트 메타데이터가 여러 허용 모델·추론 수준을 제공하면 실행 가능한 capability catalogue를 자동 구성한다. GDM은 작업 난도·위험·실행 능력·비용 제약에 따라 route·effort와 이유를 배정하며 같은 역할도 달라질 수 있다. 그렇지 않으면 상속 route만 사용한다. 승인된 비용·권한·비방해 검증을 지키고 모델이나 가격을 추측하지 않는다.
 - IMPORTANT: 생성된 task의 소유 경로·산출물·수용 기준·연결 check·의존성을 유지하고 spawn 전 claim한다.
   implementation에는 필요한 테스트 작성·수정 경로의 쓰기 소유권을 포함하고 verifier는 읽기 전용을 유지한다.
   루트가 실제 결과를 확인하고 implementation·verification은 `gdm pass` 후 `gdm team review --attempt <current-attempt-id>`로
@@ -138,13 +135,13 @@ v1 snapshot과 handoff는 계속 읽을 수 있다. 자동 실행이 필요한 `
   정하고 결과 수집마다 재평가한다. single은 1이며 무거운 빌드는 직렬화한다. team 기록은
   audit나 done을 대체하지 않는다. 해당 Work 구현에 참여하지 않은 실행자의 native verification도
   아래의 다른 실제 모델에 의한 독립 audit를 대체하지 않는다.
-  새 요청 계획은 schema `gdm-team-plan/v1`을 유지하며 planner semantic v2로 식별한다.
+  v2 catalogue의 새 요청 계획은 schema `gdm-team-plan/v1`을 유지하며 planner semantic v3로 식별한다. v1 catalogue는 기존 semantic v2를 유지한다.
   knowledge의 `acceptanceMode: artifact-review`, `checks: []`는 출처·근거·미확인 사항을 담은 completed 보고서의
   불변 해시와 수용 기준을 검토해 수락하며 아직 구현하지 않은 최종 동작 check의 통과를 요구하지 않는다.
   모든 Work check는 implementation 또는 verification에서 증명한다. 수동·이전 계획의 연결 check
   수락 방식과 최종 `gdm done`의 전체 check 게이트는 바꾸지 않는다.
 - IMPORTANT: 루트 조율자는 변경 통합·충돌 해결과 최종 판정을 소유한다. coordinated에서는 제한된 연결·
-  충돌 수정 외의 통상 구현을 위임하며, 제품 파일을 직접 고치면 기록된 실제 구현 모델과 동일해야 한다.
+  충돌 수정 외의 통상 구현을 위임하며, 제품 파일을 직접 고치면 조율자의 실제 모델도 구현 모델 집합에 기록한다.
 
 <!-- GDM_TARGET_FRAGMENT_V1:delegation -->
 
@@ -173,7 +170,7 @@ gdm-go의 도구 전부 + 검수:
 |---|---|
 | `gdm plan init --audit --require <보존> --forbid <금지> --risk <low\|medium\|high> --verification <deterministic\|inspectable\|opaque> [--profile integration] [preflight·scope 플래그] [--simplify]` | preflight 계약·baseline과 함께 검수 필수 작업 시작 |
 | `gdm audit brief` | 검수자에게 줄 브리핑 패키지 출력 |
-| `gdm audit verdict (--pass\|--fail) --report <파일> --implementation-model <모델> --audit-model <모델>` | 검수자 판정과 독립성·보고서·워크트리 지문 기록 |
+| `gdm audit verdict (--pass\|--fail) --report <파일> --implementation-model <모델> [--implementation-model <모델> ...] --audit-model <모델>` | 모든 구현 모델을 반복 지정하여 검수자 판정과 독립성·보고서·워크트리 지문 기록 |
 | `gdm-agents/run-role.sh --mode work --provider <codex\|claude> --role audit --slug <슬러그> --handoff-event-id <event-id> --claim-id <claim-id> --receiver-role audit [--workspace <경로>] [--model <모델>]` | canonical dispatch identity에 결속된 deterministic model-view를 주입하고 stdout을 `.gdm/<슬러그>/out/protocol/<claim-id>.out`에 저장하며 claim·finish receipt와 자원 제한 안에서 단일 검수 PID 트리를 실행. Work mode에는 `--prompt`를 쓰지 않는다 |
 
 ## 프로세스
@@ -187,7 +184,7 @@ gdm-go의 도구 전부 + 검수:
    선택형 기술 설계 호출 실패는 원인과 `coordinator-fallback`을 기록하고 진행한다. 사용자가
    Claude 결과 자체를 요구했거나 필수 근거가 없으면 해당 의존 작업만 보류한다.
    선택적으로 요청받은 Claude Design 연동은 `gdm-design`을 따른다. 설계·시각 산출물은 구현 모델이 아니며 로컬 제품 코드는 기록된
-   실제 구현 모델만 작성한다.
+   배정된 실제 구현 모델이 작성한다.
 2. 구현 전 가정·불확실성·허용/금지 경로·중단 조건·risk·verification을 분류하고
    `gdm plan init --slug <슬러그> --brief "<요약>" --audit --require "<보존 조건>"
    --forbid "자동 커밋" ...`에 모두 기록한다. 구조 변경의 간소화 검증이 필요할 때 `--simplify`를 붙인다.
@@ -212,9 +209,7 @@ gdm-go의 도구 전부 + 검수:
    필요한 다중 턴 상태, 비적용 사유와 증거 범위를 대조한다. 통과 수로 이 대조를 대신하지 않는다.
    등록 후 필요한 검증을 알리고 승인된 범위의 구현을 계속한다. full이라는 이유만으로
    이미 받은 승인을 다시 묻지 않는다.
-4. 구현 시작 전에 실제 구현 모델 하나를 지정한다. 검수 입력의 첫 필드에
-   `implementationModel: <실제 모델>`을 기록하고 작업 기록에도 남긴다. 지원되는 대상의 중간 이상
-   작업은 생성된 route·소유 경계대로 같은 실제 구현 모델의 워커를 실행한다. 작은 순차 작업은
+4. 구현 배정의 route·effort를 host-declared claim에 선언하고 정확히 실행한다. 조율자와 현재 후보에 남은 과거 시도를 포함한 모든 실제 구현 모델을 작업 기록과 검수 입력에 기록한다. `implementationModels`에 전체 집합을 보존하며 기존 `implementationModel`은 첫 모델을 담는 호환용 단일 값이다. 새 v3 작업에서 귀속이 불명이면 거부한다. 이전 작업의 선언 누락은 호스트가 귀속을 제공하며 원격 모델 신원의 기계적 증명은 아니다. 작은 순차 작업은
    auto의 single 사유를 유지한다. 루트는
    산출물 수집·수용 기준 대조·통합·pass를 맡고, 모든 team task를 수락한 후 독립 검수로 간다.
    검수 전 마지막 변경 이후의 검증이 빠졌을 때만 해당 항목을 `gdm recheck --check <id>`로
@@ -231,7 +226,7 @@ gdm-go의 도구 전부 + 검수:
       `--artifact <audit-artifact>`를 넣은 `gdm protocol offer`로 이 bytes/hash를 먼저 고정한다.
       credential-free valid UTF-8 완결본이 1 MiB를 넘으면 내용을 임의로 자르지 말고 자동
       audit를 차단한다.
-   b. **실제 구현 모델과 다른 모델의 검수자 정확히 1명을 새 컨텍스트로 실행한다.** 프롬프트는
+   b. **모든 실제 구현 모델과 다른 모델의 검수자 정확히 1명을 새 컨텍스트로 실행한다.** 프롬프트는
       입력은 현재 대화 요약이나 별도 `--prompt`가 아니라 offer에 묶인 audit artifact를 포함한
       canonical bundle에서 만든 `gdm-dispatch-model-view/v1`이다. artifact의 path·hash·text와
       canonical `bundleSha256`는 전달하지만 `bytesBase64`는 중복 주입하지 않는다. `auditor.md`는
@@ -242,13 +237,13 @@ gdm-go의 도구 전부 + 검수:
       트리만 종료한다.
       다른 모델을 사용할 수 없으면 임의로 같은 모델 검수로 낮추지 말고 사용자에게
       차단 상태를 보고한다.
-   c. 검수자는 model-view에 포함된 artifact text와 상태만 검토해 `implementationModel`과
-      `auditModel`을 포함한
+   c. 검수자는 model-view에 포함된 전체 구현 모델 집합과 artifact text·상태를 검토해 모델마다 별도의 정확한 `implementationModel: <모델>` 줄과 `auditModel: <검수 모델>` 줄을 포함한
       보고서를 stdout으로 반환한다. runner가 stdout을
       `.gdm/<슬러그>/out/protocol/<claim-id>.out`에 저장하며, 중요한 근거가 model-view에 없으면
       확인 불가로 적고 반려한다.
    d. `gdm audit verdict --pass|--fail --report .gdm/<슬러그>/out/protocol/<claim-id>.out
-      --implementation-model <실제 구현 모델> --audit-model <검수 모델>`.
+      --implementation-model <실제 구현 모델> [--implementation-model <다른 구현 모델> ...] --audit-model <검수 모델>`.
+      CLI는 제공된 전체 모델과 검수 모델을 비교하고 기록된 현재·과거 쓰기 시도의 모델을 모두 포함했는지 확인한다. 조율자나 기록에 없는 구현의 실제 모델도 호스트가 포함해야 한다. protocol export는 모델 배열을 보존하며 done과 audit-state도 이를 다시 확인한다.
       CLI는 보고서 해시와 현재 Git 워크트리의 실제 파일 내용 지문을 함께 묶는다. 이후 코드나
       보고서가 바뀌면 검수가 무효가 되고, 같은 내용을 커밋해 HEAD만 바뀐 경우에는 유지된다.
       유효한 audit 결속이 있으면 `done`은 같은 검증 명령을 다시 실행하지 않는다. 외부 연동은
@@ -270,7 +265,7 @@ gdm-go의 도구 전부 + 검수:
 
 ## 엣지 케이스
 
-- 실제 구현 모델과 다른 검수자를 실행할 수 없으면 `INDEPENDENCE_BLOCKED`를 보고하고
+- 모든 실제 구현 모델과 다른 검수자를 실행할 수 없으면 `INDEPENDENCE_BLOCKED`를 보고하고
   full의 검수 통과·done·전달을 중단한다. 같은 모델 검수나 사용자 동의로 full 게이트를
   낮추지 않는다. 사용자가 경량 루프로 범위를 다시 정하면 별도 gdm-go 작업으로 시작한다.
 - 반려 횟수만으로 멈추지 않는다. 사유와 새 근거를 반영해 승인된 범위의 수정·재검수를
@@ -304,10 +299,10 @@ Good:
 어시스턴트:
 1. plan init --audit --profile integration --require "기존 심의 전이 보존" --forbid "자동 커밋",
    check 4개(happy/edge/regression/adversarial) 등록 → 검증 계약 import·show → 범위 공유
-2. team auto → 지식 결과 수락 → 같은 실제 구현 모델의 두 워커가 상태 전이·테스트 모듈을 맡음
+2. team auto → 지식 결과 수락 → 배정된 route의 워커가 상태 전이·테스트 모듈을 맡음
    → 조율자가 변경 통합·pass·review → 구현에 참여하지 않은 verify 워커의 최종 검증 수락
 3. audit brief + 실제 diff/source excerpt + evidence exact content/hash/command output을 묶어
-   단일 검수자 실행 — 실제 구현 모델과 다른 사용 가능한 Claude 모델을 지정한다
+   단일 검수자 실행 — 모든 실제 구현 모델과 다른 사용 가능한 Claude 모델을 지정한다
    `gdm-agents/run-role.sh --mode work --provider claude --model <다른 실제 모델 ID> --role audit --slug ... --handoff-event-id ... --claim-id ... --receiver-role audit`
    → 검수자가 반려 ("전문간사 배정 전 통보 시도 케이스 미검증")
 4. verdict --fail 기록 → 해당 케이스를 c5로 추가, 구현·pass → 재검수 → 통과

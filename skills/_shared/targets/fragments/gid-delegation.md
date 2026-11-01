@@ -9,6 +9,10 @@ Work의 역할·소유 경로·의존성·실행 route는 `gdm team auto --from-
 capability catalogue·명시적 context만 제공하고 생성된 `team next`의 route·prompt를 그대로
 현재 도구에 전달한다. 기본 worker route는 `native-inherit`이며 planner의 `--model`과
 worker 모델은 별개다. route가 실행 불가능하면 blocked로 남기고 임의의 모델로 바꾸지 않는다.
+호스트 도구 메타데이터가 여러 허용 모델·effort를 지원하면 실제 실행 가능한 catalogue를 자동 구성한다.
+GDM은 난도·위험·실행 능력·비용 제약에 따라 배정별 route·effort와 이유를 고른다. 같은 역할도
+달라질 수 있다. 선택된 route·provider·model·effort를 claim에 host-declared로 기록하고 정확히
+전달한다. 메타데이터가 선택을 지원하지 않으면 상속 route만 사용한다. tool-0 Claude는 쓰기 워커가 아니다.
 `--file`은 명시적 수동 import 호환 경로다. Work의 새 경계나 변경 요구는 context와 check를
 갱신해 `--from-request --replan --reason`으로 반영한다.
 Work의 하위 위임도 호스트와 GDM이 조율한다. 작업자는 임의로 범위·모델을 확장하지 않고
@@ -22,7 +26,7 @@ gid native는 현재 세션에 노출된 `delegate_tasks`를 사용한다. 도�
 배정한다. 이는 작업 전체의 역할 수 제한이 아니며, 생성된 next·route에 따라
 추가 묶음을 배정한다. 결과를 수집한 뒤 실제 호스트 가용 슬롯·자원·사용자 비용 한도와
 통합 부담을 다시 확인한다. 쓰기 범위가 겹치거나 선행 결과가 필요한 작업은 같은 묶음에 넣지
-않는다. 작업자는 부모가 선택한 공급자·모델·추론 강도·실행 정책을 상속하며 현재 버전에서는
+않는다. 현재 도구가 모델 선택을 노출하지 않으면 작업자는 부모의 공급자·모델·추론 강도·실행 정책을 상속하며
 다시 위임하지 않는다.
 
 Work task는 실행 전에 `gdm team claim`한다. 도구 입력과 결과 산출물에 Work slug, task ID,
@@ -32,7 +36,7 @@ assignee, attempt를 함께 남긴다. `delegate_tasks`는 각 작업의 결과�
 프로세스 중단 후에는 저장된 결과와 실제 파일 변경을 확인한 뒤 명시적으로 새 시도를 만든다.
 
 루트가 결과를 `team report`로 저장하고 implementation·verification의 연결 check를 `gdm pass`로
-증명한 뒤 현재 `--attempt`를 지정하여 `team review`한다. planner semantic v2 knowledge의
+증명한 뒤 현재 `--attempt`를 지정하여 `team review`한다. planner semantic v3 knowledge의
 `acceptanceMode: artifact-review`, `checks: []`는 출처 근거가 담긴 completed 보고서의 불변 해시와
 수용 기준을 review하며 미래의 동작 check 통과를 요구하지 않는다. 최종 done의 전체 check 게이트와
 수동·이전 계획의 동작은 유지한다. 작업자는 자신의 check나 task를 수락하지 않는다.

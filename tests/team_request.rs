@@ -791,3 +791,209 @@ fn rejected_dry_run_and_credential_response_do_not_write_diagnostics() {
     assert_eq!(before, f.state_bytes());
     assert!(f.rejected_archives().is_empty());
 }
+
+#[test]
+fn adaptive_selection_survives_reload_and_claim_rejects_substitution_without_mutation() {
+    let f = Fixture::new(true, true);
+    let route = |id: &str, model: &str| json!({"id":id,"provider":"native","model":model,"roles":["knowledge","implementation","verification"],"access":["read","write"],"execution":"native","efforts":[null,"high"],"strengths":["Scoped implementation"],"limitations":[],"maxInvocations":8});
+    fs::write(f.root.join("capabilities.json"), serde_json::to_vec(&json!({"schemaVersion":"gdm-team-capabilities/v2","routes":[route("light","available-light"),route("deep","available-deep")]})).unwrap()).unwrap();
+    let mut reply = response();
+    for key in ["knowledge", "verification"] {
+        reply["plan"][key]["routeId"] = json!("light");
+        reply["plan"][key]["effort"] = Value::Null;
+        reply["plan"][key]["selectionReason"] = json!("Bounded read task with low execution cost");
+    }
+    for (i, module) in reply["plan"]["modules"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .enumerate()
+    {
+        module["routeId"] = json!(if i == 0 { "deep" } else { "light" });
+        module["effort"] = json!("high");
+        module["selectionReason"] = json!("Selected for module complexity and risk");
+    }
+    f.reply(reply);
+    let planned = f.planned(&["--capabilities-file", "capabilities.json"]);
+    assert_eq!(planned["tasks"][1]["routeId"], "deep");
+    assert_eq!(planned["tasks"][2]["routeId"], "light");
+    assert_eq!(planned["tasks"][1]["effort"], "high");
+    f.ok(&["team", "next", "--slug", "sample"]);
+    let before = f.state_bytes();
+    let base = [
+        "team",
+        "claim",
+        "--slug",
+        "sample",
+        "--task",
+        "knowledge",
+        "--assignee",
+        "fresh-reader",
+        "--attempt",
+        "adaptive-k1",
+    ];
+    let missing = f.run(&base);
+    assert!(!missing.status.success());
+    assert_eq!(before, f.state_bytes());
+    let wrong = [
+        &base[..],
+        &[
+            "--execution-route",
+            "light",
+            "--execution-provider",
+            "native",
+            "--execution-model",
+            "substitute",
+            "--execution-effort",
+            "inherit",
+        ],
+    ]
+    .concat();
+    assert!(!f.run(&wrong).status.success());
+    assert_eq!(before, f.state_bytes());
+    let valid = [
+        &base[..],
+        &[
+            "--execution-route",
+            "light",
+            "--execution-provider",
+            "native",
+            "--execution-model",
+            "available-light",
+            "--execution-effort",
+            "inherit",
+        ],
+    ]
+    .concat();
+    f.ok(&valid);
+    let execution = f.state()["team"]["tasks"][0]["attempts"][0]["execution"].clone();
+    assert_eq!(execution["source"], "host-declared");
+    assert_eq!(execution["model"], "available-light");
+    assert!(execution["effort"].is_null());
+    f.ok(&["team", "next", "--slug", "sample"]);
+}
+
+#[test]
+fn adaptive_reservations_count_failed_retried_claims_across_route_rename_replan() {
+    let f = Fixture::new(true, true);
+    let write_plan = |reader_id: &str| {
+        let route = |id: &str, model: &str, cap: u64| json!({"id":id,"provider":"native","model":model,"roles":["knowledge","implementation","verification"],"access":["read","write"],"execution":"native","efforts":[null],"strengths":[],"limitations":[],"maxInvocations":cap});
+        fs::write(f.root.join("capabilities.json"),serde_json::to_vec(&json!({"schemaVersion":"gdm-team-capabilities/v2","routes":[route(reader_id,"reader-model",2),route("builder","builder-model",8)]})).unwrap()).unwrap();
+        let mut reply = response();
+        for key in ["knowledge", "verification"] {
+            reply["plan"][key]["routeId"] = json!(if key == "knowledge" {
+                reader_id
+            } else {
+                "builder"
+            });
+            reply["plan"][key]["effort"] = Value::Null;
+            reply["plan"][key]["selectionReason"] =
+                json!("Bounded task within remaining invocation capacity");
+        }
+        for m in reply["plan"]["modules"].as_array_mut().unwrap() {
+            m["routeId"] = json!("builder");
+            m["effort"] = Value::Null;
+            m["selectionReason"] = json!("Implementation capacity supports the scoped module");
+        }
+        f.reply(reply);
+    };
+    let claim = |route: &str, attempt: &str| {
+        f.run(&[
+            "team",
+            "claim",
+            "--slug",
+            "sample",
+            "--task",
+            "knowledge",
+            "--assignee",
+            "reader-worker",
+            "--attempt",
+            attempt,
+            "--execution-route",
+            route,
+            "--execution-provider",
+            "native",
+            "--execution-model",
+            "reader-model",
+            "--execution-effort",
+            "inherit",
+        ])
+    };
+    let reject = |attempt: &str| {
+        f.ok(&[
+            "team",
+            "report",
+            "--slug",
+            "sample",
+            "--task",
+            "knowledge",
+            "--attempt",
+            attempt,
+            "--outcome",
+            "failed",
+            "--summary",
+            "Source analysis needs another attempt",
+            "--artifact",
+            "docs/policy.md",
+        ]);
+        f.ok(&[
+            "team",
+            "review",
+            "--slug",
+            "sample",
+            "--task",
+            "knowledge",
+            "--attempt",
+            attempt,
+            "--decision",
+            "reject",
+            "--reason",
+            "Retry source analysis with the missing evidence",
+        ]);
+    };
+    write_plan("reader-old");
+    f.planned(&["--capabilities-file", "capabilities.json"]);
+    assert!(claim("reader-old", "reader-a1").status.success());
+    reject("reader-a1");
+    write_plan("reader-renamed");
+    f.planned(&[
+        "--capabilities-file",
+        "capabilities.json",
+        "--replan",
+        "--reason",
+        "Rename available route while preserving provider model reservation history",
+    ]);
+    let input = f.state()["team"]["allocation"]["request"]["input"].clone();
+    assert_eq!(input["promptVersion"], 3);
+    assert_eq!(input["invocationReservations"]["unknownAttribution"], false);
+    let reader = input["invocationReservations"]["providerModels"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|v| v["model"] == "reader-model")
+        .unwrap();
+    assert_eq!(reader["claimed"], 1);
+    assert_eq!(reader["remaining"], 1);
+    let prompt = fs::read_to_string(f.provider.join("input")).unwrap();
+    assert!(prompt.contains("\"promptVersion\":3"));
+    assert!(prompt.contains("invocationReservations"));
+    assert!(claim("reader-renamed", "reader-a2").status.success());
+    reject("reader-a2");
+    f.ok(&[
+        "team",
+        "retry",
+        "--slug",
+        "sample",
+        "--task",
+        "knowledge",
+        "--attempt",
+        "reader-a2",
+        "--reason",
+        "Try another source analysis attempt",
+    ]);
+    let before = f.state_bytes();
+    let exhausted = claim("reader-renamed", "reader-a3");
+    assert!(!exhausted.status.success());
+    assert!(String::from_utf8_lossy(&exhausted.stderr).contains("team_invocation_limit"));
+    assert_eq!(before, f.state_bytes());
+}

@@ -42,11 +42,12 @@ Usage:
   gdm pass <id> --manual --observed <evidence-file> [--reviewer <reviewer>] [...]   # Manual check
   gdm recheck [--check <id>] [--slug <slug>] [--expected-plan-fingerprint <sha256>]              # Rerun proven automatic checks to detect regressions
   gdm audit brief [--json] [--slug <slug>]                # Print the briefing package for an independent auditor
-  gdm audit verdict (--pass | --fail) --report <audit-report> --implementation-model <model> --audit-model <model> [--slug <slug>]
+  gdm audit verdict (--pass | --fail) --report <audit-report> --implementation-model <model>... --audit-model <model> [--slug <slug>]
   gdm done [--slug <slug>] [--expected-plan-fingerprint <sha256>]
   gdm team configure --slug <slug> --mode coordinated|single [--reason <reason>] [--max-active <1..32>] [--session <root-session-id>]
   gdm team add --slug <slug> --task <id> --role <role> --path <relative-path>... --access read|write --deliverable <text> --acceptance <criteria> --check <id>... [--depends-on <task-id>]...
   gdm team claim --slug <slug> --task <id> --assignee <worker-id> --attempt <attempt-id>
+                [--execution-route <id> --execution-provider <provider> --execution-model <model> --execution-effort <effort|inherit>]  # adaptive catalogue v2 claims
   gdm team report --slug <slug> --task <id> --attempt <attempt-id> --outcome completed|failed|cancelled|inconclusive --summary <text> --artifact <relative-file> [--tokens <count>] [--elapsed-ms <time>]
   gdm team review --slug <slug> --task <id> --attempt <attempt-id> --decision accept|reject --reason <reason>
   gdm team retry --slug <slug> --task <id> --attempt <attempt-id> --reason <reason>

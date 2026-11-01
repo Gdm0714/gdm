@@ -774,7 +774,7 @@ pub fn summary(cwd: &Path, w: &Value) -> Option<Value> {
                 .is_ok_and(|v| r["sourceAfter"] == v["source"] && r["artifacts"] == v["refs"])
     }) && (r.is_none_or(|r| r["mode"] != "audit_bound")
         || (check_audit(cwd, w).is_ok()
-            && fingerprint::audit_problems(cwd, &w["audit"]).is_ok_and(|p| p.is_empty())))
+            && fingerprint::audit_problems(cwd, w).is_ok_and(|p| p.is_empty())))
         && blocked.is_empty()
         && proven == required.len()
         && !required.is_empty();

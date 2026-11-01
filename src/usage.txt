@@ -42,11 +42,12 @@ gdm {VERSION} — 작업 증거가 다음 습관을 바꾸는 개인 AI 워크�
   gdm pass <id> --manual --observed <확인 기록 파일> [--reviewer <검토자>] [...]   # 수동 항목
   gdm recheck [--check <id>] [--slug <슬러그>] [--expected-plan-fingerprint <sha256>]              # 통과한 자동 항목 재실행 (회귀 검출)
   gdm audit brief [--json] [--slug <슬러그>]                # 검수자에게 줄 브리핑 패키지 출력
-  gdm audit verdict (--pass | --fail) --report <검수보고 파일> --implementation-model <모델> --audit-model <모델> [--slug <슬러그>]
+  gdm audit verdict (--pass | --fail) --report <검수보고 파일> --implementation-model <모델>... --audit-model <모델> [--slug <슬러그>]
   gdm done [--slug <슬러그>] [--expected-plan-fingerprint <sha256>]
   gdm team configure --slug <슬러그> --mode coordinated|single [--reason <사유>] [--max-active <1..32>] [--session <루트 세션 ID>]
   gdm team add --slug <슬러그> --task <id> --role <역할> --path <상대 경로>... --access read|write --deliverable <산출물> --acceptance <수용 조건> --check <id>... [--depends-on <task-id>]...
   gdm team claim --slug <슬러그> --task <id> --assignee <담당 ID> --attempt <시도 ID>
+                [--execution-route <id> --execution-provider <provider> --execution-model <model> --execution-effort <effort|inherit>]  # adaptive catalogue v2 claims
   gdm team report --slug <슬러그> --task <id> --attempt <시도 ID> --outcome completed|failed|cancelled|inconclusive --summary <설명> --artifact <상대 파일> [--tokens <수>] [--elapsed-ms <시간>]
   gdm team review --slug <슬러그> --task <id> --attempt <시도 ID> --decision accept|reject --reason <근거>
   gdm team retry --slug <슬러그> --task <id> --attempt <시도 ID> --reason <사유>

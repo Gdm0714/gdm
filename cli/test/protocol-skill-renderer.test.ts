@@ -122,7 +122,9 @@ describe("deterministic provider target skill renderer", () => {
         expect(compact).toContain("진행자가 역할을 미리 매핑하거나 modules JSON을 작성하지 않는다");
         expect(compact).toContain("기본 worker route는 `native-inherit`이며 planner의 `--model`은 worker 모델 선택이 아니다");
         expect(compact).toContain("명시적 수동 import 호환 경로이며 기본 흐름이 아니다");
-        expect(compact).toContain("planner semantic v2");
+        expect(compact).toContain("planner semantic v3");
+        expect(compact).toContain("같은 역할도");
+        expect(compact).toContain("host-declared");
         expect(compact).toContain("`acceptanceMode: artifact-review`, `checks: []`");
         expect(compact).toContain("completed 보고서의 불변 해시와 수용 기준");
         expect(compact).toContain("수동·이전 계획의 연결 check");
