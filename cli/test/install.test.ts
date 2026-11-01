@@ -373,7 +373,7 @@ describe("gdm installation and workflow skills", () => {
     expect(installedFull).toContain("여러 구현 에이전트가 겹치지 않는 파일·모듈을 나눠 맡는다");
     expect(installedFull).toContain("Codex native delegation contract");
     expect(installedResearch).toContain("모든 세대의 활성 spawned agent");
-    expect(installedResearch).toContain("`MAX_ACTIVE_SUBAGENTS: 4`");
+    expect(installedResearch).toContain("`MAX_ACTIVE_SUBAGENTS: adaptive`");
     expect(installedResearch).toContain("하위 역할을 만들 수 있다");
     expect(installedResearch).toContain("자기복제형 재위임");
     expect(installedResearch.replace(/\s+/gu, " ")).toContain("끝이 정해지지 않은 팬아웃");

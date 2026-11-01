@@ -24,17 +24,55 @@
   고정하지 않는다.
 - 여러 구현 워커는 겹치지 않는 파일·모듈을 소유하고 루트 진행자가 변경을 통합한다.
 - 역할 이름이나 위임 보고보다 gdm의 check·증거·journal을 판정 정본으로 삼는다.
+- 새 외부 API·인증·업무 상태/다중 턴 작업은 plan/go/full에서 `--profile integration`으로
+  생성하고 중요 미확인 사항·필수 결과·증거 범위를 구조화 계약에 연결한다. 무관한 작은 로컬
+  작업·legacy Work에 소급 강제하지 않는다. 미분류나 check 통과 수만으로 실환경 준비 완료를 주장하지 않는다.
+  현재 후보와 완료 receipt의 결속, unknown·waived와 수용 근거를 최종 보고까지 유지한다.
 
 ## 역할 배정
+
+plan/go/full은 사용자 원문 요청을 Work brief에 보존하고 check를 최소 1개 등록한 뒤
+`gdm team auto --slug <s> --from-request --provider <claude|codex> --model <planner-model> --max-active <1..32> --executor <native|unavailable> --json`으로 배정한다.
+GDM이 원문·check·저장소 경로를 내부 planner의 제한된 tool-0 호출에 전달해 역할·경로·의존성·
+route를 생성하고 검증한다. 진행자가 역할을 미리 매핑하거나 modules JSON을 작성하지 않는다.
+호스트는 실제 가용 슬롯·executor·허용 capability catalogue와 필요한 명시적 context만 제공한다.
+`--context <path>`는 반복 가능하며 `--capabilities-file <path>`는 허용 route 목록이다.
+호스트 도구가 여러 모델 선택을 지원하면 현재 도구 메타데이터와 사용자 예산에서 실제 실행 가능한
+후보로 capability catalogue v2를 자동 구성한다. 역할마다 여러 후보를 허용하고 고정 역할·모델 표를
+만들지 않는다. GDM이 각 작업의 난도·위험·필요 능력과 비용 조건을 보고 route·effort·selectionReason을
+선택한다. 선택 기능이 없는 호스트의 기본 worker route는 `native-inherit`이며 planner의 `--model`은 worker 모델 선택이 아니다.
+선택된 모델·추론 수준은 그대로 실행하고 claim에 동일한 host-declared 실행 정보를 기록한다.
+지원하지 않는 경로를 다른 모델로 바꾸지 않는다. 상세 schema와 한도는 `docs/automatic-role-allocation.md`를 따른다.
+`--file <team-plan.json>`은 명시적 수동 import 호환 경로이며 기본 흐름이 아니다.
+새 배정의 `--dry-run`도 실제 planner 호출이며 적용만 생략한다. 동일 입력은 저장된 결과를
+재사용하며 `plannerReused: true`를 반환한다. 실패를 키워드 추정·수동 역할 배정으로
+덮지 않는다. CLI는 native 워커를 띄우지 않으며 활성 진행자가 생성된 next·route·prompt를
+그대로 실행해 next→claim→spawn→report→pass→review를 계속한다. 배정 재승인은 요구하지 않는다.
+자동 배정은 데몬이나 새 권한이 아니며 사용자 지시·도구 권한·비방해 검증을 모든 역할에 전달한다.
+미확인 사항·integration에는 knowledge, 지식 조사·medium/high risk·다중 module·독립 검증에는
+별도 verification을 둔다. 명시적 verification 배정도 independentVerification 값과 무관하게
+coordinated로 실행한다. 구현은 knowledge에, 검증은 모든 선행 task에 의존한다. 구체적
+`knowledgeIndependentReason`이 있는 기반 코드만 경로 충돌 없이 먼저 구현할 수 있다.
+최종 검증자는 그 Work의 구현에 참여하지 않아야 하며 full의 독립 audit와 구분한다.
+새 요청 계획은 schema `gdm-team-plan/v1`을 유지한다. capability catalogue v1은 planner semantic v2, 다중 모델 catalogue v2는 semantic v3로 식별한다.
+knowledge의 `acceptanceMode: artifact-review`, `checks: []`는 출처·근거·미확인 사항을 담은 completed 보고서의
+불변 해시와 수용 기준으로 판단한다. 미래의 최종 동작 check 통과를 지식 수락에 요구하지 않는다.
+모든 Work check는 implementation 또는 verification에서 증명하며 최종 `gdm done` 게이트와
+수동·이전 계획의 연결 check 수락 방식은 유지한다. 테스트 작성·수정 경로는 implementation의
+쓰기 소유 범위에 포함하며 verifier는 읽기 전용을 유지한다.
+작은 low risk 단일 module만 사유 있는 single로 처리한다. 복잡한 작업의 executor unavailable은
+blocked이며 조용히 single로 낮추지 않는다. 형식은 `docs/automatic-role-allocation.md`를 따른다.
 
 | 역할 | 스킬 | 소유자 | 필수 불변식 |
 |---|---|---|---|
 | 기술 설계 | gdm-plan | 진행자 + 선택형 Claude CLI | 진행자가 코드 근거·계약으로 계획하고 필요할 때 외부 설계안을 검증·통합한다 |
+| 지식 확보 | gdm-go/full의 knowledge | 읽기 전용 워커 | 원문 요구·입력·정책을 확인하고 미확인 사항의 근거를 제출한다 |
 | 시각 디자인 | gdm-design | Claude Design + 진행자 | 진행자가 프롬프트를 전달하고 사용자가 Claude Design에서 생성한 뒤 진행자가 pull·구현·검증한다 |
 | 경량 구현 | gdm-go | 진행자 또는 경계가 분리된 구현 워커 | 진행자가 통합하고 gdm 증거가 통과해야만 완료한다 |
-| 중량 구현 | gdm-full | 한 실제 구현 모델의 진행자·워커 | 같은 모델의 여러 워커는 허용하고 독립 검수 전 전달하지 않는다 |
+| 중량 구현 | gdm-full | GDM이 작업별로 선택한 모델의 워커와 진행자 | 모든 구현 모델을 기록하고 독립 검수 전 전달하지 않는다 |
 | 리뷰 | gdm-review | 진행자 + 필요한 읽기 전용 역할 | 실제 diff·증거를 읽고 후보를 반증·중복 제거한다 |
-| 검수 | auditor | 실제 구현 모델과 다른 모델 | 새 컨텍스트에서 직접 증거를 확인한다 |
+| 최종 검증 | gdm-go/full의 verification | 해당 Work 구현에 참여하지 않은 워커 | 고정한 후보의 결과와 증거를 확인하며 독립 audit를 대신하지 않는다 |
+| 검수 | auditor | 전체 구현 모델 집합 밖의 모델 | 새 컨텍스트에서 직접 증거를 확인한다 |
 
 ## 실행 모델 라우팅
 
@@ -46,6 +84,10 @@
 외부 전문 역할도 `--provider claude`로 실행한다. 다른 실행 대상의 모델 기본값을 Claude 진행자에게 강제하지 않는다.
 공급자 이름이 아닌 실제 모델 차이로 판단하므로 같은 Claude 공급자에서도 다른 모델로
 검수할 수 있다. 사용 가능한 다른 모델이 없으면 full을 차단하고 일상 go와 구분한다.
+가용 후보가 여러 개면 같은 역할이라도 작업별로 모델·추론 수준을 선택한다. 높은 추론은 필요한
+판단에 쓰고 비용 등급은 비교 힌트로만 쓴다. 모델별 maxInvocations는 과거·재시도까지 포함한
+claim 예약 횟수이며 달러 지출이나 구독 잔액이 아니다. 자동 배정을 이유로 비싼 외부 모델을
+무제한 호출하거나 실제 모델 신원을 추측하지 않는다. full의 제품 변경은 여러 모델이 맡을 수 있다.
 
 - 새 아키텍처·API·데이터 모델·상태 흐름·컴포넌트 경계·마이그레이션처럼 구현 전에 기술
   선택은 진행자가 로컬 코드 근거로 판단한다. Claude CLI는 사용자가 요청하거나 로컬 조사
@@ -177,8 +219,10 @@ crash·timeout인 경우, 출력이 malformed JSON·schema mismatch인 경우, �
 ## 검수 독립성
 
 검수 모델은 실제 diff를 만든 구현 모델과 달라야 한다. 조율자나 스킬 이름이 아니라 실제
-구현 주체를 기준으로 판단한다. gdm-full 한 작업의 실제 구현 모델은 하나로 유지하되,
-그 모델을 쓰는 구현 에이전트 수는 한 명으로 제한하지 않는다.
+구현 주체를 기준으로 판단한다. GDM이 선택한 워커와 진행자 및 남은 변경에 기여한 과거 시도의
+모델을 모두 기록한다. `audit verdict`에 `--implementation-model`을 모델마다 반복하고 보고서에도
+각 `implementationModel`을 적는다. 검수 모델은 전체 집합과 달라야 하며 모르는 신원을 지어내지 않는다.
+이 정보는 호스트의 선언과 실행 기록이며 원격 모델 신원의 암호학적 인증은 아니다.
 
 - 검수자는 현재 대화나 실행자의 결론 요약을 받지 않는다.
 - 입력은 지속 brief, 작업 계약, 실제 diff, gdm 증거 경로다.
@@ -187,16 +231,21 @@ crash·timeout인 경우, 출력이 malformed JSON·schema mismatch인 경우, �
 
 ## 역할 실행과 제한된 병렬 위임
 
+Work의 하위 위임도 호스트와 GDM이 조율한다. 일반 역할의 childQuota는 임의의 범위·모델
+확장 승인이 아니며 새 경계는 보고 후 생성된 task·route와 host claim·가용 예산 안에서 실행한다.
+
 분리 가능한 역할은 설치 target이 제공하는 Codex·Claude의 제한된 역할 실행기로 위임할 수 있다.
 해당 역할 스킬 전문과 필요한 파일·증거 경로만 전달하고, 사용자의 비밀, 전체 대화,
 불필요한 저장소 원문은 넘기지 않는다. 결과를 받은 뒤 진행자가 실제 파일과 gdm 게이트로
 다시 판정한다.
 
 일반 역할은 leaf가 아니며, 작업 중 새로 발견한 독립 경계가 있거나 전문성·fresh context·
-컨텍스트 분리가 유리하면 하위 역할을 만들 수 있다. 운영 규칙은 하나의 hook-enabled native root
-session tree에서 루트 진행자를 제외한 모든 세대의 활성 spawned agent를 합쳐 동시에 최대
-4명이다 (`MAX_ACTIVE_SUBAGENTS: 4`). 현재 세션의 유효
-`max_concurrent_threads_per_session = 4`이면 Codex도 이를 네이티브 하드 상한으로 강제한다.
+컨텍스트 분리가 유리하면 하위 역할을 만들 수 있다. 하나의 hook-enabled native root session
+tree에서 루트 진행자를 제외한 모든 세대의 활성 spawned agent를 함께 센다. 동시 예산은
+작업별로 정하며 (`MAX_ACTIVE_SUBAGENTS: adaptive`), GDM의 1..32 범위와 실제 호스트 가용
+슬롯·자원·사용자 비용 한도 중 더 낮은 한도를 따른다. 숫자 32는 최대 허용 범위이지 권장
+인원수가 아니다. 독립 범위와 품질·완료 시간에 주는 이익으로 역할 수를 정하고 결과 수집마다
+의존성·중복 조사·통합 부담을 보고 다음 배정을 조절한다. 수를 채우기 위한 분할은 하지 않는다.
 새 역할을 만들기 전에 같은 루트 세션 트리의 활성 수를 확인하고, 빈 슬롯이 없으면 완료를
 기다리거나 기존 역할에 후속 작업을 보낸다. 자식이 만든 자식도 같은 세션 상한에 포함된다.
 
@@ -219,16 +268,16 @@ session tree에서 루트 진행자를 제외한 모든 세대의 활성 spawned
 실행 제한은 현재 pending/running 예약과 연결되지 않은 활성 관찰만 계산한다.
 `stopped|failed|expired` 이력은 실행 제한에서 제외한다. 누적 호출 횟수와 과거 기록은
 감사와 중복 호출 방지를 위해 보존하며 누적 횟수 때문에 새 실행을 차단하지 않는다.
-초기 예산과 단계별 확장은 없다. 취소 요청만으로 자리를 반환하지 않고 관찰된 상태를 따른다.
+훅의 실행 예약에는 초기 예산과 단계별 확장은 없다. 취소 요청만으로 자리를 반환하지 않고 관찰된 상태를 따른다.
 첫 Pre 뒤 같은 `tool_use_id`의 재전달은 실제 handler 실행 여부를 훅이 증명할 수 없으므로
 동일한 `tool_input`·protocol·caller라도 즉시 거부하고 새 attempt로 세지 않는다. 같은 id의
 입력·caller가 바뀌는 경우도 거부한다. Pre보다 먼저 온 unmatched Post는 세션당 32개까지만
 보관하고 동일 replay만 상태 변경 없이 허용한다. 실행 자리가 없으면 새 역할 대신 기존 역할에
 후속 작업을 보내거나 진행자가 직접 통합한다.
-훅이 실행되는 하나의 native root session tree에서 활성 실행 예약 32는 새 spawn의 입장 상한이고, 동시 4는
-해당 target runtime의 유효 설정이 4일 때 native hard 상한이다. 사용자 설정 파일만으로
+훅이 실행되는 하나의 native root session tree에서 활성 실행 예약 32는 새 spawn의 입장 상한이고,
+실제 동시 실행 상한은 해당 target runtime의 유효 설정을 따른다. 사용자 설정 파일만으로
 유효값을 단정하지 않고 target의 debug config에서 계층을 확인한다. 비대화형 CLI와 별도
-세션을 합친 논리 작업 전체의 동시 4는 진행자가 지키는 협력적 운영 규칙이다.
+세션을 합친 논리 작업 전체도 같은 작업별 동시 예산을 공유하는 협력적 운영 규칙을 따른다.
 늦은 lifecycle 관찰로 실행 예약이 상한을 넘더라도 이력을 버리거나 실행을 강제 종료하지 않는다.
 
 일반 역할의 위임에서 금지하는 것은 "필요한 만큼", "파일마다 하나"처럼 끝이 정해지지 않은

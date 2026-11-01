@@ -113,6 +113,10 @@ pub fn verification_plan_fingerprint(w: &Value) -> String {
         string(&mut bytes, kind(c));
         bytes.push(u8::from(b(&c["expert"])));
     }
+    if super::verification::active(w) {
+        string(&mut bytes, "gdm-integration/v1");
+        string(&mut bytes, &super::verification::contract_digest(w));
+    }
     sha256(bytes)
 }
 pub fn assert_plan(w: &Value, expected: Option<&str>) -> Result<()> {
@@ -223,6 +227,7 @@ pub fn add_check(w: &mut Value, input: &Value) -> Result<Value> {
         + 1;
     let c = json!({"id":format!("c{n}"),"desc":desc,"cmd":if cmd.is_empty(){Value::Null}else{json!(cmd)},"expect":expect,"manual":manual,"kind":kind,"expert":expert,"status":"open"});
     w["checks"].as_array_mut().unwrap().push(c.clone());
+    super::verification::plan_changed(w);
     Ok(c)
 }
 pub fn edit(w: &mut Value, id: &str, patch: &Value, reason: &str) -> Result<bool> {
@@ -295,6 +300,7 @@ pub fn edit(w: &mut Value, id: &str, patch: &Value, reason: &str) -> Result<bool
     next.as_object_mut().unwrap().remove("evidence");
     next.as_object_mut().unwrap().remove("redEvidence");
     w["checks"][i] = next;
+    super::verification::plan_changed(w);
     Ok(reverted)
 }
 pub fn completion_blockers(w: &Value) -> Vec<Value> {
@@ -378,6 +384,14 @@ pub fn completion_blockers(w: &Value) -> Vec<Value> {
         }
     }
     out.extend(super::team::blockers(w));
+    out.extend(super::verification::blockers(w).into_iter().map(|mut v| {
+        v["message"] = json!(format!(
+            "Integration verification: {} {}",
+            s(&v["code"]),
+            s(&v["id"])
+        ));
+        v
+    }));
     out
 }
 pub fn evidence_valid(e: &Value) -> bool {
@@ -535,6 +549,22 @@ pub fn validate_work(mut w: Value) -> Result<Value> {
             || ["implementationModel", "auditModel"]
                 .iter()
                 .any(|k| a.get(k).is_some_and(|v| !v.is_string()))
+            || a.get("implementationModels").is_some_and(|v| {
+                v.as_array().is_none_or(|models| {
+                    models.is_empty()
+                        || models.len() > 64
+                        || models.first() != a.get("implementationModel")
+                        || models
+                            .iter()
+                            .any(|m| !m.is_string() || s(m).trim().is_empty())
+                        || models
+                            .iter()
+                            .map(|m| s(m).to_lowercase())
+                            .collect::<std::collections::BTreeSet<_>>()
+                            .len()
+                            != models.len()
+                })
+            })
             || a.get("workspace")
                 .is_some_and(|v| !v.is_null() && !fingerprint_valid(v)))
     {
@@ -547,6 +577,7 @@ pub fn validate_work(mut w: Value) -> Result<Value> {
     }
     w["contract"] = contract::normalize(w.get("contract"))?;
     super::team::validate(&w)?;
+    super::verification::validate(&w)?;
     if b(&w["done"]) {
         let mut candidate = w.clone();
         candidate["done"] = json!(false);

@@ -14,6 +14,7 @@ pub mod retro;
 pub mod state;
 pub mod store;
 pub mod team;
+pub mod verification;
 use crate::support::{Error, Result, ensure_flags, has_flag, print_json};
 use std::path::Path;
 pub fn run(cwd: &Path, argv: &[String]) -> Result<()> {
@@ -41,7 +42,9 @@ pub fn run(cwd: &Path, argv: &[String]) -> Result<()> {
         && !(sub == "contract" && has_flag(args, "check-commit")))
         || (command == "audit" && sub == "verdict")
         || (command == "regression" && matches!(sub, "capture" | "replay"))
-        || (command == "team" && !matches!(sub, "status" | "next"))
+        || (command == "team"
+            && !matches!(sub, "status" | "next")
+            && !(sub == "auto" && has_flag(args, "from-request")))
         || (command == "preset" && sub != "list");
     let _lock = if mutates {
         Some(store::lock(cwd)?)

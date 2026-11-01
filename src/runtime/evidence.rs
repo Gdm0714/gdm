@@ -282,6 +282,8 @@ pub fn automatic(
     )
 }
 pub fn revert(work: &mut Value, index: usize, red: bool) {
+    let id = s(&work["checks"][index]["id"]).to_owned();
+    super::verification::evidence_replaced(work, &id);
     work["checks"][index]["status"] = json!("open");
     work["checks"][index]
         .as_object_mut()
@@ -300,6 +302,34 @@ pub fn recheck(
     only: Option<&str>,
     validate: bool,
 ) -> Result<Vec<String>> {
+    recheck_observed(cwd, work, only, validate).map(|(failed, _)| failed)
+}
+pub fn automatic_bound(
+    cwd: &Path,
+    work: &Value,
+    id: &str,
+    cmd: &str,
+    red: bool,
+    write: bool,
+) -> Result<Value> {
+    if !super::verification::active(work) {
+        return automatic(cwd, s(&work["slug"]), id, cmd, red, write);
+    }
+    let before = super::verification::observe(cwd, work)?;
+    let mut evidence = automatic(cwd, s(&work["slug"]), id, cmd, red, write)?;
+    let after = super::verification::observe(cwd, work)?;
+    super::verification::assert_unchanged(&before, &after)?;
+    if let Some(binding) = super::verification::bind(work, id, &before, &after, false) {
+        evidence["verificationBinding"] = binding;
+    }
+    Ok(evidence)
+}
+pub fn recheck_observed(
+    cwd: &Path,
+    work: &mut Value,
+    only: Option<&str>,
+    validate: bool,
+) -> Result<(Vec<String>, Vec<Value>)> {
     let targets = state::checks(work)
         .iter()
         .enumerate()
@@ -320,18 +350,22 @@ pub fn recheck(
     let slug = s(&work["slug"]).to_owned();
     let ts = now();
     let mut failed = vec![];
+    let mut observations = vec![];
     for (i, c) in targets {
         // Replacing evidence invalidates the old completion and audit binding.
         // Validation-only replay retains them unless the check actually fails.
         if !validate {
+            super::verification::invalidate(work);
             work["done"] = json!(false);
             work.as_object_mut().unwrap().remove("doneAt");
         }
         let id = s(&c["id"]);
-        match automatic(cwd, &slug, id, s(&c["cmd"]), false, !validate) {
+        match automatic_bound(cwd, work, id, s(&c["cmd"]), false, !validate) {
             Ok(mut evidence) => {
                 let hash = evidence["sha256"].clone();
+                observations.push(json!({"checkId":id,"sha256":hash,"exitCode":evidence["exitCode"],"binding":evidence["verificationBinding"]}));
                 if !validate {
+                    super::verification::evidence_replaced(work, id);
                     evidence["at"] = json!(ts);
                     work["checks"][i]["evidence"] = evidence;
                 }
@@ -341,7 +375,7 @@ pub fn recheck(
                     &json!({"ts":ts,"event":"recheck","check":id,"ok":true,"mode":if validate{"validate"}else{"refresh"},"sha256":hash}),
                 )?;
             }
-            Err(e) if e.code == "cmd_failed" => {
+            Err(e) if e.code == "cmd_failed" || e.code.starts_with("verification_") => {
                 work["done"] = json!(false);
                 work.as_object_mut().unwrap().remove("doneAt");
                 revert(work, i, false);
@@ -355,7 +389,7 @@ pub fn recheck(
             Err(e) => return Err(e),
         }
     }
-    Ok(failed)
+    Ok((failed, observations))
 }
 pub fn stale(cwd: &Path, work: &Value) -> Vec<(usize, bool, String)> {
     let mut result = vec![];

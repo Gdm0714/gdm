@@ -107,6 +107,47 @@ afterEach(() => {
 });
 
 describe("deterministic provider target skill renderer", () => {
+  test("preserves integration scope and explicit validation semantics in every target", () => {
+    for (const target of TARGETS) {
+      const output = render(target);
+      for (const name of ["gdm-plan", "gdm-go", "gdm-full"]) {
+        const skill = readFileSync(join(output, name, "SKILL.md"), "utf8");
+        for (const required of ["--profile integration", "gdm plan verification import", "gdm plan verification show"]) {
+          expect(skill).toContain(required);
+        }
+        for (const required of ["gdm-team-plan/v1", "gdm team auto", "--from-request", "--provider", "--model", "--max-active", "--context", "--capabilities-file", "--dry-run", "executor", "unavailable", "native dispatch", "blocked"]) {
+          expect(skill).toContain(required);
+        }
+        const compact = skill.replace(/\s+/gu, " ");
+        expect(compact).toContain("진행자가 역할을 미리 매핑하거나 modules JSON을 작성하지 않는다");
+        expect(compact).toContain("기본 worker route는 `native-inherit`이며 planner의 `--model`은 worker 모델 선택이 아니다");
+        expect(compact).toContain("명시적 수동 import 호환 경로이며 기본 흐름이 아니다");
+        expect(compact).toContain("planner semantic v3");
+        expect(compact).toContain("같은 역할도");
+        expect(compact).toContain("host-declared");
+        expect(compact).toContain("`acceptanceMode: artifact-review`, `checks: []`");
+        expect(compact).toContain("completed 보고서의 불변 해시와 수용 기준");
+        expect(compact).toContain("수동·이전 계획의 연결 check");
+        expect(compact).toContain("테스트 작성·수정 경로");
+        expect(compact).toContain("verifier는 읽기 전용을 유지");
+        expect(skill).not.toContain("modules[{id,paths,checks,deliverable,acceptance}]");
+        const firstAuto = skill.split("\n").find((line) => line.includes("gdm team auto --slug <s>"))!;
+        expect(firstAuto).toContain("--from-request");
+        expect(firstAuto).not.toContain("--file");
+      }
+      const go = readFileSync(join(output, "gdm-go", "SKILL.md"), "utf8");
+      for (const required of ["gdm plan verification resolve", "gdm plan verification waive", "completionValid", "completionMode", "positiveOutcome", "deniedAction"]) {
+        expect(go).toContain(required);
+      }
+      for (const required of ["knowledgeIndependentReason", "independentVerification", "implement-<module-id>", "verify", "blocked"]) {
+        expect(go).toContain(required);
+      }
+      if (target !== "codex") {
+        expect(go).toMatch(/executor[\s\S]{0,80}unavailable[\s\S]{0,180}blocked/u);
+        expect(go).toContain("필수 역할을 없애 single로 낮추지 않는다");
+      }
+    }
+  });
   test("binds all targets to byte-identical canonical source-template hashes", () => {
     const codex = render("codex");
     const claude = render("claude");

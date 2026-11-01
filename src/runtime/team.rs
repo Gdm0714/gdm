@@ -6,8 +6,13 @@ use crate::support::{
 use serde_json::{Value, json};
 use std::{collections::BTreeSet, fs, path::Path};
 
+mod planning;
+mod request;
+
 const SCHEMA: &str = "gdm-team/v1";
 const MAX_TASKS: usize = 64;
+// A Work budget is separate from the host's available worker slots.
+const MAX_ACTIVE_WORKERS: u64 = 32;
 const MAX_ATTEMPTS: usize = 64;
 const MAX_ARTIFACT: usize = 1024 * 1024;
 const MAX_NUMBER: u64 = 9_007_199_254_740_991;
@@ -335,12 +340,12 @@ pub fn validate(work: &Value) -> Result<()> {
             "configuredAt",
             "tasks",
         ],
-        &["reason", "sessionId"],
+        &["reason", "sessionId", "allocation", "allocationHistory"],
     ) || team["schemaVersion"] != SCHEMA
         || !["coordinated", "single"].contains(&s(team, "mode"))
         || team["maxActive"]
             .as_u64()
-            .is_none_or(|n| !(1..=4).contains(&n))
+            .is_none_or(|n| !(1..=MAX_ACTIVE_WORKERS).contains(&n))
         || (team["mode"] == "single" && team["maxActive"] != 1)
         || !timestamp(&team["configuredAt"])
         || team.get("sessionId").is_some_and(|v| !id_ok(v))
@@ -371,9 +376,25 @@ pub fn validate(work: &Value) -> Result<()> {
                 "status",
                 "attempts",
             ],
-            &["withdrawal"],
+            &[
+                "withdrawal",
+                "routeId",
+                "effort",
+                "selectionReason",
+                "acceptanceMode",
+            ],
         ) || !id_ok(&task["id"])
             || !id_ok(&task["role"])
+            || task.get("routeId").is_some_and(|r| !id_ok(r))
+            || task.get("acceptanceMode").is_some_and(|m| {
+                *m != "artifact-review"
+                    || task["role"] != "knowledge"
+                    || task["access"] != "read"
+                    || !matches!(
+                        work["team"]["allocation"]["request"]["input"]["promptVersion"].as_u64(),
+                        Some(2 | 3)
+                    )
+            })
             || !["read", "write"].contains(&s(task, "access"))
             || !text_ok(&task["deliverable"], "deliverable", 480)
             || !text_ok(&task["acceptance"], "acceptance", 480)
@@ -381,9 +402,17 @@ pub fn validate(work: &Value) -> Result<()> {
                 v.as_str()
                     .is_some_and(|v| path(v, false).is_ok_and(|p| p == v))
             })
-            || !strings(&task["checks"], 1, 64, |v| {
-                id_ok(v) && state::checks(work).iter().any(|c| c["id"] == *v)
-            })
+            || !strings(
+                &task["checks"],
+                if task["acceptanceMode"] == "artifact-review" {
+                    0
+                } else {
+                    1
+                },
+                64,
+                |v| id_ok(v) && state::checks(work).iter().any(|c| c["id"] == *v),
+            )
+            || (task["acceptanceMode"] == "artifact-review" && !array(&task["checks"]).is_empty())
             || !strings(&task["dependsOn"], 0, MAX_TASKS, |v| {
                 id_ok(v) && ids.contains(state::s(v))
             })
@@ -408,8 +437,9 @@ pub fn validate(work: &Value) -> Result<()> {
             if !exact(
                 attempt,
                 &["id", "assignee", "claimedAt", "dependencies"],
-                &["report", "review", "retry"],
+                &["report", "review", "retry", "execution"],
             ) || !id_ok(&attempt["id"])
+                || !execution_matches(work, task, attempt.get("execution"))
                 || !id_ok(&attempt["assignee"])
                 || !attempt_ids.insert(s(attempt, "id"))
                 || !timestamp(&attempt["claimedAt"])
@@ -534,6 +564,7 @@ pub fn validate(work: &Value) -> Result<()> {
     }) {
         return Err(corrupt());
     }
+    planning::validate(work)?;
     Ok(())
 }
 /// File-independent completion gates, also used by legacy work completion.
@@ -544,7 +575,7 @@ pub fn blockers(work: &Value) -> Vec<Value> {
     if validate(work).is_err() {
         return vec![json!({"code":"team_state_corrupt","message":"Team state is invalid"})];
     }
-    let mut out = vec![];
+    let mut out = planning::blockers(work);
     let current = accepted_ids(work);
     if team["mode"] == "coordinated" && tasks(work).is_empty() {
         out.push(json!({"code":"team_tasks_required","message":"Coordinated work requires at least one scoped task"}));
@@ -564,6 +595,7 @@ pub fn blockers(work: &Value) -> Vec<Value> {
 /// Re-read accepted artifacts and linked evidence at the final completion gate.
 pub fn verify_artifacts(cwd: &Path, work: &Value) -> Result<()> {
     validate(work)?;
+    planning::verify_history(cwd, work)?;
     for task in tasks(work).iter().filter(|t| t["status"] == "accepted") {
         verify_task(cwd, work, task)?;
     }
@@ -573,6 +605,7 @@ pub fn verify_artifacts(cwd: &Path, work: &Value) -> Result<()> {
 /// acceptance need repair. That does not permit altered accepted artifacts.
 pub fn verify_snapshot_artifacts(cwd: &Path, work: &Value) -> Result<()> {
     validate(work)?;
+    planning::verify_history(cwd, work)?;
     for task in tasks(work).iter().filter(|t| t["status"] == "accepted") {
         verify_result_files(cwd, task)?;
         verify_linked_evidence(cwd, work, task)?;
@@ -665,7 +698,7 @@ pub fn summary(work: &Value) -> Value {
             json!({"taskId":task["id"],"attemptId":latest(task)["id"],"status":task["status"],"action":action})
         })
         .collect();
-    json!({"schemaVersion":SCHEMA,"mode":team["mode"],"maxActive":team["maxActive"],"sessionId":team["sessionId"],"taskCount":tasks(work).len(),"pending":count("pending"),"active":count("active"),"reported":count("reported"),"rejected":count("rejected"),"withdrawn":count("withdrawn"),"accepted":current.len(),"taskStates":states,"blockers":blockers(work)})
+    json!({"schemaVersion":SCHEMA,"mode":team["mode"],"maxActive":team["maxActive"],"sessionId":team["sessionId"],"taskCount":tasks(work).len(),"pending":count("pending"),"active":count("active"),"reported":count("reported"),"rejected":count("rejected"),"withdrawn":count("withdrawn"),"accepted":current.len(),"taskStates":states,"blockers":blockers(work),"allocation":planning::projection(work)})
 }
 
 fn grammar(args: &[String], allowed: &[&str], repeatable: &[&str]) -> Result<()> {
@@ -684,9 +717,9 @@ fn grammar(args: &[String], allowed: &[&str], repeatable: &[&str]) -> Result<()>
                 format!("Unknown or duplicate team flag --{key}"),
             ));
         }
-        if key == "json" {
+        if ["json", "dry-run", "replan", "from-request"].contains(&key) {
             if inline.is_some() {
-                return Err(err("usage", "--json does not take a value"));
+                return Err(err("usage", format!("--{key} does not take a value")));
             }
         } else if inline.is_none() {
             index += 1;
@@ -716,6 +749,9 @@ fn persist(cwd: &Path, work: &mut Value, event: &str, details: Value) -> Result<
     // Use the same predicate as export before committing any new immutable
     // metadata. Legacy records remain readable for diagnosis.
     protocol::no_credentials(&work["team"])?;
+    // A team mutation changes the state bound by enhanced completion receipts.
+    // Preserve the prior receipt as history before clearing current completion.
+    super::verification::invalidate(work);
     work["done"] = json!(false);
     work.as_object_mut().unwrap().remove("doneAt");
     work.as_object_mut().unwrap().remove("audit");
@@ -751,10 +787,10 @@ fn configure(cwd: &Path, work: &mut Value, args: &[String]) -> Result<()> {
         return Err(err("usage", "Single mode requires a substantive --reason"));
     }
     let cap = number(args, "max-active")?.unwrap_or(if mode == "single" { 1 } else { 3 });
-    if !(1..=4).contains(&cap) || (mode == "single" && cap != 1) {
+    if !(1..=MAX_ACTIVE_WORKERS).contains(&cap) || (mode == "single" && cap != 1) {
         return Err(err(
             "usage",
-            "--max-active must be 1 through 4; single mode requires 1",
+            format!("--max-active must be 1 through {MAX_ACTIVE_WORKERS}; single mode requires 1"),
         ));
     }
     let session = read_flag(args, "session")?
@@ -814,6 +850,11 @@ fn configure(cwd: &Path, work: &mut Value, args: &[String]) -> Result<()> {
     } else if let Some(session) = old.get("sessionId") {
         team["sessionId"] = session.clone();
     }
+    for key in ["allocation", "allocationHistory"] {
+        if let Some(value) = old.get(key) {
+            team[key] = value.clone();
+        }
+    }
     if work["team"] == team {
         return Ok(());
     }
@@ -832,6 +873,7 @@ fn configure(cwd: &Path, work: &mut Value, args: &[String]) -> Result<()> {
 }
 fn add(cwd: &Path, work: &mut Value, args: &[String]) -> Result<()> {
     configured(work)?;
+    planning::locked(work)?;
     let id = contract::opaque_id(&required_flag(args, "task")?, "task")?;
     let prior = tasks(work).iter().position(|t| t["id"] == id);
     if prior.is_some_and(|i| {
@@ -902,12 +944,147 @@ fn add(cwd: &Path, work: &mut Value, args: &[String]) -> Result<()> {
     })?;
     persist(cwd, work, "add", task)
 }
+fn adaptive(work: &Value) -> bool {
+    work["team"]["allocation"]["request"]["input"]["promptVersion"] == 3
+}
+fn execution_matches(work: &Value, task: &Value, execution: Option<&Value>) -> bool {
+    if !adaptive(work) {
+        return execution.is_none();
+    }
+    let Some(e) = execution else {
+        return false;
+    };
+    let Some(route) = request::route(work, task) else {
+        return false;
+    };
+    exact(
+        e,
+        &["routeId", "provider", "model", "effort", "source"],
+        &[],
+    ) && e["source"] == "host-declared"
+        && e["routeId"] == task["routeId"]
+        && e["provider"] == route["provider"]
+        && e["model"] == route["model"]
+        && e["effort"] == task["effort"]
+}
+fn historical_teams(cwd: &Path, work: &Value) -> Result<Vec<Value>> {
+    planning::verify_history(cwd, work)?;
+    array(&work["team"]["allocationHistory"])
+        .iter()
+        .map(|h| {
+            let bytes = store::contained(
+                cwd,
+                s(&h["artifact"], "path"),
+                "team-plan-history",
+                MAX_ARTIFACT,
+            )?;
+            let old: Value = serde_json::from_slice(&bytes)?;
+            Ok(old["team"].clone())
+        })
+        .collect()
+}
+/// Known host-declared implementation models and whether any worker attribution is absent.
+pub(crate) fn implementation_models(cwd: &Path, work: &Value) -> Result<(Vec<String>, bool)> {
+    let mut teams = historical_teams(cwd, work)?;
+    teams.push(work["team"].clone());
+    let mut models = BTreeSet::new();
+    let mut unknown = false;
+    for team in teams {
+        for task in array(&team["tasks"])
+            .iter()
+            .filter(|t| t["access"] == "write")
+        {
+            for attempt in array(&task["attempts"]) {
+                if let Some(model) = attempt["execution"]["model"]
+                    .as_str()
+                    .filter(|m| *m != "inherit")
+                {
+                    models.insert(model.to_owned());
+                } else {
+                    unknown = true;
+                }
+            }
+        }
+    }
+    Ok((models.into_iter().collect(), unknown))
+}
+fn claim_execution(
+    cwd: &Path,
+    work: &Value,
+    task: &Value,
+    args: &[String],
+) -> Result<Option<Value>> {
+    let keys = [
+        "execution-route",
+        "execution-provider",
+        "execution-model",
+        "execution-effort",
+    ];
+    if !adaptive(work) {
+        if keys
+            .iter()
+            .any(|k| read_flag(args, k).ok().flatten().is_some())
+        {
+            return Err(err(
+                "team_execution_invalid",
+                "Legacy assignments have no adaptive execution declaration",
+            ));
+        }
+        return Ok(None);
+    }
+    let effort = required_flag(args, "execution-effort")?;
+    let execution = json!({"routeId":required_flag(args,"execution-route")?,"provider":required_flag(args,"execution-provider")?,"model":required_flag(args,"execution-model")?,"effort":if effort=="inherit" {Value::Null} else {json!(effort)},"source":"host-declared"});
+    if !execution_matches(work, task, Some(&execution)) {
+        return Err(err(
+            "team_execution_invalid",
+            "Host declaration must exactly match selected route, provider, model and effort; substitution is forbidden",
+        ));
+    }
+    let route = request::route(work, task).unwrap();
+    if route["execution"] != "native" {
+        return Err(err(
+            "team_execution_unavailable",
+            "This host only launches native worker routes; replan unavailable execution",
+        ));
+    }
+    if let Some(limit) = route["maxInvocations"].as_u64() {
+        let mut teams = historical_teams(cwd, work)?;
+        teams.push(work["team"].clone());
+        let mut used = 0u64;
+        for team in teams {
+            for attempt in array(&team["tasks"])
+                .iter()
+                .flat_map(|t| array(&t["attempts"]))
+            {
+                let e = &attempt["execution"];
+                if e.is_null() {
+                    return Err(err(
+                        "team_invocation_limit",
+                        "Historical claims lack attribution; a cumulative cap cannot be proven",
+                    ));
+                }
+                if e["provider"] == execution["provider"] && e["model"] == execution["model"] {
+                    used += 1;
+                }
+            }
+        }
+        if used >= limit {
+            return Err(err(
+                "team_invocation_limit",
+                "Cumulative provider/model claim reservation limit reached, including failed attempts",
+            ));
+        }
+    }
+    Ok(Some(execution))
+}
+
 fn claim(cwd: &Path, work: &mut Value, args: &[String]) -> Result<()> {
     configured(work)?;
     let i = index(work, &required_flag(args, "task")?)?;
     let assignee = contract::opaque_id(&required_flag(args, "assignee")?, "assignee")?;
     let attempt = contract::opaque_id(&required_flag(args, "attempt")?, "attempt")?;
     let task = &tasks(work)[i];
+    planning::claim(cwd, work, task, &assignee, &attempt)?;
     if task["status"] != "pending" {
         return Err(err("team_transition", "Only a pending task can be claimed"));
     }
@@ -967,6 +1144,7 @@ fn claim(cwd: &Path, work: &mut Value, args: &[String]) -> Result<()> {
             "An active task has overlapping read or write ownership",
         ));
     }
+    let execution = claim_execution(cwd, work, task, args)?;
     let task_id = task["id"].clone();
     let dependencies = dependency_receipts(work, task);
     let claimed_at = event_time(work);
@@ -976,12 +1154,19 @@ fn claim(cwd: &Path, work: &mut Value, args: &[String]) -> Result<()> {
         .push(
             json!({"id":attempt,"assignee":assignee,"claimedAt":claimed_at,"dependencies":dependencies}),
         );
+    if let Some(execution) = execution.clone() {
+        work["team"]["tasks"][i]["attempts"]
+            .as_array_mut()
+            .unwrap()
+            .last_mut()
+            .unwrap()["execution"] = execution;
+    }
     work["team"]["tasks"][i]["status"] = json!("active");
     persist(
         cwd,
         work,
         "claim",
-        json!({"taskId":task_id,"attemptId":attempt,"assignee":assignee}),
+        json!({"taskId":task_id,"attemptId":attempt,"assignee":assignee,"execution":execution}),
     )
 }
 fn report(cwd: &Path, work: &mut Value, args: &[String]) -> Result<()> {
@@ -1141,6 +1326,7 @@ fn retry(cwd: &Path, work: &mut Value, args: &[String]) -> Result<()> {
 }
 fn withdraw(cwd: &Path, work: &mut Value, args: &[String]) -> Result<()> {
     configured(work)?;
+    planning::locked(work)?;
     let i = index(work, &required_flag(args, "task")?)?;
     let why = reason(&required_flag(args, "reason")?)?;
     let expected = read_flag(args, "attempt")?
@@ -1199,6 +1385,13 @@ fn next(cwd: &Path, work: &Value) -> Value {
     if work.get("team").is_none() {
         return json!({"action":"configure","command":format!("gdm team configure --slug {} --mode coordinated",s(work,"slug"))});
     }
+    let mut allocation_blockers = planning::blockers(work);
+    if let Err(error) = planning::verify_history(cwd, work) {
+        allocation_blockers.push(json!({"code":error.code,"message":error.message}));
+    }
+    if !allocation_blockers.is_empty() {
+        return json!({"schemaVersion":"gdm-team-next/v1","automaticExecution":false,"actions":[{"action":"blocked","blockers":allocation_blockers}],"allocation":planning::projection(work)});
+    }
     let mut actions = vec![];
     let current = accepted_ids(work);
     let active: Vec<_> = tasks(work)
@@ -1228,7 +1421,21 @@ fn next(cwd: &Path, work: &Value) -> Value {
                 })
             })
         {
-            actions.push(json!({"action":"dispatch","taskId":id,"role":task["role"],"paths":task["paths"],"access":task["access"],"deliverable":task["deliverable"],"acceptance":task["acceptance"],"checks":task["checks"],"message":"The coordinator must claim this task with its assignee and attempt before launching the scoped worker"}));
+            let mut action = json!({"action":"dispatch","taskId":id,"role":task["role"],"paths":task["paths"],"access":task["access"],"deliverable":task["deliverable"],"acceptance":task["acceptance"],"checks":task["checks"],"message":"The coordinator must claim this task with its assignee and attempt before launching the scoped worker"});
+            if let Some(route) = request::route(work, task) {
+                action["route"] = route.clone();
+                action["routeId"] = task["routeId"].clone();
+                for key in ["effort", "selectionReason"] {
+                    if let Some(v) = task.get(key) {
+                        action[key] = v.clone();
+                    }
+                }
+                action["prompt"] = json!(request::dispatch_prompt(work, task));
+                if let Some(mode) = task.get("acceptanceMode") {
+                    action["acceptanceMode"] = mode.clone();
+                }
+            }
+            actions.push(action);
             selected.push(task);
         }
     }
@@ -1252,6 +1459,24 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
         .ok_or_else(|| err("usage", "A team subcommand is required"))?;
     let (allowed, repeatable): (&[&str], &[&str]) = match command.as_str() {
         "configure" => (&["slug", "mode", "reason", "max-active", "session"], &[]),
+        "auto" => (
+            &[
+                "slug",
+                "file",
+                "dry-run",
+                "json",
+                "replan",
+                "reason",
+                "from-request",
+                "provider",
+                "model",
+                "max-active",
+                "executor",
+                "context",
+                "capabilities-file",
+            ],
+            &["context"],
+        ),
         "add" => (
             &[
                 "slug",
@@ -1266,7 +1491,19 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
             ],
             &["path", "check", "depends-on"],
         ),
-        "claim" => (&["slug", "task", "assignee", "attempt"], &[]),
+        "claim" => (
+            &[
+                "slug",
+                "task",
+                "assignee",
+                "attempt",
+                "execution-route",
+                "execution-provider",
+                "execution-model",
+                "execution-effort",
+            ],
+            &[],
+        ),
         "report" => (
             &[
                 "slug",
@@ -1287,11 +1524,33 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
         _ => return Err(err("usage", "Unknown team subcommand")),
     };
     grammar(args, allowed, repeatable)?;
+    if command == "auto" && args.iter().any(|a| a == "--from-request") {
+        return print_json(&request::run(cwd, args)?);
+    }
+    if command == "auto"
+        && args.iter().any(|a| {
+            [
+                "--provider",
+                "--model",
+                "--max-active",
+                "--executor",
+                "--context",
+                "--capabilities-file",
+            ]
+            .contains(&a.split('=').next().unwrap_or(""))
+        })
+    {
+        return Err(err(
+            "usage",
+            "Planner options require --from-request; --file is a manual import",
+        ));
+    }
     let slug = required_flag(args, "slug")?;
     let mut work = store::load(cwd, &slug)?;
     validate(&work)?;
     match command.as_str() {
         "configure" => configure(cwd, &mut work, args)?,
+        "auto" => return print_json(&planning::run(cwd, &mut work, args)?),
         "add" => add(cwd, &mut work, args)?,
         "claim" => claim(cwd, &mut work, args)?,
         "report" => report(cwd, &mut work, args)?,
@@ -1415,6 +1674,24 @@ mod tests {
             json!({"observed":path,"sha256":sha256(b"Check passed"),"manual":true,"at":now()});
         store::save(cwd, work).unwrap();
     }
+    #[test]
+    fn adaptive_execution_declaration_is_exact_and_legacy_absent() {
+        let route = json!({"id":"chosen","provider":"native","model":"available-model"});
+        let work = json!({"team":{"allocation":{"request":{"input":{"promptVersion":3,"capabilities":{"routes":[route]}}}}}});
+        let task = json!({"routeId":"chosen","effort":"high"});
+        let mut e = json!({"routeId":"chosen","provider":"native","model":"available-model","effort":"high","source":"host-declared"});
+        assert!(execution_matches(&work, &task, Some(&e)));
+        assert!(!execution_matches(&work, &task, None));
+        e["model"] = json!("substituted-model");
+        assert!(!execution_matches(&work, &task, Some(&e)));
+        e["model"] = json!("available-model");
+        e["effort"] = Value::Null;
+        assert!(!execution_matches(&work, &task, Some(&e)));
+        let legacy = json!({"team":{}});
+        assert!(execution_matches(&legacy, &task, None));
+        assert!(!execution_matches(&legacy, &task, Some(&e)));
+    }
+
     #[test]
     fn report_is_not_acceptance_and_done_rechecks_preserve_definition_receipt() {
         let (repo, mut work) = fixture();

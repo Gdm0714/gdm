@@ -120,6 +120,32 @@ v1 snapshot과 handoff는 계속 읽을 수 있다. 자동 실행이 필요한 `
 - IMPORTANT: 질문은 답이 구현 방향을 실제로 가르는 경우에만, 한 번에 2~3개까지만
   한다. 관례적 기본값이 있는 것은 기본값을 택하고 계획에 명시한다.
 
+## 외부 연동 검증 계획
+
+새 작업이 외부 API·인증 신원·업무 상태 변경 또는 다중 턴 상태에 의존하면 계획에
+`profile: integration`을 기록한다. 이런 흐름과 무관한 작은 로컬 수정과 기존 Work에 이를 소급 강제하지 않는다.
+profile이 없는 작업은 미분류이며 실환경 검증으로 설명하지 않는다. 기존 `verification`
+(`deterministic|inspectable|opaque`)은 검증 방식이므로 이 profile과 별개로 유지한다.
+
+진행자는 구현 전에 원문 요구와 확보한 입력을 대조해 다음을 계획에 남긴다.
+
+- 중요한 미확인 사항마다 고유 ID, 미확인 내용, 해소에 필요한 관측, 연결할 check를 적는다.
+  `uncertain` 한 줄이나 무관한 proven check 하나로 여러 미확인 사항을 해소하지 않는다.
+- 필수 결과를 원문 입력 수용, 정상 사용자의 업무 결과, 금지 행동 차단, 필요한 다중 턴
+  상태로 나누어 check에 연결한다. 적용되지 않는 조건에는 사유를 쓴다. 정상 사용자까지
+  모두 거절하는 구현을 잡고, 접수·환불·변경은 응답 문구 대신 API 영수증이나 실제 상태를
+  검증한다. 접수 성공과 처리 완료도 구분한다.
+- 원문에서 확보한 입력과 직접 만든 fixture를 구분하고, 입력 출처·실행 환경·대상 식별과
+  필요한 fixture/대상 manifest를 정한다. 변형·익명화했으면 그 범위도 남긴다. 원문 입력이나
+  원격 대상 버전을 확보하지 못했으면 unknown으로 남기며 합성 입력이나 과거 trace로 대체해
+  실환경 검증을 주장하지 않는다. 민감 원문·비밀은 외부 검수 artifact에 싣지 않는다.
+
+실행 단계에서 check ID를 확정한 뒤 `gdm plan verification import --slug <s> --file <contract.json>`으로
+구조화 계약을 등록하고 `gdm plan verification show --slug <s> --json`으로 이 매핑을 대조한다.
+작성 형식은 gdm 저장소의 `fixtures/verification-v1/contract.json`과
+`docs/integration-verification.md`를 사용하며 예제 digest나 범위를 실제 작업에 재사용하지 않는다.
+계약 작성·해소·한계 수용과 후보 고정 절차는 gdm-go의 외부 연동 검증 계약을 따른다.
+
 ## 선택형 코드 그래프 내비게이션
 
 `GRAPH_NAV_PROVIDER: env:GDM_GRAPH_PROVIDER`, `COMPANION_TOOL_POLICY: optional`이다. 관련 코드를
@@ -178,6 +204,44 @@ crash·timeout인 경우, 출력이 malformed JSON·schema mismatch인 경우, �
 fresh context, 넓은 탐색이 주 컨텍스트에 만드는 노이즈를 보고 직접 수행하거나 위임한다.
 여러 조사 역할에는 겹치지 않는 영역과 종료 조건을 주며, 진행자가 인용할 실제 파일을 다시
 확인하고 최종 문서를 저장한다.
+
+실질적 구현 작업의 역할 배정은 GDM이 원문 요청과 check를 해석해 생성한다. 진행자가 역할을
+미리 매핑하거나 modules JSON을 작성하지 않는다. 계획 문서는 사용자 원문·코드 근거·검증 항목을
+보존하고 실행 단계에서 제공할 명시적 context를 가리킨다. 계획만 요청받았으면 이 문서를
+준비하고, 구현도 승인됐으면 원문을 Work brief에 보존해 init하고 check를 최소 1개 등록한 후
+아래 명령과 gdm-go의 native dispatch 루프로 이어간다.
+
+```sh
+gdm team auto --slug <s> --from-request --provider <claude|codex> --model <planner-model> --max-active <1..32> --executor <native|unavailable> --json
+```
+
+호스트는 실제 가용 슬롯·executor·허용 capability catalogue와 필요한 명시적 context만 제공한다.
+`--context <path>`는 반복 가능하고 `--capabilities-file <path>`는 사용 가능한 route의 목록이다.
+호스트 도구가 여러 모델 선택을 지원하면 현재 도구 메타데이터와 사용자 예산에서 실제 실행 가능한
+후보로 capability catalogue v2를 자동 구성한다. 역할마다 여러 후보를 허용하고 고정 역할·모델 표를
+만들지 않는다. GDM이 각 작업의 난도·위험·필요 능력과 비용 조건을 보고 route·effort·selectionReason을
+선택한다. 선택 기능이 없는 호스트의 기본 worker route는 `native-inherit`이며 planner의 `--model`은 worker 모델 선택이 아니다.
+선택된 모델·추론 수준은 그대로 실행하고 claim에 동일한 host-declared 실행 정보를 기록한다.
+지원하지 않는 경로를 다른 모델로 바꾸지 않는다. 상세 schema와 한도는 `docs/automatic-role-allocation.md`를 따른다.
+GDM이 내부 planner를 제한된 tool-0 호출로 한 번 실행해 역할·경로·의존성·route를 검증하고
+`gdm-team-plan/v1`과 provenance를 만든다. `--file <team-plan.json>`은 명시적 수동 import
+호환 경로이며 기본 흐름이 아니다. 상세는 gdm 저장소의 `docs/automatic-role-allocation.md`를 따른다.
+새 배정의 `--dry-run`도 실제 planner를 호출하며 배정 적용만 생략한다. 동일 입력은 저장된
+결과를 재사용하며 `plannerReused: true`를 반환한다. planner 실패를 진행자의 수동
+배정이나 키워드 추정으로 대체하지 않는다. CLI는 native 워커를 직접 띄우지 않으므로 호스트가
+생성된 next·route·prompt를 그대로 실행하고 spawn 전에 claim한다. 배정 자체의 재승인은 묻지 않는다.
+미확인 사항·integration에는 knowledge, 지식 조사·medium/high risk·다중 module·독립 검증에는
+verification이 필요하다. 지식 수락 뒤 구현, 선행 결과 수락 뒤 별도 실행자의 최종 검증을 연다.
+새 요청 계획은 schema `gdm-team-plan/v1`을 유지한다. capability catalogue v1은 planner semantic v2, 다중 모델 catalogue v2는 semantic v3로 식별한다.
+knowledge의 `acceptanceMode: artifact-review`, `checks: []`는 출처·근거·미확인 사항이 담긴 completed 보고서의
+불변 해시와 수용 기준으로 판단한다. 미래의 최종 동작 check 통과를 지식 수락의 선행 조건으로
+넣지 않는다. 모든 Work check는 implementation 또는 verification에 연결하며 최종 `gdm done`
+게이트는 유지한다. implementation에는 필요한 테스트 작성·수정 경로의 쓰기 소유권을 포함하고
+verifier는 읽기 전용을 유지한다. 수동·이전 계획의 연결 check 수락 방식은 바꾸지 않는다.
+작은 low risk 단일 module은 auto의 single 사유와 직접 검증을 유지한다. executor가 unavailable이면
+복잡한 작업의 필수 역할은 blocked로 남긴다. 권한·예산·비방해 검증 제약을 유지한다.
+실행 중 지식 결과가 범위를 바꾸면 active·reported를 정리하고 요청·check·context를 갱신해
+같은 요청 기반 명령에 `--replan --reason '<변경 근거>'`를 붙인다. 과거 증거 보존과 새 검증은 gdm-go를 따른다.
 
 <!-- GDM_TARGET_FRAGMENT_V1:delegation -->
 
@@ -238,9 +302,22 @@ gdm plan add에 그대로 쓸 수 있는 형태:
 - verification: deterministic | inspectable | opaque
 - simplify: yes | no (구조 변경의 추상화·dead code·중복 위험을 별도로 검증할 때 yes)
 
+## 외부 연동 검증 계약 초안 (해당 작업만)
+- profile: integration | 미분류 (선택 이유)
+- 중요한 미확인 사항: <ID / 내용 / 필요한 관측 / 연결 check>
+- 필수 결과: <원문 입력 / 정상 업무 결과 / 금지 행동 / 다중 턴 상태 → check, 또는 비적용 사유>
+- 증거 범위: <입력 출처 / 실행 환경 / 대상 식별 / fixture·대상 manifest / unknown>
+- 계약 파일: <실행 단계에서 check ID 확정 후 import할 gdm-verification-contract/v1 파일>
+
 ## 구현 단계
 1. <파일:위치> 무엇을 어떻게
 2. ...
+
+## 요청 기반 자동 배정 입력
+- 원문 요청: <Work brief로 보존할 사용자 요청>
+- 문맥: <GDM에 --context로 전달할 필요한 로컬 파일>
+- 실행 조건: <실제 executor / 가용 슬롯 / 허용 capability catalogue / 비방해 검증>
+- 실행: <check 등록 후 gdm team auto --from-request; 역할·module·route는 GDM이 생성>
 
 ## 범위 밖 (하지 않는 것)
 - ...
@@ -256,7 +333,9 @@ gdm plan add에 그대로 쓸 수 있는 형태:
    `gdm plan init --slug <슬러그> --brief-file .gdm/plans/<슬러그>.md --require '<보존 조건>'
    --forbid '<금지 조건>' --assume '<가정>' --uncertain '<불확실성>' --allow-path <경로>
    --forbid-path <경로> --stop-if '<중단 조건>' --risk <등급> --verification <방식> [--simplify]`
-   (+중량이면 `--audit`). `gdm plan add --from-brief`가 괄호 marker를 check 종류로 보존한다.
+   (+중량이면 `--audit`, 외부 연동이면 `--profile integration`).
+   `gdm plan add --from-brief`가 괄호 marker를 check 종류로 보존하지만 구조화 검증 계약을
+   대신 등록하지는 않는다. 외부 연동은 check ID 확정 후 위 import·show checkpoint까지 수행한다.
    `--forbid '자동 커밋'`이 기본이며 사용자가 별도로 승인하기
    전에는 계획 완료나 `done`을 전달 승인으로 해석하지 않는다.
 
@@ -291,7 +370,8 @@ Good:
 확인 필요: 상한선을 두시겠어요? (문서에는 100만 건 상한 가정으로 작성)
 바로 시작하려면: gdm plan init --slug download-limit-config
 --brief-file .gdm/plans/download-limit-config.md --require '기존 다운로드 동작 보존'
---forbid '자동 커밋' --audit"
+--forbid '자동 커밋' --audit --profile integration
+check 등록 후 검증 계약 import와 team auto로 지식·구현·검증 배정"
 </example>
 
 <commentary>
