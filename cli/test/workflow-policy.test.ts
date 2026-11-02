@@ -59,10 +59,12 @@ describe("workflow policy", () => {
       const text = normalized(source);
       const command = source.split("\n").find((line) => line.includes("gdm team auto --slug <s> --from-request"));
       expect(command).toBeDefined();
-      for (const flag of ["--provider", "--model", "--max-active", "--executor"]) {
+      for (const flag of ["--max-active", "--executor"]) {
         expect(command).toContain(flag);
       }
-      expect(command).not.toContain("--file");
+      for (const flag of ["--provider", "--model", "--effort", "--file"]) {
+        expect(command).not.toContain(flag);
+      }
       expect(text).toMatch(/원문.*(?:Work brief|brief)/u);
       expect(text).toContain("check를 최소 1개 등록");
       expect(text).toContain("진행자가 역할을 미리 매핑하거나 modules JSON을 작성하지 않는다");
@@ -74,6 +76,10 @@ describe("workflow policy", () => {
         expect(text).toContain("host-declared");
       }
       expect(text).toContain("planner의 `--model`은 worker 모델 선택이 아니다");
+      for (const required of ["gdm-planner-catalog/v1", "planner-catalog.json", "--planner-catalog <path>", "$GDM_CONFIG_DIR", "$XDG_CONFIG_HOME", "$HOME/.config/gdm", "기존 설정은 보존", "worker용 `--capabilities-file <path>`와 별개", "--provider <claude|codex> --model <planner-model> [--effort <level>]", "일부만 지정하거나", "자동 재시도·fallback", "v2 receipt", "구독 잔량·총 과금·원격 모델 신원"]) {
+        expect(text).toContain(required);
+      }
+
       expect(text).toMatch(/tool-0 호출/u);
       expect(text).toMatch(/--dry-run.{0,20}(?:도 실제 planner|`도 실제 planner)/u);
       expect(text).toMatch(/수동 import.*호환 경로이며 기본 흐름이 아니다/u);
@@ -84,6 +90,9 @@ describe("workflow policy", () => {
     for (const target of ["codex", "claude", "gid"]) {
       const text = normalized(readFileSync(join(ROOT, "skills", "_shared", "targets", "fragments", `${target}-delegation.md`), "utf8"));
       expect(text).toContain("`gdm team auto --from-request`가 생성");
+      expect(text).toContain("매 작업의 모델 선택을 진행자에게 요구하지 않는다");
+      expect(text).toContain("계획기용 `--planner-catalog`와 worker용 `--capabilities-file`은 별개");
+      expect(text).toContain("계획 자동화는 native 실행 자동화가 아니다");
       expect(text).toContain("진행자가 역할을 미리 매핑하거나 modules JSON을 작성하지 않는다");
       expect(text).toContain("route·prompt를 그대로");
       expect(text).toMatch(/(?:spawn|실행) 전에 `gdm team claim`/u);
@@ -98,7 +107,7 @@ describe("workflow policy", () => {
     expect(exampleCommands.length).toBeGreaterThan(0);
     for (const command of exampleCommands) {
       expect(command).toContain("--from-request");
-      expect(command).not.toContain("--file");
+      for (const flag of ["--provider", "--model", "--effort", "--file"]) expect(command).not.toContain(flag);
     }
     expect(requestWorkflow).toContain("automaticPlanning: true");
     expect(requestWorkflow).toContain("automaticExecution: false");
@@ -108,6 +117,18 @@ describe("workflow policy", () => {
       schemaVersion: "gdm-team-capabilities/v1",
       routes: [{ id: "native-inherit", provider: "native", model: "inherit", roles: ["knowledge", "implementation", "verification"], access: ["read", "write"] }],
     });
+    const catalogs = [...requestWorkflow.matchAll(/```json\n([\s\S]*?)\n```/gu)].map((match) => JSON.parse(match[1]!));
+    const planner = catalogs.find((catalog) => catalog.schemaVersion === "gdm-planner-catalog/v1");
+    expect(planner.routes).toHaveLength(1);
+    expect(planner.routes[0]).toEqual({
+      id: "approved-planner", provider: "claude", model: "operator-approved-model-id",
+      efforts: [{ level: "high", capability: "frontier", costRank: 1 }],
+      limits: { maxSeconds: 120, maxOutputBytes: 262144, maxBudgetUsd: 0.50 },
+    });
+    for (const required of ["gdm-planner-policy/v1", "more than eight checks", "three or more", "not a measured token price", "no automatic retries or fallback", "historical validation replays the persisted snapshot", "do not attest the remote backend", "combining manual routing", "--effort"]) {
+      // Keep documentation assertions about behavior, bounds and evidence alongside the schema example.
+      expect(requestWorkflow).toContain(required);
+    }
     // The compatibility example remains available, explicitly separated from the default workflow.
     expect(docs.split("## Manual import compatibility")[1]).toContain("gdm team auto --slug feature --file .gdm/plans/roles.json");
 

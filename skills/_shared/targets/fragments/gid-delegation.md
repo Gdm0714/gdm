@@ -4,6 +4,12 @@
 현재 엔진에 쓰기 가능한 위임 도구가 있으면 GDM이 생성한 구현 경계대로 배정한다.
 분석·계획·리뷰 스킬은 읽기 전용이라는 본래 계약을 유지한다.
 
+계획기는 `--provider`·`--model` 없는 기본 명령으로 자동 호출한다. 운영자가 한 번 승인한
+`planner-catalog.json`을 보존하고 매 작업의 모델 선택을 진행자에게 요구하지 않는다.
+계획기용 `--planner-catalog`와 worker용 `--capabilities-file`은 별개다. native 모델 목록에서
+CLI 권한·capability·가격을 추정하지 않는다. 명시적 수동 override만 provider·model을 함께
+지정하며 선택 실패 때 자동 재시도·fallback하지 않는다. 계획 자동화는 native 실행 자동화가 아니다.
+
 Work의 역할·소유 경로·의존성·실행 route는 `gdm team auto --from-request`가 생성한다.
 진행자가 역할을 미리 매핑하거나 modules JSON을 작성하지 않는다. 호스트는 실제 capacity·
 capability catalogue·명시적 context만 제공하고 생성된 `team next`의 route·prompt를 그대로

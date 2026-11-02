@@ -1,6 +1,6 @@
 # Automatic role allocation
 
-`gdm team auto --from-request` interprets the Work's original user request and registered checks, then generates durable knowledge, implementation and independent verification tasks. For a new input GDM collects repository paths, invokes one bounded tool-0 planner through the selected provider, validates the result and records its provenance. This is actual model use and can incur provider usage, including with `--dry-run`. An unchanged input reuses the stored result with `plannerReused: true`.
+`gdm team auto --from-request` interprets the Work's original user request and registered checks, then generates durable knowledge, implementation and independent verification tasks. For a new input GDM collects repository paths, invokes one bounded tool-0 planner through an automatically selected provider, model and effort, validates the result and records its provenance. This is actual model use and can incur provider usage, including with `--dry-run`. An unchanged input reuses the stored result with `plannerReused: true`.
 
 The host supplies its real capacity, executor availability, allowed capability catalogue and any necessary explicit context. It does not assign roles, choose module boundaries or author a modules JSON plan in the normal workflow. GDM chooses those assignments and their execution routes from the supplied inputs.
 
@@ -11,11 +11,11 @@ Planning and execution are separate: the request result reports `automaticPlanni
 Preserve the original user request in the Work brief and register at least one meaningful check before planning. The planner uses the brief, requirements, risk, scope, uncertainties, registered check definitions and repository path inventory. Existing paths must appear in that inventory; new paths must be explicitly declared by the planner in `createPaths` beneath an existing parent. Only add relevant, credential-free context files that are authorized for the selected provider. Do not send secrets or private code to external tools.
 
 ```sh
-gdm team auto --slug feature --from-request --provider codex --model <planner-model> --max-active <available-worker-slots> --executor native --json
+gdm team auto --slug feature --from-request --max-active <available-worker-slots> --executor native --json
 gdm team next --slug feature --json
 ```
 
-The provider must be `claude` or `codex`; `--model` selects the planner, not implementation or verification workers. Choose an available planner within the user's established provider and cost constraints. Append `--context <repository-relative-file>` for each necessary context file. At most 16 explicit context files are allowed; their text and accepted knowledge together must fit in 32 KiB, and the full planner input must fit in 48 KiB. Narrow the Work's allowed paths or supplied context when these bounds are exceeded. Repository inventory includes paths and hashes, not source file text. Use `--capabilities-file <repository-relative-file>` only to describe execution routes the host can actually perform. When host tool metadata exposes multiple permitted models and efforts, construct a v2 catalogue automatically from those callable capabilities. Otherwise the default is the inherited native worker route:
+The default omits both `--provider` and `--model`: GDM selects an authorized planner from the operator catalog described below. This planner catalog is separate from the native worker capability catalog. Append `--context <repository-relative-file>` for each necessary context file. At most 16 explicit context files are allowed; their text and accepted knowledge together must fit in 32 KiB, and the full planner input must fit in 48 KiB. Narrow the Work's allowed paths or supplied context when these bounds are exceeded. Repository inventory includes paths and hashes, not source file text. Use `--capabilities-file <repository-relative-file>` only to describe execution routes the host can actually perform. When host tool metadata exposes multiple permitted models and efforts, construct a v2 catalogue automatically from those callable capabilities. Otherwise the default is the inherited native worker route:
 
 ```json
 {
@@ -33,6 +33,39 @@ The provider must be `claude` or `codex`; `--model` selects the planner, not imp
 ```
 
 A v2 route adds `execution` (`native` or `tool-free`), supported `efforts` (strings or null), `strengths` and `limitations` arrays, and optional advisory `costClass` and `maxInvocations`. A tool-free Claude planner is not a writable worker. Do not infer availability, authorization or prices from names. The catalogue describes available capabilities; it is not a task-to-model or role-to-worker assignment. The planner may select only a supplied route ID that supports the role and access mode. `native-inherit` preserves the host's current worker model. The planner model does not override it. If a selected route is unavailable at execution time, report the blocker and replan with truthful capabilities instead of substituting a model.
+
+## Configure the automatic planner once
+
+The operator approves actual callable Claude or Codex candidates, their supported efforts, capability levels and resource preferences once. Preserve an existing configuration; do not overwrite it during workflow setup or invent candidates, entitlement or prices. GDM does not infer CLI availability from the host's native worker model list. A missing or invalid catalog fails explicitly rather than assuming a model.
+
+Without `--planner-catalog`, resolution uses the first configured location: `$GDM_CONFIG_DIR/planner-catalog.json`, otherwise `$XDG_CONFIG_HOME/gdm/planner-catalog.json`, otherwise `$HOME/.config/gdm/planner-catalog.json`. `--planner-catalog <repository-relative-file>` selects a repository-contained catalog for this input. It does not replace `--capabilities-file`, which describes worker execution routes.
+
+The exact schema is `gdm-planner-catalog/v1`, with 1–16 routes. This illustrative placeholder must be replaced with operator-approved model IDs and declarations before use; it is not a built-in model policy:
+
+```json
+{
+  "schemaVersion": "gdm-planner-catalog/v1",
+  "routes": [
+    {
+      "id": "approved-planner",
+      "provider": "claude",
+      "model": "operator-approved-model-id",
+      "efforts": [{ "level": "high", "capability": "frontier", "costRank": 1 }],
+      "limits": { "maxSeconds": 120, "maxOutputBytes": 262144, "maxBudgetUsd": 0.50 }
+    }
+  ]
+}
+```
+
+Each route has a unique `id` and provider/model pair, `provider` (`claude` or `codex`), `model`, 1–6 unique effort entries and `limits`. Each effort has exactly `level`, `capability` (`standard`, `advanced` or `frontier`) and integer `costRank` (0–1000000). Claude supports `low`, `medium`, `high`, `xhigh`, `max`; Codex supports `minimal`, `low`, `medium`, `high`, `xhigh`. These adapter-supported values do not establish that a particular model or account supports them; only configure authorized pairs. `costRank` is an operator's advisory resource preference, not a measured token price or subscription charge.
+
+`limits` requires integer `maxSeconds` (1–120) and `maxOutputBytes` (1–262144). Optional positive `maxBudgetUsd` is Claude-only and is passed to its CLI; omission retains the 0.50 per-invocation default. Codex monetary caps are rejected. Time/output limits tighten the existing runtime environment bounds. A CLI budget flag does not measure subscription balance or impose a cumulative Work spending cap.
+
+`gdm-planner-policy/v1` uses declared Work facts with a conservative `standard` floor. Each of medium risk, unresolved uncertainties, integration, any expert check, and large scope (more than eight checks or more than eight allowed paths) adds one escalator. One or two require `advanced`; three or more, or high risk, require `frontier`. Feasible route/effort pairs sort by `costRank`, capability, effort order (`minimal`, `low`, `medium`, `high`, `xhigh`, `max`), then route ID. If no feasible pair exists, selection fails explicitly. This is deterministic demand selection, not keyword semantic analysis, a quality benchmark or proof of the optimal model.
+
+The selector itself makes no provider call. Each new-input command invokes the selected planner at most once, with no automatic retries or fallback. Identical accepted inputs reuse their plan. Selection reason, catalog source/hash, policy facts and requested effort/effective limits are bound to cache input and provenance; v2 receipts bind the actual invocation options. Changed or missing current catalogs block claims until replanning, while historical validation replays the persisted snapshot. Legacy provenance remains valid. Requested model and process evidence are observable; they do not attest the remote backend's identity.
+
+For an explicit manual override, add `--provider <claude|codex> --model <planner-model>` and optionally `--effort <level>` to the request command. Both provider and model are required together. Omitting effort preserves legacy manual behavior; supplying it uses exact effort transport and v2 receipts. A partial override, `--effort` without the complete override, or combining manual routing with `--planner-catalog` fails. Manual planner selection does not select worker models.
 
 For new input, `--dry-run` invokes the planner and validates a proposal without applying it to durable Work. The `allocation.request` provenance summary identifies the request-driven origin. Applied provenance is archived at `.gdm/<slug>/out/team-request-<sha256>.json`, binding the planner input, response and receipt. Planner failure, unavailable provider, malformed output or invalid assignments fail explicitly; there is no keyword-based fallback and the host must not fabricate a successful plan. `--from-request` and `--file` are mutually exclusive.
 

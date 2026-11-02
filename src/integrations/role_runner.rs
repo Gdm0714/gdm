@@ -583,12 +583,89 @@ fn planner_model(provider: &str, requested: &str) -> Result<String> {
     Ok(model.into())
 }
 
+/// Explicit planner controls are serialized into the cache input and receipt.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct PlannerOptions {
+    pub effort: String,
+    pub max_seconds: u64,
+    pub max_output_bytes: usize,
+    pub max_prompt_bytes: usize,
+    pub max_processes: usize,
+    pub max_rss_kb: u64,
+    pub max_budget_usd: Option<f64>,
+}
+
+pub(crate) fn planner_effort_supported(provider: &str, effort: &str) -> bool {
+    match provider {
+        "claude" => ["low", "medium", "high", "xhigh", "max"].contains(&effort),
+        "codex" => ["minimal", "low", "medium", "high", "xhigh"].contains(&effort),
+        _ => false,
+    }
+}
+impl PlannerOptions {
+    pub(crate) fn validate(&self, provider: &str) -> Result<()> {
+        if !planner_effort_supported(provider, &self.effort)
+            || self.max_seconds == 0
+            || self.max_seconds > 120
+            || self.max_output_bytes == 0
+            || self.max_output_bytes > PLANNER_MAX_OUTPUT
+            || self.max_prompt_bytes == 0
+            || self.max_prompt_bytes > PLANNER_MAX_PROMPT
+            || self.max_processes == 0
+            || self.max_rss_kb == 0
+            || self
+                .max_budget_usd
+                .is_some_and(|n| !n.is_finite() || n <= 0.0)
+            || (provider == "codex" && self.max_budget_usd.is_some())
+            || (provider == "claude" && self.max_budget_usd.is_none())
+        {
+            return Err(planner_error("unsupported planner effort or limits"));
+        }
+        Ok(())
+    }
+    pub(crate) fn effective(
+        provider: &str,
+        effort: &str,
+        seconds: u64,
+        output: usize,
+        budget: Option<f64>,
+    ) -> Result<Self> {
+        let env = planner_limits(Limits::env()?);
+        let options = Self {
+            effort: effort.into(),
+            max_seconds: seconds,
+            max_output_bytes: output,
+            max_prompt_bytes: env.prompt,
+            max_processes: env.processes,
+            max_rss_kb: env.rss,
+            max_budget_usd: budget,
+        };
+        options.validate(provider)?;
+        Ok(Self {
+            max_seconds: seconds.min(env.seconds),
+            max_output_bytes: output.min(env.output),
+            ..options
+        })
+    }
+    fn limits(&self) -> Limits {
+        Limits {
+            seconds: self.max_seconds,
+            output: self.max_output_bytes,
+            prompt: self.max_prompt_bytes,
+            processes: self.max_processes,
+            rss: self.max_rss_kb,
+        }
+    }
+}
+
 fn planner_argv(
     provider: &str,
     workspace: &Path,
     model: &str,
     schema: &Value,
     schema_path: &Path,
+    options: Option<&PlannerOptions>,
 ) -> Result<Vec<String>> {
     let mut argv = provider_argv(provider, workspace, model)?;
     if provider == "claude" {
@@ -603,13 +680,22 @@ fn planner_argv(
             "--json-schema".into(),
             schema.to_string(),
             "--effort".into(),
-            "low".into(),
+            options.map_or("low", |o| o.effort.as_str()).into(),
             "--max-budget-usd".into(),
-            "0.50".into(),
+            options.map_or_else(|| "0.50".into(), |o| o.max_budget_usd.unwrap().to_string()),
         ]);
     } else {
         // Keep stdin as the last positional argument after the structured flags.
         argv.pop();
+        if let Some(options) = options {
+            argv.extend([
+                "-c".into(),
+                format!(
+                    "model_reasoning_effort={}",
+                    serde_json::to_string(&options.effort)?
+                ),
+            ]);
+        }
         argv.extend([
             "--output-schema".into(),
             schema_path.to_string_lossy().into_owned(),
@@ -803,12 +889,26 @@ pub(crate) fn request_plan(
     model: &str,
     prompt: &str,
     schema: &Value,
+    options: Option<&PlannerOptions>,
 ) -> Result<PlannerReply> {
     let model = planner_model(provider, model)?;
-    let limits = planner_limits(Limits::env()?);
+    let limits = if let Some(options) = options {
+        options.validate(provider)?;
+        options.limits()
+    } else {
+        planner_limits(Limits::env()?)
+    };
     validate_planner_input(prompt, schema, limits)?;
     let executable = resolve_provider(provider)?;
-    request_plan_with_executable(provider, &model, prompt, schema, &executable, limits)
+    request_plan_configured(
+        provider,
+        &model,
+        prompt,
+        schema,
+        &executable,
+        limits,
+        options,
+    )
 }
 
 fn validate_planner_input(prompt: &str, schema: &Value, limits: Limits) -> Result<()> {
@@ -830,6 +930,7 @@ fn validate_planner_input(prompt: &str, schema: &Value, limits: Limits) -> Resul
 }
 
 // The explicit executable keeps fake-provider tests independent of global env.
+#[cfg(test)]
 fn request_plan_with_executable(
     provider: &str,
     model: &str,
@@ -838,6 +939,22 @@ fn request_plan_with_executable(
     executable: &Path,
     limits: Limits,
 ) -> Result<PlannerReply> {
+    request_plan_configured(provider, model, prompt, schema, executable, limits, None)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn request_plan_configured(
+    provider: &str,
+    model: &str,
+    prompt: &str,
+    schema: &Value,
+    executable: &Path,
+    limits: Limits,
+    options: Option<&PlannerOptions>,
+) -> Result<PlannerReply> {
+    if let Some(options) = options {
+        options.validate(provider)?;
+    }
     validate_planner_input(prompt, schema, limits)?;
     let started = Instant::now();
     let deadline = started + Duration::from_secs(limits.seconds);
@@ -864,7 +981,7 @@ fn request_plan_with_executable(
             .open(path)?;
         file.write_all(content.as_bytes())?;
     }
-    let argv = planner_argv(provider, &workspace, model, schema, &schema_path)?;
+    let argv = planner_argv(provider, &workspace, model, schema, &schema_path, options)?;
     let mut version_command = command(executable, &version_workspace, &["--version".into()]);
     version_command.stdin(Stdio::null());
     let version_result = monitored_with_deadline(
@@ -932,6 +1049,12 @@ fn request_plan_with_executable(
         "providerInvocations": 1,
         "status": "succeeded",
     });
+    if let Some(options) = options {
+        receipt["schemaVersion"] = json!("gdm-request-planner-receipt/v2");
+        receipt["argvPolicyId"] = json!(format!("gdm-{provider}-request-planner-v2"));
+        receipt["effortRequested"] = json!(options.effort);
+        receipt["limits"] = serde_json::to_value(options)?;
+    }
     if let Some(usage) = output.usage {
         receipt["usage"] = usage;
     }
@@ -1482,6 +1605,55 @@ cat "$fixture/response"
             output: 16 * 1024,
             prompt: 4096,
         }
+    }
+
+    #[test]
+    fn planner_explicit_effort_is_sent_to_both_adapters() {
+        let base = PlannerOptions {
+            effort: "high".into(),
+            max_seconds: 10,
+            max_output_bytes: 100000,
+            max_prompt_bytes: 65536,
+            max_processes: 16,
+            max_rss_kb: 2097152,
+            max_budget_usd: Some(0.75),
+        };
+        for provider in ["claude", "codex"] {
+            for effort in ["low", "medium", "high", "xhigh"] {
+                let options = PlannerOptions {
+                    effort: effort.into(),
+                    max_budget_usd: if provider == "claude" {
+                        Some(0.75)
+                    } else {
+                        None
+                    },
+                    ..base.clone()
+                };
+                options.validate(provider).unwrap();
+                let argv = planner_argv(
+                    provider,
+                    Path::new("/tmp/isolated"),
+                    "operator-model",
+                    &json!({}),
+                    Path::new("/tmp/schema"),
+                    Some(&options),
+                )
+                .unwrap();
+                if provider == "claude" {
+                    assert!(argv.windows(2).any(|v| v == ["--effort", effort]));
+                    assert!(argv.windows(2).any(|v| v == ["--max-budget-usd", "0.75"]));
+                } else {
+                    assert!(
+                        argv.windows(2)
+                            .any(|v| v == ["-c", &format!("model_reasoning_effort=\"{effort}\"")])
+                    );
+                    assert!(!argv.iter().any(|v| v == "--max-budget-usd"));
+                }
+            }
+        }
+        assert!(base.validate("codex").is_err());
+        assert!(!planner_effort_supported("codex", "max"));
+        assert!(!planner_effort_supported("claude", "minimal"));
     }
 
     #[test]

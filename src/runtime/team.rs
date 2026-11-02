@@ -1474,6 +1474,8 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
                 "executor",
                 "context",
                 "capabilities-file",
+                "planner-catalog",
+                "effort",
             ],
             &["context"],
         ),
@@ -1536,6 +1538,8 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
                 "--executor",
                 "--context",
                 "--capabilities-file",
+                "--planner-catalog",
+                "--effort",
             ]
             .contains(&a.split('=').next().unwrap_or(""))
         })

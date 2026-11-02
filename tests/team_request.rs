@@ -997,3 +997,218 @@ fn adaptive_reservations_count_failed_retried_claims_across_route_rename_replan(
     assert!(String::from_utf8_lossy(&exhausted.stderr).contains("team_invocation_limit"));
     assert_eq!(before, f.state_bytes());
 }
+
+fn planner_catalog() -> Value {
+    json!({"schemaVersion":"gdm-planner-catalog/v1","routes":[
+        {"id":"standard","provider":"claude","model":"operator-standard","efforts":[{"level":"medium","capability":"standard","costRank":1}],"limits":{"maxSeconds":60,"maxOutputBytes":200000,"maxBudgetUsd":0.75}},
+        {"id":"demanding","provider":"claude","model":"operator-demanding","efforts":[{"level":"high","capability":"frontier","costRank":2}],"limits":{"maxSeconds":90,"maxOutputBytes":250000}}
+    ]})
+}
+fn automatic(f: &Fixture, extra: &[&str]) -> Output {
+    f.run(
+        &[
+            &[
+                "team",
+                "auto",
+                "--slug",
+                "sample",
+                "--from-request",
+                "--max-active",
+                "3",
+                "--executor",
+                "native",
+            ][..],
+            extra,
+        ]
+        .concat(),
+    )
+}
+fn automatic_ok(f: &Fixture, extra: &[&str]) -> Value {
+    let out = automatic(f, extra);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    serde_json::from_slice(&out.stdout).unwrap()
+}
+fn operator_catalog(f: &Fixture, c: &Value) {
+    fs::create_dir_all(&f.config).unwrap();
+    fs::write(
+        f.config.join("planner-catalog.json"),
+        serde_json::to_vec(c).unwrap(),
+    )
+    .unwrap();
+}
+#[test]
+fn automatic_planner_uses_operator_catalog_and_reuses_then_invalidates_cache() {
+    let f = Fixture::new(true, true);
+    let mut c = planner_catalog();
+    operator_catalog(&f, &c);
+    let out = automatic_ok(&f, &[]);
+    assert_eq!(
+        out["plannerReceipt"]["schemaVersion"],
+        "gdm-request-planner-receipt/v2"
+    );
+    assert_eq!(
+        out["plannerReceipt"]["modelRequested"],
+        "operator-demanding"
+    );
+    assert_eq!(out["plannerReceipt"]["effortRequested"], "high");
+    assert_eq!(out["plannerReceipt"]["limits"]["maxSeconds"], 5);
+    assert_eq!(out["plannerReceipt"]["limits"]["maxBudgetUsd"], 0.5);
+    assert!(
+        fs::read_to_string(f.provider.join("argv"))
+            .unwrap()
+            .contains("--effort\nhigh\n--max-budget-usd\n0.5\n")
+    );
+    assert_eq!(automatic_ok(&f, &[])["plannerReused"], true);
+    assert_eq!(fs::read(f.provider.join("invocations")).unwrap(), b"x");
+    c["routes"][1]["efforts"][0]["level"] = json!("xhigh");
+    operator_catalog(&f, &c);
+    let claim = f.run(&[
+        "team",
+        "claim",
+        "--slug",
+        "sample",
+        "--task",
+        "knowledge",
+        "--assignee",
+        "reader",
+        "--attempt",
+        "a1",
+    ]);
+    assert!(!claim.status.success());
+    assert!(String::from_utf8_lossy(&claim.stderr).contains("team_planner_catalog_stale"));
+    let out = automatic_ok(&f, &[]);
+    assert_eq!(out["plannerReused"], false);
+    assert_eq!(out["plannerReceipt"]["effortRequested"], "xhigh");
+    assert_eq!(fs::read(f.provider.join("invocations")).unwrap(), b"xx");
+}
+#[test]
+fn automatic_planner_rejects_missing_catalog_unsupported_limits_efforts_and_ambiguous_flags() {
+    for extra in [
+        vec![],
+        vec!["--provider", "claude"],
+        vec!["--model", "m"],
+        vec!["--effort", "high"],
+        vec![
+            "--provider",
+            "claude",
+            "--model",
+            "m",
+            "--planner-catalog",
+            "catalog.json",
+        ],
+        vec!["--effort", "high", "--effort", "low"],
+    ] {
+        let f = Fixture::new(true, true);
+        assert!(!automatic(&f, &extra).status.success());
+        assert!(!f.provider.join("invocations").exists());
+    }
+    for kind in [
+        "effort",
+        "capability",
+        "seconds",
+        "output",
+        "budget",
+        "unknown",
+        "duplicate",
+        "insufficient",
+    ] {
+        let f = Fixture::new(true, true);
+        let mut c = planner_catalog();
+        match kind {
+            "effort" => c["routes"][1]["efforts"][0]["level"] = json!("ultra"),
+            "capability" => c["routes"][1]["efforts"][0]["capability"] = json!("magic"),
+            "seconds" => c["routes"][1]["limits"]["maxSeconds"] = json!(121),
+            "output" => c["routes"][1]["limits"]["maxOutputBytes"] = json!(0),
+            "budget" => {
+                c["routes"][1]["provider"] = json!("codex");
+                c["routes"][1]["limits"]["maxBudgetUsd"] = json!(1);
+            }
+            "unknown" => c["routes"][1]["limits"]["subscriptionRemaining"] = json!(100),
+            "duplicate" => c["routes"][1]["id"] = json!("standard"),
+            "insufficient" => c["routes"].as_array_mut().unwrap().truncate(1),
+            _ => unreachable!(),
+        }
+        operator_catalog(&f, &c);
+        assert!(!automatic(&f, &[]).status.success(), "{kind}");
+        assert!(!f.provider.join("invocations").exists(), "{kind}");
+    }
+}
+#[test]
+fn manual_explicit_effort_changes_cache_without_changing_legacy_defaults() {
+    let f = Fixture::new(true, true);
+    let old = f.planned(&[]);
+    assert_eq!(
+        old["plannerReceipt"]["schemaVersion"],
+        "gdm-request-planner-receipt/v1"
+    );
+    assert_eq!(f.planned(&[])["plannerReused"], true);
+    let new = f.planned(&["--effort", "medium"]);
+    assert_eq!(new["plannerReceipt"]["effortRequested"], "medium");
+    assert_eq!(f.planned(&["--effort", "medium"])["plannerReused"], true);
+    assert_eq!(fs::read(f.provider.join("invocations")).unwrap(), b"xx");
+    assert!(!f.auto(&["--effort", "ultra"]).status.success());
+    assert_eq!(fs::read(f.provider.join("invocations")).unwrap(), b"xx");
+}
+#[test]
+fn automatic_selection_and_effective_receipt_tampering_is_rejected() {
+    for kind in ["selection", "catalog", "effort", "limits", "policy"] {
+        let f = Fixture::new(true, true);
+        operator_catalog(&f, &planner_catalog());
+        automatic_ok(&f, &[]);
+        let mut work = f.state();
+        let r = &mut work["team"]["allocation"]["request"];
+        match kind {
+            "selection" => r["input"]["planner"]["selection"]["routeId"] = json!("standard"),
+            "catalog" => r["input"]["planner"]["catalog"]["routes"][1]["model"] = json!("forged"),
+            "effort" => r["receipt"]["effortRequested"] = json!("low"),
+            "limits" => r["receipt"]["limits"]["maxSeconds"] = json!(120),
+            "policy" => r["input"]["planner"]["selection"]["policy"] = json!("invented"),
+            _ => unreachable!(),
+        }
+        // Rehash the outer envelopes so rejection exercises deterministic
+        // selection/receipt validation rather than only an obsolete digest.
+        use gdm::{runtime::protocol::canonical_json, support::sha256};
+        r["inputDigest"] = json!(sha256(canonical_json(&r["input"])));
+        r.as_object_mut().unwrap().remove("artifact");
+        let archive = canonical_json(r);
+        let hash = sha256(&archive);
+        let path = format!(".gdm/sample/out/team-request-{hash}.json");
+        fs::write(f.root.join(&path), archive).unwrap();
+        r["artifact"] = json!({"path":path,"sha256":hash});
+        fs::write(
+            f.root.join(".gdm/sample/checks.json"),
+            serde_json::to_vec(&work).unwrap(),
+        )
+        .unwrap();
+        let out = f.run(&["team", "next", "--slug", "sample"]);
+        assert!(!out.status.success(), "{kind}");
+        assert!(
+            String::from_utf8_lossy(&out.stderr).contains("state_corrupt"),
+            "{kind}"
+        );
+    }
+}
+#[test]
+fn explicit_catalog_is_independent_from_worker_capabilities_and_catches_inflight_edits() {
+    let f = Fixture::new(true, true);
+    fs::write(
+        f.root.join("planners.json"),
+        serde_json::to_vec(&planner_catalog()).unwrap(),
+    )
+    .unwrap();
+    let script = fs::read_to_string(f.provider.join("claude"))
+        .unwrap()
+        .replace(
+            "cat \"$fixture/response\"",
+            "printf 'invalid catalog' > \"$GDM_TEST_CWD/planners.json\"\ncat \"$fixture/response\"",
+        );
+    fs::write(f.provider.join("claude"), script).unwrap();
+    let out = automatic(&f, &["--planner-catalog", "planners.json"]);
+    assert!(!out.status.success());
+    assert!(!f.has_request_archive());
+    assert_eq!(fs::read(f.provider.join("invocations")).unwrap(), b"x");
+}

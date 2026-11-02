@@ -133,7 +133,10 @@ describe("deterministic provider target skill renderer", () => {
         expect(skill).not.toContain("modules[{id,paths,checks,deliverable,acceptance}]");
         const firstAuto = skill.split("\n").find((line) => line.includes("gdm team auto --slug <s>"))!;
         expect(firstAuto).toContain("--from-request");
-        expect(firstAuto).not.toContain("--file");
+        for (const flag of ["--file", "--provider", "--model", "--effort"]) expect(firstAuto).not.toContain(flag);
+        for (const required of ["gdm-planner-catalog/v1", "planner-catalog.json", "--planner-catalog <path>", "$GDM_CONFIG_DIR", "기존 설정은 보존", "worker용 `--capabilities-file <path>`와 별개", "--provider <claude|codex> --model <planner-model> [--effort <level>]", "자동 재시도·fallback", "v2 receipt", "구독 잔량·총 과금·원격 모델 신원", "계획 자동화는 native 실행 자동화가 아니다"]) {
+          expect(compact).toContain(required);
+        }
       }
       const go = readFileSync(join(output, "gdm-go", "SKILL.md"), "utf8");
       for (const required of ["gdm plan verification resolve", "gdm plan verification waive", "completionValid", "completionMode", "positiveOutcome", "deniedAction"]) {
