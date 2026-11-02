@@ -5,6 +5,24 @@ GDM은 구현을 나누는 것부터 결과를 검증하고 수락하는 것까�
 지원 도구가 맡고, 루트 조율자는 수용 기준·검증·통합·완료를 책임진다. 팀 상태는 정본을 원자적으로
 저장한 뒤 진단용 journal을 기록하므로, 중간 종료에도 저장된 필수 task·결과·반려가 정본에 남는다.
 
+## 요청 기반 기본 배정
+
+Work brief와 check를 등록한 뒤 모델 인자 없이 실행한다.
+
+```sh
+gdm team auto --slug team-change --from-request --max-active <실제-가용-슬롯> --executor native --json
+```
+
+계획기는 한 번 승인한 `planner-catalog.json`에서 provider·model·effort를 자동 선택한다.
+위치는 `$GDM_CONFIG_DIR`, 아니면 `$XDG_CONFIG_HOME/gdm`, 아니면 `$HOME/.config/gdm`이다.
+기존 설정을 보존하고 실제 CLI 호출 권한·능력·자원 순위를 추측해서 채우지 않는다.
+`--planner-catalog <path>`는 저장소 안의 계획기 설정이며 worker용 `--capabilities-file`과 별개다.
+명시적 수동 override만 `--provider`와 `--model`을 함께 지정하고 `--effort`를 추가할 수 있다.
+자동 선택은 선언된 작업 조건을 따르며 새 입력마다 최대 한 번 호출한다. 자동 재시도·fallback,
+구독 잔량 측정, 모델 우열 보장은 없다. [상세 설정과 정책](automatic-role-allocation.md)을 따른다.
+CLI는 계획을 생성하고 실제 native worker 실행·claim·결과 검증은 호스트가 맡는다.
+아래 `team configure`·`team add` 예시는 명시적 수동 조율 호환 경로다.
+
 ## 실행 방식 선택
 
 `gdm-go`와 `gdm-full`은 Work와 check를 만든 뒤 구현 전에 실행 방식을 정한다.

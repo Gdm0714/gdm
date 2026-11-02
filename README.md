@@ -104,6 +104,13 @@ Claude Code만으로 계획·구현·테스트·완료까지 사용할 수 있�
 /gdm-full 구현과 독립 검수까지 해줘
 ```
 
+요청 기반 팀 계획은 승인된 `planner-catalog.json`에서 provider·model·effort를 자동 선택한다.
+처음 한 번 실제 호출 가능한 후보와 능력·자원 순위·한도를 승인해 GDM 설정 디렉터리에 저장하고
+기존 설정은 보존한다. 기본 명령에는 매번 `--provider`·`--model`을 넣지 않는다. 계획기 카탈로그와
+worker용 `--capabilities-file`은 별개이며 native 모델 목록만으로 CLI 권한을 추정하지 않는다.
+[설정 위치·schema·수동 override와 한계](docs/automatic-role-allocation.md#configure-the-automatic-planner-once)를 따른다.
+선택은 선언된 작업 조건에 따른 제한된 정책이며 모델 우열이나 구독 과금을 보장하지 않는다.
+
 일상 작업은 현재 Claude Code에서 선택한 모델로 수행한다. 일반 세션은 파일 편집과 검증
 명령을 실행하며, 별도로 호출하는 전문 역할에만 tool-0 읽기 전용 제한을 적용한다.
 `gdm-full`은 구현과 다른 실제 모델의 검수를 요구한다. 같은 Claude 공급자의 다른 모델을

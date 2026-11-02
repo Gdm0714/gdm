@@ -212,8 +212,27 @@ fresh context, 넓은 탐색이 주 컨텍스트에 만드는 노이즈를 보�
 아래 명령과 gdm-go의 native dispatch 루프로 이어간다.
 
 ```sh
-gdm team auto --slug <s> --from-request --provider <claude|codex> --model <planner-model> --max-active <1..32> --executor <native|unavailable> --json
+gdm team auto --slug <s> --from-request --max-active <1..32> --executor <native|unavailable> --json
 ```
+
+계획기 기본 선택은 자동이다. `--provider`와 `--model`을 모두 생략하면 승인된
+`gdm-planner-catalog/v1`의 provider·model·effort를 GDM이 선택한다. 매 작업마다 진행자가 모델을
+고르지 않는다. 최초 설정 때만 실제 호출 가능한 후보와 capability·costRank·limits를 운영자가
+승인해 `planner-catalog.json`으로 저장한다. 위치 우선순위는 `$GDM_CONFIG_DIR/planner-catalog.json`,
+`$XDG_CONFIG_HOME/gdm/planner-catalog.json`, `$HOME/.config/gdm/planner-catalog.json`이다.
+기존 설정은 보존하고 후보·권한·가격을 자동으로 만들어 넣지 않는다. 저장소 안의
+`--planner-catalog <path>`로 이번 입력의 카탈로그를 지정할 수도 있다. 이 계획기 카탈로그는
+worker용 `--capabilities-file <path>`와 별개이며 native 모델 목록은 CLI 호출 권한의 증거가 아니다.
+수동 override는 `--provider <claude|codex> --model <planner-model> [--effort <level>]`을 함께
+명시할 때만 사용한다. 일부만 지정하거나 `--planner-catalog`와 혼합하면 실패한다.
+수동 지정에서 effort를 생략하면 기존 동작을 유지하며 자동 선택에서 `--effort`만 지정할 수 없다.
+선택 정책은 선언된 위험·불확실성·integration·expert check·범위로 수요를 올리고 가능한
+route·effort를 운영자의 costRank 순으로 고른다. 키워드 의미 분석이나 모델 우열 벤치마크가 아니다.
+새 입력은 선택된 계획기를 최대 한 번 호출하고 자동 재시도·fallback을 하지 않는다.
+선택 이유·요청 effort·실효 한도를 provenance와 v2 receipt에 결속한다. 카탈로그 변경은 캐시와
+claim freshness에 반영되며 과거 snapshot 검증은 보존된다. 구독 잔량·총 과금·원격 모델 신원을
+증명하지 않는다. 상세 schema와 선택 규칙은 `docs/automatic-role-allocation.md`를 따른다.
+
 
 호스트는 실제 가용 슬롯·executor·허용 capability catalogue와 필요한 명시적 context만 제공한다.
 `--context <path>`는 반복 가능하고 `--capabilities-file <path>`는 사용 가능한 route의 목록이다.

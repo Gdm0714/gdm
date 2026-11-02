@@ -32,8 +32,27 @@ description: |
 구현 전에 다음 요청 기반 명령을 실행한다.
 
 ```sh
-gdm team auto --slug <s> --from-request --provider <claude|codex> --model <planner-model> --max-active <1..32> --executor <native|unavailable> --json
+gdm team auto --slug <s> --from-request --max-active <1..32> --executor <native|unavailable> --json
 ```
+
+계획기 기본 선택은 자동이다. `--provider`와 `--model`을 모두 생략하면 승인된
+`gdm-planner-catalog/v1`의 provider·model·effort를 GDM이 선택한다. 매 작업마다 진행자가 모델을
+고르지 않는다. 최초 설정 때만 실제 호출 가능한 후보와 capability·costRank·limits를 운영자가
+승인해 `planner-catalog.json`으로 저장한다. 위치 우선순위는 `$GDM_CONFIG_DIR/planner-catalog.json`,
+`$XDG_CONFIG_HOME/gdm/planner-catalog.json`, `$HOME/.config/gdm/planner-catalog.json`이다.
+기존 설정은 보존하고 후보·권한·가격을 자동으로 만들어 넣지 않는다. 저장소 안의
+`--planner-catalog <path>`로 이번 입력의 카탈로그를 지정할 수도 있다. 이 계획기 카탈로그는
+worker용 `--capabilities-file <path>`와 별개이며 native 모델 목록은 CLI 호출 권한의 증거가 아니다.
+수동 override는 `--provider <claude|codex> --model <planner-model> [--effort <level>]`을 함께
+명시할 때만 사용한다. 일부만 지정하거나 `--planner-catalog`와 혼합하면 실패한다.
+수동 지정에서 effort를 생략하면 기존 동작을 유지하며 자동 선택에서 `--effort`만 지정할 수 없다.
+선택 정책은 선언된 위험·불확실성·integration·expert check·범위로 수요를 올리고 가능한
+route·effort를 운영자의 costRank 순으로 고른다. 키워드 의미 분석이나 모델 우열 벤치마크가 아니다.
+새 입력은 선택된 계획기를 최대 한 번 호출하고 자동 재시도·fallback을 하지 않는다.
+선택 이유·요청 effort·실효 한도를 provenance와 v2 receipt에 결속한다. 카탈로그 변경은 캐시와
+claim freshness에 반영되며 과거 snapshot 검증은 보존된다. 구독 잔량·총 과금·원격 모델 신원을
+증명하지 않는다. 상세 schema와 선택 규칙은 `docs/automatic-role-allocation.md`를 따른다.
+
 
 GDM이 원문 요청·등록된 check·저장소 경로 목록을 모아 내부 planner를 제한된 tool-0 호출로
 한 번 실행하고, 역할·소유 경로·의존성·check 연결·실행 route를 검증해 배정한다. 호스트는 실제
@@ -295,7 +314,7 @@ audit_bound는 결속된 검수 증거 사용이며 manual 증거도 자동 재�
 | `gdm plan init ... --profile integration` | 외부 연동의 필수 결과·미확인 사항·증거 범위 계약 활성화 |
 | `gdm plan verification import --slug <s> --file <contract.json>` | check ID에 연결한 구조화 검증 계약 등록 |
 | `gdm plan verification show --slug <s> --json` | 현재 계약·미확인 사항과 검증 범위 확인 |
-| `gdm team auto --slug <s> --from-request --provider <claude\|codex> --model <planner-model> --max-active <1..32> --executor <native\|unavailable> [--context <path>] [--capabilities-file <path>] [--dry-run] [--json]` | 원문 요청·check로 내부 planner가 역할·의존성·route 배정 |
+| `gdm team auto --slug <s> --from-request --max-active <1..32> --executor <native\|unavailable> [--context <path>] [--capabilities-file <path>] [--dry-run] [--json]` | 원문 요청·check로 내부 planner가 역할·의존성·route 배정 |
 | `gdm team auto --slug <s> --from-request ... --replan --reason <근거>` | 활성 실행·미검토 보고 정리 후 갱신한 요청·check·context로 재배정 |
 | `gdm team auto --slug <s> --file <team-plan.json> [--dry-run]` | 명시적 수동 import 호환 경로 |
 | `gdm plan add --desc <항목> --cmd <검증 명령> --expect <기대> --kind <regression\|behavior\|edge\|static>` | 자동 항목 분류·등록 |
@@ -474,7 +493,7 @@ Good:
    c1 "설정값 변경" (cmd: grep -q "DEFAULT_LIMIT = 500_000" src/config.ts)
    c2 "단위 테스트 통과" (cmd: ./gradlew test --tests '*Excel*')
    c3 "50만 초과 요청 시 안내 응답" (cmd: curl -sf .../download?rows=600000 | grep -q "제한")
-3. `gdm team auto --slug excel-limit --from-request --provider <claude|codex> --model <planner-model> --max-active 1 --executor native` → 생성된 작은 작업 single 사유 확인
+3. `gdm team auto --slug excel-limit --from-request --max-active 1 --executor native` → 생성된 작은 작업 single 사유 확인
    → 구현 → `gdm pass c1` → `gdm pass c2` → `gdm pass c3` → `gdm done`
 4. 반복 실패·miss 또는 적용한 habit이 있을 때만 관찰 수확 → 적용한 habit 결과 평가
 5. "완료: 기본 제한이 50만 건으로 변경됐고 3개 항목이 전부 실행 증거로 통과했습니다.
