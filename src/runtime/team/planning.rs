@@ -578,6 +578,7 @@ pub(super) fn claim(
         return Ok(());
     }
     guard(work)?;
+    super::request::guard_config(cwd, work)?;
     verify_history(cwd, work)?;
     if history_attempts(work).any(|a| s(a, "id") == attempt) {
         return Err(err(

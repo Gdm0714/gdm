@@ -32,7 +32,7 @@ gdm {VERSION} — 작업 증거가 다음 습관을 바꾸는 개인 AI 워크�
   gdm plan verification show --slug <슬러그> [--json]
   gdm plan verification resolve --slug <슬러그> --id <미확인-ID>
   gdm plan verification waive --slug <슬러그> --id <미확인-ID> --reason <한계> --policy <권한-근거> [--accept-unknown-scope]
-  gdm team auto --slug <슬러그> --from-request --provider claude|codex --model <계획 모델> --max-active <1..32> --executor native|unavailable
+  gdm team auto --slug <슬러그> --from-request [--planner-catalog <catalog.json> | --provider claude|codex --model <계획 모델> [--effort <수준>]] --max-active <1..32> --executor native|unavailable
                 [--context <상대 파일>]... [--capabilities-file <catalogue.json>] [--dry-run] [--json] [--replan --reason <사유>]  # 원문 brief·등록 check로 내부 planner 호출 및 역할·route 배정
   gdm team auto --slug <슬러그> --file <spec.json> [--dry-run] [--json] [--replan --reason <사유>]  # 명시적 수동 import 호환; 기본 흐름은 --from-request
   gdm plan edit --check <id> [--desc ..] [--cmd ..] [--expect ..] [--kind ..] --reason <사유> [--slug <슬러그>]
@@ -91,6 +91,7 @@ gdm {VERSION} — 작업 증거가 다음 습관을 바꾸는 개인 AI 워크�
   (예: gdm preset set test "./gradlew test" → gdm plan add --cmd @test ...)
 
 규칙:
+  - 자동 계획은 GDM_CONFIG_DIR, XDG_CONFIG_HOME/gdm, ~/.config/gdm 순서로 planner-catalog.json을 찾습니다. 실제 호출 가능한 계획기 후보를 한 번 설정하며 네이티브 워커 카탈로그와 분리됩니다. 자동 재시도나 모델 대체는 없습니다
   - team auto --from-request는 check를 최소 1개 등록한 뒤 사용합니다. 새 입력은 --dry-run도 실제 planner를 호출하며 동일 입력은 결과를 재사용합니다
     --model은 planner 모델이며 worker는 허용 catalogue의 route를 따릅니다. 호스트는 생성된 next·route·prompt를 claim 후 실행합니다
   - 자동 항목의 증거는 gdm이 직접 만듭니다: pass가 cmd를 실행해 출력을 저장·해시하고,

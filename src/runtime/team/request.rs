@@ -105,6 +105,298 @@ fn catalog(value: &Value) -> Result<()> {
     protocol::no_credentials(value)
 }
 
+// The planner catalog is operator authorization for CLI candidates, distinct
+// from native worker capabilities. Capability and cost ranks are declarations,
+// never measured model quality, billing, or subscription availability.
+mod selector {
+    use super::*;
+    use crate::integrations::role_runner::{PlannerOptions, planner_effort_supported};
+    const POLICY: &str = "gdm-planner-policy/v1";
+    fn invalid() -> Error {
+        err(
+            "team_planner_catalog_invalid",
+            "Expected an authorized bounded gdm-planner-catalog/v1 catalog with supported efforts and limits",
+        )
+    }
+    fn capability(v: &Value) -> Option<u64> {
+        match v.as_str()? {
+            "standard" => Some(1),
+            "advanced" => Some(2),
+            "frontier" => Some(3),
+            _ => None,
+        }
+    }
+    fn effort_rank(v: &Value) -> usize {
+        ["minimal", "low", "medium", "high", "xhigh", "max"]
+            .iter()
+            .position(|e| Some(*e) == v.as_str())
+            .unwrap_or(99)
+    }
+    pub(super) fn validate_catalog(c: &Value) -> Result<()> {
+        if !exact(c, &["schemaVersion", "routes"], &[])
+            || c["schemaVersion"] != "gdm-planner-catalog/v1"
+            || c["routes"]
+                .as_array()
+                .is_none_or(|r| r.is_empty() || r.len() > 16)
+        {
+            return Err(invalid());
+        }
+        let mut ids = BTreeSet::new();
+        let mut models = BTreeSet::new();
+        for r in array(&c["routes"]) {
+            if !exact(r, &["id", "provider", "model", "efforts", "limits"], &[])
+                || !id_ok(&r["id"])
+                || !ids.insert(s(r, "id"))
+                || !["claude", "codex"].contains(&s(r, "provider"))
+                || !r["model"].as_str().is_some_and(|m| {
+                    !m.is_empty()
+                        && m.len() <= 128
+                        && m.bytes()
+                            .all(|b| b.is_ascii_alphanumeric() || b"._:/-".contains(&b))
+                        && m.as_bytes()[0].is_ascii_alphanumeric()
+                })
+                || !models.insert((s(r, "provider"), s(r, "model")))
+                || r["efforts"]
+                    .as_array()
+                    .is_none_or(|e| e.is_empty() || e.len() > 6)
+                || !exact(
+                    &r["limits"],
+                    &["maxSeconds", "maxOutputBytes"],
+                    &["maxBudgetUsd"],
+                )
+                || r["limits"]["maxSeconds"]
+                    .as_u64()
+                    .is_none_or(|n| n == 0 || n > 120)
+                || r["limits"]["maxOutputBytes"]
+                    .as_u64()
+                    .is_none_or(|n| n == 0 || n > 262144)
+                || r["limits"].get("maxBudgetUsd").is_some_and(|n| {
+                    s(r, "provider") != "claude"
+                        || n.as_f64().is_none_or(|n| !n.is_finite() || n <= 0.0)
+                })
+            {
+                return Err(invalid());
+            }
+            let mut levels = BTreeSet::new();
+            for e in array(&r["efforts"]) {
+                if !exact(e, &["level", "capability", "costRank"], &[])
+                    || !planner_effort_supported(s(r, "provider"), s(e, "level"))
+                    || !levels.insert(s(e, "level"))
+                    || capability(&e["capability"]).is_none()
+                    || e["costRank"].as_u64().is_none_or(|n| n > 1000000)
+                {
+                    return Err(invalid());
+                }
+            }
+        }
+        protocol::no_credentials(c)
+    }
+    pub(super) fn select(work: &Value, c: &Value) -> Result<Value> {
+        validate_catalog(c)?;
+        let contract = &work["contract"];
+        let uncertain = !array(&contract["uncertainties"]).is_empty();
+        let integration = work["integration"] == true;
+        let expert = array(&work["checks"]).iter().any(|c| c["expert"] == true);
+        let scale = array(&work["checks"]).len() > 8 || array(&contract["allowedPaths"]).len() > 8;
+        let escalators = [
+            contract["risk"] == "medium",
+            uncertain,
+            integration,
+            expert,
+            scale,
+        ]
+        .iter()
+        .filter(|v| **v)
+        .count();
+        let demand = if contract["risk"] == "high" || escalators >= 3 {
+            3
+        } else if escalators > 0 {
+            2
+        } else {
+            1
+        };
+        let facts = json!({"risk":contract["risk"],"uncertainty":uncertain,"integration":integration,"expertChecks":expert,"largeScope":scale,"demand":demand});
+        let mut pairs = vec![];
+        for route in array(&c["routes"]) {
+            for effort in array(&route["efforts"]) {
+                if capability(&effort["capability"]).unwrap() >= demand {
+                    pairs.push((route, effort));
+                }
+            }
+        }
+        pairs.sort_by_key(|(r, e)| {
+            (
+                e["costRank"].as_u64().unwrap(),
+                capability(&e["capability"]).unwrap(),
+                effort_rank(&e["level"]),
+                s(r, "id"),
+            )
+        });
+        let (r,e) = pairs.first().ok_or_else(|| err("team_planner_unavailable", "No authorized planner route and effort meets the declared task demand; configure a capable candidate or use an explicit manual override"))?;
+        Ok(
+            json!({"policy":POLICY,"facts":facts,"routeId":r["id"],"provider":r["provider"],"model":r["model"],"effort":e["level"],"reason":"Conservative standard floor with declared risk uncertainty integration expert checks and scope escalation; feasible pairs ordered by operator resource preference capability effort and stable route ID"}),
+        )
+    }
+    fn options(
+        provider: &str,
+        effort: &str,
+        limits: &Value,
+        runtime: &PlannerOptions,
+    ) -> Result<PlannerOptions> {
+        runtime.validate("claude")?;
+        let o = PlannerOptions {
+            effort: effort.into(),
+            max_seconds: limits["maxSeconds"]
+                .as_u64()
+                .ok_or_else(invalid)?
+                .min(runtime.max_seconds),
+            max_output_bytes: (limits["maxOutputBytes"].as_u64().ok_or_else(invalid)? as usize)
+                .min(runtime.max_output_bytes),
+            max_budget_usd: if provider == "claude" {
+                Some(limits["maxBudgetUsd"].as_f64().unwrap_or(0.50))
+            } else {
+                None
+            },
+            ..runtime.clone()
+        };
+        o.validate(provider)?;
+        Ok(o)
+    }
+    pub(super) fn configure(
+        cwd: &Path,
+        work: &Value,
+        args: &[String],
+        input: &mut Value,
+    ) -> Result<()> {
+        let provider = read_flag(args, "provider")?;
+        let model = read_flag(args, "model")?;
+        let effort = read_flag(args, "effort")?;
+        let file = read_flag(args, "planner-catalog")?;
+        if provider.is_some() != model.is_some()
+            || (provider.is_some() && file.is_some())
+            || (provider.is_none() && effort.is_some())
+        {
+            return Err(err(
+                "usage",
+                "Supply both --provider and --model for a manual override; --effort requires that override and --planner-catalog is automatic only",
+            ));
+        }
+        if let (Some(p), Some(m)) = (provider, model) {
+            if m.trim().is_empty() {
+                return Err(err("usage", "--from-request requires a nonblank --model"));
+            }
+            if !["claude", "codex"].contains(&p.as_str()) {
+                return Err(err("usage", "Invalid planner provider"));
+            }
+            input["provider"] = json!(p);
+            input["model"] = json!(m);
+            let Some(effort) = effort else {
+                return Ok(());
+            };
+            let o = PlannerOptions::effective(
+                &p,
+                &effort,
+                120,
+                262144,
+                if p == "claude" { Some(0.50) } else { None },
+            )?;
+            input["planner"] = json!({"version":1,"mode":"manual","options":o});
+            return Ok(());
+        }
+        let (source, c) = if let Some(file) = file {
+            let (path, text) = read_text(cwd, &file, MAX_CONTEXT)?;
+            (
+                json!({"kind":"repository","path":path,"sha256":sha256(&text)}),
+                serde_json::from_str::<Value>(&text).map_err(|_| invalid())?,
+            )
+        } else {
+            let path = crate::i18n::config_path()
+                .map_err(|e| err("team_planner_catalog_missing", e))?
+                .with_file_name("planner-catalog.json");
+            let bytes = store::read_regular(&path,MAX_CONTEXT as u64).map_err(|_| err("team_planner_catalog_missing","Configure planner-catalog.json in the GDM configuration directory or supply --planner-catalog; no planner model is assumed"))?;
+            (
+                json!({"kind":"operator","path":path,"sha256":sha256(&bytes)}),
+                serde_json::from_slice::<Value>(&bytes).map_err(|_| invalid())?,
+            )
+        };
+        let selection = select(work, &c)?;
+        let route = array(&c["routes"])
+            .iter()
+            .find(|r| r["id"] == selection["routeId"])
+            .unwrap();
+        let runtime = PlannerOptions::effective("claude", "low", 120, 262144, Some(0.50))?;
+        let o = options(
+            s(&selection, "provider"),
+            s(&selection, "effort"),
+            &route["limits"],
+            &runtime,
+        )?;
+        input["provider"] = selection["provider"].clone();
+        input["model"] = selection["model"].clone();
+        input["planner"] = json!({"version":1,"mode":"automatic","source":source,"catalog":c,"catalogDigest":digest(&c),"selection":selection,"runtimeLimits":runtime,"options":o});
+        Ok(())
+    }
+    pub(super) fn validate(input: &Value) -> Result<()> {
+        let Some(p) = input.get("planner") else {
+            return Ok(());
+        };
+        let o: PlannerOptions =
+            serde_json::from_value(p["options"].clone()).map_err(|_| corrupt())?;
+        o.validate(s(input, "provider")).map_err(|_| corrupt())?;
+        if p["version"] != 1 {
+            return Err(corrupt());
+        }
+        match s(p, "mode") {
+            "manual" if exact(p, &["version", "mode", "options"], &[]) => Ok(()),
+            "automatic"
+                if exact(
+                    p,
+                    &[
+                        "version",
+                        "mode",
+                        "source",
+                        "catalog",
+                        "catalogDigest",
+                        "selection",
+                        "runtimeLimits",
+                        "options",
+                    ],
+                    &[],
+                ) =>
+            {
+                let selected = select(&input["work"], &p["catalog"]).map_err(|_| corrupt())?;
+                let runtime: PlannerOptions =
+                    serde_json::from_value(p["runtimeLimits"].clone()).map_err(|_| corrupt())?;
+                let route = array(&p["catalog"]["routes"])
+                    .iter()
+                    .find(|r| r["id"] == selected["routeId"])
+                    .ok_or_else(corrupt)?;
+                let expected = options(
+                    s(&selected, "provider"),
+                    s(&selected, "effort"),
+                    &route["limits"],
+                    &runtime,
+                )
+                .map_err(|_| corrupt())?;
+                if selected != p["selection"]
+                    || selected["provider"] != input["provider"]
+                    || selected["model"] != input["model"]
+                    || p["catalogDigest"] != digest(&p["catalog"])
+                    || expected != o
+                    || !exact(&p["source"], &["kind", "path", "sha256"], &[])
+                    || !["repository", "operator"].contains(&s(&p["source"], "kind"))
+                    || !state::valid_hash(s(&p["source"], "sha256"))
+                    || p["source"]["path"].as_str().is_none_or(str::is_empty)
+                {
+                    return Err(corrupt());
+                }
+                Ok(())
+            }
+            _ => Err(corrupt()),
+        }
+    }
+}
+
 fn read_text(cwd: &Path, path: &str, limit: usize) -> Result<(String, String)> {
     let path = safe_path(cwd, path, true)?;
     let bytes = store::contained(cwd, &path, "planner-context", limit)?;
@@ -272,7 +564,8 @@ fn input(cwd: &Path, work: &Value, args: &[String]) -> Result<Value> {
         }
         knowledge.push(json!({"taskId":task["id"],"path":path,"sha256":sha256(&text),"text":text}));
     }
-    let mut value = json!({"schemaVersion":"gdm-team-request-input/v1","work":planning::inputs(work),"inventory":inventory(cwd, work)?,"contexts":contexts,"acceptedKnowledge":knowledge,"capabilities":catalog,"maxActive":cap,"executor":executor,"provider":required_flag(args,"provider")?,"model":required_flag(args,"model")?,"promptVersion":if catalog["schemaVersion"] == "gdm-team-capabilities/v2" {3} else {2}});
+    let mut value = json!({"schemaVersion":"gdm-team-request-input/v1","work":planning::inputs(work),"inventory":inventory(cwd, work)?,"contexts":contexts,"acceptedKnowledge":knowledge,"capabilities":catalog,"maxActive":cap,"executor":executor,"promptVersion":if catalog["schemaVersion"] == "gdm-team-capabilities/v2" {3} else {2}});
+    selector::configure(cwd, &value["work"].clone(), args, &mut value)?;
     if value["promptVersion"] == 3 {
         value["invocationReservations"] = reservation_summary(cwd, work, &value["capabilities"])?;
     }
@@ -575,6 +868,13 @@ fn adaptive_schema(value: &mut Value) {
         .extend([json!("effort"), json!("selectionReason")]);
 }
 fn prompt(input: &Value) -> String {
+    let mut value = legacy_prompt(input);
+    if input.get("planner").is_some() {
+        value.push_str("\nPlanner selection contract version 1. In prose metadata avoid the words function, class, const, let, var, import and export followed by a space; the privacy guard treats those sequences as code. Use ordinary descriptions of routines and types. Planner capability and resource preference are operator declarations, not comparative benchmarks or billing evidence.");
+    }
+    value
+}
+fn legacy_prompt(input: &Value) -> String {
     if input["promptVersion"] == 3 {
         return format!(
             "{}\nAdaptive contract version 3. Each assignment must select an offered route and explicit offered effort, including null only when offered. Include selectionReason based on task difficulty, risk, context, execution capability and advisory cost. Do not substitute unavailable models or invent capabilities. maxInvocations is a cumulative reservation cap, not spend metering. Knowledge dependencies are attached automatically. Module dependsOn contains only earlier module IDs, never a knowledge task ID. invocationReservations describes all historical and current claim reservations. unknownAttribution means cumulative remaining capacity cannot be proven. Choose within remaining limits and do not describe reservations as actual calls or spend.",
@@ -706,10 +1006,24 @@ fn provenance(work: &Value) -> Option<&Value> {
     work["team"]["allocation"].get("request")
 }
 
+fn receipt_options_valid(input: &Value, receipt: &Value) -> bool {
+    if let Some(planner) = input.get("planner") {
+        receipt["schemaVersion"] == "gdm-request-planner-receipt/v2"
+            && receipt["effortRequested"] == planner["options"]["effort"]
+            && receipt["limits"] == planner["options"]
+            && receipt["argvPolicyId"] == format!("gdm-{}-request-planner-v2", s(input, "provider"))
+    } else {
+        receipt["schemaVersion"] == "gdm-request-planner-receipt/v1"
+            && receipt.get("effortRequested").is_none()
+            && receipt.get("limits").is_none()
+    }
+}
+
 pub(super) fn validate(work: &Value) -> Result<()> {
     let Some(request) = provenance(work) else {
         return Ok(());
     };
+    selector::validate(&request["input"])?;
     let (recorded_prompt, recorded_schema) = recorded_contract(request)?;
     let plan = if request["input"]["promptVersion"] == 1 {
         request["response"]["plan"].clone()
@@ -761,9 +1075,11 @@ pub(super) fn validate(work: &Value) -> Result<()> {
                 "modelsObserved",
                 "totalCostUsdObserved",
                 "nonfatalNoticeCount",
+                "effortRequested",
+                "limits",
             ],
         )
-        || request["receipt"]["schemaVersion"] != "gdm-request-planner-receipt/v1"
+        || !receipt_options_valid(&request["input"], &request["receipt"])
         || request["receipt"]["status"] != "succeeded"
         || request["receipt"]["providerInvocations"] != 1
         || request["receipt"]["providerTarget"] != request["input"]["provider"]
@@ -811,6 +1127,44 @@ pub(super) fn verify(cwd: &Path, work: &Value) -> Result<()> {
         return Err(err(
             "team_request_changed",
             "Planner provenance archive changed",
+        ));
+    }
+    Ok(())
+}
+
+pub(super) fn guard_config(cwd: &Path, work: &Value) -> Result<()> {
+    let Some(request) = provenance(work) else {
+        return Ok(());
+    };
+    let p = &request["input"]["planner"];
+    if p["mode"] != "automatic" {
+        return Ok(());
+    }
+    let source = &p["source"];
+    let bytes = if source["kind"] == "repository" {
+        store::contained(cwd, s(source, "path"), "planner-catalog", MAX_CONTEXT)
+    } else {
+        let path = crate::i18n::config_path()
+            .map_err(|e| err("team_planner_catalog_stale", e))?
+            .with_file_name("planner-catalog.json");
+        if path.to_str() != source["path"].as_str() {
+            return Err(err(
+                "team_planner_catalog_stale",
+                "Planner configuration location changed; replan before dispatch",
+            ));
+        }
+        store::read_regular(&path, MAX_CONTEXT as u64)
+    }
+    .map_err(|_| {
+        err(
+            "team_planner_catalog_stale",
+            "Planner catalog is unavailable; replan before dispatch",
+        )
+    })?;
+    if sha256(&bytes) != source["sha256"] {
+        return Err(err(
+            "team_planner_catalog_stale",
+            "Planner catalog changed; replan before dispatch",
         ));
     }
     Ok(())
@@ -896,10 +1250,6 @@ pub(super) fn run(cwd: &Path, args: &[String]) -> Result<Value> {
         ));
     }
     let slug = required_flag(args, "slug")?;
-    let model = required_flag(args, "model")?;
-    if model.trim().is_empty() {
-        return Err(err("usage", "--from-request requires a nonblank --model"));
-    }
     let dry_run = args.iter().any(|a| a == "--dry-run");
     let replan = args.iter().any(|a| a == "--replan");
     let why = read_flag(args, "reason")?.map(|v| reason(&v)).transpose()?;
@@ -951,11 +1301,20 @@ pub(super) fn run(cwd: &Path, args: &[String]) -> Result<Value> {
         adaptive_schema(&mut plan["knowledge"]["anyOf"][0]);
         adaptive_schema(&mut plan["verification"]["anyOf"][0]);
     }
+    let options = input
+        .get("planner")
+        .map(|p| {
+            serde_json::from_value::<crate::integrations::role_runner::PlannerOptions>(
+                p["options"].clone(),
+            )
+        })
+        .transpose()?;
     let reply = crate::integrations::role_runner::request_plan(
         s(&input, "provider"),
         s(&input, "model"),
         &planner_prompt,
         &planner_schema,
+        options.as_ref(),
     )?;
     protocol::no_credentials(&reply.value)?;
     protocol::no_credentials(&reply.receipt)?;
@@ -1053,6 +1412,32 @@ pub(super) fn run(cwd: &Path, args: &[String]) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn planner_policy_changes_demand_without_keyword_guesses_and_has_stable_ties() {
+        let route = |id: &str, level: &str, capability: &str, cost: u64| json!({"id":id,"provider":"claude","model":id,"efforts":[{"level":level,"capability":capability,"costRank":cost}],"limits":{"maxSeconds":60,"maxOutputBytes":200000}});
+        let mut catalog = json!({"schemaVersion":"gdm-planner-catalog/v1","routes":[route("b","medium","standard",1),route("a","medium","standard",1),route("advanced","high","advanced",2),route("frontier","xhigh","frontier",3)]});
+        let mut work = json!({"brief":"A short difficult sounding request","contract":{"risk":"low","uncertainties":[],"allowedPaths":["src"]},"checks":[],"integration":false});
+        assert_eq!(selector::select(&work, &catalog).unwrap()["routeId"], "a");
+        catalog["routes"].as_array_mut().unwrap().reverse();
+        assert_eq!(selector::select(&work, &catalog).unwrap()["routeId"], "a");
+        work["contract"]["risk"] = json!("medium");
+        assert_eq!(
+            selector::select(&work, &catalog).unwrap()["routeId"],
+            "advanced"
+        );
+        work["contract"]["uncertainties"] = json!(["Unresolved external behavior"]);
+        work["integration"] = json!(true);
+        assert_eq!(
+            selector::select(&work, &catalog).unwrap()["routeId"],
+            "frontier"
+        );
+        work["contract"]["risk"] = json!("high");
+        assert_eq!(
+            selector::select(&work, &catalog).unwrap()["effort"],
+            "xhigh"
+        );
+    }
 
     // Independent structural check of the provider's strict-output contract.
     // It inspects required/property equality at every object, including anyOf

@@ -32,7 +32,7 @@ Usage:
   gdm plan verification show --slug <slug> [--json]
   gdm plan verification resolve --slug <slug> --id <unknown-id>
   gdm plan verification waive --slug <slug> --id <unknown-id> --reason <limit> --policy <authority> [--accept-unknown-scope]
-  gdm team auto --slug <slug> --from-request --provider claude|codex --model <planner-model> --max-active <1..32> --executor native|unavailable
+  gdm team auto --slug <slug> --from-request [--planner-catalog <catalog.json> | --provider claude|codex --model <planner-model> [--effort <level>]] --max-active <1..32> --executor native|unavailable
                 [--context <relative-file>]... [--capabilities-file <catalogue.json>] [--dry-run] [--json] [--replan --reason <reason>]  # invoke the internal planner from the original brief and registered checks; allocate roles and routes
   gdm team auto --slug <slug> --file <spec.json> [--dry-run] [--json] [--replan --reason <reason>]  # explicit manual import compatibility; --from-request is the default workflow
   gdm plan edit --check <id> [--desc ..] [--cmd ..] [--expect ..] [--kind ..] --reason <reason> [--slug <slug>]
@@ -91,6 +91,7 @@ Presets: use "@name" as --cmd in plan add/edit to expand a registered command
   (Example: gdm preset set test "./gradlew test" → gdm plan add --cmd @test ...)
 
 Rules:
+  - Automatic planning reads planner-catalog.json from GDM_CONFIG_DIR, XDG_CONFIG_HOME/gdm or ~/.config/gdm; configure authorized CLI candidates once. Native worker capabilities are separate. No automatic retries or model fallback.
   - Register at least one check before team auto --from-request. New inputs invoke the actual planner even with --dry-run; unchanged inputs reuse the result
     --model selects the planner; workers follow allowed catalogue routes. The host claims before executing generated next/route prompts
   - GDM produces automatic evidence: pass runs cmd and stores and hashes its output.
