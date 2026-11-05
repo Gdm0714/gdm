@@ -73,7 +73,7 @@ zsh /tmp/gdm-tools-install.sh --tool gdm --with-skills
 ```
 
 `gdm` 실행 파일은 기본적으로 `~/.local/bin`에 설치됩니다. 설치 후 PATH 안내가 나오면 해당 폴더를 셸의 명령 검색 경로에 추가하세요.
-`--with-skills`는 Codex·Claude·gid 스킬과 Codex hook을 설치합니다. CLI만 필요하면 옵션을 빼세요.
+`--with-skills`는 Codex·Claude·gid 스킬과 자동 요청 진입 구성을 설치합니다. CLI만 필요하면 옵션을 빼세요.
 Linux용 사전 빌드 파일은 이번 프리뷰에 포함되지 않습니다.
 [설치·첫 실행·업데이트 안내](https://gdmux.pages.dev/downloads/QUICKSTART.md)
 
@@ -89,8 +89,15 @@ cd gdm
 ./install/install.sh
 ```
 
-설치기는 `gdm`, target별 스킬과 역할 실행기를 설치한다. 기존 Codex hook과 설정은
-보존하고, 변경 전 hook 파일은 별도 backup으로 남긴다.
+설치기는 `gdm`, target별 스킬·역할 실행기와 `gdm-entry-v1`을 설치한다. 기존 hook·설정·
+permission mode는 보존하고 변경 전 설정은 별도 backup으로 남긴다. 등록 후 실제 활성화는
+클라이언트의 hook 지원·신뢰 설정과 새 세션에서 확인해야 한다.
+
+활성 진입 안내를 받은 현재 모델은 “로그인 오류 고쳐줘” 같은 일반 요청도 `gdm-go`로
+수행한다. 질문은 바로 답하고 “이번에는 GDM 없이”라는 명시적 제외는 이번 요청에 적용한다.
+기존 Work는 상태를 읽어 이어가며 반복 안내 때문에 다시 계획하지 않는다. CLI는 native
+워커를 직접 띄우지 않으므로 호스트가 claim 후 실제 위임·결과 회수·검증·수용·done을 수행한다.
+[자동 진입과 호스트별 한계](docs/automatic-role-allocation.md#ordinary-requests-enter-through-the-current-host)를 따른다.
 
 ### 2. Claude Code에서 실행
 
@@ -121,7 +128,8 @@ worker용 `--capabilities-file`은 별개이며 native 모델 목록만으로 CL
 
 ### 3. gid에서 실행
 
-설치된 gid를 시작한 뒤 `/skill gdm-go`로 구현·검증 작업을 요청한다.
+trusted extension 등록 뒤 새 gid native 세션에서 일반 구현·수정 요청으로 시작한다.
+명시적으로 `/skill gdm-go`를 선택하는 방법도 유지한다.
 스킬은 `GID_CONFIG_DIR/skills` 또는 기본 `~/.config/gid/skills`에 설치된다.
 `XDG_CONFIG_HOME`을 사용하면 그 아래 `gid/skills`를 따른다.
 
@@ -132,8 +140,8 @@ worker용 `--capabilities-file`은 별개이며 native 모델 목록만으로 CL
 
 gid native의 `delegate_tasks`는 서로 겹치지 않는 작업을 최대 3개까지 배정하고 결과를
 수집한 뒤 반환한다. 각 작업자는 부모의 모델·권한을 상속한다. 루트는 실제 결과를 검토하고
-GDM check와 task를 수락한 뒤 완료한다. 도구가 없는 실행 환경에서는 이유를 기록하고
-단일 실행으로 진행한다. Claude ACP는 현재 제공되는 Agent 도구와 추적 가능한 대기를 쓴다.
+GDM check와 task를 수락한 뒤 완료한다. 도구가 없으면 작은 작업의 single 판단은 유지하지만 복잡한 coordinated 작업은
+`executor: unavailable`로 차단하고 필수 역할을 없애지 않는다. Claude ACP는 현재 제공되는 Agent 도구와 추적 가능한 대기를 쓴다.
 
 작업 기록은 별도 실행 데몬이 아니다. 중단된 세션을 재개할 때 저장된 결과와 실제 변경을
 먼저 확인하며, 불확실한 명령을 자동으로 반복하지 않는다.

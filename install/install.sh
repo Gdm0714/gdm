@@ -25,6 +25,8 @@ GID_SKILL_ROLLBACK=""
 BINARY_OLD_MOVED=0
 BINARY_NEW_INSTALLED=0
 INSTALL_COMMITTED=0
+ENTRY_CONFIG_ROLLBACK=""
+ENTRY_CONFIG_PATHS=("$CODEX_HOME_DIR/hooks.json" "$HOME/.claude/settings.json" "$GID_CONFIG_ROOT/extensions/gdm-entry-v1.json")
 
 # Called by cleanup(), which itself is invoked through the EXIT trap.
 # shellcheck disable=SC2329
@@ -52,6 +54,20 @@ cleanup() {
   trap - EXIT
   set +e
   if [ "$INSTALL_COMMITTED" = "0" ]; then
+    if [ -n "$ENTRY_CONFIG_ROLLBACK" ]; then
+      local i path
+      for i in 2 1 0; do
+        path="${ENTRY_CONFIG_PATHS[$i]}"
+        # Restore only the bytes written by this attempt; preserve later edits.
+        if [ ! -L "$path" ] && [ -f "$ENTRY_CONFIG_ROLLBACK/$i.after" ] && cmp -s "$path" "$ENTRY_CONFIG_ROLLBACK/$i.after"; then
+          if [ -f "$ENTRY_CONFIG_ROLLBACK/$i.before" ]; then
+            cp -p "$ENTRY_CONFIG_ROLLBACK/$i.before" "$path"
+          else
+            rm -f -- "$path"
+          fi
+        fi
+      done
+    fi
     # Skill roots may coincide, so unwind in the reverse order of installation.
     rollback_skill_swap "$GID_CONFIG_ROOT/skills" "$GID_STAGE" "$GID_SKILL_ROLLBACK"
     rollback_skill_swap "$CODEX_HOME_DIR/skills" "$CODEX_STAGE" "$CODEX_SKILL_ROLLBACK"
@@ -72,6 +88,7 @@ cleanup() {
   [ -z "$CODEX_SKILL_ROLLBACK" ] || rm -rf "$CODEX_SKILL_ROLLBACK"
   [ -z "$GID_SKILL_ROLLBACK" ] || rm -rf "$GID_SKILL_ROLLBACK"
   [ -z "$ROLLBACK_DIR" ] || rm -rf "$ROLLBACK_DIR"
+  [ -z "$ENTRY_CONFIG_ROLLBACK" ] || rm -rf "$ENTRY_CONFIG_ROLLBACK"
   exit "$status"
 }
 
@@ -141,6 +158,11 @@ chmod 755 "$BUILD_TMP"
 CODEX_HOME="$CODEX_HOME_DIR" "$BUILD_TMP" agent hook-install \
   --binary "$BUILD_TMP" --dry-run
 
+for target in codex claude gid; do
+  CODEX_HOME="$CODEX_HOME_DIR" GID_CONFIG_DIR="$GID_CONFIG_ROOT" "$BUILD_TMP" entry install \
+    --target "$target" --binary "$BUILD_TMP" --dry-run >/dev/null
+done
+
 echo "[2/5] 스킬 대상 사전검증·staging"
 stage_generated_skills "$HOME/.claude/skills" claude CLAUDE_STAGE
 stage_generated_skills "$CODEX_HOME_DIR/skills" codex CODEX_STAGE
@@ -164,9 +186,21 @@ apply_skill_swap "$HOME/.claude/skills" "$CLAUDE_STAGE" "$CLAUDE_SKILL_ROLLBACK"
 apply_skill_swap "$CODEX_HOME_DIR/skills" "$CODEX_STAGE" "$CODEX_SKILL_ROLLBACK"
 apply_skill_swap "$GID_CONFIG_ROOT/skills" "$GID_STAGE" "$GID_SKILL_ROLLBACK"
 
-echo "[4/5] Codex 에이전트 게이트 commit"
+echo "[4/5] 에이전트 게이트·자동 진입 설정"
+ENTRY_CONFIG_ROLLBACK="$(mktemp -d "$BIN_DIR/.gdm-config-rollback.XXXXXX")"
+for i in 0 1 2; do
+  path="${ENTRY_CONFIG_PATHS[$i]}"
+  if [ -e "$path" ]; then cp -p "$path" "$ENTRY_CONFIG_ROLLBACK/$i.before"; fi
+done
 CODEX_HOME="$CODEX_HOME_DIR" "$BIN_DIR/gdm" agent hook-install \
   --binary "$BIN_DIR/gdm" >/dev/null
+cp -p "${ENTRY_CONFIG_PATHS[0]}" "$ENTRY_CONFIG_ROLLBACK/0.after"
+for i in 0 1 2; do
+  case "$i" in 0) target=codex ;; 1) target=claude ;; 2) target=gid ;; esac
+  CODEX_HOME="$CODEX_HOME_DIR" GID_CONFIG_DIR="$GID_CONFIG_ROOT" "$BIN_DIR/gdm" entry install \
+    --target "$target" --binary "$BIN_DIR/gdm"
+  cp -p "${ENTRY_CONFIG_PATHS[$i]}" "$ENTRY_CONFIG_ROLLBACK/$i.after"
+done
 INSTALL_COMMITTED=1
 
 # Everything after the hook commit is diagnostic only. It must not turn a
@@ -178,5 +212,5 @@ if ! CODEX_HOME="$CODEX_HOME_DIR" GID_CONFIG_DIR="$GID_CONFIG_ROOT" "$BIN_DIR/gd
 fi
 
 echo
-echo "설치 완료. 사용: gid에서 /skill gdm-go 또는 /skill gdm-full을 사용하세요. CLI 안내: gdm --help"
+echo "설치 완료. 자동 진입 설정됨; 실제 실행은 호스트 trust·기능·새 세션에 따라 달라집니다. gid가 없으면 등록 대기 상태입니다. 비활성화: gdm entry uninstall --target codex|claude|gid --json. CLI 안내: gdm --help"
 exit 0

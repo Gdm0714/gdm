@@ -717,7 +717,15 @@ fn grammar(args: &[String], allowed: &[&str], repeatable: &[&str]) -> Result<()>
                 format!("Unknown or duplicate team flag --{key}"),
             ));
         }
-        if ["json", "dry-run", "replan", "from-request"].contains(&key) {
+        if [
+            "json",
+            "dry-run",
+            "replan",
+            "from-request",
+            "prepare-native",
+        ]
+        .contains(&key)
+        {
             if inline.is_some() {
                 return Err(err("usage", format!("--{key} does not take a value")));
             }
@@ -1468,6 +1476,8 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
                 "replan",
                 "reason",
                 "from-request",
+                "prepare-native",
+                "complete-native",
                 "provider",
                 "model",
                 "max-active",
@@ -1532,6 +1542,8 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
     if command == "auto"
         && args.iter().any(|a| {
             [
+                "--prepare-native",
+                "--complete-native",
                 "--provider",
                 "--model",
                 "--max-active",

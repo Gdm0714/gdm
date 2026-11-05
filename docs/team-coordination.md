@@ -1,5 +1,16 @@
 # GDM 팀 작업 조율
 
+일반 구현·수정 요청은 활성 `gdm-entry-v1`의 안내를 받은 현재 모델이 판단해 설치된
+`gdm-go`/`gdm-full`로 진입한다. 질문·명시적 제외에는 Work나 planner를 만들지 않는다.
+기존 Work는 `entry status`의 `slug`·`activeWorkSlug`와 `team next`를 확인해 이어가며 반복
+hook을 이유로 다시 계획하지 않는다. [호스트별 진입·게이트 한계](automatic-role-allocation.md#ordinary-requests-enter-through-the-current-host)를 따른다.
+
+생성된 dispatch는 실행 지시다. 루트가 유일한 assignee·attempt로 **claim한 뒤** 실제
+Codex spawn, Claude Agent 또는 gid `delegate_tasks`를 호출한다. 선택된 route·effort를
+지원하는 실제 도구만 사용하고 결과를 받아 report·pass·review·next를 계속한다. 도구가
+없거나 route가 불가능하면 blocked를 보고하며, 계획 출력이나 hook 알림을 실행 증거로 세지 않는다.
+
+
 GDM은 구현을 나누는 것부터 결과를 검증하고 수락하는 것까지 하나의 Work에 기록한다.
 `gdm team`은 작업 소유권과 결과의 장부다. 실제 에이전트 실행은 현재 gid·Codex·Claude 세션의
 지원 도구가 맡고, 루트 조율자는 수용 기준·검증·통합·완료를 책임진다. 팀 상태는 정본을 원자적으로

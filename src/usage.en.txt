@@ -4,6 +4,11 @@ Workflow: contract → evidence → observations → habits → comparison
 
 Usage:
   gdm [--language auto|ko|en] <command> [options]
+  gdm entry hook --target codex|claude|gid
+  gdm entry status --target <target> --session <id> --json
+  gdm entry decide --target <target> --session <id> --request <token> --kind work|question|optout [--slug <work>] --json
+  gdm entry install --target <target> --binary <absolute-executable> [--dry-run] [--json]
+  gdm entry uninstall --target <target> [--dry-run] [--json]
   gdm language auto|ko|en                 # Save the language for future launches
   gdm plan init --slug <slug> (--brief <description> | --brief-file <file>) [--audit] [--risk <low|medium|high>] [--verification <deterministic|inspectable|opaque>] [--simplify] (--require <requirement> | --forbid <restriction>)...
                 [--assume <assumption>]... [--uncertain <uncertainty>]... [--allow-path <path>]... [--forbid-path <path>]... [--stop-if <stop-condition>]...
@@ -34,6 +39,8 @@ Usage:
   gdm plan verification waive --slug <slug> --id <unknown-id> --reason <limit> --policy <authority> [--accept-unknown-scope]
   gdm team auto --slug <slug> --from-request [--planner-catalog <catalog.json> | --provider claude|codex --model <planner-model> [--effort <level>]] --max-active <1..32> --executor native|unavailable
                 [--context <relative-file>]... [--capabilities-file <catalogue.json>] [--dry-run] [--json] [--replan --reason <reason>]  # invoke the internal planner from the original brief and registered checks; allocate roles and routes
+  gdm team auto --slug <slug> --from-request --prepare-native --provider claude|codex --model <host-model> [--effort <level>] --max-active <1..32> --executor native [--context <relative-file>]... [--capabilities-file <catalogue.json>] [--replan --reason <reason>] [--json]
+  gdm team auto --slug <slug> --from-request --complete-native <relative-completion.json> [--json]  # bound host-attested native inference; configure the actual session first
   gdm team auto --slug <slug> --file <spec.json> [--dry-run] [--json] [--replan --reason <reason>]  # explicit manual import compatibility; --from-request is the default workflow
   gdm plan edit --check <id> [--desc ..] [--cmd ..] [--expect ..] [--kind ..] --reason <reason> [--slug <slug>]
   gdm plan source --fingerprint <sha256> [--slug <slug>]

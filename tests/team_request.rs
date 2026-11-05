@@ -40,6 +40,7 @@ impl Fixture {
 set -eu
 fixture=$(dirname "$0")
 if [ "${1:-}" = "--version" ]; then printf 'fake-claude/1.0\n'; exit 0; fi
+test "${GDM_ENTRY_DISABLED:-}" = 1
 printf x >> "$fixture/invocations"
 printf '%s\n' "$@" > "$fixture/argv"
 cat > "$fixture/input"
@@ -1211,4 +1212,638 @@ fn explicit_catalog_is_independent_from_worker_capabilities_and_catches_inflight
     assert!(!out.status.success());
     assert!(!f.has_request_archive());
     assert_eq!(fs::read(f.provider.join("invocations")).unwrap(), b"x");
+}
+
+// Native-host fixtures exercise the public CLI without starting any provider.
+fn native_prepare(f: &Fixture, extra: &[&str]) -> Value {
+    f.ok(&[
+        "team",
+        "configure",
+        "--slug",
+        "sample",
+        "--mode",
+        "coordinated",
+        "--session",
+        "gid-session",
+        "--max-active",
+        "3",
+    ]);
+    native_prepare_again(f, extra)
+}
+fn native_prepare_again(f: &Fixture, extra: &[&str]) -> Value {
+    let out = f.auto(&[&["--prepare-native"][..], extra].concat());
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    serde_json::from_slice(&out.stdout).unwrap()
+}
+fn native_envelope(prepared: &Value, response: Value) -> Value {
+    use gdm::{runtime::protocol::canonical_json, support::sha256};
+    json!({"schemaVersion":"gdm-native-plan-completion/v1","requestId":prepared["requestId"],"response":response,"receipt":{"schemaVersion":"gdm-native-planner-receipt/v1","attestation":"host-asserted","host":"gid","requestId":prepared["requestId"],"sessionId":prepared["sessionId"],"invocationId":"native-inference-one","providerTarget":prepared["provider"],"modelRequested":prepared["model"],"effortRequested":prepared["effort"],"promptSha256":prepared["promptSha256"],"schemaSha256":prepared["schemaSha256"],"outputSha256":sha256(canonical_json(&response)),"providerInvocations":1,"elapsedMs":17,"status":"succeeded"}})
+}
+fn native_complete(f: &Fixture, envelope: &Value) -> Output {
+    fs::write(
+        f.root.join(".gdm/sample/out/native-completion.json"),
+        serde_json::to_vec(envelope).unwrap(),
+    )
+    .unwrap();
+    f.run(&[
+        "team",
+        "auto",
+        "--slug",
+        "sample",
+        "--from-request",
+        "--complete-native",
+        ".gdm/sample/out/native-completion.json",
+        "--json",
+    ])
+}
+fn native_completed(f: &Fixture, envelope: &Value) -> Value {
+    let out = native_complete(f, envelope);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    serde_json::from_slice(&out.stdout).unwrap()
+}
+fn native_rejected(f: &Fixture, envelope: &Value, code: &str) {
+    let before = f.state_bytes();
+    let out = native_complete(f, envelope);
+    assert!(
+        !out.status.success(),
+        "unexpected success {}",
+        String::from_utf8_lossy(&out.stdout)
+    );
+    assert!(
+        String::from_utf8_lossy(&out.stderr).contains(code),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert_eq!(
+        before,
+        f.state_bytes(),
+        "rejected native completion changed Work"
+    );
+    assert!(!f.provider.join("invocations").exists());
+}
+
+#[test]
+fn native_prepare_is_bounded_immutable_and_does_not_invoke_or_apply() {
+    use gdm::{runtime::protocol::canonical_json, support::sha256};
+    let f = Fixture::new(true, true);
+    let p = native_prepare(&f, &["--context", "docs/policy.md", "--effort", "high"]);
+    let before = f.state_bytes();
+    assert_eq!(p["schemaVersion"], "gdm-native-plan-preparation/v1");
+    assert_eq!(p["stateFingerprint"], sha256(canonical_json(&f.state())));
+    assert_eq!(
+        p["schemaSha256"],
+        sha256(canonical_json(&p["responseSchema"]))
+    );
+    assert_eq!(p["promptSha256"], sha256(p["prompt"].as_str().unwrap()));
+    assert_eq!(p["maxInvocations"], 1);
+    assert_eq!(p["effort"], "high");
+    assert_eq!(p["automaticExecution"], false);
+    assert_eq!(
+        p,
+        native_prepare_again(&f, &["--context", "docs/policy.md", "--effort", "high"])
+    );
+    assert_eq!(before, f.state_bytes());
+    assert!(f.state()["team"].get("allocation").is_none());
+    assert!(!f.has_request_archive());
+    assert!(!f.provider.join("invocations").exists());
+    let prompt = p["prompt"].as_str().unwrap();
+    assert!(prompt.contains("Observed customer policy context"));
+    assert!(!prompt.contains("PRIVATE_SOURCE_SENTINEL"));
+}
+
+#[test]
+fn native_completion_applies_truthful_provenance_and_replays_after_task_progress() {
+    let f = Fixture::new(true, true);
+    let p = native_prepare(&f, &[]);
+    let e = native_envelope(&p, response());
+    let out = native_completed(&f, &e);
+    assert_eq!(out["plannerReused"], false);
+    assert_eq!(out["automaticPlanning"], true);
+    assert_eq!(out["plannerReceipt"]["attestation"], "host-asserted");
+    assert!(out["plannerReceipt"].get("executable").is_none());
+    assert_eq!(
+        f.state()["team"]["allocation"]["request"]["receipt"]["requestId"],
+        p["requestId"]
+    );
+    assert_eq!(native_prepare_again(&f, &[])["plannerReused"], true);
+    f.ok(&[
+        "team",
+        "claim",
+        "--slug",
+        "sample",
+        "--task",
+        "knowledge",
+        "--assignee",
+        "researcher",
+        "--attempt",
+        "native-k1",
+    ]);
+    fs::write(f.root.join("src/service.rs"), "normal worker progress\n").unwrap();
+    let before = f.state_bytes();
+    let journal = fs::read(f.root.join(".gdm/sample/journal.jsonl")).unwrap();
+    let replay = native_completed(&f, &e);
+    assert_eq!(replay["plannerReused"], true);
+    assert_eq!(replay["unchanged"], true);
+    assert_eq!(before, f.state_bytes());
+    assert_eq!(
+        journal,
+        fs::read(f.root.join(".gdm/sample/journal.jsonl")).unwrap()
+    );
+    let mut changed = e.clone();
+    changed["receipt"]["invocationId"] = json!("native-inference-two");
+    native_rejected(&f, &changed, "team_native_replay_conflict");
+    let mut changed = e;
+    changed["response"]["rationale"] = json!("Changed response rationale");
+    native_rejected(&f, &changed, "team_native_replay_conflict");
+}
+
+#[test]
+fn native_completion_rejects_unbound_tampered_failed_and_excess_receipts() {
+    for field in [
+        "requestId",
+        "sessionId",
+        "providerTarget",
+        "modelRequested",
+        "effortRequested",
+        "promptSha256",
+        "schemaSha256",
+        "outputSha256",
+        "host",
+        "attestation",
+        "status",
+        "providerInvocations",
+        "elapsedMs",
+        "executable",
+        "missing-receipt-request",
+    ] {
+        let f = Fixture::new(true, true);
+        let p = native_prepare(&f, &[]);
+        let mut e = native_envelope(&p, response());
+        match field {
+            "providerInvocations" => e["receipt"][field] = json!(2),
+            "elapsedMs" => e["receipt"][field] = json!(120001),
+            "missing-receipt-request" => {
+                e["receipt"].as_object_mut().unwrap().remove("requestId");
+            }
+            _ => e["receipt"][field] = json!("altered"),
+        }
+        native_rejected(&f, &e, "team_native_invalid");
+        assert!(!f.has_request_archive());
+    }
+    let f = Fixture::new(true, true);
+    let p = native_prepare(&f, &[]);
+    let mut e = native_envelope(&p, response());
+    e["response"]["rationale"] = json!("Response edited after host attestation");
+    native_rejected(&f, &e, "team_native_invalid");
+    e["receipt"] = json!({});
+    native_rejected(&f, &e, "team_native_invalid");
+}
+
+#[test]
+fn native_completion_rejects_stale_work_sources_context_capabilities_and_session() {
+    for change in ["work", "source", "context", "capabilities", "session"] {
+        let f = Fixture::new(true, true);
+        let catalog = json!({"schemaVersion":"gdm-team-capabilities/v1","routes":[{"id":"native-inherit","provider":"native","model":"inherit","roles":["knowledge","implementation","verification"],"access":["read","write"]}]});
+        fs::write(
+            f.root.join("docs/routes.json"),
+            serde_json::to_vec(&catalog).unwrap(),
+        )
+        .unwrap();
+        let p = native_prepare(
+            &f,
+            &[
+                "--context",
+                "docs/policy.md",
+                "--capabilities-file",
+                "docs/routes.json",
+            ],
+        );
+        let e = native_envelope(&p, response());
+        match change {
+            "work" => {
+                f.ok(&[
+                    "plan",
+                    "add",
+                    "--slug",
+                    "sample",
+                    "--desc",
+                    "Concurrent requirement",
+                    "--cmd",
+                    "true",
+                    "--expect",
+                    "Expected outcome",
+                ]);
+            }
+            "source" => fs::write(f.root.join("src/service.rs"), "changed\n").unwrap(),
+            "context" => fs::write(f.root.join("docs/policy.md"), "changed context\n").unwrap(),
+            "capabilities" => {
+                let mut c = catalog;
+                c["routes"][0]["model"] = json!("updated");
+                fs::write(
+                    f.root.join("docs/routes.json"),
+                    serde_json::to_vec(&c).unwrap(),
+                )
+                .unwrap();
+            }
+            "session" => {
+                f.ok(&[
+                    "team",
+                    "configure",
+                    "--slug",
+                    "sample",
+                    "--mode",
+                    "coordinated",
+                    "--session",
+                    "gid-session-two",
+                    "--reason",
+                    "Host session changed",
+                ]);
+            }
+            _ => unreachable!(),
+        }
+        native_rejected(&f, &e, "team_request_stale");
+    }
+}
+
+#[test]
+fn native_proposals_reuse_grounding_ownership_and_strict_plan_validation() {
+    for change in [
+        "unknown",
+        "path",
+        "route",
+        "capacity",
+        "rationale",
+        "create",
+        "dependency",
+    ] {
+        let f = Fixture::new(true, true);
+        let p = native_prepare(&f, &[]);
+        let mut r = response();
+        let code = match change {
+            "unknown" => {
+                r["plan"]["extra"] = json!(true);
+                "team_plan_invalid"
+            }
+            "path" => {
+                r["plan"]["modules"][0]["paths"] = json!(["src/invented.rs"]);
+                "team_path_ungrounded"
+            }
+            "route" => {
+                r["plan"]["modules"][0]["routeId"] = json!("missing");
+                "team_route_invalid"
+            }
+            "capacity" => {
+                r["plan"]["maxActive"] = json!(4);
+                "team_capability_conflict"
+            }
+            "rationale" => {
+                r["rationale"] = json!("");
+                "team_plan_invalid"
+            }
+            "create" => {
+                r["plan"]["modules"][0]["createPaths"] = json!(["src/transport.rs"]);
+                "team_path_ungrounded"
+            }
+            "dependency" => {
+                r["plan"]["modules"][0]["dependsOn"] = json!(["business"]);
+                "team_plan_invalid"
+            }
+            _ => unreachable!(),
+        };
+        native_rejected(&f, &native_envelope(&p, r), code);
+        assert!(!f.has_request_archive());
+    }
+}
+
+#[test]
+fn native_prepare_and_complete_reject_conflicting_flags_missing_session_and_unsafe_paths() {
+    let f = Fixture::new(true, true);
+    assert!(!f.auto(&["--prepare-native"]).status.success());
+    let p = native_prepare(&f, &[]);
+    for extra in [
+        &["--dry-run"][..],
+        &["--file", "manual.json"],
+        &["--complete-native", "anything.json"],
+    ] {
+        assert!(
+            !f.auto(&[&["--prepare-native"][..], extra].concat())
+                .status
+                .success()
+        );
+    }
+    let e = native_envelope(&p, response());
+    fs::write(
+        f.root.join(".gdm/sample/out/native-completion.json"),
+        serde_json::to_vec(&e).unwrap(),
+    )
+    .unwrap();
+    std::os::unix::fs::symlink(
+        f.root.join(".gdm/sample/out/native-completion.json"),
+        f.root.join("native-link.json"),
+    )
+    .unwrap();
+    for path in ["../escape.json", "/tmp/escape.json", "native-link.json"] {
+        let out = f.run(&[
+            "team",
+            "auto",
+            "--slug",
+            "sample",
+            "--from-request",
+            "--complete-native",
+            path,
+        ]);
+        assert!(!out.status.success());
+    }
+    assert!(
+        !f.run(&[
+            "team",
+            "auto",
+            "--slug",
+            "sample",
+            "--from-request",
+            "--complete-native",
+            ".gdm/sample/out/native-completion.json",
+            "--model",
+            "override"
+        ])
+        .status
+        .success()
+    );
+    assert!(
+        !f.run(&["team", "auto", "--slug", "sample", "--prepare-native"])
+            .status
+            .success()
+    );
+    assert!(!f.provider.join("invocations").exists());
+}
+
+#[test]
+fn native_preparation_and_archive_tampering_fail_closed() {
+    let f = Fixture::new(true, true);
+    let p = native_prepare(&f, &[]);
+    let e = native_envelope(&p, response());
+    let path = f.root.join(format!(
+        ".gdm/sample/out/team-native-{}.json",
+        p["requestId"].as_str().unwrap()
+    ));
+    let bytes = fs::read(&path).unwrap();
+    let mut pending: Value = serde_json::from_slice(&bytes).unwrap();
+    pending["args"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!("--replan"));
+    fs::write(&path, serde_json::to_vec(&pending).unwrap()).unwrap();
+    native_rejected(&f, &e, "team_native_invalid");
+    fs::write(path, bytes).unwrap();
+    native_completed(&f, &e);
+    let artifact = f.state()["team"]["allocation"]["request"]["artifact"]["path"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    fs::write(f.root.join(artifact), "corrupt archive").unwrap();
+    let out = native_complete(&f, &e);
+    assert!(!out.status.success());
+    assert!(String::from_utf8_lossy(&out.stderr).contains("team_request_changed"));
+}
+
+#[test]
+fn native_completion_rejects_oversized_and_malformed_envelopes_without_state_changes() {
+    let f = Fixture::new(true, true);
+    native_prepare(&f, &[]);
+    let before = f.state_bytes();
+    for bytes in [b"not json".to_vec(), vec![b' '; 1024 * 1024 + 1]] {
+        fs::write(f.root.join(".gdm/sample/out/native-completion.json"), bytes).unwrap();
+        assert!(
+            !f.run(&[
+                "team",
+                "auto",
+                "--slug",
+                "sample",
+                "--from-request",
+                "--complete-native",
+                ".gdm/sample/out/native-completion.json"
+            ])
+            .status
+            .success()
+        );
+        assert_eq!(before, f.state_bytes());
+    }
+}
+
+#[test]
+fn native_superseded_preparation_cannot_restore_an_old_allocation() {
+    let f = Fixture::new(true, true);
+    let p = native_prepare(&f, &[]);
+    let old = native_envelope(&p, response());
+    native_completed(&f, &old);
+    fs::write(f.root.join("src/service.rs"), "new planning snapshot\n").unwrap();
+    let newer = native_prepare_again(&f, &[]);
+    assert_ne!(p["requestId"], newer["requestId"]);
+    native_completed(&f, &native_envelope(&newer, response()));
+    native_rejected(&f, &old, "team_request_stale");
+}
+
+#[test]
+fn native_interrupted_apply_resumes_identical_consumed_completion_only() {
+    let f = Fixture::new(true, true);
+    let p = native_prepare(&f, &[]);
+    let before = f.state_bytes();
+    let e = native_envelope(&p, response());
+    native_completed(&f, &e);
+    let applied = f.state()["team"]["allocation"]["request"].clone();
+    let artifact = f.root.join(applied["artifact"]["path"].as_str().unwrap());
+    let archive = fs::read(&artifact).unwrap();
+    // Recreate the interruption boundary: immutable consumed result + provenance
+    // exist, while canonical Work has not yet committed the allocation.
+    fs::write(f.root.join(".gdm/sample/checks.json"), &before).unwrap();
+    let mut conflicting = e.clone();
+    conflicting["receipt"]["invocationId"] = json!("different-inference");
+    native_rejected(&f, &conflicting, "team_native_replay_conflict");
+    let out = native_completed(&f, &e);
+    assert_eq!(out["plannerReused"], false);
+    assert_eq!(archive, fs::read(artifact).unwrap());
+    assert_eq!(applied, f.state()["team"]["allocation"]["request"]);
+    assert_eq!(native_completed(&f, &e)["plannerReused"], true);
+}
+
+#[test]
+fn native_plans_preserve_dynamic_exclusive_ownership_at_claim_time() {
+    let f = Fixture::new(true, true);
+    let p = native_prepare(&f, &[]);
+    let mut r = response();
+    for module in r["plan"]["modules"].as_array_mut().unwrap() {
+        module["paths"] = json!(["src/transport.rs"]);
+        module["dependsOn"] = json!([]);
+        module["knowledgeIndependentReason"] =
+            json!("Independent transport groundwork while source policy is researched");
+    }
+    native_completed(&f, &native_envelope(&p, r));
+    f.ok(&[
+        "team",
+        "claim",
+        "--slug",
+        "sample",
+        "--task",
+        "implement-transport",
+        "--assignee",
+        "transport-worker",
+        "--attempt",
+        "transport-a1",
+    ]);
+    let before = f.state_bytes();
+    let conflict = f.run(&[
+        "team",
+        "claim",
+        "--slug",
+        "sample",
+        "--task",
+        "implement-business",
+        "--assignee",
+        "business-worker",
+        "--attempt",
+        "business-a1",
+    ]);
+    assert!(!conflict.status.success());
+    assert!(String::from_utf8_lossy(&conflict.stderr).contains("team_scope_conflict"));
+    assert_eq!(before, f.state_bytes());
+    assert!(!f.provider.join("invocations").exists());
+}
+
+#[test]
+fn native_v2_plans_enforce_cumulative_reservations_and_claim_limits() {
+    let f = Fixture::new(true, true);
+    let catalog = json!({"schemaVersion":"gdm-team-capabilities/v2","routes":[{"id":"native-inherit","provider":"native","model":"available-model","roles":["knowledge","implementation","verification"],"access":["read","write"],"execution":"native","efforts":[null],"strengths":[],"limitations":[],"maxInvocations":4}]});
+    fs::write(
+        f.root.join("docs/capabilities.json"),
+        serde_json::to_vec(&catalog).unwrap(),
+    )
+    .unwrap();
+    let p = native_prepare(&f, &["--capabilities-file", "docs/capabilities.json"]);
+    let mut r = response();
+    for a in r["plan"]["modules"].as_array_mut().unwrap() {
+        a["effort"] = Value::Null;
+        a["selectionReason"] = json!("Authorized scoped implementation within invocation capacity");
+    }
+    for key in ["knowledge", "verification"] {
+        r["plan"][key]["effort"] = Value::Null;
+        r["plan"][key]["selectionReason"] = json!("Read role within remaining invocation capacity");
+    }
+    native_completed(&f, &native_envelope(&p, r.clone()));
+    let claim = |attempt: &str| {
+        f.run(&[
+            "team",
+            "claim",
+            "--slug",
+            "sample",
+            "--task",
+            "knowledge",
+            "--assignee",
+            "reader-worker",
+            "--attempt",
+            attempt,
+            "--execution-route",
+            "native-inherit",
+            "--execution-provider",
+            "native",
+            "--execution-model",
+            "available-model",
+            "--execution-effort",
+            "inherit",
+        ])
+    };
+    for index in 1..=4 {
+        let attempt = format!("reader-{index}");
+        let out = claim(&attempt);
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        f.ok(&[
+            "team",
+            "report",
+            "--slug",
+            "sample",
+            "--task",
+            "knowledge",
+            "--attempt",
+            &attempt,
+            "--outcome",
+            "failed",
+            "--summary",
+            "Need additional source evidence",
+            "--artifact",
+            "docs/policy.md",
+        ]);
+        f.ok(&[
+            "team",
+            "review",
+            "--slug",
+            "sample",
+            "--task",
+            "knowledge",
+            "--attempt",
+            &attempt,
+            "--decision",
+            "reject",
+            "--reason",
+            "Missing required source evidence",
+        ]);
+        if index == 1 {
+            let next = native_prepare_again(
+                &f,
+                &[
+                    "--capabilities-file",
+                    "docs/capabilities.json",
+                    "--replan",
+                    "--reason",
+                    "Reallocate after reviewed failed attempt",
+                ],
+            );
+            native_rejected(
+                &f,
+                &native_envelope(&next, r.clone()),
+                "team_invocation_limit",
+            );
+        }
+        f.ok(&[
+            "team",
+            "retry",
+            "--slug",
+            "sample",
+            "--task",
+            "knowledge",
+            "--attempt",
+            &attempt,
+            "--reason",
+            "Gather the missing source evidence",
+        ]);
+    }
+    let before = f.state_bytes();
+    let exhausted = claim("reader-5");
+    assert!(!exhausted.status.success());
+    assert!(String::from_utf8_lossy(&exhausted.stderr).contains("team_invocation_limit"));
+    assert_eq!(before, f.state_bytes());
+    assert!(!f.provider.join("invocations").exists());
+}
+
+#[test]
+fn native_canonical_output_size_and_credential_limits_apply_before_archiving() {
+    let f = Fixture::new(true, true);
+    let p = native_prepare(&f, &[]);
+    let mut r = response();
+    r["rationale"] = json!("x".repeat(262144));
+    native_rejected(&f, &native_envelope(&p, r), "team_native_invalid");
+    let mut r = response();
+    r["rationale"] = json!("Authorization Bearer synthetic-private-token");
+    native_rejected(&f, &native_envelope(&p, r), "privacy_rejected");
+    assert!(!f.has_request_archive());
 }

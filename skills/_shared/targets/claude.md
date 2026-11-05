@@ -32,6 +32,22 @@
 - 여기서 network 없음은 모델에 network/browser tool을 노출하지 않는다는 뜻이며, provider
   transport가 모델 backend에 연결하지 않는다는 뜻은 아니다.
 - preflight도 tool 0으로 실행하므로 필요한 저장소 문맥을 prompt bytes에 미리 포함한다.
-- target hook: 별도 lifecycle hook이 필요하지 않으며 상태는 `not-required`다.
+- target hook: 전문 역할의 기존 native agent gate는 `not-required`다. 자동 요청 진입은 별도
+  `gdm-entry-v1`이 담당한다.
 - 이 블록은 target argv와 hook 지원 상태만 설명한다. Work 상태나 역할 권한은 공통 source
   template에서 생성된 target body가 정한다.
+
+## 자동 진입 호스트 계약
+
+- 별도 `gdm-entry-v1`의 `UserPromptSubmit`이 원문을 보존하고 `GDM_AUTOMATIC_ENTRY_V1`
+  안내를 추가한다. 현재 Claude 모델이 분류하고 설치된 `gdm-go`/`gdm-full`을 수행한다.
+  hook은 Skill·Agent를 직접 호출하거나 추가 모델을 실행하지 않는다.
+- 실제 노출된 Claude Code `Agent` 도구와 task 결과·대기를 사용한다. 실제 tool metadata가
+  지원하는 model·effort만 전달한다. 현재 도구가 상속만 지원하면 상속 route만 선언한다.
+  쓰기 executor가 없으면 coordinated는 blocked이며 tool-0 역할 실행기로 대체하지 않는다.
+- 지원 edit 도구의 `PreToolUse`와 유한 `Stop` 보정은 shell·불투명 MCP의 모든 변경을
+  막지 못한다. 신뢰할 수 있는 worker 신원이 없는 event는 완전한 root/worker 구분을
+  보장하지 않는다. 부모는 작업자에게 새 root Work 금지와 배정 범위를 전달한다.
+- 요청 event에 안정적인 turn ID가 없을 때 같은 prompt digest의 pending token을 재사용할
+  수 있다. 결정 후의 같은 문장은 새 요청일 수 있어 정확히 한 번 전달을 보장하지 않는다.
+  상태·Work 결속을 먼저 읽어 중복 계획을 피한다. quota·권한 실패를 성공으로 보고하지 않는다.

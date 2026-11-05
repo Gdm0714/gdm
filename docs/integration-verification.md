@@ -57,3 +57,19 @@ Integration `done` reports existing completion blockers, including the IDs of un
 The public optional `verificationSummary` is `gdm-verification-summary/v1`: profile, contract/state/completion digests, completion validity/mode, required/proven/open/waived/unknown counts and bounded code/opaque-ID blockers/limitations. Scope codes such as `input_synthetic`, `environment_mock`, `environment_staging`, `target_remote` and `target_trace` preserve declared limitations even when completion is valid. No command, raw evidence, endpoint, external path or waiver reason is included. Full local plan/protocol snapshots retain explicit artifact paths for inspection; their credential screening still applies. Remote consumers must forward the safe summary rather than the full local contract. It appears in plan list, status and protocol export. Missing means legacy, not passing integration verification.
 
 Compatibility: new Work has top-level `verificationFeature: "gdm-integration/v1"` and nested `contract.integrationVerification`. Existing writers preserve unknown top-level fields but strip unknown contract members; the new reader rejects that mismatch (`verification_feature_lost`). This detects the tested old writer's round trip, not arbitrary local editing or every historical binary. Unsupported schema versions fail closed. All participating writers/consumers must support this feature before rollout. Legacy normalized state and oracle hashes remain unchanged when the extension is absent.
+
+
+## Automatic entry evidence
+
+Rendered bootstrap checks prove published instructions, marker placement, target boundaries and
+manifest integrity. They do not prove that a client loaded a hook or that a worker executed. For
+automatic entry, separately observe the host's actual request event, `entry decide` state, bound Work,
+claimed native dispatch and collected report, rejected premature completion and accepted final
+completion. Include question/opt-out, unavailable executor, replay/resume and preserved configuration.
+
+An isolated headless host using deterministic fixture transport can prove local event/tool plumbing
+without provider credentials; label it synthetic/mock. It does not prove a live model's semantic
+classification or remote model identity. Record live provider quota, hook availability and permission
+limits separately. gid context-only entry and its coordinated Work completion guard must not be
+reported as universal mutation prevention. Claude events without stable turn IDs cannot establish
+exactly-once delivery of identical prompts. Never claim a rendered string check proves native dispatch.

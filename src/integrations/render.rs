@@ -9,6 +9,7 @@ use std::{
     os::unix::fs::{OpenOptionsExt, PermissionsExt},
     path::{Path, PathBuf},
 };
+const AUTOMATIC_ENTRY_MARKER: &str = "<!-- GDM_AUTOMATIC_ENTRY_V1 -->";
 const ADAPTER_BEGIN: &str = "<!-- GDM_TARGET_ADAPTER_V1_BEGIN -->";
 const ADAPTER_END: &str = "<!-- GDM_TARGET_ADAPTER_V1_END -->";
 fn error(s: impl Into<String>) -> Error {
@@ -178,6 +179,22 @@ pub fn run(cwd: &Path, args: &[String]) -> Result<()> {
         let body = canonical[end..]
             .strip_prefix('\n')
             .unwrap_or(&canonical[end..]);
+        let entry_count = body.matches(AUTOMATIC_ENTRY_MARKER).count();
+        let expected_entry_count = usize::from(["go", "full"].contains(&name.as_ref()));
+        if entry_count != expected_entry_count {
+            return Err(error(format!(
+                "automatic entry fragment count mismatch: {name}"
+            )));
+        }
+        let expanded;
+        let body = if entry_count > 0 {
+            let path = source.join("_shared/automatic-entry.md");
+            safe(&path, false)?;
+            expanded = body.replace(AUTOMATIC_ENTRY_MARKER, fs::read_to_string(path)?.trim_end());
+            expanded.as_str()
+        } else {
+            body
+        };
         let count = marker.captures_iter(body).count();
         if ["analyze", "plan", "review"].contains(&name.as_ref()) && count != 1 {
             return Err(error(format!(

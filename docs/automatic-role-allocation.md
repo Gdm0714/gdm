@@ -1,5 +1,49 @@
 # Automatic role allocation
 
+## Ordinary requests enter through the current host
+
+With `gdm-entry-v1` installed and effective, an ordinary request such as “fix the login error” receives
+`GDM_AUTOMATIC_ENTRY_V1` context. The current conversation model classifies the original request;
+the hook performs no provider call and does not use keyword heuristics to decide meaning. Work follows
+installed `gdm-go`, or the existing `gdm-full` criteria when appropriate. Questions remain lightweight,
+and an explicit “without GDM for this request” is recorded as request-scoped opt-out. Existing Work
+is preserved for resume.
+
+```sh
+gdm entry status --target codex --session <actual-session-id> --json
+gdm entry decide --target codex --session <actual-session-id> --request <hook-token> --kind work --json
+# Follow go/full: preserve the original brief, initialize Work and register real checks.
+gdm entry decide --target codex --session <actual-session-id> --request <hook-token> --kind work --slug <existing-work> --json
+# Then use the existing team auto / next / claim / native execution / report / pass / review / done loop.
+```
+
+Use the exact target, session and request token from the observed hook; do not invent them. The same
+`decide` command accepts `--kind question` or `--kind optout` without creating Work. `decide` records a
+model declaration; it neither proves classification accuracy nor allocates tasks. Read `slug` and
+`activeWorkSlug` before initializing. Resume existing Work through `protocol export` and `team next`;
+reminders and repeated events must not trigger another planner. A stale request token cannot replace
+the current decision, and an unfinished Work binding cannot be silently replaced.
+
+| Host | Entry and continuation | Enforcement limits |
+|---|---|---|
+| Codex | `UserPromptSubmit` adds context; the current model uses actual native spawn/wait/result tools. | Supported edit-tool gates and bounded Stop correction; arbitrary shell/MCP mutations remain outside coverage. Requires effective hook support/trust. |
+| Claude Code | `UserPromptSubmit` adds context; the current model uses exposed `Agent` and result tools. | Supported edit-tool gates and bounded Stop correction; shell/MCP blind spots. Missing stable turn identity cannot guarantee exactly-once delivery of identical prompts. |
+| gid native | Trusted extension `input` adds context; `before_turn` reminds the root. Native `delegate_tasks` executes claimed tasks and collects results. | Entry is context-only. Existing native completion guard covers session-bound coordinated Work, not every mutation or single Work. A new native session and existing permission approvals may be required. |
+
+Hooks skip trustworthy host-identified workers and `GDM_ENTRY_DISABLED=1` provider children. Hosts
+without reliable worker identity cannot promise complete root/worker detection; parents must tell
+native workers to execute only their assignment and never initialize another root Work. gid's
+`block_reason` aborts before context insertion, so it is not used as a recoverable generic edit denial.
+No hook grants permissions, invokes a nested model, replaces user input or creates an execution daemon.
+Installation is distinct from observed activation. Use `gdm entry install --target <codex|claude|gid>
+--binary <absolute-executable> --dry-run --json` to inspect a managed registration. Preserve existing
+settings, feature flags and permission modes. gid registration hash-pins the executable and must be
+refreshed after binary upgrades; do not edit its registry by hand. `GDM_ENTRY_DISABLED=1` suppresses
+entry for a process; request opt-out does not uninstall or persistently disable the integration.
+
+
+## Adaptive allocation
+
 `gdm team auto --from-request` interprets the Work's original user request and registered checks, then generates durable knowledge, implementation and independent verification tasks. For a new input GDM collects repository paths, invokes one bounded tool-0 planner through an automatically selected provider, model and effort, validates the result and records its provenance. This is actual model use and can incur provider usage, including with `--dry-run`. An unchanged input reuses the stored result with `plannerReused: true`.
 
 The host supplies its real capacity, executor availability, allowed capability catalogue and any necessary explicit context. It does not assign roles, choose module boundaries or author a modules JSON plan in the normal workflow. GDM chooses those assignments and their execution routes from the supplied inputs.
@@ -68,6 +112,54 @@ The selector itself makes no provider call. Each new-input command invokes the s
 For an explicit manual override, add `--provider <claude|codex> --model <planner-model>` and optionally `--effort <level>` to the request command. Both provider and model are required together. Omitting effort preserves legacy manual behavior; supplying it uses exact effort transport and v2 receipts. A partial override, `--effort` without the complete override, or combining manual routing with `--planner-catalog` fails. Manual planner selection does not select worker models.
 
 For new input, `--dry-run` invokes the planner and validates a proposal without applying it to durable Work. The `allocation.request` provenance summary identifies the request-driven origin. Applied provenance is archived at `.gdm/<slug>/out/team-request-<sha256>.json`, binding the planner input, response and receipt. Planner failure, unavailable provider, malformed output or invalid assignments fail explicitly; there is no keyword-based fallback and the host must not fabricate a successful plan. `--from-request` and `--file` are mutually exclusive.
+
+## Native host planner bridge
+
+A native gid host can use its existing model transport while every GDM workspace command stays inside the host sandbox. GDM prepares the exact prompt and response schema; gid makes one tool-free inference and returns its bound response. GDM remains responsible for source collection, freshness, proposal validation, ownership, durable allocation and worker claim limits. Neither bridge command invokes a provider CLI, executes a check or dispatches workers.
+
+```sh
+gdm team configure --slug feature --mode coordinated --session <actual-gid-session> --max-active <available-worker-slots>
+gdm team auto --slug feature --from-request --prepare-native --provider codex --model <actual-host-model> --effort high --max-active <available-worker-slots> --executor native --json
+# gid invokes its existing model transport with the returned prompt/schema and limits.
+gdm team auto --slug feature --from-request --complete-native .gdm/feature/out/native-completion.json --json
+```
+
+Preparation requires explicit provider/model and `--executor native`, supports the normal context/capabilities/replan flags, and rejects `--file`, `--dry-run`, `--planner-catalog` and simultaneous completion. Completion accepts only `--slug`, `--from-request`, `--complete-native` and optional `--json`. The host must first bind the actual session with `team configure`; the bridge does not invent a session or change GDM permissions.
+
+The preparation schema is `gdm-native-plan-preparation/v1`. It returns an opaque `requestId`, `slug`, `sessionId`, canonical entire-Work `stateFingerprint`, `inputDigest`, `provider`, `model`, nullable `effort`, `maxInvocations: 1`, `maxSeconds` (at most 120), `maxOutputBytes` (at most 262144), exact `prompt`, object `responseSchema`, `promptSha256`, `schemaSha256`, `automaticPlanning: true` and `automaticExecution: false`. The prompt hash covers its UTF-8 bytes; schema and response hashes cover compact canonical JSON, recursively sorting object keys. An immutable pending artifact also binds the exact input and original preparation arguments. Preparation does not apply allocation or alter canonical Work. Repeating identical preparation returns the same identity. If an equivalent allocation already exists, the result is a team summary with `plannerReused: true`; the host must skip inference.
+
+The completion file must be repository-relative, regular, contained and free of symlinks. Store it under `.gdm/<slug>/out/` so writing the result does not change source inventory. The envelope has exactly these fields:
+
+```json
+{
+  "schemaVersion": "gdm-native-plan-completion/v1",
+  "requestId": "<preparation-requestId>",
+  "response": { "plan": {}, "rationale": "<model rationale>" },
+  "receipt": {
+    "schemaVersion": "gdm-native-planner-receipt/v1",
+    "attestation": "host-asserted",
+    "host": "gid",
+    "requestId": "<preparation-requestId>",
+    "sessionId": "<preparation-sessionId>",
+    "invocationId": "<actual-host-inference-id>",
+    "providerTarget": "codex",
+    "modelRequested": "<preparation-model>",
+    "effortRequested": "high",
+    "promptSha256": "<preparation-promptSha256>",
+    "schemaSha256": "<preparation-schemaSha256>",
+    "outputSha256": "<canonical-response-sha256>",
+    "providerInvocations": 1,
+    "elapsedMs": 100,
+    "status": "succeeded"
+  }
+}
+```
+
+The sample's empty plan is a placeholder: `response` must satisfy the exact returned schema and all semantic plan rules. Every receipt field shown is required, including nullable `effortRequested`; an optional object `usage` of at most 16 KiB may contain observed usage. The full envelope must fit in 1 MiB; its canonical response must fit the preparation's output bound. No executable, executable hash/version, argv policy or invented billing fields are accepted. The receipt truthfully records a **host assertion**, not proof of remote model identity or cryptographic proof of inference. A bare manually authored plan or an unbound receipt fails validation. gid must record inference intent/result and must not silently retry an invocation whose outcome is unknown after interruption.
+
+Before first application, completion compares the entire Work and recomputed inventory, contexts, capabilities and invocation reservations to the prepared snapshot. It validates all receipt/hash bindings, output size, status, one-invocation limit, elapsed bound, strict plan shape, grounding, coverage, dependencies, scope and ownership. It previews the ordinary allocation lifecycle guards, binds one immutable consumed completion to the request, then archives and applies. Interruption before the Work commit can resume only that identical completion. Validation rejection leaves allocation unchanged. A storage error or interruption can occur after canonical Work has committed; the host must reconcile using the identical completion, which returns unchanged if already applied, rather than launch another inference. Native provenance is archived with the exact preparation, response and receipt; existing CLI v1/v2 receipts and historical plans retain their validation semantics.
+
+Replaying the identical current completion returns `unchanged: true` and `plannerReused: true` without reapplying, including after worker progress. Changing the response or receipt for an already completed request rejects. A superseded request cannot restore an older allocation. Missing or corrupt applied provenance fails closed. A fresh proposal is required after a changed Work, session, source, context or capabilities snapshot; use the ordinary explicit replan lifecycle after worker attempts.
 
 ## Decide the necessary roles
 
