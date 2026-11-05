@@ -34,6 +34,8 @@ gdm {VERSION} — 작업 증거가 다음 습관을 바꾸는 개인 AI 워크�
   gdm plan verification waive --slug <슬러그> --id <미확인-ID> --reason <한계> --policy <권한-근거> [--accept-unknown-scope]
   gdm team auto --slug <슬러그> --from-request [--planner-catalog <catalog.json> | --provider claude|codex --model <계획 모델> [--effort <수준>]] --max-active <1..32> --executor native|unavailable
                 [--context <상대 파일>]... [--capabilities-file <catalogue.json>] [--dry-run] [--json] [--replan --reason <사유>]  # 원문 brief·등록 check로 내부 planner 호출 및 역할·route 배정
+  gdm team auto --slug <슬러그> --from-request --prepare-native --provider claude|codex --model <호스트 모델> [--effort <수준>] --max-active <1..32> --executor native [--context <상대 파일>]... [--capabilities-file <catalogue.json>] [--replan --reason <사유>] [--json]
+  gdm team auto --slug <슬러그> --from-request --complete-native <상대 completion.json> [--json]  # 실제 세션을 먼저 configure; 호스트가 선언한 네이티브 추론 결과 검증
   gdm team auto --slug <슬러그> --file <spec.json> [--dry-run] [--json] [--replan --reason <사유>]  # 명시적 수동 import 호환; 기본 흐름은 --from-request
   gdm plan edit --check <id> [--desc ..] [--cmd ..] [--expect ..] [--kind ..] --reason <사유> [--slug <슬러그>]
   gdm plan source --fingerprint <sha256> [--slug <슬러그>]

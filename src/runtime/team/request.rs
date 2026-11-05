@@ -1019,6 +1019,47 @@ fn receipt_options_valid(input: &Value, receipt: &Value) -> bool {
     }
 }
 
+fn cli_receipt_valid(request: &Value, recorded_prompt: &str, recorded_schema: &str) -> bool {
+    !(!exact(
+        &request["receipt"],
+        &[
+            "schemaVersion",
+            "providerTarget",
+            "modelRequested",
+            "executable",
+            "executableSha256",
+            "executableVersion",
+            "argvPolicyId",
+            "promptSha256",
+            "schemaSha256",
+            "outputSha256",
+            "elapsedMs",
+            "providerInvocations",
+            "status",
+        ],
+        &[
+            "usage",
+            "modelsObserved",
+            "totalCostUsdObserved",
+            "nonfatalNoticeCount",
+            "effortRequested",
+            "limits",
+        ],
+    ) || !receipt_options_valid(&request["input"], &request["receipt"])
+        || request["receipt"]["status"] != "succeeded"
+        || request["receipt"]["providerInvocations"] != 1
+        || request["receipt"]["providerTarget"] != request["input"]["provider"]
+        || request["receipt"]["modelRequested"] != request["input"]["model"]
+        || request["receipt"]
+            .get("nonfatalNoticeCount")
+            .is_some_and(|v| v.as_u64().is_none_or(|n| n > MAX_NUMBER))
+        || request["receipt"]["promptSha256"] != sha256(recorded_prompt)
+        || request["receipt"]["schemaSha256"] != sha256(recorded_schema)
+        || ["executableSha256", "outputSha256"]
+            .iter()
+            .any(|key| !state::valid_hash(s(&request["receipt"], key))))
+}
+
 pub(super) fn validate(work: &Value) -> Result<()> {
     let Some(request) = provenance(work) else {
         return Ok(());
@@ -1045,7 +1086,7 @@ pub(super) fn validate(work: &Value) -> Result<()> {
             "receipt",
             "artifact",
         ],
-        &["plannerContract"],
+        &["plannerContract", "nativePreparation"],
     ) || request["schemaVersion"] != SCHEMA
         || request["inputDigest"] != digest(&request["input"])
         || request["responseDigest"] != digest(&request["response"])
@@ -1053,45 +1094,13 @@ pub(super) fn validate(work: &Value) -> Result<()> {
         || request["input"]["work"] != work["team"]["allocation"]["inputs"]
         || !exact(&request["response"], &["plan", "rationale"], &[])
         || !text_ok(&request["response"]["rationale"], "rationale", 2000)
-        || !exact(
-            &request["receipt"],
-            &[
-                "schemaVersion",
-                "providerTarget",
-                "modelRequested",
-                "executable",
-                "executableSha256",
-                "executableVersion",
-                "argvPolicyId",
-                "promptSha256",
-                "schemaSha256",
-                "outputSha256",
-                "elapsedMs",
-                "providerInvocations",
-                "status",
-            ],
-            &[
-                "usage",
-                "modelsObserved",
-                "totalCostUsdObserved",
-                "nonfatalNoticeCount",
-                "effortRequested",
-                "limits",
-            ],
-        )
-        || !receipt_options_valid(&request["input"], &request["receipt"])
-        || request["receipt"]["status"] != "succeeded"
-        || request["receipt"]["providerInvocations"] != 1
-        || request["receipt"]["providerTarget"] != request["input"]["provider"]
-        || request["receipt"]["modelRequested"] != request["input"]["model"]
-        || request["receipt"]
-            .get("nonfatalNoticeCount")
-            .is_some_and(|v| v.as_u64().is_none_or(|n| n > MAX_NUMBER))
-        || request["receipt"]["promptSha256"] != sha256(recorded_prompt)
-        || request["receipt"]["schemaSha256"] != sha256(recorded_schema)
-        || ["executableSha256", "outputSha256"]
-            .iter()
-            .any(|key| !state::valid_hash(s(&request["receipt"], key)))
+        || !if request["receipt"]["schemaVersion"] == "gdm-native-planner-receipt/v1" {
+            request["nativePreparation"]["preparation"]["slug"] == work["slug"]
+                && native_receipt_valid(request, &recorded_prompt, &recorded_schema)
+        } else {
+            request.get("nativePreparation").is_none()
+                && cli_receipt_valid(request, &recorded_prompt, &recorded_schema)
+        }
         || !exact(&request["artifact"], &["path", "sha256"], &[])
         || !state::valid_hash(s(&request["artifact"], "sha256"))
         || request["artifact"]["path"]
@@ -1242,7 +1251,486 @@ fn rejected_proposal(
     }
 }
 
+fn response_schema(input: &Value) -> Value {
+    let mut planner_schema = schema(s(input, "provider"));
+    if input["promptVersion"] == 3 {
+        let plan = &mut planner_schema["properties"]["plan"]["properties"];
+        adaptive_schema(&mut plan["modules"]["items"]);
+        adaptive_schema(&mut plan["knowledge"]["anyOf"][0]);
+        adaptive_schema(&mut plan["verification"]["anyOf"][0]);
+    }
+    planner_schema
+}
+
+fn validated_plan(cwd: &Path, before: &Value, input: &Value, response: &Value) -> Result<Value> {
+    if !exact(response, &["plan", "rationale"], &[]) {
+        return Err(err(
+            "team_plan_invalid",
+            "Invalid planner field response.shape",
+        ));
+    }
+    if !text_ok(&response["rationale"], "rationale", 2000) {
+        return Err(err(
+            "team_plan_invalid",
+            "Invalid planner field response.rationale",
+        ));
+    }
+    let plan = canonical_plan_version(response, input["promptVersion"].as_u64().unwrap())?;
+    ground(&plan, input)?;
+    if input["promptVersion"] == 3 {
+        let mut teams = super::historical_teams(cwd, before)?;
+        teams.push(before["team"].clone());
+        for route in array(&input["capabilities"]["routes"]) {
+            if let Some(limit) = route["maxInvocations"].as_u64() {
+                let mut used = 0u64;
+                for attempt in teams
+                    .iter()
+                    .flat_map(|t| array(&t["tasks"]))
+                    .flat_map(|t| array(&t["attempts"]))
+                {
+                    let e = &attempt["execution"];
+                    if e.is_null() {
+                        return Err(err(
+                            "team_invocation_limit",
+                            "Historical claims lack attribution for cumulative planning limits",
+                        ));
+                    }
+                    if e["provider"] == route["provider"] && e["model"] == route["model"] {
+                        used += 1;
+                    }
+                }
+                let planned = assignments(&plan)
+                    .filter(|(a, _, _)| {
+                        array(&input["capabilities"]["routes"]).iter().any(|r| {
+                            r["id"] == a["routeId"]
+                                && r["provider"] == route["provider"]
+                                && r["model"] == route["model"]
+                        })
+                    })
+                    .count() as u64;
+                if used + planned > limit {
+                    return Err(err(
+                        "team_invocation_limit",
+                        "Plan plus historical reservations exceeds cumulative provider/model invocation cap",
+                    ));
+                }
+            }
+        }
+    }
+    planning::check_spec(&plan, &input["work"])?;
+    Ok(plan)
+}
+
+// Native inference is attested by the host. These records deliberately make no
+// executable observation or remote model identity claim.
+fn native_invalid() -> Error {
+    err(
+        "team_native_invalid",
+        "Invalid or unbound native planner preparation, response or host receipt",
+    )
+}
+
+fn native_args(args: &[String]) -> Result<(bool, Option<String>)> {
+    let prepare = args.iter().any(|a| a == "--prepare-native");
+    let complete = read_flag(args, "complete-native")?;
+    if prepare == complete.is_some()
+        || args.iter().any(|a| {
+            ["--file", "--dry-run", "--planner-catalog"]
+                .contains(&a.split('=').next().unwrap_or(""))
+        })
+    {
+        return Err(err(
+            "usage",
+            "Choose exactly one native preparation or completion without --file, --dry-run or --planner-catalog",
+        ));
+    }
+    if complete.is_some()
+        && args.iter().any(|a| {
+            a.starts_with("--")
+                && !["--slug", "--from-request", "--complete-native", "--json"]
+                    .contains(&a.split('=').next().unwrap_or(""))
+        })
+    {
+        return Err(err(
+            "usage",
+            "Native completion accepts only --slug, --from-request, --complete-native and --json",
+        ));
+    }
+    if prepare
+        && (read_flag(args, "provider")?.is_none()
+            || read_flag(args, "model")?.is_none()
+            || read_flag(args, "executor")?.as_deref() != Some("native"))
+    {
+        return Err(err(
+            "usage",
+            "Native preparation requires explicit --provider, --model and --executor native",
+        ));
+    }
+    Ok((prepare, complete))
+}
+
+fn native_pending_path(slug: &str, request_id: &str) -> String {
+    format!(".gdm/{slug}/out/team-native-{request_id}.json")
+}
+
+fn native_effort(input: &Value) -> Value {
+    input
+        .get("planner")
+        .map(|p| p["options"]["effort"].clone())
+        .unwrap_or(Value::Null)
+}
+
+fn native_limits(input: &Value) -> (u64, u64) {
+    let options = &input["planner"]["options"];
+    (
+        options["maxSeconds"].as_u64().unwrap_or(120).min(120),
+        options["maxOutputBytes"]
+            .as_u64()
+            .unwrap_or(262144)
+            .min(262144),
+    )
+}
+
+fn native_identity(pending: &Value) -> String {
+    let mut payload = pending.clone();
+    payload["preparation"]
+        .as_object_mut()
+        .unwrap()
+        .remove("requestId");
+    digest(&payload)
+}
+
+fn native_pending_valid(pending: &Value) -> bool {
+    let p = &pending["preparation"];
+    let input = &pending["input"];
+    if !exact(
+        pending,
+        &["schemaVersion", "preparation", "input", "args"],
+        &[],
+    ) || pending["schemaVersion"] != "gdm-native-plan-pending/v1"
+        || !exact(
+            p,
+            &[
+                "schemaVersion",
+                "requestId",
+                "slug",
+                "sessionId",
+                "stateFingerprint",
+                "inputDigest",
+                "provider",
+                "model",
+                "effort",
+                "maxInvocations",
+                "maxSeconds",
+                "maxOutputBytes",
+                "prompt",
+                "responseSchema",
+                "promptSha256",
+                "schemaSha256",
+                "automaticPlanning",
+                "automaticExecution",
+            ],
+            &[],
+        )
+        || p["schemaVersion"] != "gdm-native-plan-preparation/v1"
+        || !state::valid_hash(s(p, "requestId"))
+        || !state::valid_hash(s(p, "stateFingerprint"))
+        || !id_ok(&p["sessionId"])
+        || state::validate_slug(s(p, "slug")).is_err()
+        || !pending["args"].as_array().is_some_and(|a| {
+            a.len() <= 128
+                && a.iter()
+                    .all(|v| v.as_str().is_some_and(|s| s.len() <= MAX_CONTEXT))
+        })
+        || input["schemaVersion"] != "gdm-team-request-input/v1"
+        || !matches!(input["promptVersion"].as_u64(), Some(2 | 3))
+        || selector::validate(input).is_err()
+        || p["inputDigest"] != digest(input)
+        || p["provider"] != input["provider"]
+        || p["model"] != input["model"]
+        || p["effort"] != native_effort(input)
+        || input["executor"] != "native"
+        || p["maxInvocations"] != 1
+        || p["maxSeconds"] != native_limits(input).0
+        || p["maxOutputBytes"] != native_limits(input).1
+        || !p["prompt"]
+            .as_str()
+            .is_some_and(|s| !s.is_empty() && s.len() <= 64 * 1024)
+        || !p["responseSchema"].is_object()
+        || protocol::canonical_json(&p["responseSchema"]).len() > 64 * 1024
+        || p["promptSha256"] != sha256(s(p, "prompt"))
+        || p["schemaSha256"] != digest(&p["responseSchema"])
+        || p["automaticPlanning"] != true
+        || p["automaticExecution"] != false
+    {
+        return false;
+    }
+    let args: Vec<String> = array(&pending["args"])
+        .iter()
+        .map(|v| state::s(v).to_owned())
+        .collect();
+    native_args(&args).is_ok_and(|(prepare, _)| prepare)
+        && required_flag(&args, "slug").is_ok_and(|slug| p["slug"] == slug)
+        && native_identity(pending) == p["requestId"]
+        && protocol::no_credentials(pending).is_ok()
+}
+
+fn native_receipt_valid(request: &Value, recorded_prompt: &str, recorded_schema: &str) -> bool {
+    let pending = &request["nativePreparation"];
+    if !native_pending_valid(pending) {
+        return false;
+    }
+    let p = &pending["preparation"];
+    let r = &request["receipt"];
+    pending["input"] == request["input"]
+        && p["prompt"] == recorded_prompt
+        && serde_json::from_str::<Value>(recorded_schema)
+            .is_ok_and(|schema| schema == p["responseSchema"])
+        && exact(
+            r,
+            &[
+                "schemaVersion",
+                "attestation",
+                "host",
+                "requestId",
+                "sessionId",
+                "invocationId",
+                "providerTarget",
+                "modelRequested",
+                "effortRequested",
+                "promptSha256",
+                "schemaSha256",
+                "outputSha256",
+                "providerInvocations",
+                "elapsedMs",
+                "status",
+            ],
+            &["usage"],
+        )
+        && r["schemaVersion"] == "gdm-native-planner-receipt/v1"
+        && r["attestation"] == "host-asserted"
+        && r["host"] == "gid"
+        && r["requestId"] == p["requestId"]
+        && r["sessionId"] == p["sessionId"]
+        && text_ok(&r["invocationId"], "invocationId", 160)
+        && r["providerTarget"] == p["provider"]
+        && r["modelRequested"] == p["model"]
+        && r["effortRequested"] == p["effort"]
+        && r["promptSha256"] == p["promptSha256"]
+        && r["schemaSha256"] == p["schemaSha256"]
+        && r["outputSha256"] == digest(&request["response"])
+        && protocol::canonical_json(&request["response"]).len() as u64
+            <= native_limits(&request["input"]).1
+        && r["providerInvocations"] == 1
+        && r["status"] == "succeeded"
+        && r["elapsedMs"]
+            .as_u64()
+            .is_some_and(|n| n <= native_limits(&request["input"]).0 * 1000)
+        && r.get("usage")
+            .is_none_or(|u| u.is_object() && protocol::canonical_json(u).len() <= 16 * 1024)
+}
+
+fn native_summary(work: &Value) -> Value {
+    let mut out = super::summary(work);
+    out["tasks"] = work["team"]["tasks"].clone();
+    out["automaticPlanning"] = json!(true);
+    out["automaticExecution"] = json!(false);
+    out["unchanged"] = json!(true);
+    out["dryRun"] = json!(false);
+    out["plannerReused"] = json!(true);
+    out["plannerReceipt"] = provenance(work).unwrap()["receipt"].clone();
+    out
+}
+
+fn write_immutable(cwd: &Path, slug: &str, relative: &str, bytes: &[u8]) -> Result<()> {
+    let directory = store::ensure_work_dir(cwd, slug)?.join("out");
+    store::ensure_dir(&directory)?;
+    let destination = cwd.join(relative);
+    if store::inspect(&destination, false)? {
+        if store::contained(cwd, relative, "native-planner", MAX_ARTIFACT)? != bytes {
+            return Err(err(
+                "team_request_changed",
+                "Immutable planner archive conflict",
+            ));
+        }
+    } else {
+        store::write_atomic(&destination, bytes)?;
+    }
+    Ok(())
+}
+
+fn native_run(cwd: &Path, args: &[String]) -> Result<Value> {
+    let (prepare, completion) = native_args(args)?;
+    let slug = required_flag(args, "slug")?;
+    let _lock = store::lock(cwd)?;
+    let work = store::load(cwd, &slug)?;
+    super::validate(&work)?;
+    planning::verify_history(cwd, &work)?;
+    if prepare {
+        let replan = args.iter().any(|a| a == "--replan");
+        let why = read_flag(args, "reason")?.map(|v| reason(&v)).transpose()?;
+        if replan != why.is_some() {
+            return Err(err(
+                "usage",
+                "--replan and a substantive --reason must be supplied together",
+            ));
+        }
+        if !id_ok(&work["team"]["sessionId"]) {
+            return Err(err(
+                "team_native_session",
+                "Configure the exact native host session before preparation",
+            ));
+        }
+        let input = self::input(cwd, &work, args)?;
+        if provenance(&work).is_some_and(|p| p["inputDigest"] == digest(&input)) {
+            return Ok(native_summary(&work));
+        }
+        if (!tasks(&work).is_empty() && work["team"].get("allocation").is_none())
+            || tasks(&work)
+                .iter()
+                .any(|t| ["active", "reported"].contains(&s(t, "status")))
+            || (tasks(&work)
+                .iter()
+                .any(|t| !array(&t["attempts"]).is_empty())
+                && !replan)
+        {
+            return Err(err(
+                "team_replan_conflict",
+                "Native replanning requires reviewed workers and explicit --replan --reason after attempts",
+            ));
+        }
+        let prompt = prompt(&input);
+        let schema = response_schema(&input);
+        let (seconds, output) = native_limits(&input);
+        let mut pending = json!({"schemaVersion":"gdm-native-plan-pending/v1","args":args,"input":input,"preparation":{"schemaVersion":"gdm-native-plan-preparation/v1","slug":slug,"sessionId":work["team"]["sessionId"],"stateFingerprint":digest(&work),"inputDigest":digest(&input),"provider":input["provider"],"model":input["model"],"effort":native_effort(&input),"maxInvocations":1,"maxSeconds":seconds,"maxOutputBytes":output,"prompt":prompt,"responseSchema":schema,"promptSha256":sha256(&prompt),"schemaSha256":digest(&schema),"automaticPlanning":true,"automaticExecution":false}});
+        let request_id = native_identity(&pending);
+        pending["preparation"]["requestId"] = json!(request_id);
+        if !native_pending_valid(&pending) {
+            return Err(native_invalid());
+        }
+        let bytes = protocol::canonical_json(&pending).into_bytes();
+        if bytes.len() > MAX_ARTIFACT {
+            return Err(native_invalid());
+        }
+        write_immutable(cwd, &slug, &native_pending_path(&slug, &request_id), &bytes)?;
+        return Ok(pending["preparation"].clone());
+    }
+    let bytes = store::contained(
+        cwd,
+        completion.as_deref().unwrap(),
+        "native-completion",
+        MAX_ARTIFACT,
+    )?;
+    let envelope: Value = serde_json::from_slice(&bytes).map_err(|_| native_invalid())?;
+    protocol::no_credentials(&envelope)?;
+    if !exact(
+        &envelope,
+        &["schemaVersion", "requestId", "response", "receipt"],
+        &[],
+    ) || envelope["schemaVersion"] != "gdm-native-plan-completion/v1"
+        || !state::valid_hash(s(&envelope, "requestId"))
+    {
+        return Err(native_invalid());
+    }
+    let request_id = s(&envelope, "requestId");
+    // Current applied identity wins over freshness: completed workers may have
+    // legitimately changed Work and source since the original application.
+    if let Some(previous) = provenance(&work).filter(|p| p["receipt"]["requestId"] == request_id) {
+        if previous["response"] != envelope["response"]
+            || previous["receipt"] != envelope["receipt"]
+        {
+            return Err(err(
+                "team_native_replay_conflict",
+                "Native completion replay changed response or receipt",
+            ));
+        }
+        return Ok(native_summary(&work));
+    }
+    let pending_bytes = store::contained(
+        cwd,
+        &native_pending_path(&slug, request_id),
+        "native-preparation",
+        MAX_ARTIFACT,
+    )?;
+    let pending: Value = serde_json::from_slice(&pending_bytes).map_err(|_| native_invalid())?;
+    if !native_pending_valid(&pending)
+        || pending["preparation"]["requestId"] != request_id
+        || pending["preparation"]["slug"] != slug
+    {
+        return Err(native_invalid());
+    }
+    let p = &pending["preparation"];
+    let input = &pending["input"];
+    let result_path = format!(".gdm/{slug}/out/team-native-result-{request_id}.json");
+    let result_bytes = protocol::canonical_json(&envelope).into_bytes();
+    if store::inspect(&cwd.join(&result_path), false)?
+        && store::contained(cwd, &result_path, "native-result", MAX_ARTIFACT)? != result_bytes
+    {
+        return Err(err(
+            "team_native_replay_conflict",
+            "An already consumed native completion changed response or receipt",
+        ));
+    }
+    let mut request = json!({"schemaVersion":SCHEMA,"input":input,"inputDigest":digest(input),"response":envelope["response"],"responseDigest":digest(&envelope["response"]),"receipt":envelope["receipt"],"nativePreparation":pending,"plannerContract":{"version":input["promptVersion"],"prompt":p["prompt"],"schema":p["responseSchema"].to_string()}});
+    if !native_receipt_valid(&request, s(p, "prompt"), &p["responseSchema"].to_string()) {
+        return Err(native_invalid());
+    }
+    let original_args: Vec<String> = array(&pending["args"])
+        .iter()
+        .map(|a| state::s(a).to_owned())
+        .collect();
+    if p["stateFingerprint"] != digest(&work)
+        || p["sessionId"] != work["team"]["sessionId"]
+        || self::input(cwd, &work, &original_args)? != *input
+    {
+        return Err(err(
+            "team_request_stale",
+            "Work, session, source, context or capabilities changed after native preparation",
+        ));
+    }
+    // New completions must still use precisely the GDM-authored contract.
+    if p["prompt"] != prompt(input) || p["responseSchema"] != response_schema(input) {
+        return Err(native_invalid());
+    }
+    let plan = validated_plan(cwd, &work, input, &envelope["response"])
+        .map_err(|e| rejected_proposal(cwd, &slug, false, &request, e))?;
+    let archive = protocol::canonical_json(&request).into_bytes();
+    if archive.len() > MAX_ARTIFACT {
+        return Err(native_invalid());
+    }
+    let hash = sha256(&archive);
+    let relative = format!(".gdm/{slug}/out/team-request-{hash}.json");
+    request["artifact"] = json!({"path":relative,"sha256":hash});
+    let mut preview = work.clone();
+    let mut preview_args = original_args.clone();
+    preview_args.push("--dry-run".into());
+    planning::apply(
+        cwd,
+        &mut preview,
+        &preview_args,
+        plan.clone(),
+        Some(request.clone()),
+    )
+    .map_err(|e| rejected_proposal(cwd, &slug, false, &request, e))?;
+    // Consume one exact completion before archiving/applying. A crash may leave
+    // these immutable files without Work; only that same completion can resume.
+    write_immutable(cwd, &slug, &result_path, &result_bytes)?;
+    write_immutable(cwd, &slug, &relative, &archive)?;
+    let mut current = work;
+    let mut out = planning::apply(cwd, &mut current, &original_args, plan, Some(request))?;
+    out["automaticPlanning"] = json!(true);
+    out["plannerReused"] = json!(false);
+    out["plannerReceipt"] = envelope["receipt"].clone();
+    Ok(out)
+}
+
 pub(super) fn run(cwd: &Path, args: &[String]) -> Result<Value> {
+    if args
+        .iter()
+        .any(|a| a == "--prepare-native" || a.split('=').next() == Some("--complete-native"))
+    {
+        return native_run(cwd, args);
+    }
     if read_flag(args, "file")?.is_some() {
         return Err(err(
             "usage",
@@ -1294,13 +1782,7 @@ pub(super) fn run(cwd: &Path, args: &[String]) -> Result<Value> {
     };
     // Never hold the repository lock while waiting for a model process.
     let planner_prompt = prompt(&input);
-    let mut planner_schema = schema(s(&input, "provider"));
-    if input["promptVersion"] == 3 {
-        let plan = &mut planner_schema["properties"]["plan"]["properties"];
-        adaptive_schema(&mut plan["modules"]["items"]);
-        adaptive_schema(&mut plan["knowledge"]["anyOf"][0]);
-        adaptive_schema(&mut plan["verification"]["anyOf"][0]);
-    }
+    let planner_schema = response_schema(&input);
     let options = input
         .get("planner")
         .map(|p| {
@@ -1319,41 +1801,8 @@ pub(super) fn run(cwd: &Path, args: &[String]) -> Result<Value> {
     protocol::no_credentials(&reply.value)?;
     protocol::no_credentials(&reply.receipt)?;
     let mut request = json!({"schemaVersion":SCHEMA,"input":input,"inputDigest":digest(&input),"response":reply.value,"responseDigest":digest(&reply.value),"receipt":reply.receipt,"plannerContract":{"version":input["promptVersion"],"prompt":planner_prompt,"schema":planner_schema.to_string()}});
-    let plan = (|| -> Result<Value> {
-        if !exact(&reply.value, &["plan", "rationale"], &[]) {
-            return Err(err(
-                "team_plan_invalid",
-                "Invalid planner field response.shape",
-            ));
-        }
-        if !text_ok(&reply.value["rationale"], "rationale", 2000) {
-            return Err(err(
-                "team_plan_invalid",
-                "Invalid planner field response.rationale",
-            ));
-        }
-        let plan = canonical_plan_version(&reply.value, input["promptVersion"].as_u64().unwrap())?;
-        ground(&plan, &input)?;
-        if input["promptVersion"] == 3 {
-            let mut teams=super::historical_teams(cwd,&before)?;
-            teams.push(before["team"].clone());
-            for route in array(&input["capabilities"]["routes"]) {
-                if let Some(limit)=route["maxInvocations"].as_u64() {
-                    let mut used=0u64;
-                    for attempt in teams.iter().flat_map(|t|array(&t["tasks"])).flat_map(|t|array(&t["attempts"])) {
-                        let e=&attempt["execution"];
-                        if e.is_null() {return Err(err("team_invocation_limit","Historical claims lack attribution for cumulative planning limits"));}
-                        if e["provider"]==route["provider"] && e["model"]==route["model"] {used+=1;}
-                    }
-                    let planned=assignments(&plan).filter(|(a,_,_)|array(&input["capabilities"]["routes"]).iter().any(|r|r["id"]==a["routeId"] && r["provider"]==route["provider"] && r["model"]==route["model"])).count() as u64;
-                    if used+planned>limit {return Err(err("team_invocation_limit","Plan plus historical reservations exceeds cumulative provider/model invocation cap"));}
-                }
-            }
-        }
-        planning::check_spec(&plan, &input["work"])?;
-        Ok(plan)
-    })()
-    .map_err(|error| rejected_proposal(cwd, &slug, dry_run, &request, error))?;
+    let plan = validated_plan(cwd, &before, &input, &reply.value)
+        .map_err(|error| rejected_proposal(cwd, &slug, dry_run, &request, error))?;
     let bytes = protocol::canonical_json(&request).into_bytes();
     if bytes.len() > MAX_ARTIFACT {
         return Err(err(
