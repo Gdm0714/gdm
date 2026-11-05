@@ -56,23 +56,29 @@ fn main() {
         Some("computer-use") => gdm::computer_use::run(&cwd, &args[1..]),
         Some("device") => gdm::device::run(&cwd, &args[1..]),
         Some(
-            "agent" | "memory" | "render-skills" | "verify-manifests" | "context" | "graph"
-            | "role-run" | "provider-run",
+            "entry" | "agent" | "memory" | "render-skills" | "verify-manifests" | "context"
+            | "graph" | "role-run" | "provider-run",
         ) => {
             let mut input = String::new();
-            let needs_input = (args[0] == "agent" && args.get(1).is_some_and(|s| s == "hook"))
+            let needs_input = (["agent", "entry"].contains(&args[0].as_str())
+                && args.get(1).is_some_and(|s| s == "hook"))
                 || (["memory"].contains(&args[0].as_str())
                     && args.get(1).is_some_and(|s| s == "rpc"));
             if needs_input {
+                let input_limit = if args[0] == "entry" {
+                    64 * 1024
+                } else {
+                    4 * 1024 * 1024
+                };
                 if let Err(e) = std::io::stdin()
-                    .take(4 * 1024 * 1024 + 1)
+                    .take(input_limit + 1)
                     .read_to_string(&mut input)
                 {
                     eprintln!("{e}");
                     std::process::exit(2);
                 }
-                if input.len() > 4 * 1024 * 1024 {
-                    eprintln!("input exceeds 4 MiB");
+                if input.len() as u64 > input_limit {
+                    eprintln!("input exceeds {input_limit} bytes");
                     std::process::exit(2);
                 }
             }

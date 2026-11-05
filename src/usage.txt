@@ -4,6 +4,11 @@ gdm {VERSION} — 작업 증거가 다음 습관을 바꾸는 개인 AI 워크�
 
 사용법:
   gdm [--language auto|ko|en] <명령> [옵션]
+  gdm entry hook --target codex|claude|gid
+  gdm entry status --target <target> --session <id> --json
+  gdm entry decide --target <target> --session <id> --request <token> --kind work|question|optout [--slug <work>] --json
+  gdm entry install --target <target> --binary <absolute-executable> [--dry-run] [--json]
+  gdm entry uninstall --target <target> [--dry-run] [--json]
   gdm language auto|ko|en                 # 다음 실행에 사용할 언어 저장
   gdm plan init --slug <슬러그> (--brief <설명> | --brief-file <파일>) [--audit] [--risk <low|medium|high>] [--verification <deterministic|inspectable|opaque>] [--simplify] (--require <약속> | --forbid <금지>)...
                 [--assume <가정>]... [--uncertain <불확실성>]... [--allow-path <경로>]... [--forbid-path <경로>]... [--stop-if <중단 조건>]...

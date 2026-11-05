@@ -32,3 +32,19 @@
   확인한 뒤 `protocol adopt`한다.
 - target hook: gid가 제공하는 실제 실행·종료 기능을 사용한다. Codex hook 설치 여부를
   gid native의 완료 보장으로 대신하지 않는다.
+
+## 자동 진입 호스트 계약
+
+- trusted `gdm-entry-v1` native extension의 `input`은 원문을 보존하고
+  `GDM_AUTOMATIC_ENTRY_V1` 문맥을 추가한다. `before_turn`은 결속된 Work의 이어가기 안내다.
+  현재 모델이 분류하고 설치된 `gdm-go`/`gdm-full`을 수행한다. `input_suggestion`으로 요청을
+  덮어쓰지 않는다. executable만 복사되므로 hook 안내는 인접 스킬 파일에 의존하지 않는다.
+- native `delegate_tasks`는 `tasks: [{id, prompt, paths, access, deliverable, acceptance}]`로
+  한 번에 1–3개를 실행하고 결과를 수집한다. task는 먼저 claim하며 현재 도구의 작업자는
+  부모 모델·권한을 상속하는 leaf다. 추가 독립 작업은 실제 남은 슬롯 안에서 다음 묶음으로 실행한다.
+- entry는 context-only 안내이며 일반 변경을 결정적으로 차단한다고 주장하지 않는다.
+  `block_reason`은 안내를 읽기 전에 전체 작업을 중단하므로 복구 가능한 tool denial로 쓰지 않는다.
+  기존 native team completion guard는 실제 세션에 결속된 coordinated Work에만 적용된다.
+- manifest는 `gid extension add <manifest> --trust`로 등록하고 binary 변경 후 재등록한다.
+  새 native 세션과 기존 permission mode를 사용하며 ask 승인이 필요할 수 있다. 설치·등록과
+  실제 event 관찰은 다르다. Claude ACP에 native extension 실행을 가정하지 않는다.

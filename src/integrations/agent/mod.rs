@@ -2,7 +2,7 @@
 mod config;
 mod ledger;
 pub mod limit;
-mod lock;
+pub(crate) mod lock;
 use crate::support::{Error, Result, print_json};
 pub use ledger::parse_envelope;
 pub use ledger::run_at as run_hook_at;

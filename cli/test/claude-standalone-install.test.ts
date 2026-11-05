@@ -1,25 +1,36 @@
 import { expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const ROOT = join(import.meta.dir, "..", "..");
 
 test("fresh standalone install completes go and preserves same-provider audit gates without calling other providers", () => {
-  const home = mkdtempSync(join(tmpdir(), "gdm-claude-only-install-"));
+  const home = realpathSync(mkdtempSync(join(tmpdir(), "gdm-claude-only-install-")));
   try {
     const bin = join(home, "test-bin");
     const cwd = join(home, "project");
     mkdirSync(bin);
     mkdirSync(cwd);
     symlinkSync(process.execPath, join(bin, "bun"));
-    for (const provider of ["codex", "gid", "claude"]) {
+    for (const provider of ["codex", "claude"]) {
       const path = join(bin, provider);
       writeFileSync(path, '#!/bin/sh\nprintf "%s\\n" "$0" >> "$HOME/unexpected-provider-call"\nexit 97\n');
       chmodSync(path, 0o755);
     }
+    // The installer now performs gid metadata registration. The isolated
+    // fixture permits that API only; it must never start a model or session.
+    writeFileSync(join(bin, "gid"), '#!/bin/sh\nif [ "$1" = extension ] && [ "$2" = add ] && [ "$4" = --trust ]; then printf "%s\\n" "$3" >> "$HOME/metadata-registration-call"; exit 0; fi\nprintf "%s\\n" "$*" >> "$HOME/unexpected-provider-call"\nexit 97\n');
+    chmodSync(join(bin, "gid"), 0o755);
+    // Reuse the compiled native implementation without spawning a build or
+    // reaching the real Cargo home from this standalone installer test.
+    const target = join(home, "fixture-target");
+    mkdirSync(join(target, "release"), { recursive: true });
+    copyFileSync(join(ROOT, "target/release/gdm"), join(target, "release/gdm"));
+    writeFileSync(join(bin, "cargo"), "#!/bin/sh\nexit 0\n");
+    chmodSync(join(bin, "cargo"), 0o755);
     // No personal settings, credentials, provider binaries, or inherited provider homes.
-    const env = { HOME: home, PATH: `${bin}:/usr/bin:/bin:/usr/sbin:/sbin`, SHELL: "/bin/sh" };
+    const env = { HOME: home, CARGO_TARGET_DIR: target, PATH: `${bin}:/usr/bin:/bin:/usr/sbin:/sbin`, SHELL: "/bin/sh" };
     const run = (argv: string[]) => {
       const result = Bun.spawnSync(argv, { cwd, env, stdout: "pipe", stderr: "pipe" });
       return { code: result.exitCode, out: result.stdout.toString(), err: result.stderr.toString() };
@@ -31,7 +42,11 @@ test("fresh standalone install completes go and preserves same-provider audit ga
     expect(skill).toContain("Claude Code coordinator contract");
     expect(skill).toContain("gdm done");
     expect(skill).not.toContain("비실행 stub");
-    expect(existsSync(join(home, ".claude/settings.json"))).toBe(false);
+    const settings = JSON.parse(readFileSync(join(home, ".claude/settings.json"), "utf8"));
+    for (const event of ["UserPromptSubmit", "PreToolUse", "Stop"]) {
+      const commands = settings.hooks[event].flatMap((group: any) => group.hooks.map((hook: any) => hook.command));
+      expect(commands.some((command: string) => command.includes("entry hook --target claude --handler-id gdm-entry-v1"))).toBe(true);
+    }
 
     writeFileSync(join(cwd, "product.txt"), "BAD\n");
     const slug = "claude-only-go";
@@ -63,6 +78,7 @@ test("fresh standalone install completes go and preserves same-provider audit ga
     expect(gdm("done", "--slug", full).code).toBe(0);
     expect(gdm("plan", "contract", "--check-commit", "--slug", full).code).not.toBe(0);
     expect(existsSync(join(home, "unexpected-provider-call"))).toBe(false);
+    expect(readFileSync(join(home, "metadata-registration-call"), "utf8")).toContain("gdm-entry-v1.json");
   } finally {
     rmSync(home, { recursive: true, force: true });
   }

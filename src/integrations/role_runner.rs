@@ -540,7 +540,11 @@ fn provider_argv(provider: &str, workspace: &Path, requested: &str) -> Result<Ve
 }
 fn command(executable: &Path, workspace: &Path, args: &[String]) -> Command {
     let mut c = Command::new(executable);
-    c.args(args).current_dir(workspace).env_remove("OLDPWD");
+    c.args(args)
+        .current_dir(workspace)
+        .env_remove("OLDPWD")
+        // Tool-free specialists and planners are not new root work sessions.
+        .env("GDM_ENTRY_DISABLED", "1");
     c
 }
 

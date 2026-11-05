@@ -40,6 +40,7 @@ impl Fixture {
 set -eu
 fixture=$(dirname "$0")
 if [ "${1:-}" = "--version" ]; then printf 'fake-claude/1.0\n'; exit 0; fi
+test "${GDM_ENTRY_DISABLED:-}" = 1
 printf x >> "$fixture/invocations"
 printf '%s\n' "$@" > "$fixture/argv"
 cat > "$fixture/input"

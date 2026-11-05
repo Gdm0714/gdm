@@ -21,6 +21,8 @@ const BODY_BEGIN = "<!-- GDM_RENDERED_SKILL_BODY_V1_BEGIN -->";
 const BODY_END = "<!-- GDM_RENDERED_SKILL_BODY_V1_END -->";
 const ADAPTER_BEGIN = "<!-- GDM_TARGET_ADAPTER_V1_BEGIN -->";
 const ADAPTER_END = "<!-- GDM_TARGET_ADAPTER_V1_END -->";
+const AUTOMATIC_ENTRY_MARKER = "<!-- GDM_AUTOMATIC_ENTRY_V1 -->";
+const ENTRY_SKILLS = new Set(["go", "full"]);
 const TARGET_FRAGMENT_RE = /<!-- GDM_TARGET_FRAGMENT_V1:([a-z0-9-]+) -->/gu;
 const HASH_RE = /^[0-9a-f]{64}$/u;
 const READ_ONLY_SKILLS = new Set(["analyze", "plan", "review"]);
@@ -125,7 +127,16 @@ function targetFragment(sourceRoot: string, target: Target, name: string): strin
 
 function renderCore(sourceRoot: string, target: Target, skillName: string, body: string): string {
   let markerCount = 0;
-  const rendered = body.replace(TARGET_FRAGMENT_RE, (_marker, name: string) => {
+  const entryCount = body.split(AUTOMATIC_ENTRY_MARKER).length - 1;
+  if (entryCount !== (ENTRY_SKILLS.has(skillName) ? 1 : 0)) {
+    fail(`automatic entry fragment count mismatch: ${skillName}`);
+  }
+  const entryPath = join(sourceRoot, "_shared", "automatic-entry.md");
+  if (entryCount > 0) regularFile(entryPath);
+  const expanded = entryCount > 0
+    ? body.replace(AUTOMATIC_ENTRY_MARKER, () => readFileSync(entryPath, "utf8").trimEnd())
+    : body;
+  const rendered = expanded.replace(TARGET_FRAGMENT_RE, (_marker, name: string) => {
     markerCount += 1;
     return targetFragment(sourceRoot, target, name);
   });

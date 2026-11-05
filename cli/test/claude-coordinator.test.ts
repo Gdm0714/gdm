@@ -39,7 +39,7 @@ describe("Claude Code standalone GDM coordinator", () => {
     expect(go).toContain("현재 Claude Code 세션");
     expect(go).toContain("--provider claude");
     expect(go).toContain("다른 공급자의 로그인이나 실행 파일을 요구하지 않는다");
-    expect(go).toContain("`.gdm/` 아래 파일을 직접 쓰거나 고치지 않는다");
+    expect(go).toContain("`.gdm` 상태는 CLI로만 변경하며");
     expect(go).not.toContain("codex-fallback");
     expect(go).not.toContain("Astra medium");
     const full = installed("full");

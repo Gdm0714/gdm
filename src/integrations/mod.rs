@@ -1,6 +1,7 @@
 //! Provider adapters call native policy and storage through these commands.
 pub mod agent;
 pub mod context;
+pub mod entry;
 pub mod memory;
 pub mod render;
 pub mod role_runner;
@@ -14,6 +15,7 @@ pub fn doctor_lines(cwd: &Path) -> Result<Vec<String>> {
 
 pub fn run(cwd: &Path, argv: &[String], stdin: &str) -> Result<()> {
     match argv.first().map(String::as_str) {
+        Some("entry") => entry::run(cwd, &argv[1..], stdin),
         Some("agent") => agent::run(cwd, &argv[1..], stdin),
         Some("context" | "graph") => context::run(cwd, argv),
         Some("memory") => memory::run(cwd, &argv[1..], stdin),

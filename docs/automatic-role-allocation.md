@@ -1,5 +1,49 @@
 # Automatic role allocation
 
+## Ordinary requests enter through the current host
+
+With `gdm-entry-v1` installed and effective, an ordinary request such as “fix the login error” receives
+`GDM_AUTOMATIC_ENTRY_V1` context. The current conversation model classifies the original request;
+the hook performs no provider call and does not use keyword heuristics to decide meaning. Work follows
+installed `gdm-go`, or the existing `gdm-full` criteria when appropriate. Questions remain lightweight,
+and an explicit “without GDM for this request” is recorded as request-scoped opt-out. Existing Work
+is preserved for resume.
+
+```sh
+gdm entry status --target codex --session <actual-session-id> --json
+gdm entry decide --target codex --session <actual-session-id> --request <hook-token> --kind work --json
+# Follow go/full: preserve the original brief, initialize Work and register real checks.
+gdm entry decide --target codex --session <actual-session-id> --request <hook-token> --kind work --slug <existing-work> --json
+# Then use the existing team auto / next / claim / native execution / report / pass / review / done loop.
+```
+
+Use the exact target, session and request token from the observed hook; do not invent them. The same
+`decide` command accepts `--kind question` or `--kind optout` without creating Work. `decide` records a
+model declaration; it neither proves classification accuracy nor allocates tasks. Read `slug` and
+`activeWorkSlug` before initializing. Resume existing Work through `protocol export` and `team next`;
+reminders and repeated events must not trigger another planner. A stale request token cannot replace
+the current decision, and an unfinished Work binding cannot be silently replaced.
+
+| Host | Entry and continuation | Enforcement limits |
+|---|---|---|
+| Codex | `UserPromptSubmit` adds context; the current model uses actual native spawn/wait/result tools. | Supported edit-tool gates and bounded Stop correction; arbitrary shell/MCP mutations remain outside coverage. Requires effective hook support/trust. |
+| Claude Code | `UserPromptSubmit` adds context; the current model uses exposed `Agent` and result tools. | Supported edit-tool gates and bounded Stop correction; shell/MCP blind spots. Missing stable turn identity cannot guarantee exactly-once delivery of identical prompts. |
+| gid native | Trusted extension `input` adds context; `before_turn` reminds the root. Native `delegate_tasks` executes claimed tasks and collects results. | Entry is context-only. Existing native completion guard covers session-bound coordinated Work, not every mutation or single Work. A new native session and existing permission approvals may be required. |
+
+Hooks skip trustworthy host-identified workers and `GDM_ENTRY_DISABLED=1` provider children. Hosts
+without reliable worker identity cannot promise complete root/worker detection; parents must tell
+native workers to execute only their assignment and never initialize another root Work. gid's
+`block_reason` aborts before context insertion, so it is not used as a recoverable generic edit denial.
+No hook grants permissions, invokes a nested model, replaces user input or creates an execution daemon.
+Installation is distinct from observed activation. Use `gdm entry install --target <codex|claude|gid>
+--binary <absolute-executable> --dry-run --json` to inspect a managed registration. Preserve existing
+settings, feature flags and permission modes. gid registration hash-pins the executable and must be
+refreshed after binary upgrades; do not edit its registry by hand. `GDM_ENTRY_DISABLED=1` suppresses
+entry for a process; request opt-out does not uninstall or persistently disable the integration.
+
+
+## Adaptive allocation
+
 `gdm team auto --from-request` interprets the Work's original user request and registered checks, then generates durable knowledge, implementation and independent verification tasks. For a new input GDM collects repository paths, invokes one bounded tool-0 planner through an automatically selected provider, model and effort, validates the result and records its provenance. This is actual model use and can incur provider usage, including with `--dry-run`. An unchanged input reuses the stored result with `plannerReused: true`.
 
 The host supplies its real capacity, executor availability, allowed capability catalogue and any necessary explicit context. It does not assign roles, choose module boundaries or author a modules JSON plan in the normal workflow. GDM chooses those assignments and their execution routes from the supplied inputs.

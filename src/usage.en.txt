@@ -4,6 +4,11 @@ Workflow: contract → evidence → observations → habits → comparison
 
 Usage:
   gdm [--language auto|ko|en] <command> [options]
+  gdm entry hook --target codex|claude|gid
+  gdm entry status --target <target> --session <id> --json
+  gdm entry decide --target <target> --session <id> --request <token> --kind work|question|optout [--slug <work>] --json
+  gdm entry install --target <target> --binary <absolute-executable> [--dry-run] [--json]
+  gdm entry uninstall --target <target> [--dry-run] [--json]
   gdm language auto|ko|en                 # Save the language for future launches
   gdm plan init --slug <slug> (--brief <description> | --brief-file <file>) [--audit] [--risk <low|medium|high>] [--verification <deterministic|inspectable|opaque>] [--simplify] (--require <requirement> | --forbid <restriction>)...
                 [--assume <assumption>]... [--uncertain <uncertainty>]... [--allow-path <path>]... [--forbid-path <path>]... [--stop-if <stop-condition>]...

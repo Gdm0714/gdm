@@ -9,6 +9,8 @@ description: |
 
 # gdm:go — 검증 항목 기반 실행 루프
 
+<!-- GDM_AUTOMATIC_ENTRY_V1 -->
+
 ## 역할
 
 사용자 원문 요청과 검증 가능한 확인 항목(check)을 등록하고, GDM이 생성한 배정의 실행과
